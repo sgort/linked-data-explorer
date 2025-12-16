@@ -9,7 +9,7 @@ import ResultsTable from './components/ResultsTable';
 
 const App: React.FC = () => {
   // State
-  const [endpoint, setEndpoint] = useState(PRESET_ENDPOINTS[1].url); // Default to first remote example for better UX
+  const [endpoint, setEndpoint] = useState(PRESET_ENDPOINTS[2].url); // Default to first remote example for better UX
   const [savedEndpoints, setSavedEndpoints] = useState(PRESET_ENDPOINTS);
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].sparql);
   const [sparqlResult, setSparqlResult] = useState<SparqlResponse | null>(null);
