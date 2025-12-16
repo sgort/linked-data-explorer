@@ -1,4 +1,10 @@
-export const DEFAULT_ENDPOINT = "https://api.open-regels.triply.cc/datasets/stevengort/geboortedatum/services/geboortedatum/sparql";
+export const DEFAULT_ENDPOINT = "http://localhost:3030/ds/query";
+
+export const PRESET_ENDPOINTS = [
+  { name: "Local Jena", url: "http://localhost:3030/ds/query" },
+  { name: "AOW Leeftijd Service", url: "https://api.open-regels.triply.cc/datasets/stevengort/aow-leeftijd-service/services/aow-leeftijd-service/sparql" },
+  { name: "Geboortedatum Service", url: "https://api.open-regels.triply.cc/datasets/stevengort/geboortedatum/services/geboortedatum/sparql" }
+];
 
 export const COMMON_PREFIXES = `
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>

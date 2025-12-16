@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Search, Share2, Play, Settings, AlertCircle, Loader2, Sparkles, Code2, Link as LinkIcon, Download } from 'lucide-react';
-import { DEFAULT_ENDPOINT, SAMPLE_QUERIES, COMMON_PREFIXES } from './constants';
+import { Database, Search, Share2, Play, Settings, AlertCircle, Loader2, Sparkles, Code2, Link as LinkIcon, Download, Plus, Trash2, Save } from 'lucide-react';
+import { DEFAULT_ENDPOINT, SAMPLE_QUERIES, COMMON_PREFIXES, PRESET_ENDPOINTS } from './constants';
 import { executeSparqlQuery } from './services/sparqlService';
 import { generateSparqlFromPrompt } from './services/geminiService';
 import { ViewMode, SparqlResponse } from './types';
@@ -9,13 +9,18 @@ import ResultsTable from './components/ResultsTable';
 
 const App: React.FC = () => {
   // State
-  const [endpoint, setEndpoint] = useState(DEFAULT_ENDPOINT);
+  const [endpoint, setEndpoint] = useState(PRESET_ENDPOINTS[1].url); // Default to first remote example for better UX
+  const [savedEndpoints, setSavedEndpoints] = useState(PRESET_ENDPOINTS);
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].sparql);
   const [sparqlResult, setSparqlResult] = useState<SparqlResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.QUERY);
   const [showSettings, setShowSettings] = useState(false);
+  
+  // Endpoint Management State
+  const [newEndpointName, setNewEndpointName] = useState('');
+  const [newEndpointUrl, setNewEndpointUrl] = useState('');
   
   // Gemini / Natural Language State
   const [nlPrompt, setNlPrompt] = useState('');
@@ -62,6 +67,20 @@ const App: React.FC = () => {
     setViewMode(ViewMode.QUERY);
   };
 
+  const handleAddEndpoint = () => {
+    if (newEndpointName && newEndpointUrl) {
+      setSavedEndpoints([...savedEndpoints, { name: newEndpointName, url: newEndpointUrl }]);
+      setNewEndpointName('');
+      setNewEndpointUrl('');
+    }
+  };
+
+  const handleDeleteEndpoint = (index: number) => {
+    const newEndpoints = [...savedEndpoints];
+    newEndpoints.splice(index, 1);
+    setSavedEndpoints(newEndpoints);
+  };
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       
@@ -100,6 +119,7 @@ const App: React.FC = () => {
         <button 
           onClick={() => setShowSettings(!showSettings)}
           className={`p-3 rounded-xl transition-all ${showSettings ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`}
+          title="Settings"
         >
           <Settings size={24} />
         </button>
@@ -118,14 +138,21 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-             <div className="hidden md:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200">
+             <div className="hidden md:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
                 <span className="text-xs text-slate-500 mr-2 font-semibold">ENDPOINT:</span>
                 <input 
                   type="text" 
+                  list="endpoint-options"
                   value={endpoint} 
                   onChange={(e) => setEndpoint(e.target.value)}
-                  className="bg-transparent text-sm text-slate-700 focus:outline-none w-64 font-mono"
+                  placeholder="Select or type endpoint URL"
+                  className="bg-transparent text-sm text-slate-700 focus:outline-none w-80 font-mono truncate"
                 />
+                <datalist id="endpoint-options">
+                  {savedEndpoints.map((ep, idx) => (
+                    <option key={idx} value={ep.url}>{ep.name}</option>
+                  ))}
+                </datalist>
              </div>
              <button 
                 onClick={handleRunQuery}
@@ -145,21 +172,90 @@ const App: React.FC = () => {
           
           {/* Settings Panel Overlay */}
           {showSettings && (
-            <div className="absolute top-16 left-20 z-30 w-80 bg-white border border-slate-200 shadow-2xl rounded-br-xl rounded-bl-xl p-4 animate-in slide-in-from-left-4 fade-in duration-200">
-              <h3 className="font-semibold text-slate-700 mb-3">Configuration</h3>
-              <div className="mb-4">
-                <label className="block text-xs font-medium text-slate-500 mb-1">Jena Endpoint URL</label>
-                <input 
-                  type="text" 
-                  value={endpoint}
-                  onChange={(e) => setEndpoint(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
+            <div className="absolute top-16 left-20 z-30 w-[450px] bg-white border border-slate-200 shadow-2xl rounded-br-xl rounded-bl-xl p-5 animate-in slide-in-from-left-4 fade-in duration-200 flex flex-col max-h-[calc(100vh-100px)] overflow-hidden">
+              <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                <h3 className="font-semibold text-slate-700 flex items-center gap-2">
+                  <Settings size={18} /> Configuration
+                </h3>
+                <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600">×</button>
               </div>
-              <p className="text-xs text-slate-400">
-                Ensure your Triple Store allows CORS from this origin. 
-                For Jena, start with <code>--cors</code>.
-              </p>
+
+              <div className="space-y-4 overflow-y-auto pr-1 custom-scrollbar">
+                
+                {/* Active Endpoint */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Active Endpoint</label>
+                  <input 
+                    type="text" 
+                    value={endpoint}
+                    onChange={(e) => setEndpoint(e.target.value)}
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-slate-600"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                     Ensure your Triple Store allows CORS from this origin.
+                  </p>
+                </div>
+
+                <hr className="border-slate-100" />
+
+                {/* Manage Endpoints */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wider">Saved Endpoints</label>
+                  
+                  <div className="space-y-2 mb-3">
+                    {savedEndpoints.map((ep, idx) => (
+                      <div key={idx} className="flex items-center justify-between group p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all">
+                        <div 
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => { setEndpoint(ep.url); }}
+                        >
+                          <div className="text-sm font-medium text-slate-700 truncate">{ep.name}</div>
+                          <div className="text-[10px] text-slate-400 truncate font-mono">{ep.url}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           {endpoint === ep.url && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Active</span>}
+                           <button 
+                             onClick={() => handleDeleteEndpoint(idx)}
+                             className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                             title="Remove Endpoint"
+                           >
+                             <Trash2 size={14} />
+                           </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add New */}
+                  <div className="bg-slate-50 p-3 rounded border border-slate-200">
+                    <div className="text-xs font-medium text-slate-500 mb-2">Add New Endpoint</div>
+                    <input 
+                      type="text" 
+                      placeholder="Name (e.g. Production DB)"
+                      value={newEndpointName}
+                      onChange={(e) => setNewEndpointName(e.target.value)}
+                      className="w-full mb-2 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    />
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="URL (e.g. https://.../sparql)"
+                        value={newEndpointUrl}
+                        onChange={(e) => setNewEndpointUrl(e.target.value)}
+                        className="flex-1 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
+                      />
+                      <button 
+                        onClick={handleAddEndpoint}
+                        disabled={!newEndpointName || !newEndpointUrl}
+                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-medium disabled:opacity-50 transition-colors"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
             </div>
           )}
 
