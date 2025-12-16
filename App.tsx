@@ -6,10 +6,28 @@ import { ViewMode, SparqlResponse } from './types';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
 
+const STORAGE_KEY_ENDPOINTS = 'lde_saved_endpoints';
+const STORAGE_KEY_LAST_ENDPOINT = 'lde_last_endpoint';
+
 const App: React.FC = () => {
-  // State
-  const [endpoint, setEndpoint] = useState(PRESET_ENDPOINTS[2].url); // Default to first remote example for better UX
-  const [savedEndpoints, setSavedEndpoints] = useState(PRESET_ENDPOINTS);
+  // State Initialization with LocalStorage logic
+  const [savedEndpoints, setSavedEndpoints] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_ENDPOINTS);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn("Failed to load endpoints from storage", e);
+    }
+    return PRESET_ENDPOINTS;
+  });
+
+  const [endpoint, setEndpoint] = useState(() => {
+    // Try to restore last used endpoint, else default to Geregistreerd Partner (index 3)
+    return localStorage.getItem(STORAGE_KEY_LAST_ENDPOINT) || PRESET_ENDPOINTS[3].url;
+  });
+
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].sparql);
   const [sparqlResult, setSparqlResult] = useState<SparqlResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,6 +38,20 @@ const App: React.FC = () => {
   // Endpoint Management State
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
+
+  // Persist endpoints when changed
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_ENDPOINTS, JSON.stringify(savedEndpoints));
+    } catch (e) {
+      console.warn("Failed to save endpoints", e);
+    }
+  }, [savedEndpoints]);
+
+  // Persist current selection
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_LAST_ENDPOINT, endpoint);
+  }, [endpoint]);
 
   const handleRunQuery = async () => {
     setIsLoading(true);
@@ -56,6 +88,14 @@ const App: React.FC = () => {
     const newEndpoints = [...savedEndpoints];
     newEndpoints.splice(index, 1);
     setSavedEndpoints(newEndpoints);
+  };
+
+  // Reset to defaults if needed
+  const handleResetDefaults = () => {
+    if (confirm("Reset endpoints to default system presets?")) {
+      setSavedEndpoints(PRESET_ENDPOINTS);
+      setEndpoint(PRESET_ENDPOINTS[3].url); // Also reset active endpoint to default
+    }
   };
 
   return (
@@ -169,7 +209,10 @@ const App: React.FC = () => {
 
                 {/* Manage Endpoints */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wider">Saved Endpoints</label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Saved Endpoints</label>
+                    <button onClick={handleResetDefaults} className="text-[10px] text-blue-500 hover:underline">Reset to Default</button>
+                  </div>
                   
                   <div className="space-y-2 mb-3">
                     {savedEndpoints.map((ep, idx) => (

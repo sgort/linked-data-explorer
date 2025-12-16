@@ -3,7 +3,8 @@ export const DEFAULT_ENDPOINT = "http://localhost:3030/ds/query";
 export const PRESET_ENDPOINTS = [
   { name: "Local Jena", url: "http://localhost:3030/ds/query" },
   { name: "AOW Leeftijd Service", url: "https://api.open-regels.triply.cc/datasets/stevengort/aow-leeftijd-service/services/aow-leeftijd-service/sparql" },
-  { name: "Geboortedatum Service", url: "https://api.open-regels.triply.cc/datasets/stevengort/geboortedatum/services/geboortedatum/sparql" }
+  { name: "Geboortedatum Service", url: "https://api.open-regels.triply.cc/datasets/stevengort/geboortedatum/services/geboortedatum/sparql" },
+  { name: "Geregistreerd Partner Service", url: "https://api.open-regels.triply.cc/datasets/stevengort/geregistreerdpartner/services/geregistreerdpartner/sparql" }
 ];
 
 export const COMMON_PREFIXES = `
