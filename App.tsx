@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Search, Share2, Play, Settings, AlertCircle, Loader2, Sparkles, Code2, Link as LinkIcon, Download, Plus, Trash2, Save } from 'lucide-react';
+import { Database, Share2, Play, Settings, AlertCircle, Loader2, Code2, Download, Plus, Trash2 } from 'lucide-react';
 import { DEFAULT_ENDPOINT, SAMPLE_QUERIES, COMMON_PREFIXES, PRESET_ENDPOINTS } from './constants';
 import { executeSparqlQuery } from './services/sparqlService';
-import { generateSparqlFromPrompt } from './services/geminiService';
 import { ViewMode, SparqlResponse } from './types';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
@@ -21,13 +20,6 @@ const App: React.FC = () => {
   // Endpoint Management State
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
-  
-  // Gemini / Natural Language State
-  const [nlPrompt, setNlPrompt] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  // Initialize API Key from env but don't show to user directly to edit if not needed
-  // We assume process.env.API_KEY is available as per instructions.
 
   const handleRunQuery = async () => {
     setIsLoading(true);
@@ -44,21 +36,6 @@ const App: React.FC = () => {
       setError(err.message || "An unknown error occurred");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleGenerateSparql = async () => {
-    if (!nlPrompt.trim()) return;
-    setIsGenerating(true);
-    setError(null);
-    try {
-      const generatedSparql = await generateSparqlFromPrompt(nlPrompt);
-      setQuery(generatedSparql);
-      setViewMode(ViewMode.QUERY); // Switch to query view to let user review code
-    } catch (err: any) {
-      setError("AI Generation failed: " + err.message);
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -105,14 +82,6 @@ const App: React.FC = () => {
             title="Graph Visualization"
           >
             <Share2 size={24} />
-          </button>
-
-          <button 
-            onClick={() => setViewMode(ViewMode.NL_SEARCH)}
-            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.NL_SEARCH ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-            title="Ask AI"
-          >
-            <Sparkles size={24} />
           </button>
         </div>
 
@@ -263,28 +232,6 @@ const App: React.FC = () => {
           {viewMode !== ViewMode.VISUALIZE && (
             <div className="w-1/2 md:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10 transition-all duration-300">
                
-               {viewMode === ViewMode.NL_SEARCH && (
-                 <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-indigo-50">
-                    <h2 className="text-sm font-semibold text-indigo-900 mb-2 flex items-center gap-2">
-                      <Sparkles size={16} className="text-indigo-600"/> 
-                      AI Query Generator
-                    </h2>
-                    <textarea 
-                      value={nlPrompt}
-                      onChange={(e) => setNlPrompt(e.target.value)}
-                      placeholder="e.g., Show me all rules valid from 2025"
-                      className="w-full h-24 p-3 text-sm border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none bg-white text-slate-800"
-                    />
-                    <button 
-                      onClick={handleGenerateSparql}
-                      disabled={isGenerating || !nlPrompt}
-                      className="mt-2 w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {isGenerating ? <Loader2 className="animate-spin" size={14} /> : 'Generate SPARQL'}
-                    </button>
-                 </div>
-               )}
-
                <div className="flex-1 flex flex-col min-h-0">
                  <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">SPARQL Query</span>

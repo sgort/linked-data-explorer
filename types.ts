@@ -49,8 +49,7 @@ export interface GraphData {
 // App Types
 export enum ViewMode {
   QUERY = 'QUERY',
-  VISUALIZE = 'VISUALIZE',
-  NL_SEARCH = 'NL_SEARCH'
+  VISUALIZE = 'VISUALIZE'
 }
 
 export interface EndpointConfig {
