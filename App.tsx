@@ -1,57 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { Database, Share2, Play, Settings, AlertCircle, Loader2, Code2, Download, Plus, Trash2 } from 'lucide-react';
-import { DEFAULT_ENDPOINT, SAMPLE_QUERIES, COMMON_PREFIXES, PRESET_ENDPOINTS } from './constants';
+import React, { useState } from 'react';
+import { Database, Share2, Play, Settings, AlertCircle, Loader2, Code2, Download, Plus, Trash2, Sparkles } from 'lucide-react';
+import { SAMPLE_QUERIES, PRESET_ENDPOINTS } from './constants';
 import { executeSparqlQuery } from './services/sparqlService';
+import { generateSparqlQuery } from './services/geminiService';
 import { ViewMode, SparqlResponse } from './types';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
 
-const STORAGE_KEY_ENDPOINTS = 'lde_saved_endpoints';
-const STORAGE_KEY_LAST_ENDPOINT = 'lde_last_endpoint';
-
 const App: React.FC = () => {
-  // State Initialization with LocalStorage logic
-  const [savedEndpoints, setSavedEndpoints] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_ENDPOINTS);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (e) {
-      console.warn("Failed to load endpoints from storage", e);
-    }
-    return PRESET_ENDPOINTS;
-  });
-
-  const [endpoint, setEndpoint] = useState(() => {
-    // Try to restore last used endpoint, else default to Geregistreerd Partner (index 3)
-    return localStorage.getItem(STORAGE_KEY_LAST_ENDPOINT) || PRESET_ENDPOINTS[3].url;
-  });
+  // Purely in-memory state. No localStorage is used.
+  const [savedEndpoints, setSavedEndpoints] = useState(PRESET_ENDPOINTS);
+  const [endpoint, setEndpoint] = useState(PRESET_ENDPOINTS[1]?.url || PRESET_ENDPOINTS[0].url);
 
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].sparql);
   const [sparqlResult, setSparqlResult] = useState<SparqlResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.QUERY);
   const [showSettings, setShowSettings] = useState(false);
   
-  // Endpoint Management State
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
-
-  // Persist endpoints when changed
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_ENDPOINTS, JSON.stringify(savedEndpoints));
-    } catch (e) {
-      console.warn("Failed to save endpoints", e);
-    }
-  }, [savedEndpoints]);
-
-  // Persist current selection
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_LAST_ENDPOINT, endpoint);
-  }, [endpoint]);
+  const [aiPrompt, setAiPrompt] = useState('');
 
   const handleRunQuery = async () => {
     setIsLoading(true);
@@ -60,14 +31,32 @@ const App: React.FC = () => {
       const data = await executeSparqlQuery(endpoint, query);
       setSparqlResult(data);
       
-      // Auto-switch to Visualize if asking for triples (s p o)
-      if (query.includes('?s ?p ?o')) {
+      if (query.toLowerCase().includes('?s ?p ?o')) {
           setViewMode(ViewMode.VISUALIZE);
       }
     } catch (err: any) {
       setError(err.message || "An unknown error occurred");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsAiGenerating(true);
+    setError(null);
+    try {
+      const generatedQuery = await generateSparqlQuery(aiPrompt);
+      if (generatedQuery) {
+        setQuery(generatedQuery);
+        setAiPrompt('');
+      } else {
+        throw new Error("AI returned an empty query. Try rephrasing.");
+      }
+    } catch (err: any) {
+      setError(`AI Generation Failed: ${err.message}`);
+    } finally {
+      setIsAiGenerating(false);
     }
   };
 
@@ -90,19 +79,18 @@ const App: React.FC = () => {
     setSavedEndpoints(newEndpoints);
   };
 
-  // Reset to defaults if needed
   const handleResetDefaults = () => {
     if (confirm("Reset endpoints to default system presets?")) {
       setSavedEndpoints(PRESET_ENDPOINTS);
-      setEndpoint(PRESET_ENDPOINTS[3].url); // Also reset active endpoint to default
+      setEndpoint(PRESET_ENDPOINTS[3]?.url || PRESET_ENDPOINTS[0].url);
     }
   };
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       
-      {/* Sidebar */}
-      <div className="w-16 md:w-20 bg-slate-900 flex flex-col items-center py-6 gap-6 z-20 flex-shrink-0">
+      {/* Sidebar Navigation */}
+      <nav className="w-16 md:w-20 bg-slate-900 flex flex-col items-center py-6 gap-6 z-20 flex-shrink-0">
         <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-blue-900/50">
           <Database size={20} />
         </div>
@@ -132,12 +120,12 @@ const App: React.FC = () => {
         >
           <Settings size={24} />
         </button>
-      </div>
+      </nav>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main UI Area */}
+      <main className="flex-1 flex flex-col min-w-0">
         
-        {/* Header */}
+        {/* Header with App Info & Endpoint Selection */}
         <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
              <h1 className="text-xl font-bold text-slate-800 tracking-tight">Linked Data Explorer</h1>
@@ -147,8 +135,8 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-             <div className="hidden md:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
-                <span className="text-xs text-slate-500 mr-2 font-semibold">ENDPOINT:</span>
+             <div className="hidden lg:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
+                <span className="text-xs text-slate-500 mr-2 font-semibold uppercase tracking-tight">Endpoint</span>
                 <input 
                   type="text" 
                   list="endpoint-options"
@@ -176,24 +164,22 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {/* Workspace */}
-        <div className="flex-1 flex overflow-hidden">
+        {/* Workspace Panels */}
+        <div className="flex-1 flex overflow-hidden relative">
           
           {/* Settings Panel Overlay */}
           {showSettings && (
-            <div className="absolute top-16 left-20 z-30 w-[450px] bg-white border border-slate-200 shadow-2xl rounded-br-xl rounded-bl-xl p-5 animate-in slide-in-from-left-4 fade-in duration-200 flex flex-col max-h-[calc(100vh-100px)] overflow-hidden">
+            <div className="absolute top-0 left-0 z-30 w-[450px] h-full bg-white border-r border-slate-200 shadow-2xl p-5 animate-in slide-in-from-left fade-in duration-200 flex flex-col">
               <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
                 <h3 className="font-semibold text-slate-700 flex items-center gap-2">
                   <Settings size={18} /> Configuration
                 </h3>
-                <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600">×</button>
+                <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none" aria-label="Close settings">&times;</button>
               </div>
 
-              <div className="space-y-4 overflow-y-auto pr-1 custom-scrollbar">
-                
-                {/* Active Endpoint */}
+              <div className="space-y-4 overflow-y-auto pr-1">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Active Endpoint</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Active Endpoint URL</label>
                   <input 
                     type="text" 
                     value={endpoint}
@@ -201,20 +187,19 @@ const App: React.FC = () => {
                     className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-slate-600"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
-                     Ensure your Triple Store allows CORS from this origin.
+                     Changes are reset on browser refresh (Incognito safe).
                   </p>
                 </div>
 
                 <hr className="border-slate-100" />
 
-                {/* Manage Endpoints */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Saved Endpoints</label>
-                    <button onClick={handleResetDefaults} className="text-[10px] text-blue-500 hover:underline">Reset to Default</button>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Session Endpoints</label>
+                    <button onClick={handleResetDefaults} className="text-[10px] text-blue-500 hover:underline">Reset Defaults</button>
                   </div>
                   
-                  <div className="space-y-2 mb-3">
+                  <div className="space-y-2 mb-3 max-h-[300px] overflow-y-auto pr-1">
                     {savedEndpoints.map((ep, idx) => (
                       <div key={idx} className="flex items-center justify-between group p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all">
                         <div 
@@ -238,12 +223,12 @@ const App: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Add New */}
-                  <div className="bg-slate-50 p-3 rounded border border-slate-200">
-                    <div className="text-xs font-medium text-slate-500 mb-2">Add New Endpoint</div>
+                  {/* Add New Endpoint Form */}
+                  <div className="bg-slate-50 p-3 rounded border border-slate-200 shadow-inner">
+                    <div className="text-xs font-medium text-slate-500 mb-2">Add New TripleDB/Jena Endpoint</div>
                     <input 
                       type="text" 
-                      placeholder="Name (e.g. Production DB)"
+                      placeholder="Display Name (e.g. Local TripleDB)"
                       value={newEndpointName}
                       onChange={(e) => setNewEndpointName(e.target.value)}
                       className="w-full mb-2 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
@@ -251,7 +236,7 @@ const App: React.FC = () => {
                     <div className="flex gap-2">
                       <input 
                         type="text" 
-                        placeholder="URL (e.g. https://.../sparql)"
+                        placeholder="SPARQL Endpoint URL"
                         value={newEndpointUrl}
                         onChange={(e) => setNewEndpointUrl(e.target.value)}
                         className="flex-1 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
@@ -259,49 +244,75 @@ const App: React.FC = () => {
                       <button 
                         onClick={handleAddEndpoint}
                         disabled={!newEndpointName || !newEndpointUrl}
-                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-medium disabled:opacity-50 transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium disabled:opacity-50 transition-colors shadow-sm"
                       >
                         <Plus size={16} />
                       </button>
                     </div>
                   </div>
-
                 </div>
               </div>
             </div>
           )}
 
-          {/* Left Pane (Editors) */}
+          {/* Left Editor Pane */}
           {viewMode !== ViewMode.VISUALIZE && (
-            <div className="w-1/2 md:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10 transition-all duration-300">
+            <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
                
+               {/* AI Sparkle Section */}
+               <div className="p-4 bg-blue-50/50 border-b border-blue-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles size={14} className="text-blue-600" />
+                    <span className="text-xs font-bold text-blue-800 uppercase tracking-tight">AI Generation Assistant</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      placeholder="Describe what you want to find..."
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      className="flex-1 border border-blue-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white shadow-sm"
+                      onKeyDown={(e) => e.key === 'Enter' && handleAiGenerate()}
+                    />
+                    <button 
+                      onClick={handleAiGenerate}
+                      disabled={isAiGenerating || !aiPrompt.trim()}
+                      className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md shadow-sm disabled:opacity-50 transition-colors"
+                      title="Generate SPARQL"
+                    >
+                      {isAiGenerating ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                    </button>
+                  </div>
+               </div>
+
                <div className="flex-1 flex flex-col min-h-0">
                  <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
-                   <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">SPARQL Query</span>
+                   <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">SPARQL Query Editor</span>
                    <div className="flex gap-2">
-                      <button className="text-slate-400 hover:text-blue-600" title="Copy">
-                        <Code2 size={14} />
+                      <button className="p-1 text-slate-400 hover:text-blue-600 transition-colors" title="Copy to Clipboard" onClick={() => navigator.clipboard.writeText(query)}>
+                        <Code2 size={16} />
                       </button>
                    </div>
                  </div>
                  <textarea 
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="flex-1 w-full p-4 font-mono text-sm text-slate-800 bg-white focus:outline-none resize-none leading-relaxed code-scroll"
+                    className="flex-1 w-full p-4 font-mono text-sm text-slate-800 bg-white focus:outline-none resize-none leading-relaxed overflow-auto code-scroll"
                     spellCheck={false}
+                    aria-label="SPARQL Query"
                  />
                </div>
 
-               <div className="h-1/3 border-t border-slate-200 flex flex-col bg-slate-50">
-                  <div className="px-4 py-2 border-b border-slate-200 flex justify-between items-center">
-                    <span className="text-xs font-bold text-slate-500 uppercase">Sample Queries</span>
+               <div className="h-1/3 border-t border-slate-200 flex flex-col bg-slate-50 overflow-hidden">
+                  <div className="px-4 py-2 border-b border-slate-200 flex justify-between items-center flex-shrink-0">
+                    <span className="text-xs font-bold text-slate-500 uppercase">Library</span>
                   </div>
-                  <div className="overflow-y-auto flex-1 p-2 space-y-1">
+                  <div className="overflow-y-auto flex-1 p-2 space-y-1 custom-scrollbar">
                     {SAMPLE_QUERIES.map((q, idx) => (
                       <button 
                         key={idx}
                         onClick={() => handleSampleClick(q.sparql)}
-                        className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-white hover:text-blue-600 rounded-md border border-transparent hover:border-slate-200 transition-colors truncate"
+                        className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-white hover:text-blue-600 rounded-md border border-transparent hover:border-slate-200 transition-all truncate shadow-sm hover:shadow"
                       >
                         {q.name}
                       </button>
@@ -311,38 +322,39 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* Right Pane (Results) */}
-          <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0">
+          {/* Right Results Pane */}
+          <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
+            {/* Error Overlay */}
             {error && (
-              <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200 shadow-sm flex items-start gap-3">
+              <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                 <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
-                <div className="text-sm whitespace-pre-wrap font-medium">{error}</div>
-                <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-700">×</button>
+                <div className="text-sm whitespace-pre-wrap font-medium flex-1">{error}</div>
+                <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-700 text-xl font-bold leading-none" aria-label="Dismiss error">&times;</button>
               </div>
             )}
 
             {viewMode === ViewMode.VISUALIZE ? (
-              <div className="flex-1 p-4 h-full">
+              <div className="flex-1 p-4 h-full overflow-hidden">
                 <GraphView data={sparqlResult} />
               </div>
             ) : (
               <div className="flex-1 flex flex-col h-full overflow-hidden">
-                <div className="px-6 py-3 border-b border-slate-200 bg-white flex justify-between items-center">
+                <div className="px-6 py-3 border-b border-slate-200 bg-white flex justify-between items-center flex-shrink-0 shadow-sm">
                   <h3 className="text-sm font-semibold text-slate-700">
-                    Results 
-                    {sparqlResult && <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-xs font-normal">{sparqlResult.results.bindings.length} rows</span>}
+                    Results View 
+                    {sparqlResult && <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-xs font-normal border border-slate-200">{sparqlResult.results.bindings.length} records</span>}
                   </h3>
                   {sparqlResult && (
-                     <button className="text-slate-400 hover:text-blue-600 flex items-center gap-1 text-xs">
+                     <button className="text-slate-400 hover:text-blue-600 flex items-center gap-1 text-xs transition-colors">
                        <Download size={14} /> Export CSV
                      </button>
                   )}
                 </div>
-                <div className="flex-1 overflow-auto bg-white">
+                <div className="flex-1 overflow-auto bg-white custom-scrollbar">
                   {isLoading ? (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400">
                       <Loader2 className="animate-spin mb-2" size={32} />
-                      <p className="text-sm">Executing query...</p>
+                      <p className="text-sm animate-pulse">Running SPARQL query...</p>
                     </div>
                   ) : (
                     <ResultsTable data={sparqlResult} />
@@ -353,7 +365,7 @@ const App: React.FC = () => {
           </div>
 
         </div>
-      </div>
+      </main>
     </div>
   );
 };
