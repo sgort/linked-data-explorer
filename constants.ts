@@ -1,3 +1,5 @@
+export const APP_VERSION = "1.1"; // Increment this to force-refresh user settings
+
 export const DEFAULT_ENDPOINT = "http://localhost:3030/ds/query";
 
 export const PRESET_ENDPOINTS = [

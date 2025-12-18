@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Share2, Play, Settings, AlertCircle, Loader2, Code2, Download, Plus, Trash2 } from 'lucide-react';
-import { DEFAULT_ENDPOINT, SAMPLE_QUERIES, COMMON_PREFIXES, PRESET_ENDPOINTS } from './constants';
+import { APP_VERSION, DEFAULT_ENDPOINT, SAMPLE_QUERIES, COMMON_PREFIXES, PRESET_ENDPOINTS } from './constants';
 import { executeSparqlQuery } from './services/sparqlService';
 import { ViewMode, SparqlResponse } from './types';
 import GraphView from './components/GraphView';
@@ -8,11 +8,19 @@ import ResultsTable from './components/ResultsTable';
 
 const STORAGE_KEY_ENDPOINTS = 'lde_saved_endpoints';
 const STORAGE_KEY_LAST_ENDPOINT = 'lde_last_endpoint';
+const STORAGE_KEY_VERSION = 'lde_app_version';
 
 const App: React.FC = () => {
-  // State Initialization with LocalStorage logic
+  // 1. Initial State & Migration Logic
   const [savedEndpoints, setSavedEndpoints] = useState(() => {
     try {
+      const storedVersion = localStorage.getItem(STORAGE_KEY_VERSION);
+      
+      // If version is missing or old, ignore storage and use new constants
+      if (!storedVersion || storedVersion !== APP_VERSION) {
+        return PRESET_ENDPOINTS;
+      }
+
       const stored = localStorage.getItem(STORAGE_KEY_ENDPOINTS);
       if (stored) {
         return JSON.parse(stored);
@@ -24,7 +32,11 @@ const App: React.FC = () => {
   });
 
   const [endpoint, setEndpoint] = useState(() => {
-    // Try to restore last used endpoint, else default to Geregistreerd Partner (index 3)
+    const storedVersion = localStorage.getItem(STORAGE_KEY_VERSION);
+    // If migration needed, force the new default
+    if (!storedVersion || storedVersion !== APP_VERSION) {
+      return PRESET_ENDPOINTS[3].url;
+    }
     return localStorage.getItem(STORAGE_KEY_LAST_ENDPOINT) || PRESET_ENDPOINTS[3].url;
   });
 
@@ -39,20 +51,21 @@ const App: React.FC = () => {
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
 
-  // Persist endpoints when changed
+  // 2. Persistance Effects
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_ENDPOINTS, JSON.stringify(savedEndpoints));
+      localStorage.setItem(STORAGE_KEY_VERSION, APP_VERSION);
     } catch (e) {
       console.warn("Failed to save endpoints", e);
     }
   }, [savedEndpoints]);
 
-  // Persist current selection
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_LAST_ENDPOINT, endpoint);
   }, [endpoint]);
 
+  // 3. Handlers
   const handleRunQuery = async () => {
     setIsLoading(true);
     setError(null);
@@ -60,7 +73,6 @@ const App: React.FC = () => {
       const data = await executeSparqlQuery(endpoint, query);
       setSparqlResult(data);
       
-      // Auto-switch to Visualize if asking for triples (s p o)
       if (query.includes('?s ?p ?o')) {
           setViewMode(ViewMode.VISUALIZE);
       }
@@ -90,11 +102,10 @@ const App: React.FC = () => {
     setSavedEndpoints(newEndpoints);
   };
 
-  // Reset to defaults if needed
   const handleResetDefaults = () => {
     if (confirm("Reset endpoints to default system presets?")) {
       setSavedEndpoints(PRESET_ENDPOINTS);
-      setEndpoint(PRESET_ENDPOINTS[3].url); // Also reset active endpoint to default
+      setEndpoint(PRESET_ENDPOINTS[3].url);
     }
   };
 
