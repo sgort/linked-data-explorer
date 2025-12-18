@@ -100,7 +100,7 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collide", d3.forceCollide().radius(50));
 
-    // Arrow markers defined in defs
+    // Arrow markers
     const defs = svg.append("defs");
     defs.append("marker")
       .attr("id", "arrowhead")
@@ -114,7 +114,16 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
       .attr("d", "M0,-5L10,0L0,5")
       .attr("fill", "#94a3b8");
 
-    // Drawing Links inside the zoom container
+    // Zoom behavior - Apply to SVG but transform the CONTAINER group
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.1, 8])
+      .on("zoom", (event) => {
+        container.attr("transform", event.transform);
+      });
+
+    svg.call(zoom);
+
+    // Drawing Links
     const linkLayer = container.append("g").attr("class", "links");
     
     const linkGroup = linkLayer.selectAll("g")
@@ -135,7 +144,7 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
       .style("pointer-events", "none")
       .style("font-weight", "500");
 
-    // Drawing Nodes inside the zoom container
+    // Drawing Nodes
     const nodeLayer = container.append("g").attr("class", "nodes");
 
     const nodeGroup = nodeLayer.selectAll("g")
@@ -164,15 +173,6 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
       .style("text-shadow", "0px 0px 4px #fff, 0px 0px 4px #fff");
 
     nodeGroup.append("title").text(d => d.id);
-
-    // Zoom behavior - Apply to SVG but transform the CONTAINER group
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.1, 4])
-      .on("zoom", (event) => {
-        container.attr("transform", event.transform);
-      });
-
-    svg.call(zoom);
 
     simulation.on("tick", () => {
       linkPath

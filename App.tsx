@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Database, Share2, Play, Settings, AlertCircle, Loader2, Code2, Download, Plus, Trash2, Sparkles } from 'lucide-react';
+import { Database, Share2, Play, Settings, AlertCircle, Loader2, Code2, Download, Plus, Trash2 } from 'lucide-react';
 import { SAMPLE_QUERIES, PRESET_ENDPOINTS } from './constants';
 import { executeSparqlQuery } from './services/sparqlService';
-import { generateSparqlQuery } from './services/geminiService';
 import { ViewMode, SparqlResponse } from './types';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
@@ -15,14 +14,12 @@ const App: React.FC = () => {
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].sparql);
   const [sparqlResult, setSparqlResult] = useState<SparqlResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.QUERY);
   const [showSettings, setShowSettings] = useState(false);
   
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
-  const [aiPrompt, setAiPrompt] = useState('');
 
   const handleRunQuery = async () => {
     setIsLoading(true);
@@ -38,25 +35,6 @@ const App: React.FC = () => {
       setError(err.message || "An unknown error occurred");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleAiGenerate = async () => {
-    if (!aiPrompt.trim()) return;
-    setIsAiGenerating(true);
-    setError(null);
-    try {
-      const generatedQuery = await generateSparqlQuery(aiPrompt);
-      if (generatedQuery) {
-        setQuery(generatedQuery);
-        setAiPrompt('');
-      } else {
-        throw new Error("AI returned an empty query. Try rephrasing.");
-      }
-    } catch (err: any) {
-      setError(`AI Generation Failed: ${err.message}`);
-    } finally {
-      setIsAiGenerating(false);
     }
   };
 
@@ -82,12 +60,12 @@ const App: React.FC = () => {
   const handleResetDefaults = () => {
     if (confirm("Reset endpoints to default system presets?")) {
       setSavedEndpoints(PRESET_ENDPOINTS);
-      setEndpoint(PRESET_ENDPOINTS[3]?.url || PRESET_ENDPOINTS[0].url);
+      setEndpoint(PRESET_ENDPOINTS[1]?.url || PRESET_ENDPOINTS[0].url);
     }
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
       
       {/* Sidebar Navigation */}
       <nav className="w-16 md:w-20 bg-slate-900 flex flex-col items-center py-6 gap-6 z-20 flex-shrink-0">
@@ -187,7 +165,7 @@ const App: React.FC = () => {
                     className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-slate-600"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
-                     Changes are reset on browser refresh (Incognito safe).
+                     Changes are reset on browser refresh.
                   </p>
                 </div>
 
@@ -258,33 +236,6 @@ const App: React.FC = () => {
           {/* Left Editor Pane */}
           {viewMode !== ViewMode.VISUALIZE && (
             <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
-               
-               {/* AI Sparkle Section */}
-               <div className="p-4 bg-blue-50/50 border-b border-blue-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles size={14} className="text-blue-600" />
-                    <span className="text-xs font-bold text-blue-800 uppercase tracking-tight">AI Generation Assistant</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <input 
-                      type="text"
-                      placeholder="Describe what you want to find..."
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      className="flex-1 border border-blue-200 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white shadow-sm"
-                      onKeyDown={(e) => e.key === 'Enter' && handleAiGenerate()}
-                    />
-                    <button 
-                      onClick={handleAiGenerate}
-                      disabled={isAiGenerating || !aiPrompt.trim()}
-                      className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md shadow-sm disabled:opacity-50 transition-colors"
-                      title="Generate SPARQL"
-                    >
-                      {isAiGenerating ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
-                    </button>
-                  </div>
-               </div>
-
                <div className="flex-1 flex flex-col min-h-0">
                  <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">SPARQL Query Editor</span>

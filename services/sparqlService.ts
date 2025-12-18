@@ -14,7 +14,8 @@ export const executeSparqlQuery = async (
   
   // CORS Proxy fallback: some public endpoints block direct browser requests.
   if (useProxy) {
-    targetUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(endpoint + '?query=' + encodeURIComponent(query))}`;
+    // We use allorigins as a reliable public proxy
+    targetUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(endpoint + (endpoint.includes('?') ? '&' : '?') + 'query=' + encodeURIComponent(query))}`;
   }
 
   try {
@@ -23,15 +24,15 @@ export const executeSparqlQuery = async (
     };
 
     if (useProxy) {
-      // The proxy wraps the result in a JSON structure with the original body in 'contents'
       const proxyResponse = await fetch(targetUrl);
       if (!proxyResponse.ok) throw new Error("CORS Proxy failed to reach the endpoint.");
       const proxyData = await proxyResponse.json();
       
       if (!proxyData.contents) {
-        throw new Error("Proxy returned empty content. The endpoint might be down.");
+        throw new Error("Proxy returned empty content. The endpoint might be down or unreachable.");
       }
       
+      // The proxy wraps the result in 'contents'
       return JSON.parse(proxyData.contents) as SparqlResponse;
     } else {
       const formBody = new URLSearchParams();
@@ -62,22 +63,20 @@ export const executeSparqlQuery = async (
   } catch (error: any) {
     console.error("SPARQL Execution Failed:", error);
     
-    // Auto-retry with proxy if it looks like a CORS/Network failure
-    if (!useProxy && error.name === 'TypeError' && error.message === 'Failed to fetch') {
-       console.log("Direct fetch failed (likely CORS). Retrying via proxy...");
+    // Auto-retry with proxy if it looks like a CORS/Network failure on a remote host
+    const isRemote = !endpoint.includes('localhost') && !endpoint.includes('127.0.0.1');
+    if (!useProxy && isRemote && (error.name === 'TypeError' || error.message.includes('Failed to fetch'))) {
+       console.log("Direct fetch failed. Retrying via CORS proxy...");
        return executeSparqlQuery(endpoint, query, true);
     }
 
-    if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+    if (error.message.includes('Failed to fetch')) {
          const isLocal = endpoint.includes('localhost') || endpoint.includes('127.0.0.1');
-         let msg = `CORS/Network Error: Unable to reach ${endpoint}.`;
-         msg += `\n\nPotential Fixes:`;
+         let msg = `CORS or Connection Error: Unable to reach ${endpoint}.`;
          if (isLocal) {
-             msg += `\n- Ensure Jena Fuseki is running locally.`;
-             msg += `\n- Start Jena with CORS enabled: fuseki-server --cors`;
+             msg += `\n\nEnsure Jena Fuseki/TripleDB is running and CORS is enabled (--cors flag).`;
          } else {
-             msg += `\n- The server might block Cross-Origin requests.`;
-             msg += `\n- Check if the URL is correct and supports SPARQL JSON results.`;
+             msg += `\n\nThe server might be blocking browser requests or the URL is incorrect.`;
          }
          throw new Error(msg);
     }
