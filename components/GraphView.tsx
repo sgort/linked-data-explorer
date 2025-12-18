@@ -1,6 +1,8 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { SparqlResponse, GraphNode, GraphLink } from '../types';
+import { Share2 } from 'lucide-react';
 
 interface GraphViewProps {
   data: SparqlResponse | null;
@@ -35,13 +37,10 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
     const width = dimensions.width;
     const height = dimensions.height;
 
-    // Process SPARQL results into Graph structure
-    // We assume bindings contain ?s ?p ?o OR just generic columns we try to link
-    // For specific structure visualization, we expect variables named 's', 'p', 'o'
-    // or we assume row-based relationships.
-    // Heuristic: If s, p, o exist, use them. Otherwise, create a central node for each row? 
-    // Let's implement the Triples (s-p-o) heuristic primarily.
-    
+    // Create a single container group for all graph elements. 
+    // Zoom/Pan will be applied ONLY to this group.
+    const container = svg.append("g").attr("class", "zoom-container");
+
     const nodesMap = new Map<string, GraphNode>();
     const links: GraphLink[] = [];
 
@@ -50,17 +49,17 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
         nodesMap.set(val, {
           id: val,
           group: isSubject ? 1 : 2,
-          label: val.split('/').pop()?.split('#').pop() || val, // Simple label extraction
+          label: val.split('/').pop()?.split('#').pop() || val,
           type,
-          x: width / 2 + (Math.random() - 0.5) * 50,
-          y: height / 2 + (Math.random() - 0.5) * 50
+          x: width / 2 + (Math.random() - 0.5) * 100,
+          y: height / 2 + (Math.random() - 0.5) * 100
         });
       }
       return nodesMap.get(val)!;
     };
 
     data.results.bindings.forEach((binding) => {
-      // Check if this is an explicit S-P-O query
+      // Use explicit s-p-o or first column as subject
       if (binding.s && binding.p && binding.o) {
         const source = getOrCreateNode(binding.s.value, binding.s.type as any, true);
         const target = getOrCreateNode(binding.o.value, binding.o.type as any, false);
@@ -72,7 +71,6 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
           predicate: predicate.split('/').pop()?.split('#').pop() || predicate
         });
       } else {
-        // Fallback: If not S-P-O, visualize connection between first column and others
         const vars = Object.keys(binding);
         if (vars.length < 2) return;
         
@@ -81,62 +79,66 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
         
         for (let i = 1; i < vars.length; i++) {
           const v = vars[i];
-          const leafNode = getOrCreateNode(binding[v].value, binding[v].type as any, false);
-          links.push({
-            source: rootNode.id,
-            target: leafNode.id,
-            predicate: v
-          });
+          if (binding[v]) {
+            const leafNode = getOrCreateNode(binding[v].value, binding[v].type as any, false);
+            links.push({
+              source: rootNode.id,
+              target: leafNode.id,
+              predicate: v
+            });
+          }
         }
       }
     });
 
     const nodes = Array.from(nodesMap.values());
 
-    // D3 Simulation
+    // D3 Simulation setup
     const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(150))
-      .force("charge", d3.forceManyBody().strength(-300))
+      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(220))
+      .force("charge", d3.forceManyBody().strength(-600))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collide", d3.forceCollide().radius(30));
+      .force("collide", d3.forceCollide().radius(50));
 
-    // Arrow markers
-    svg.append("defs").selectAll("marker")
-      .data(["end"])
-      .enter().append("marker")
-      .attr("id", "arrow")
+    // Arrow markers defined in defs
+    const defs = svg.append("defs");
+    defs.append("marker")
+      .attr("id", "arrowhead")
       .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 25) // Shift arrow back
+      .attr("refX", 30) 
       .attr("refY", 0)
       .attr("markerWidth", 6)
       .attr("markerHeight", 6)
       .attr("orient", "auto")
       .append("path")
       .attr("d", "M0,-5L10,0L0,5")
-      .attr("fill", "#999");
+      .attr("fill", "#94a3b8");
 
-    const link = svg.append("g")
-      .attr("class", "links")
-      .selectAll("line")
+    // Drawing Links inside the zoom container
+    const linkLayer = container.append("g").attr("class", "links");
+    
+    const linkGroup = linkLayer.selectAll("g")
       .data(links)
       .enter().append("g");
 
-    const linkPath = link.append("line")
-      .attr("stroke", "#999")
+    const linkPath = linkGroup.append("line")
+      .attr("stroke", "#cbd5e1")
       .attr("stroke-opacity", 0.6)
       .attr("stroke-width", 1.5)
-      .attr("marker-end", "url(#arrow)");
+      .attr("marker-end", "url(#arrowhead)");
 
-    const linkText = link.append("text")
+    const linkText = linkGroup.append("text")
       .text(d => d.predicate)
       .attr("font-size", "10px")
-      .attr("fill", "#555")
+      .attr("fill", "#64748b")
       .attr("text-anchor", "middle")
-      .style("pointer-events", "none");
+      .style("pointer-events", "none")
+      .style("font-weight", "500");
 
-    const node = svg.append("g")
-      .attr("class", "nodes")
-      .selectAll("g")
+    // Drawing Nodes inside the zoom container
+    const nodeLayer = container.append("g").attr("class", "nodes");
+
+    const nodeGroup = nodeLayer.selectAll("g")
       .data(nodes)
       .enter().append("g")
       .call(d3.drag<SVGGElement, GraphNode>()
@@ -144,30 +146,30 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
           .on("drag", dragged)
           .on("end", dragended) as any);
 
-    node.append("circle")
-      .attr("r", 15)
+    nodeGroup.append("circle")
+      .attr("r", 16)
       .attr("fill", d => d.group === 1 ? "#3b82f6" : (d.type === 'literal' ? "#10b981" : "#f59e0b"))
       .attr("stroke", "#fff")
-      .attr("stroke-width", 1.5);
+      .attr("stroke-width", 2)
+      .attr("class", "shadow-sm hover:stroke-slate-400 cursor-pointer");
 
-    node.append("text")
-      .text(d => d.label.length > 20 ? d.label.substring(0, 20) + '...' : d.label)
-      .attr("x", 18)
+    nodeGroup.append("text")
+      .text(d => d.label.length > 25 ? d.label.substring(0, 25) + '...' : d.label)
+      .attr("x", 20)
       .attr("y", 5)
-      .style("font-size", "12px")
-      .style("font-family", "Inter, sans-serif")
-      .style("fill", "#333")
+      .style("font-size", "11px")
+      .style("font-weight", "600")
+      .style("fill", "#1e293b")
       .style("pointer-events", "none")
-      .style("text-shadow", "1px 1px 0 #fff");
+      .style("text-shadow", "0px 0px 4px #fff, 0px 0px 4px #fff");
 
-    node.append("title")
-      .text(d => d.id);
+    nodeGroup.append("title").text(d => d.id);
 
-    // Zoom behavior
+    // Zoom behavior - Apply to SVG but transform the CONTAINER group
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
       .on("zoom", (event) => {
-        svg.selectAll("g").attr("transform", event.transform);
+        container.attr("transform", event.transform);
       });
 
     svg.call(zoom);
@@ -183,8 +185,7 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
         .attr("x", (d: any) => (d.source.x + d.target.x) / 2)
         .attr("y", (d: any) => (d.source.y + d.target.y) / 2 - 5);
 
-      node
-        .attr("transform", d => `translate(${d.x},${d.y})`);
+      nodeGroup.attr("transform", d => `translate(${d.x},${d.y})`);
     });
 
     function dragstarted(event: any, d: GraphNode) {
@@ -210,23 +211,28 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
   }, [data, dimensions]);
 
   return (
-    <div ref={wrapperRef} className="w-full h-full bg-slate-50 rounded-lg overflow-hidden border border-slate-200 shadow-inner relative">
+    <div ref={wrapperRef} className="w-full h-full bg-white rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
        {(!data || data.results.bindings.length === 0) && (
-        <div className="absolute inset-0 flex items-center justify-center text-slate-400">
-          <p>Run a query to visualize data</p>
+        <div className="absolute inset-0 flex items-center justify-center text-slate-400 bg-slate-50/50">
+          <p className="flex items-center gap-2 font-medium">
+            <Share2 size={18} />
+            Run a query to visualize the knowledge graph
+          </p>
         </div>
       )}
-      <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="w-full h-full cursor-grab active:cursor-grabbing"></svg>
+      <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="w-full h-full cursor-grab active:cursor-grabbing">
+        {/* Graph will be rendered here */}
+      </svg>
       
-      <div className="absolute bottom-4 left-4 bg-white/90 p-3 rounded shadow backdrop-blur-sm text-xs border border-slate-200">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-3 h-3 rounded-full bg-blue-500"></span> Subject / Entity
-        </div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-3 h-3 rounded-full bg-amber-500"></span> Object (URI/BNode)
+      <div className="absolute bottom-4 left-4 bg-white/80 p-3 rounded-lg shadow-sm backdrop-blur-md text-[10px] border border-slate-200 flex flex-col gap-1.5 uppercase tracking-wider font-bold text-slate-500 z-10">
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-blue-500 ring-2 ring-blue-100"></span> Subject / Entity
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-emerald-500"></span> Literal Value
+          <span className="w-3 h-3 rounded-full bg-amber-500 ring-2 ring-amber-100"></span> Object (URI/BNode)
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-emerald-100"></span> Literal Value
         </div>
       </div>
     </div>
