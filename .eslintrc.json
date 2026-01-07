@@ -1,0 +1,25 @@
+{
+  "extends": ["react-app", "react-app/jest", "plugin:prettier/recommended"],
+  "plugins": ["simple-import-sort", "import"],
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "extensions": [".js", ".jsx", ".ts", ".tsx"]
+      }
+    }
+  },
+  "rules": {
+    "react/prop-types": "off",
+    "import/no-unresolved": ["error", { "caseSensitive": true }],
+    "simple-import-sort/imports": "error",
+    "simple-import-sort/exports": "error",
+    "import/no-named-as-default": "off",
+    "no-unused-vars": [
+      "warn",
+      {
+        "varsIgnorePattern": "^_",
+        "argsIgnorePattern": "^_"
+      }
+    ]
+  }
+}
