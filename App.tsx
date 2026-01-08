@@ -4,6 +4,7 @@ import {
   Code2,
   Database,
   Download,
+  GitBranch,
   Loader2,
   Play,
   Plus,
@@ -15,8 +16,9 @@ import React, { useState } from 'react';
 
 import Changelog from './components/Changelog';
 import GraphView from './components/GraphView';
+import OrchestrationView from './components/OrchestrationView';
 import ResultsTable from './components/ResultsTable';
-import { PRESET_ENDPOINTS, SAMPLE_QUERIES } from './constants';
+import { ALL_QUERIES, DMN_QUERIES, PRESET_ENDPOINTS, SAMPLE_QUERIES } from './constants';
 import { executeSparqlQuery } from './services/sparqlService';
 import { SparqlResponse, ViewMode } from './types';
 
@@ -54,8 +56,27 @@ const App: React.FC = () => {
   };
 
   const handleSampleClick = (sampleQuery: string) => {
-    setQuery(sampleQuery);
-    setViewMode(ViewMode.QUERY);
+    // Find the actual query object
+    const queryObj = ALL_QUERIES.find((q) => q.name === sampleQuery || q.sparql === sampleQuery);
+
+    if (queryObj) {
+      setQuery(queryObj.sparql);
+
+      // If it's an orchestration query, switch to orchestration view
+      if ('category' in queryObj && queryObj.category === 'orchestration') {
+        setViewMode(ViewMode.ORCHESTRATION);
+      } else {
+        setViewMode(ViewMode.QUERY);
+      }
+    }
+  };
+
+  const handleRunQueryFromOrchestration = (queryName: string) => {
+    const queryObj = DMN_QUERIES.find((q) => q.name === queryName);
+    if (queryObj) {
+      setQuery(queryObj.sparql);
+      handleRunQuery();
+    }
   };
 
   const handleAddEndpoint = () => {
@@ -79,6 +100,12 @@ const App: React.FC = () => {
     }
   };
 
+  const getLibraryQueries = () => {
+    // For now, always show SAMPLE_QUERIES
+    // DMN queries are accessed via "Discover DMNs" button
+    return SAMPLE_QUERIES;
+  };
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
       {/* Sidebar Navigation */}
@@ -94,6 +121,14 @@ const App: React.FC = () => {
             title="SPARQL Editor"
           >
             <Code2 size={24} />
+          </button>
+
+          <button
+            onClick={() => setViewMode(ViewMode.ORCHESTRATION)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.ORCHESTRATION ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="DMN Orchestration"
+          >
+            <GitBranch size={24} />
           </button>
 
           <button
@@ -182,6 +217,15 @@ const App: React.FC = () => {
             <div className="flex-1 overflow-hidden">
               <Changelog />
             </div>
+          )}
+
+          {/* Orchestration View (Full Width) */}
+          {viewMode === ViewMode.ORCHESTRATION && (
+            <OrchestrationView
+              sparqlResult={sparqlResult}
+              isLoading={isLoading}
+              onRunQuery={handleRunQueryFromOrchestration}
+            />
           )}
 
           {/* Settings Panel Overlay */}
@@ -303,53 +347,55 @@ const App: React.FC = () => {
           )}
 
           {/* Left Editor Pane */}
-          {viewMode !== ViewMode.VISUALIZE && viewMode !== ViewMode.CHANGELOG && (
-            <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
-              <div className="flex-1 flex flex-col min-h-0">
-                <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    SPARQL Query Editor
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
-                      title="Copy to Clipboard"
-                      onClick={() => navigator.clipboard.writeText(query)}
-                    >
-                      <Code2 size={16} />
-                    </button>
+          {viewMode !== ViewMode.VISUALIZE &&
+            viewMode !== ViewMode.CHANGELOG &&
+            viewMode !== ViewMode.ORCHESTRATION && (
+              <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      SPARQL Query Editor
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                        title="Copy to Clipboard"
+                        onClick={() => navigator.clipboard.writeText(query)}
+                      >
+                        <Code2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="flex-1 w-full p-4 font-mono text-sm text-slate-800 bg-white focus:outline-none resize-none leading-relaxed overflow-auto code-scroll"
+                    spellCheck={false}
+                    aria-label="SPARQL Query"
+                  />
+                </div>
+
+                <div className="h-1/3 border-t border-slate-200 flex flex-col bg-slate-50 overflow-hidden">
+                  <div className="px-4 py-2 border-b border-slate-200 flex justify-between items-center flex-shrink-0">
+                    <span className="text-xs font-bold text-slate-500 uppercase">Library</span>
+                  </div>
+                  <div className="overflow-y-auto flex-1 p-2 space-y-1 custom-scrollbar">
+                    {getLibraryQueries().map((q, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSampleClick(q.name)}
+                        className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-white hover:text-blue-600 rounded-md border border-transparent hover:border-slate-200 transition-all truncate shadow-sm hover:shadow"
+                      >
+                        {q.name}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <textarea
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="flex-1 w-full p-4 font-mono text-sm text-slate-800 bg-white focus:outline-none resize-none leading-relaxed overflow-auto code-scroll"
-                  spellCheck={false}
-                  aria-label="SPARQL Query"
-                />
               </div>
-
-              <div className="h-1/3 border-t border-slate-200 flex flex-col bg-slate-50 overflow-hidden">
-                <div className="px-4 py-2 border-b border-slate-200 flex justify-between items-center flex-shrink-0">
-                  <span className="text-xs font-bold text-slate-500 uppercase">Library</span>
-                </div>
-                <div className="overflow-y-auto flex-1 p-2 space-y-1 custom-scrollbar">
-                  {SAMPLE_QUERIES.map((q, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSampleClick(q.sparql)}
-                      className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-white hover:text-blue-600 rounded-md border border-transparent hover:border-slate-200 transition-all truncate shadow-sm hover:shadow"
-                    >
-                      {q.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+            )}
 
           {/* Right Results Pane */}
-          {viewMode !== ViewMode.CHANGELOG && (
+          {viewMode !== ViewMode.CHANGELOG && viewMode !== ViewMode.ORCHESTRATION && (
             <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
               {/* Error Overlay */}
               {error && (
