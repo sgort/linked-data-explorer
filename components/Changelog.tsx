@@ -3,26 +3,6 @@ import React, { useState } from 'react';
 
 import changelogData from '../changelog.json';
 
-interface ChangelogItem {
-  title: string;
-  icon: string;
-  iconColor: string;
-  items: string[];
-}
-
-interface ChangelogVersion {
-  version: string;
-  status: string;
-  statusColor: string;
-  borderColor: string;
-  date: string;
-  sections: ChangelogItem[];
-}
-
-interface ChangelogData {
-  versions: ChangelogVersion[];
-}
-
 const Changelog: React.FC = () => {
   const [expandedVersions, setExpandedVersions] = useState<Set<string>>(
     new Set([changelogData.versions[0]?.version])
@@ -173,12 +153,12 @@ const Changelog: React.FC = () => {
           </p>
           <div className="flex flex-wrap gap-4 text-xs">
             <a
-              href="https://git.open-regels.nl/hosting/linked-data-explorer"
+              href="https://github.com/yourorg/linked-data-explorer"
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
             >
-              📦 Gitlab Repository
+              📦 GitHub Repository
             </a>
             <a
               href="https://acc.linkeddata.open-regels.nl"
