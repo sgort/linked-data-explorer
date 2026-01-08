@@ -3,6 +3,10 @@ export const DEFAULT_ENDPOINT = 'http://localhost:3030/ds/query';
 export const PRESET_ENDPOINTS = [
   { name: 'Local Jena', url: 'http://localhost:3030/ds/query' },
   {
+    name: 'DMN Discovery',
+    url: 'https://api.open-regels.triply.cc/datasets/stevengort/DMN-discovery/services/DMN-discovery/sparql',
+  },
+  {
     name: 'Facts Jena',
     url: 'https://api.open-regels.triply.cc/datasets/stevengort/facts/services/facts-jena/sparql',
   },
