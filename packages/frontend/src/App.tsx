@@ -71,11 +71,24 @@ const App: React.FC = () => {
     }
   };
 
-  const handleRunQueryFromOrchestration = (queryName: string) => {
+  const handleRunQueryFromOrchestration = async (queryName: string) => {
     const queryObj = DMN_QUERIES.find((q) => q.name === queryName);
-    if (queryObj) {
-      setQuery(queryObj.sparql);
-      handleRunQuery();
+    if (!queryObj) return;
+
+    setQuery(queryObj.sparql); // For editor display
+
+    // Execute immediately with actual query text
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const data = await executeSparqlQuery(endpoint, queryObj.sparql); // ← Direct!
+      setSparqlResult(data);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
