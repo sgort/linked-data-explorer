@@ -14,7 +14,7 @@
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",
     "check-format": "npm run check-format --workspaces --if-present",
-    "prepare": "husky"
+    "postinstall": "husky install || true"
   },
   "devDependencies": {
     "husky": "^9.1.7",
