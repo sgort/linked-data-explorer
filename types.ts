@@ -1,11 +1,11 @@
-import { SimulationNodeDatum, SimulationLinkDatum } from 'd3';
+import { SimulationLinkDatum, SimulationNodeDatum } from 'd3';
 
 // SPARQL Response Types
 export interface SparqlBinding {
   type: string;
   value: string;
   datatype?: string;
-  "xml:lang"?: string;
+  'xml:lang'?: string;
 }
 
 export interface SparqlResultHead {
@@ -49,7 +49,7 @@ export interface GraphData {
 // App Types
 export enum ViewMode {
   QUERY = 'QUERY',
-  VISUALIZE = 'VISUALIZE'
+  VISUALIZE = 'VISUALIZE',
 }
 
 export interface EndpointConfig {
