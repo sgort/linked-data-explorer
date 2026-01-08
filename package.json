@@ -1,50 +1,39 @@
 {
-  "name": "linked-data-explorer",
+  "name": "linked-data-explorer-monorepo",
+  "version": "0.2.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "description": "Monorepo for Linked Data Explorer - RONL DMN Orchestration Platform",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "prepare": "husky",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "check-format": "prettier --check ."
-  },
-  "dependencies": {
-    "@google/genai": "^1.33.0",
-    "d3": "^7.9.0",
-    "lucide-react": "^0.561.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "dev": "npm run dev --workspace=@linked-data-explorer/frontend",
+    "build": "npm run build --workspace=@linked-data-explorer/frontend",
+    "preview": "npm run preview --workspace=@linked-data-explorer/frontend",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
+    "check-format": "npm run check-format --workspaces --if-present",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
-    "@types/d3": "^7.4.3",
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "eslint": "^9.39.2",
-    "eslint-config-prettier": "^9.1.2",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.26",
-    "eslint-plugin-simple-import-sort": "^12.1.1",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
-    "prettier": "^3.7.4",
-    "typescript": "~5.8.2",
-    "typescript-eslint": "^8.52.0",
-    "vite": "^6.2.0"
+    "lint-staged": "^16.2.7"
   },
   "lint-staged": {
-    "**/*.{js,jsx,ts,tsx,json,css,md}": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "package.json": [
-      "prettier --write"
+    "packages/frontend/**/*.{js,jsx,ts,tsx,json,css,md}": [
+      "cd packages/frontend && npx prettier --write",
+      "cd packages/frontend && npx eslint --fix"
     ]
-  }
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ictu/linked-data-explorer.git"
+  },
+  "author": "ICTU - Regels Overheid",
+  "license": "EUPL-1.2"
 }
