@@ -22,8 +22,8 @@
   },
   "lint-staged": {
     "packages/frontend/**/*.{js,jsx,ts,tsx,json,css,md}": [
-      "cd packages/frontend && npx prettier --write",
-      "cd packages/frontend && npx eslint --fix"
+      "prettier --write",
+      "eslint --config packages/frontend/eslint.config.js --fix"
     ]
   },
   "engines": {
