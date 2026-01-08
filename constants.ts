@@ -22,6 +22,8 @@ PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX m8g: <http://data.europa.eu/m8g/>
 PREFIX eli: <http://data.europa.eu/eli/ontology#>
 PREFIX ronl: <https://regels.overheid.nl/termen/>
+PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
+PREFIX schema: <http://schema.org/>
 `;
 
 export const SAMPLE_QUERIES = [
@@ -132,3 +134,189 @@ WHERE {
 ORDER BY ?serviceTitle`,
   },
 ];
+
+// DMN Orchestration Queries
+export const DMN_QUERIES = [
+  {
+    name: 'Find All DMNs',
+    category: 'orchestration',
+    sparql: `${COMMON_PREFIXES}
+SELECT DISTINCT ?dmn ?identifier ?title ?apiEndpoint ?deploymentId ?service 
+       ?inputUri ?inputId ?inputType ?inputTitle
+       ?outputUri ?outputId ?outputType ?outputTitle
+WHERE {
+  # Core DMN properties
+  ?dmn a cprmv:DecisionModel ;
+       dct:identifier ?identifier ;
+       dct:title ?title ;
+       ronl:implementedBy ?apiEndpoint .
+  
+  OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
+  OPTIONAL { ?dmn cpsv:implements ?service }
+  
+  # Get all inputs
+  OPTIONAL {
+    ?inputUri a cpsv:Input ;
+              cpsv:isRequiredBy ?dmn ;
+              dct:identifier ?inputId ;
+              dct:type ?inputType .
+    OPTIONAL { ?inputUri dct:title ?inputTitle }
+  }
+  
+  # Get all outputs
+  OPTIONAL {
+    ?outputUri a cpsv:Output ;
+               cpsv:produces ?dmn ;
+               dct:identifier ?outputId ;
+               dct:type ?outputType .
+    OPTIONAL { ?outputUri dct:title ?outputTitle }
+  }
+  
+  FILTER(LANG(?title) = "nl" || LANG(?title) = "")
+}
+ORDER BY ?title ?inputId ?outputId`,
+  },
+  {
+    name: 'DMN Input/Output Details',
+    category: 'orchestration',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?dmn ?dmnTitle ?inputUri ?inputId ?inputType ?outputUri ?outputId ?outputType ?outputValue
+WHERE {
+  ?dmn a cprmv:DecisionModel ;
+       dct:title ?dmnTitle .
+  
+  OPTIONAL {
+    ?inputUri a cpsv:Input ;
+              cpsv:isRequiredBy ?dmn ;
+              dct:identifier ?inputId ;
+              dct:type ?inputType .
+  }
+  
+  OPTIONAL {
+    ?outputUri a cpsv:Output ;
+               cpsv:produces ?dmn ;
+               dct:identifier ?outputId ;
+               dct:type ?outputType .
+    OPTIONAL { ?outputUri schema:value ?outputValue }
+  }
+  
+  FILTER(LANG(?dmnTitle) = "nl" || LANG(?dmnTitle) = "")
+}
+ORDER BY ?dmnTitle ?inputId ?outputId`,
+  },
+  {
+    name: 'Find DMN Chains',
+    category: 'orchestration',
+    sparql: `${COMMON_PREFIXES}
+SELECT DISTINCT ?dmn1 ?dmn1Title ?dmn2 ?dmn2Title ?variableId ?variableType
+WHERE {
+  # DMN1 produces output
+  ?output1 a cpsv:Output ;
+           cpsv:produces ?dmn1 ;
+           dct:identifier ?variableId ;
+           dct:type ?variableType .
+  
+  # DMN2 requires input with same identifier
+  ?input2 a cpsv:Input ;
+          cpsv:isRequiredBy ?dmn2 ;
+          dct:identifier ?variableId ;
+          dct:type ?variableType .
+  
+  # Get DMN titles
+  ?dmn1 a cprmv:DecisionModel ;
+        dct:title ?dmn1Title .
+  
+  ?dmn2 a cprmv:DecisionModel ;
+        dct:title ?dmn2Title .
+  
+  # Ensure different DMNs
+  FILTER(?dmn1 != ?dmn2)
+  FILTER(LANG(?dmn1Title) = "nl" || LANG(?dmn1Title) = "")
+  FILTER(LANG(?dmn2Title) = "nl" || LANG(?dmn2Title) = "")
+}
+ORDER BY ?dmn1Title ?dmn2Title ?variableId`,
+  },
+  {
+    name: 'DMN Chain Paths (Transitive)',
+    category: 'orchestration',
+    sparql: `${COMMON_PREFIXES}
+SELECT DISTINCT ?startDmn ?startTitle ?endDmn ?endTitle ?pathLength
+WHERE {
+  # This is a simplified version - full transitive closure requires more complex SPARQL
+  # For now, we find direct and 2-hop chains
+  
+  {
+    # Direct connection (1-hop)
+    ?output1 cpsv:produces ?startDmn ;
+             dct:identifier ?var1 .
+    ?input2 cpsv:isRequiredBy ?endDmn ;
+            dct:identifier ?var1 .
+    FILTER(?var1 = ?var1)
+    BIND(1 AS ?pathLength)
+  }
+  UNION
+  {
+    # 2-hop connection
+    ?output1 cpsv:produces ?startDmn ;
+             dct:identifier ?var1 .
+    ?input2 cpsv:isRequiredBy ?middleDmn ;
+            dct:identifier ?var1 .
+    ?output2 cpsv:produces ?middleDmn ;
+             dct:identifier ?var2 .
+    ?input3 cpsv:isRequiredBy ?endDmn ;
+            dct:identifier ?var2 .
+    FILTER(?startDmn != ?middleDmn && ?middleDmn != ?endDmn && ?startDmn != ?endDmn)
+    BIND(2 AS ?pathLength)
+  }
+  
+  ?startDmn a cprmv:DecisionModel ;
+            dct:title ?startTitle .
+  ?endDmn a cprmv:DecisionModel ;
+          dct:title ?endTitle .
+  
+  FILTER(?startDmn != ?endDmn)
+  FILTER(LANG(?startTitle) = "nl" || LANG(?startTitle) = "")
+  FILTER(LANG(?endTitle) = "nl" || LANG(?endTitle) = "")
+}
+ORDER BY ?pathLength ?startTitle ?endTitle`,
+  },
+  {
+    name: 'DMN Complete Metadata',
+    category: 'orchestration',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?dmn ?identifier ?title ?apiEndpoint ?deploymentId ?service ?serviceTitle
+       (GROUP_CONCAT(DISTINCT ?inputId; separator=", ") as ?inputs)
+       (GROUP_CONCAT(DISTINCT ?outputId; separator=", ") as ?outputs)
+WHERE {
+  ?dmn a cprmv:DecisionModel ;
+       dct:identifier ?identifier ;
+       dct:title ?title ;
+       ronl:implementedBy ?apiEndpoint .
+  
+  OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
+  
+  OPTIONAL { 
+    ?dmn cpsv:implements ?service .
+    ?service dct:title ?serviceTitle .
+    FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "")
+  }
+  
+  OPTIONAL {
+    ?input cpsv:isRequiredBy ?dmn ;
+           dct:identifier ?inputId .
+  }
+  
+  OPTIONAL {
+    ?output cpsv:produces ?dmn ;
+            dct:identifier ?outputId .
+  }
+  
+  FILTER(LANG(?title) = "nl" || LANG(?title) = "")
+}
+GROUP BY ?dmn ?identifier ?title ?apiEndpoint ?deploymentId ?service ?serviceTitle
+ORDER BY ?title`,
+  },
+];
+
+// Combined queries for Library view
+export const ALL_QUERIES = [...SAMPLE_QUERIES, ...DMN_QUERIES];

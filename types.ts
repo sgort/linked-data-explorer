@@ -51,9 +51,51 @@ export enum ViewMode {
   QUERY = 'QUERY',
   VISUALIZE = 'VISUALIZE',
   CHANGELOG = 'CHANGELOG',
+  ORCHESTRATION = 'ORCHESTRATION', // NEW: DMN Orchestration view
 }
 
 export interface EndpointConfig {
   url: string;
   updateUrl?: string; // Optional for update queries
+}
+
+// DMN Orchestration Types
+export interface DmnVariable {
+  uri: string;
+  identifier: string;
+  type: string;
+  label?: string;
+}
+
+export interface DmnModel {
+  uri: string;
+  identifier: string;
+  title: string;
+  apiEndpoint: string;
+  deploymentId?: string;
+  service?: string;
+  inputs: DmnVariable[];
+  outputs: DmnVariable[];
+}
+
+export interface DmnChainLink {
+  sourceDmn: string;
+  targetDmn: string;
+  sourceOutput: string;
+  targetInput: string;
+  variableId: string;
+  variableType: string;
+}
+
+export interface DmnChain {
+  nodes: DmnModel[];
+  links: DmnChainLink[];
+}
+
+export interface OrchestrationState {
+  dmns: DmnModel[];
+  chains: DmnChainLink[];
+  selectedDmn: DmnModel | null;
+  isLoading: boolean;
+  error: string | null;
 }
