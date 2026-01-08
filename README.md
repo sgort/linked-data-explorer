@@ -12,20 +12,25 @@
 
 ## 📋 Table of Contents
 
-- [Overview](#overview)
-- [Features](#features)
-- [Live Deployments](#live-deployments)
-- [Technology Stack](#technology-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Development](#development)
-- [Code Quality](#code-quality)
-- [Deployment](#deployment)
-- [Usage Guide](#usage-guide)
-- [Contributing](#contributing)
-- [License](#license)
+- [Architecture Overview](#-architecture-overview)
+- [Overview](#-overview)
+- [Features](#-features)
+- [Live Deployments](#-live-deployments)
+- [Technology Stack](#-technology-stack)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [Development](#-development)
+- [Code Quality](#-code-quality)
+- [Deployment](#-deployment)
+- [Usage Guide](#-usage-guide)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
+
+## 🏗️ Architecture Overview
+
+![Architecture Overview](./static/img/architecture-overview.png)
 
 ## 🎯 Overview
 
