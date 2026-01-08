@@ -50,6 +50,7 @@ export interface GraphData {
 export enum ViewMode {
   QUERY = 'QUERY',
   VISUALIZE = 'VISUALIZE',
+  CHANGELOG = 'CHANGELOG',
 }
 
 export interface EndpointConfig {

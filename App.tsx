@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  BookOpen,
   Code2,
   Database,
   Download,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 
+import Changelog from './components/Changelog';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
 import { PRESET_ENDPOINTS, SAMPLE_QUERIES } from './constants';
@@ -101,6 +103,14 @@ const App: React.FC = () => {
           >
             <Share2 size={24} />
           </button>
+
+          <button
+            onClick={() => setViewMode(ViewMode.CHANGELOG)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.CHANGELOG ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="Changelog"
+          >
+            <BookOpen size={24} />
+          </button>
         </div>
 
         <button
@@ -125,48 +135,57 @@ const App: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden lg:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
-              <span className="text-xs text-slate-500 mr-2 font-semibold uppercase tracking-tight">
-                Endpoint
-              </span>
-              <input
-                type="text"
-                list="endpoint-options"
-                value={endpoint}
-                onChange={(e) => setEndpoint(e.target.value)}
-                placeholder="Select or type endpoint URL"
-                className="bg-transparent text-sm text-slate-700 focus:outline-none w-80 font-mono truncate"
-              />
-              <datalist id="endpoint-options">
-                {savedEndpoints.map((ep, idx) => (
-                  <option key={idx} value={ep.url}>
-                    {ep.name}
-                  </option>
-                ))}
-              </datalist>
-            </div>
-            <button
-              onClick={handleRunQuery}
-              disabled={isLoading}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-white shadow-sm transition-all
+          {viewMode !== ViewMode.CHANGELOG && (
+            <div className="flex items-center gap-3">
+              <div className="hidden lg:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
+                <span className="text-xs text-slate-500 mr-2 font-semibold uppercase tracking-tight">
+                  Endpoint
+                </span>
+                <input
+                  type="text"
+                  list="endpoint-options"
+                  value={endpoint}
+                  onChange={(e) => setEndpoint(e.target.value)}
+                  placeholder="Select or type endpoint URL"
+                  className="bg-transparent text-sm text-slate-700 focus:outline-none w-80 font-mono truncate"
+                />
+                <datalist id="endpoint-options">
+                  {savedEndpoints.map((ep, idx) => (
+                    <option key={idx} value={ep.url}>
+                      {ep.name}
+                    </option>
+                  ))}
+                </datalist>
+              </div>
+              <button
+                onClick={handleRunQuery}
+                disabled={isLoading}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-white shadow-sm transition-all
                   ${isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-md active:transform active:scale-95'}
                 `}
-            >
-              {isLoading ? (
-                <Loader2 className="animate-spin" size={16} />
-              ) : (
-                <Play size={16} fill="currentColor" />
-              )}
-              Run Query
-            </button>
-          </div>
+              >
+                {isLoading ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <Play size={16} fill="currentColor" />
+                )}
+                Run Query
+              </button>
+            </div>
+          )}
         </header>
 
         {/* Workspace Panels */}
         <div className="flex-1 flex overflow-hidden relative">
+          {/* Changelog View (Full Width) */}
+          {viewMode === ViewMode.CHANGELOG && (
+            <div className="flex-1 overflow-hidden">
+              <Changelog />
+            </div>
+          )}
+
           {/* Settings Panel Overlay */}
-          {showSettings && (
+          {showSettings && viewMode !== ViewMode.CHANGELOG && (
             <div className="absolute top-0 left-0 z-30 w-[450px] h-full bg-white border-r border-slate-200 shadow-2xl p-5 animate-in slide-in-from-left fade-in duration-200 flex flex-col">
               <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
                 <h3 className="font-semibold text-slate-700 flex items-center gap-2">
@@ -284,7 +303,7 @@ const App: React.FC = () => {
           )}
 
           {/* Left Editor Pane */}
-          {viewMode !== ViewMode.VISUALIZE && (
+          {viewMode !== ViewMode.VISUALIZE && viewMode !== ViewMode.CHANGELOG && (
             <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
               <div className="flex-1 flex flex-col min-h-0">
                 <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
@@ -330,56 +349,58 @@ const App: React.FC = () => {
           )}
 
           {/* Right Results Pane */}
-          <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
-            {/* Error Overlay */}
-            {error && (
-              <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
-                <div className="text-sm whitespace-pre-wrap font-medium flex-1">{error}</div>
-                <button
-                  onClick={() => setError(null)}
-                  className="ml-auto text-red-400 hover:text-red-700 text-xl font-bold leading-none"
-                  aria-label="Dismiss error"
-                >
-                  &times;
-                </button>
-              </div>
-            )}
+          {viewMode !== ViewMode.CHANGELOG && (
+            <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
+              {/* Error Overlay */}
+              {error && (
+                <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+                  <div className="text-sm whitespace-pre-wrap font-medium flex-1">{error}</div>
+                  <button
+                    onClick={() => setError(null)}
+                    className="ml-auto text-red-400 hover:text-red-700 text-xl font-bold leading-none"
+                    aria-label="Dismiss error"
+                  >
+                    &times;
+                  </button>
+                </div>
+              )}
 
-            {viewMode === ViewMode.VISUALIZE ? (
-              <div className="flex-1 p-4 h-full overflow-hidden">
-                <GraphView data={sparqlResult} />
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col h-full overflow-hidden">
-                <div className="px-6 py-3 border-b border-slate-200 bg-white flex justify-between items-center flex-shrink-0 shadow-sm">
-                  <h3 className="text-sm font-semibold text-slate-700">
-                    Results View
+              {viewMode === ViewMode.VISUALIZE ? (
+                <div className="flex-1 p-4 h-full overflow-hidden">
+                  <GraphView data={sparqlResult} />
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col h-full overflow-hidden">
+                  <div className="px-6 py-3 border-b border-slate-200 bg-white flex justify-between items-center flex-shrink-0 shadow-sm">
+                    <h3 className="text-sm font-semibold text-slate-700">
+                      Results View
+                      {sparqlResult && (
+                        <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-xs font-normal border border-slate-200">
+                          {sparqlResult.results.bindings.length} records
+                        </span>
+                      )}
+                    </h3>
                     {sparqlResult && (
-                      <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-xs font-normal border border-slate-200">
-                        {sparqlResult.results.bindings.length} records
-                      </span>
+                      <button className="text-slate-400 hover:text-blue-600 flex items-center gap-1 text-xs transition-colors">
+                        <Download size={14} /> Export CSV
+                      </button>
                     )}
-                  </h3>
-                  {sparqlResult && (
-                    <button className="text-slate-400 hover:text-blue-600 flex items-center gap-1 text-xs transition-colors">
-                      <Download size={14} /> Export CSV
-                    </button>
-                  )}
+                  </div>
+                  <div className="flex-1 overflow-auto bg-white custom-scrollbar">
+                    {isLoading ? (
+                      <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                        <Loader2 className="animate-spin mb-2" size={32} />
+                        <p className="text-sm animate-pulse">Running SPARQL query...</p>
+                      </div>
+                    ) : (
+                      <ResultsTable data={sparqlResult} />
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 overflow-auto bg-white custom-scrollbar">
-                  {isLoading ? (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                      <Loader2 className="animate-spin mb-2" size={32} />
-                      <p className="text-sm animate-pulse">Running SPARQL query...</p>
-                    </div>
-                  ) : (
-                    <ResultsTable data={sparqlResult} />
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>
