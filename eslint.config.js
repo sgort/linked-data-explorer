@@ -1,0 +1,79 @@
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import reactPlugin from 'eslint-plugin-react';
+import reactHooksPlugin from 'eslint-plugin-react-hooks';
+import reactRefreshPlugin from 'eslint-plugin-react-refresh';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import prettierConfig from 'eslint-config-prettier';
+
+export default tseslint.config(
+  // Ignore patterns
+  {
+    ignores: [
+      'dist/**',
+      'build/**',
+      'node_modules/**',
+      '.husky/**',
+      '.cache/**',
+      '.config/**',
+      'coverage/**',
+      'vite.config.ts',
+      'eslint.config.js',
+    ],
+  },
+
+  // Base JavaScript rules
+  js.configs.recommended,
+
+  // TypeScript rules
+  ...tseslint.configs.recommended,
+
+  // React plugin configuration
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    plugins: {
+      react: reactPlugin,
+      'react-hooks': reactHooksPlugin,
+      'react-refresh': reactRefreshPlugin,
+      'simple-import-sort': simpleImportSort,
+    },
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
+    rules: {
+      // React rules
+      ...reactPlugin.configs.recommended.rules,
+      ...reactPlugin.configs['jsx-runtime'].rules,
+      'react/prop-types': 'off', // Using TypeScript for prop validation
+      'react/react-in-jsx-scope': 'off', // Not needed with new JSX transform
+
+      // React Hooks rules
+      ...reactHooksPlugin.configs.recommended.rules,
+
+      // React Refresh rule
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+
+      // Import sorting rules
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+
+      // TypeScript rules
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          varsIgnorePattern: '^_',
+          argsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/no-explicit-any': 'warn',
+
+      // General rules
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
+  },
+
+  // Prettier integration (must be last to override other configs)
+  prettierConfig
+);

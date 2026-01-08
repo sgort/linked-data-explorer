@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { SparqlResponse } from '../types';
 
 interface ResultsTableProps {
@@ -7,7 +8,7 @@ interface ResultsTableProps {
 
 const ResultsTable: React.FC<ResultsTableProps> = ({ data }) => {
   if (!data) return <div className="text-slate-500 italic p-4">No results yet. Run a query.</div>;
-  
+
   if (data.results.bindings.length === 0) {
     return <div className="text-slate-500 italic p-4">Query returned 0 results.</div>;
   }
@@ -42,19 +43,28 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ data }) => {
                     {cell ? (
                       <div className="flex flex-col">
                         <span className={cell.type === 'uri' ? 'text-blue-600' : 'text-slate-700'}>
-                            {cell.type === 'uri' ? (
-                                <a href={cell.value} target="_blank" rel="noreferrer" className="hover:underline">
-                                    {cell.value.startsWith('http') ? cell.value.split('/').pop()?.split('#').pop() : cell.value}
-                                </a>
-                            ) : cell.value}
+                          {cell.type === 'uri' ? (
+                            <a
+                              href={cell.value}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="hover:underline"
+                            >
+                              {cell.value.startsWith('http')
+                                ? cell.value.split('/').pop()?.split('#').pop()
+                                : cell.value}
+                            </a>
+                          ) : (
+                            cell.value
+                          )}
                         </span>
-                        {cell["xml:lang"] && (
-                            <span className="text-[10px] text-slate-400">@{cell["xml:lang"]}</span>
+                        {cell['xml:lang'] && (
+                          <span className="text-[10px] text-slate-400">@{cell['xml:lang']}</span>
                         )}
-                         {cell.type === 'uri' && (
-                            <span className="text-[9px] text-slate-400 truncate opacity-0 hover:opacity-100 transition-opacity">
-                                {cell.value}
-                            </span>
+                        {cell.type === 'uri' && (
+                          <span className="text-[9px] text-slate-400 truncate opacity-0 hover:opacity-100 transition-opacity">
+                            {cell.value}
+                          </span>
                         )}
                       </div>
                     ) : (

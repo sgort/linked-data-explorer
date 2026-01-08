@@ -1,10 +1,10 @@
-export const DEFAULT_ENDPOINT = "http://localhost:3030/ds/query";
+export const DEFAULT_ENDPOINT = 'http://localhost:3030/ds/query';
 
 export const PRESET_ENDPOINTS = [
-  { name: "Local Jena", url: "http://localhost:3030/ds/query" },
+  { name: 'Local Jena', url: 'http://localhost:3030/ds/query' },
   {
-    name: "Facts Jena",
-    url: "https://api.open-regels.triply.cc/datasets/stevengort/facts/services/facts-jena/sparql",
+    name: 'Facts Jena',
+    url: 'https://api.open-regels.triply.cc/datasets/stevengort/facts/services/facts-jena/sparql',
   },
 ];
 
@@ -26,7 +26,7 @@ PREFIX ronl: <https://regels.overheid.nl/termen/>
 
 export const SAMPLE_QUERIES = [
   {
-    name: "Get All Public Services",
+    name: 'Get All Public Services',
     sparql: `${COMMON_PREFIXES}
 SELECT ?service ?title ?description
 WHERE {
@@ -37,7 +37,7 @@ WHERE {
 } ORDER BY ?title`,
   },
   {
-    name: "Rules with Their Services",
+    name: 'Rules with Their Services',
     sparql: `${COMMON_PREFIXES}
 SELECT ?serviceTitle ?ruleTitle ?validFrom ?confidence ?description
 WHERE {
@@ -58,7 +58,7 @@ WHERE {
 ORDER BY ?serviceTitle ?validFrom ?ruleTitle`,
   },
   {
-    name: "Count Rules per Service",
+    name: 'Count Rules per Service',
     sparql: `${COMMON_PREFIXES}
 SELECT ?serviceTitle (COUNT(?rule) as ?ruleCount)
 WHERE {
@@ -74,7 +74,7 @@ GROUP BY ?serviceTitle
 ORDER BY DESC(?ruleCount)`,
   },
   {
-    name: "Services with All Their Rules (Detailed)",
+    name: 'Services with All Their Rules (Detailed)',
     sparql: `${COMMON_PREFIXES}
 SELECT ?service ?serviceTitle ?serviceDescription ?rule ?ruleTitle ?validFrom ?confidence
 WHERE {
@@ -97,7 +97,7 @@ WHERE {
 ORDER BY ?serviceTitle ?validFrom ?ruleTitle`,
   },
   {
-    name: "Explore Relations (S-P-O)",
+    name: 'Explore Relations (S-P-O)',
     sparql: `${COMMON_PREFIXES}
 SELECT ?s ?p ?o
 WHERE {
@@ -105,7 +105,7 @@ WHERE {
 } LIMIT 500`,
   },
   {
-    name: "Services and Authorities",
+    name: 'Services and Authorities',
     sparql: `${COMMON_PREFIXES}
 SELECT ?service ?title ?authorityName (STR(?homepage) AS ?website)
 WHERE {
@@ -119,7 +119,7 @@ WHERE {
 ORDER BY ?title`,
   },
   {
-    name: "Services with Legal Resources",
+    name: 'Services with Legal Resources',
     sparql: `${COMMON_PREFIXES}
 SELECT ?service ?serviceTitle ?legalTitle ?legalResource
 WHERE {
@@ -130,5 +130,5 @@ WHERE {
   FILTER(LANG(?serviceTitle) = "nl")
 }
 ORDER BY ?serviceTitle`,
-  }
+  },
 ];
