@@ -1,0 +1,115 @@
+{
+  "versions": [
+    {
+      "version": "0.2.0",
+      "status": "Enhancement",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "January X, 2026",
+      "sections": [
+        {
+          "title": "DMN Orchestration",
+          "icon": "🚀",
+          "iconColor": "emerald",
+          "items": [
+            "Added DMN discovery and visualization",
+            "SPARQL queries for DMN models",
+            "Three-panel orchestration view"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "status": "Initial Release",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "January 8, 2026",
+      "sections": [
+        {
+          "title": "Core Features",
+          "icon": "✨",
+          "iconColor": "blue",
+          "items": [
+            "React-based SPARQL visualization and query tool",
+            "Interactive graph visualization using D3.js force simulation",
+            "Support for multiple SPARQL endpoints (configurable)",
+            "Real-time query execution with loading states",
+            "Zoom and pan capabilities for graph exploration"
+          ]
+        },
+        {
+          "title": "SPARQL Features",
+          "icon": "🔍",
+          "iconColor": "emerald",
+          "items": [
+            "Built-in SPARQL query editor with syntax support",
+            "Sample query library for quick testing",
+            "Support for SELECT queries with visual results",
+            "Automatic graph detection for ?s ?p ?o patterns",
+            "CORS proxy support for public endpoints"
+          ]
+        },
+        {
+          "title": "Visualization",
+          "icon": "📊",
+          "iconColor": "purple",
+          "items": [
+            "Force-directed graph layout for RDF triples",
+            "Color-coded nodes: Subjects (blue), Objects (amber), Literals (green)",
+            "Interactive node dragging and positioning",
+            "Edge labels showing predicates/relationships",
+            "Responsive canvas that adapts to window size"
+          ]
+        },
+        {
+          "title": "User Interface",
+          "icon": "🎨",
+          "iconColor": "indigo",
+          "items": [
+            "Modern design with Tailwind CSS",
+            "Dark sidebar navigation with mode switching",
+            "Tabular results view for query data",
+            "Settings panel for endpoint management",
+            "Error handling with user-friendly messages"
+          ]
+        },
+        {
+          "title": "Technical Stack",
+          "icon": "⚡",
+          "iconColor": "yellow",
+          "items": [
+            "Built with React 19 and TypeScript",
+            "Vite for fast development and building",
+            "D3.js v7 for data visualization",
+            "Lucide React for consistent iconography",
+            "ESLint 9 with modern flat config for code quality"
+          ]
+        },
+        {
+          "title": "Code Quality",
+          "icon": "✅",
+          "iconColor": "green",
+          "items": [
+            "Full TypeScript type safety throughout codebase",
+            "ESLint configuration with zero warnings",
+            "Prettier for consistent code formatting",
+            "Husky git hooks for pre-commit linting",
+            "lint-staged for fast pre-commit checks"
+          ]
+        },
+        {
+          "title": "Deployment",
+          "icon": "🚀",
+          "iconColor": "red",
+          "items": [
+            "Deployed to Azure Static Web Apps",
+            "Custom domain: linkeddata.open-regels.nl",
+            "Automatic CI/CD via GitHub Actions",
+            "Environment: acc.linkeddata.open-regels.nl for testing"
+          ]
+        }
+      ]
+    }
+  ]
+}
