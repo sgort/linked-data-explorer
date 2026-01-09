@@ -55,10 +55,28 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         'RONL_HeusdenpasEindresultaat',
       ],
       defaultInputs: {
+        // SVB inputs
+        dagVanAanvraag: '2025-01-24',
         geboortedatumAanvrager: '1980-01-23',
-        dagVanAanvraag: '2025-12-24',
-        aanvragerAlleenstaand: true,
+        geboortedatumPartner: null, // ← Changed to null (single person)
+
+        // SZW inputs
+        aanvragerAlleenstaand: true, // ← Changed to true (single person)
         aanvragerHeeftKinderen: true,
+        aanvragerHeeftAOWLeeftijd: false,
+
+        // Heusden inputs
+        aanvragerInwonerHeusden: true,
+        aanvragerHeeftKind4Tm17: true,
+        maandelijksBrutoInkomenAanvrager: 1500,
+        aanvragerUitkeringBaanbrekers: false,
+        aanvragerVoedselbankpasDenBosch: false,
+        aanvragerKwijtscheldingGemeentelijkeBelastingen: false,
+        aanvragerSchuldhulptrajectKredietbankNederland: false,
+        aanvragerDitKalenderjaarAlAangevraagd: false,
+        aanvragerAanmerkingStudieFinanciering: false,
+        aanvragerIs181920: false,
+        aanvragerIsTenminste21: true,
       },
     },
   ];

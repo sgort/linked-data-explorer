@@ -130,8 +130,11 @@ const ChainBuilder: React.FC = () => {
     chainDmns.forEach((dmn, index) => {
       // Check if required inputs are available
       dmn.inputs.forEach((input) => {
+        // ✅ FIX: Check for undefined/null instead of falsy
+        const hasInput = input.identifier in inputs;
+
         // First DMN needs inputs from user
-        if (index === 0 && !inputs[input.identifier]) {
+        if (index === 0 && !hasInput) {
           missingInputs.push({
             identifier: input.identifier,
             title: input.title,
@@ -140,7 +143,7 @@ const ChainBuilder: React.FC = () => {
           });
         }
         // Later DMNs can get inputs from previous DMNs or user
-        else if (index > 0 && !providedOutputs.has(input.identifier) && !inputs[input.identifier]) {
+        else if (index > 0 && !providedOutputs.has(input.identifier) && !hasInput) {
           errors.push({
             type: 'missing_input',
             message: `${dmn.identifier} requires '${input.identifier}' but no previous DMN provides it`,
@@ -271,6 +274,7 @@ const ChainBuilder: React.FC = () => {
 
   return (
     <DndContext
+      key={selectedChain.length}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
