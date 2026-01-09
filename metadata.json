@@ -1,5 +1,0 @@
-{
-  "name": "Linked Data Explorer",
-  "description": "A SPARQL visualization and query tool for Dutch Government Data (Regels Overheid).",
-  "requestFramePermissions": []
-}
