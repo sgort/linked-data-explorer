@@ -50,13 +50,14 @@ Legal Decision + Explanation
 
 ## 🎯 Overview
 
-**Linked Data Explorer** is a modern web application for visualizing and querying SPARQL endpoints, with a focus on Dutch Government Data from the **Regels Overheid** project. Built with React and TypeScript, it provides an intuitive interface for exploring RDF triples through interactive graph visualizations and a powerful query editor.
+**Linked Data Explorer** is a web application for visualizing and querying SPARQL endpoints, with specialized support for DMN (Decision Model and Notation) orchestration. Built as part of the **Regels Overheid Nederland (RONL)** initiative, it enables discovery and exploration of government decision models using Linked Data principles.
 
 ### Key Capabilities
 
-- 🔍 **SPARQL Query Editor** - Write and execute SPARQL queries with a clean, intuitive interface
+- 🔍 **SPARQL Query Editor** - Execute and visualize SPARQL queries with an intuitive interface
 - 📊 **Interactive Graph Visualization** - Explore RDF triples using D3.js force-directed graphs
-- 📖 **Version History** - Track features and changes through a built-in changelog
+- 🔗 **DMN Orchestration** - Discover Decision Models and visualize input/output relationships
+- 📖 **Version History** - Built-in changelog tracking features and improvements
 - ⚙️ **Configurable Endpoints** - Connect to multiple SPARQL endpoints including TriplyDB
 - 🎨 **Modern UI** - Clean, responsive design with Tailwind CSS
 
@@ -69,12 +70,11 @@ Legal Decision + Explanation
 <details>
 <summary>View Features</summary>
 
-- **Syntax Support** - Built-in SPARQL query editor
+- **Syntax Support** - SPARQL 1.1 query execution
 - **Sample Query Library** - Pre-built queries for quick testing
-- **Multiple Endpoints** - Switch between different SPARQL endpoints
-- **Results Table** - View query results in a formatted table
-- **Export Functionality** - Download results as CSV (coming soon)
-- **CORS Proxy Support** - Access public endpoints with automatic proxy handling
+- **Multiple Endpoints** - Switch between TriplyDB, local, and custom endpoints
+- **Results Table** - Formatted display with column headers and data types
+- **CORS Proxy** - Automatic fallback for public endpoints
 
 </details>
 
@@ -83,32 +83,41 @@ Legal Decision + Explanation
 <details>
 <summary>View Features</summary>
 
-- **Force-Directed Layout** - D3.js powered visualization of RDF triples
-- **Interactive Nodes** - Drag, zoom, and pan to explore relationships
-- **Color-Coded Types**:
+- **Force-Directed Layout** - D3.js v7 powered visualization
+- **Interactive Exploration** - Drag nodes, zoom, and pan
+- **Color-Coded Nodes**:
   - 🔵 **Blue** - Subjects (URIs)
-  - 🟡 **Amber** - Objects (URIs)
+  - 🟡 **Amber** - Objects (URIs)  
   - 🟢 **Green** - Literals (text values)
-- **Edge Labels** - Predicates displayed on relationships
-- **Responsive Canvas** - Adapts to window size automatically
-- **Auto-Detection** - Automatically visualizes `?s ?p ?o` query patterns
+- **Edge Labels** - Predicates shown on relationships
+- **Auto-Detection** - Recognizes `?s ?p ?o` patterns
 
 </details>
 
-### 3. Changelog
+### 3. DMN Orchestration ✨ NEW
+
+- **DMN Discovery** - SPARQL-based discovery using CPRMV vocabulary
+- **Three-Panel Layout**:
+  - Left: DMN list with search/filter
+  - Center: Chain builder (Phase B.3 placeholder)
+  - Right: DMN details with inputs/outputs
+- **Variable Display** - Type-tagged inputs (blue) and outputs (green)
+- **Search & Filter** - Real-time filtering by DMN name/identifier
+- **Chain Detection** - Identifies where DMN outputs match other DMN inputs
+
+### 4. Changelog
 
 <details>
 <summary>View Features</summary>
 
 - **Version Tracking** - Complete history of features and improvements
-- **JSON-Configurable** - Easy to update without code changes
+- **JSON-Configurable** - Update `changelog.json` without code changes
 - **Collapsible Sections** - Organized by version with expandable details
-- **Color-Coded Badges** - Visual status indicators
-- **Section Icons** - Emoji-based categorization (✨ Features, 🐛 Fixes, etc.)
+- **Visual Status Badges** - Color-coded release types
 
 </details>
 
-### 4. Settings & Configuration
+### 5. Settings & Configuration
 
 <details>
 <summary>View Features</summary>
@@ -131,71 +140,57 @@ Legal Decision + Explanation
 | **Production** | [linkeddata.open-regels.nl](https://linkeddata.open-regels.nl)         | `main` | Stable release      |
 | **Acceptance** | [acc.linkeddata.open-regels.nl](https://acc.linkeddata.open-regels.nl) | `acc`  | Testing environment |
 
+**Deployment Platform:** Azure Static Web Apps  
+**CI/CD:** GitHub Actions (automated on push) 
+
 ---
 
 ## 🛠️ Technology Stack
 
-### Core Framework
+### Frontend
 
-- **React 19.2** - UI library with latest features
-- **TypeScript 5.8** - Type-safe JavaScript
-- **Vite 6.2** - Lightning-fast build tool
-
-### UI & Styling
-
-- **Tailwind CSS** - Utility-first CSS framework (via CDN)
-- **Lucide React 0.561** - Beautiful icon library
-- **Inter Font** - Modern, readable typography
-
-### Data Visualization
-
-- **D3.js 7.9** - Force-directed graph rendering
-- **@types/d3 7.4** - TypeScript definitions for D3
-
-### Code Quality
-
-- **ESLint 9** - Modern flat config format
-- **Prettier 3.7** - Code formatting
-- **Husky 9.1** - Git hooks
-- **lint-staged 16.2** - Pre-commit linting
-- **TypeScript ESLint 8.52** - TypeScript-specific linting rules
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **React** | 19.2.3 | UI framework |
+| **TypeScript** | 5.8.2 | Type-safe JavaScript |
+| **Vite** | 6.2.0 | Build tool & dev server |
+| **D3.js** | 7.9.0 | Graph visualization |
+| **Tailwind CSS** | 3.x (CDN) | Utility-first styling |
+| **Lucide React** | 0.561.0 | Icon library |
 
 ### Development Tools
 
-- **@vitejs/plugin-react 5.0** - Vite React plugin
-- **@types/node 22.14** - Node.js type definitions
+| Tool | Version | Purpose |
+|------|---------|---------|
+| **ESLint** | 9.39.2 | Code linting (flat config) |
+| **Prettier** | 3.7.4 | Code formatting |
+| **Husky** | 9.1.7 | Git hooks |
+| **lint-staged** | 16.2.7 | Pre-commit linting |
+| **TypeScript ESLint** | 8.52.0 | TS-specific linting |
+
+### Vocabularies & Standards
+
+- **CPSV** (Core Public Service Vocabulary) - Service descriptions
+- **CPRMV** (CPSV Rule Model Vocabulary) - Decision model metadata
+- **SPARQL 1.1** - Query language
+- **RDF/Turtle** - Data format
 
 ---
 
-## 📁 Project Structure
+### 📁 Project Monorepo Structure
 
 ```
 linked-data-explorer/
-├── .github/
-│   └── workflows/
-│       ├── azure-static-web-apps-witty-beach-*.yml    # Production deployment
-│       └── azure-static-web-apps-brave-bay-*.yml      # ACC deployment
-├── components/
-│   ├── Changelog.tsx            # Version history component
-│   ├── GraphView.tsx            # D3.js graph visualization
-│   └── ResultsTable.tsx         # SPARQL results display
-├── services/
-│   ├── sparqlService.ts         # SPARQL query execution
-│   └── storage.ts               # (Deprecated)
-├── App.tsx                      # Main application component
-├── types.ts                     # TypeScript type definitions
-├── constants.ts                 # SPARQL queries and endpoints
-├── index.tsx                    # React app entry point
-├── index.html                   # HTML template
-├── index.css                    # Global styles
-├── changelog.json               # Version history data
-├── package.json                 # Dependencies and scripts
-├── vite.config.ts               # Vite configuration
-├── tsconfig.json                # TypeScript configuration
-├── eslint.config.js             # ESLint flat config
-├── .prettierrc.json             # Prettier config
-└── README.md                    # This file
+├── packages/
+│   ├── frontend/              # React application
+│   │   └── src/               # Source code
+│   └── backend/               # Phase B.2 (planned)
+├── examples/                  # TTL test data (3 DMN models)
+├── .github/workflows/         # CI/CD pipelines
+└── [workspace config]         # Root package.json, etc.
 ```
+
+---
 
 ---
 
@@ -203,223 +198,206 @@ linked-data-explorer/
 
 ### Prerequisites
 
-- **Node.js 20+** - [Download](https://nodejs.org/)
-- **npm** (comes with Node.js)
-- **Git** - [Download](https://git-scm.com/)
+- **Node.js** 20.0.0 or higher ([Download](https://nodejs.org/))
+- **npm** 10.0.0 or higher (comes with Node.js)
+- **Git** ([Download](https://git-scm.com/))
 
 ### Installation
 
-1. **Clone the repository**
-
 ```bash
-git clone https://github.com/yourorg/linked-data-explorer.git
+# 1. Clone the repository
+git clone https://github.com/sgort/linked-data-explorer.git
 cd linked-data-explorer
-```
 
-2. **Install dependencies**
-
-```bash
+# 2. Install dependencies (from root)
 npm install
+
+# 3. Start development server
+npm run dev
+
+# 4. Open browser
+# Navigate to http://localhost:3000
 ```
 
-3. **Start development server**
+### Quick Start Commands
 
 ```bash
-npm run dev
+# Development
+npm run dev              # Start dev server (port 3000)
+npm run build            # Build for production
+npm run preview          # Preview production build
+
+# Code Quality
+npm run lint             # Run ESLint
+npm run lint:fix         # Fix linting issues
+npm run format           # Format with Prettier
+npm run check-format     # Check formatting
+
+# Workspace Commands (from root)
+npm run dev --workspace=@linked-data-explorer/frontend
+npm run build --workspace=@linked-data-explorer/frontend
 ```
-
-4. **Open in browser**
-
-Navigate to [http://localhost:5173](http://localhost:5173)
 
 ---
 
-## 💻 Development
+## 👨‍💻 Development
 
-### Available Scripts
+### Local Development
 
-| Command                | Description                               |
-| ---------------------- | ----------------------------------------- |
-| `npm run dev`          | Start development server with HMR         |
-| `npm run build`        | Build for production (outputs to `dist/`) |
-| `npm run preview`      | Preview production build locally          |
-| `npm run lint`         | Check code for errors                     |
-| `npm run lint:fix`     | Auto-fix linting errors                   |
-| `npm run format`       | Format all files with Prettier            |
-| `npm run check-format` | Check formatting (CI)                     |
-| `npm run prepare`      | Install Husky hooks (automatic)           |
+```bash
+cd packages/frontend
+npm run dev
+```
 
-### Development Workflow
+**The app will open at:** http://localhost:3000
 
-1. **Create a feature branch**
+**Features:**
+- ✅ Hot module replacement (HMR)
+- ✅ Fast refresh for React components
+- ✅ TypeScript type checking
+- ✅ Automatic linting on save
 
+### Project Conventions
+
+**File Structure:**
+- Components: `src/components/*.tsx`
+- Services: `src/services/*.ts`
+- Types: `src/types/index.ts`
+- Utils: `src/utils/*.ts`
+
+**Naming:**
+- Components: PascalCase (`OrchestrationView.tsx`)
+- Files: camelCase (`sparqlService.ts`)
+- Constants: UPPER_SNAKE_CASE (`DEFAULT_ENDPOINT`)
+
+**Imports:**
+- Absolute imports: Use `@/` alias (configured in tsconfig)
+- Relative imports: Prefer `../` for sibling directories
+- Sort order: External → Internal → Types → Styles
+
+### Adding New Features
+
+1. **Create branch:**
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
-2. **Make changes**
-   - Code is automatically linted and formatted on commit (via Husky)
-   - TypeScript errors will prevent commits
+2. **Make changes:**
+   - Add/modify files in `src/`
+   - Update `changelog.json` if user-facing
+   - Add TypeScript types in `types/index.ts`
 
-3. **Test locally**
-
+3. **Test locally:**
    ```bash
-   npm run dev
+   npm run dev        # Test in browser
+   npm run lint       # Check for errors
+   npm run build      # Verify build works
    ```
 
-4. **Build and verify**
-
+4. **Commit & push:**
    ```bash
-   npm run build
-   npm run preview
-   ```
-
-5. **Push and create PR**
-   ```bash
+   git add .
+   git commit -m "feat: your feature description"
    git push origin feature/your-feature-name
    ```
+
+5. **Create Pull Request** to `acc` branch
 
 ---
 
 ## ✅ Code Quality
 
-### Linting & Formatting
+### Linting
 
-This project uses **ESLint 9** with modern flat config format and **Prettier** for code formatting.
-
-#### ESLint Configuration
-
-Located in `eslint.config.js`:
-
-- Modern flat config format
+**ESLint 9** with flat config format:
 - TypeScript-specific rules
 - React best practices
-- Import sorting with `eslint-plugin-simple-import-sort`
-- Zero warnings on build
-
-#### Prettier Configuration
-
-Located in `.prettierrc.json`:
-
-```json
-{
-  "semi": true,
-  "trailingComma": "es5",
-  "singleQuote": true,
-  "printWidth": 100,
-  "tabWidth": 2,
-  "endOfLine": "lf"
-}
-```
-
-#### Git Hooks
-
-**Pre-commit** (via Husky + lint-staged):
-
-- Runs Prettier on staged files
-- Runs ESLint with auto-fix
-- Prevents commits with unfixable errors
-
-**Pre-push** (via Husky):
-
-- Runs full lint check
-- Runs full format check
-- Prevents pushes with any errors
-
-#### Skip Hooks (when needed)
+- Import sorting
+- Prettier integration
 
 ```bash
-git commit --no-verify
-git push --no-verify
+npm run lint          # Check for issues
+npm run lint:fix      # Auto-fix issues
+```
+
+### Formatting
+
+**Prettier 3.7** configuration:
+- Semi-colons: Yes
+- Single quotes: Yes
+- Trailing commas: ES5
+- Print width: 100
+- Tab width: 2
+
+```bash
+npm run format           # Format all files
+npm run check-format     # Check if formatted
+```
+
+### Git Hooks
+
+**Pre-commit** (Husky):
+- ✅ Runs Prettier on staged files
+- ✅ Runs ESLint with auto-fix
+- ✅ Prevents commits with errors
+
+```bash
+# Skip hooks if needed (not recommended)
+git commit --no-verify -m "message"
+```
+
+### TypeScript
+
+**Strict mode enabled:**
+- No implicit any
+- Strict null checks
+- No unused variables (warnings)
+
+```bash
+# Type checking
+npx tsc --noEmit
 ```
 
 ---
 
 ## 🚢 Deployment
 
-### Azure Static Web Apps
+### Automatic Deployment
 
-The application is deployed to **Azure Static Web Apps** with two environments:
+**Trigger:** Push to `main` or `acc` branch  
+**Platform:** Azure Static Web Apps  
+**Process:**
 
-#### Production Environment
-
-- **URL**: https://linkeddata.open-regels.nl
-- **Branch**: `main`
-- **Workflow**: `.github/workflows/azure-static-web-apps-witty-beach-*.yml`
-- **Trigger**: Push to `main` or PR to `main`
-
-#### Acceptance Environment
-
-- **URL**: https://acc.linkeddata.open-regels.nl
-- **Branch**: `acc`
-- **Workflow**: `.github/workflows/azure-static-web-apps-brave-bay-*.yml`
-- **Trigger**: Push to `acc` or PR to `acc`
-
-### Deployment Process
-
-1. **Push to branch** - Automatic deployment via GitHub Actions
-2. **Build process**:
-   - Install dependencies
-   - Run Vite build
-   - Output to `dist/` directory
-3. **Deploy to Azure** - Automatic upload to Static Web Apps
-4. **Live in ~2-5 minutes** - GitHub Actions status shows progress
+1. GitHub Actions workflow triggers
+2. Installs dependencies (`npm install`)
+3. Builds frontend (`npm run build`)
+4. Deploys to Azure
+5. Live in 2-3 minutes
 
 ### Manual Deployment
 
 ```bash
-# Build locally
+# 1. Build locally
 npm run build
 
-# Preview build
+# 2. Test build
 npm run preview
 
-# Deploy to production (via git)
-git push origin main
-
-# Deploy to acceptance
-git push origin acc
+# 3. Deploy via git
+git push origin main      # Production
+git push origin acc       # Acceptance
 ```
 
----
+### Environment Variables
 
-## 📖 Usage Guide
+**Currently:** None required (Tailwind via CDN)  
+**Future (Phase B.2):** API endpoint configuration
 
-### 1. Running a SPARQL Query
+### Monitoring
 
-1. **Open the Query Editor** - Click the `</>` icon in the sidebar
-2. **Select or write a query**:
-   - Choose from Library (bottom panel)
-   - Or write custom SPARQL query
-3. **Select endpoint** - Choose from dropdown or enter custom URL
-4. **Click "Run Query"** - Results appear in the right panel
-
-### 2. Visualizing Graph Data
-
-1. **Run a query** with `?s ?p ?o` pattern
-2. **Graph View activates automatically**
-3. **Interact with graph**:
-   - **Drag nodes** - Click and drag to reposition
-   - **Zoom** - Mouse wheel or pinch
-   - **Pan** - Click and drag background
-4. **Legend** - Bottom-right shows node types
-
-### 3. Viewing Changelog
-
-1. **Click the 📖 icon** in the sidebar
-2. **Browse versions** - Click version headers to expand/collapse
-3. **Read details** - View features, bug fixes, and improvements by section
-
-### 4. Managing Endpoints
-
-1. **Click Settings icon** (⚙️) at bottom of sidebar
-2. **Add endpoint**:
-   - Enter display name
-   - Enter SPARQL endpoint URL
-   - Click `+` button
-3. **Switch endpoints** - Click on any endpoint in the list
-4. **Remove endpoint** - Hover and click trash icon
-5. **Reset to defaults** - Click "Reset Defaults" link
+- **Status:** Check GitHub Actions tab
+- **Logs:** Available in Azure Portal
+- **Errors:** Check browser console + Azure logs
 
 ---
 
@@ -487,6 +465,62 @@ Edit `changelog.json`:
 
 ---
 
+## 🗺️ Roadmap
+
+### ✅ Phase A - Foundation (Complete)
+- [x] SPARQL query editor
+- [x] Graph visualization with D3.js
+- [x] Multiple endpoint support
+- [x] Results table display
+- [x] Changelog component
+- [x] Azure deployment pipeline
+
+### ✅ Phase B.1 - DMN Discovery (Complete)
+- [x] CPRMV vocabulary support
+- [x] DMN list with search/filter
+- [x] Input/output variable display
+- [x] Basic chain detection
+- [x] Three-panel orchestration view
+- [x] Type-tagged variables (Integer, String, Boolean)
+
+### 🔄 Phase B.2 - Backend Service (In Progress)
+
+**Goals:**
+- [ ] Node.js/Express backend service
+- [ ] Advanced chain discovery algorithms
+- [ ] REST API for DMN operations
+- [ ] Semantic variable matching
+- [ ] Cycle detection
+- [ ] Chain validation & scoring
+- [ ] Azure App Service deployment
+
+**Architecture:**
+```
+Frontend → REST API → Backend Service → TriplyDB
+                           ↓
+                   DMN Orchestration Logic
+```
+
+### 📅 Phase B.3 - Chain Builder (Planned)
+
+**Goals:**
+- [ ] Visual drag-and-drop chain builder
+- [ ] Real-time chain validation
+- [ ] Chain execution simulation
+- [ ] Export chains as BPMN
+- [ ] Chain templates library
+
+### 🚀 Phase C - Execution Engine (Future)
+
+**Goals:**
+- [ ] BPMN orchestration integration
+- [ ] DMN execution via Operaton
+- [ ] Input gathering workflows
+- [ ] Legal decision explanations
+- [ ] Audit trail generation
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please follow these guidelines:
@@ -532,45 +566,6 @@ EUPL v. 1.2 License - See [LICENSE](./LICENSE) file for details
 - **Issues**: [Gitlab Issues](https://git.open-regels.nl/hosting/linked-data-explorer/-/issues)
 - **Project**: [Regels Overheid](https://regels.overheid.nl/)
 - **Maintainer**: ICTU Development Team
-
----
-
-## 🗺️ Roadmap
-
-### Phase B.1 (In Progress)
-
-- [ ] DMN Discovery via SPARQL
-- [ ] Orchestration View with 3-panel layout
-- [ ] DMN Chain Visualization
-
-### Phase B.2 (Planned)
-
-- [ ] Backend Service (Node.js + Express)
-- [ ] Advanced Chain Discovery Algorithms
-- [ ] TriplyDB Authentication
-
-### Phase B.3 (Future)
-
-- [ ] Visual Chain Builder
-- [ ] Drag-and-Drop Composition
-- [ ] Chain Validation
-
-### Phase B.4 (Future)
-
-- [ ] BPMN Generation
-- [ ] Operaton Integration
-- [ ] Deployment Automation
-
----
-
-## 📊 Project Status
-
-- ✅ **SPARQL Query Editor** - Complete
-- ✅ **Graph Visualization** - Complete
-- ✅ **Changelog Feature** - Complete
-- ✅ **Code Quality Setup** - Complete (ESLint 9 + Prettier)
-- ✅ **Deployment Pipeline** - Complete (Azure Static Web Apps)
-- 🚧 **DMN Orchestration** - In Progress (Phase B.1)
 
 ---
 
