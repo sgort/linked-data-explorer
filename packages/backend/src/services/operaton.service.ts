@@ -58,7 +58,7 @@ export class OperatonService {
   async evaluateDecision(
     decisionKey: string,
     variables: Record<string, unknown>
-  ): Promise<OperatonEvaluationResponse> {
+  ): Promise<OperatonEvaluationResponse | OperatonEvaluationResponse[]> {
     try {
       const startTime = Date.now();
 
@@ -140,14 +140,34 @@ export class OperatonService {
   /**
    * Extract plain values from Operaton response
    * Operaton returns { variableName: { value: X, type: Y } }
+   * OR [{ variableName: { value: X, type: Y } }] (array with single object)
    * We want just { variableName: X }
    */
-  extractValues(operatonResponse: OperatonEvaluationResponse): Record<string, unknown> {
+  extractValues(
+    operatonResponse: OperatonEvaluationResponse | OperatonEvaluationResponse[]
+  ): Record<string, unknown> {
     const extracted: Record<string, unknown> = {};
 
-    for (const [key, valueObj] of Object.entries(operatonResponse)) {
-      extracted[key] = valueObj.value;
+    // Handle array response - Operaton sometimes wraps response in array
+    let responseObject = operatonResponse;
+    if (Array.isArray(operatonResponse) && operatonResponse.length > 0) {
+      responseObject = operatonResponse[0];
+      logger.debug('Unwrapped array response', { originalLength: operatonResponse.length });
     }
+
+    // Now extract values from the object
+    if (typeof responseObject === 'object' && responseObject !== null) {
+      for (const [key, valueObj] of Object.entries(responseObject)) {
+        if (typeof valueObj === 'object' && valueObj !== null && 'value' in valueObj) {
+          extracted[key] = (valueObj as { value: unknown }).value;
+        }
+      }
+    }
+
+    logger.info('Extracted values:', {
+      extractedKeys: Object.keys(extracted),
+      extractedCount: Object.keys(extracted).length,
+    });
 
     return extracted;
   }

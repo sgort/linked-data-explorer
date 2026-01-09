@@ -51,29 +51,32 @@ export enum ViewMode {
   QUERY = 'QUERY',
   VISUALIZE = 'VISUALIZE',
   CHANGELOG = 'CHANGELOG',
-  ORCHESTRATION = 'ORCHESTRATION', // NEW: DMN Orchestration view
+  ORCHESTRATION = 'ORCHESTRATION',
 }
 
 export interface EndpointConfig {
   url: string;
-  updateUrl?: string; // Optional for update queries
+  updateUrl?: string;
 }
 
 // DMN Orchestration Types
 export interface DmnVariable {
-  uri: string;
   identifier: string;
-  type: string;
-  label?: string;
+  title: string;
+  type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double';
+  description?: string;
 }
 
 export interface DmnModel {
-  uri: string;
+  id: string;
   identifier: string;
   title: string;
-  apiEndpoint: string;
+  description?: string;
   deploymentId?: string;
-  service?: string;
+  deployedAt?: string;
+  implementedBy?: string;
+  lastTested?: string;
+  testStatus?: 'passed' | 'failed' | 'pending';
   inputs: DmnVariable[];
   outputs: DmnVariable[];
 }
@@ -98,4 +101,25 @@ export interface OrchestrationState {
   selectedDmn: DmnModel | null;
   isLoading: boolean;
   error: string | null;
+}
+
+// DMN Chain Execution Types (for backend API responses)
+export interface ExecutionStep {
+  dmnId: string;
+  dmnTitle: string;
+  startTime: number;
+  endTime?: number;
+  duration?: number;
+  inputs: Record<string, unknown>;
+  outputs?: Record<string, unknown>;
+  error?: string;
+}
+
+export interface ChainExecutionResult {
+  success: boolean;
+  chainId: string;
+  executionTime: number;
+  steps: ExecutionStep[];
+  finalOutputs: Record<string, unknown>;
+  error?: string;
 }

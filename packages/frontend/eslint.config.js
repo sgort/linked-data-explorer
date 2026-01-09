@@ -1,3 +1,6 @@
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import js from '@eslint/js';
 import prettierConfig from 'eslint-config-prettier';
 import reactPlugin from 'eslint-plugin-react';
@@ -6,6 +9,8 @@ import reactRefreshPlugin from 'eslint-plugin-react-refresh';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import tseslint from 'typescript-eslint';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 export default tseslint.config(
   // Ignore patterns
   {
@@ -31,7 +36,12 @@ export default tseslint.config(
   // React plugin configuration
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
-    // ✅ NO languageOptions section - simpler and works!
+    languageOptions: {
+      parserOptions: {
+        tsconfigRootDir: __dirname,
+        project: ['./tsconfig.json'],
+      },
+    },
     plugins: {
       react: reactPlugin,
       'react-hooks': reactHooksPlugin,
