@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { sparqlService } from '../services/sparql.service';
 import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
+import { getErrorMessage, getErrorDetails } from '../utils/errors';
 
 const router = Router();
 
@@ -23,14 +24,15 @@ router.get('/', async (req: Request, res: Response) => {
       },
       timestamp: new Date().toISOString(),
     } as ApiResponse);
-  } catch (error: any) {
-    logger.error('DMN list error', { error: error.message });
+  } catch (error: unknown) {
+    const errorDetails = getErrorDetails(error);
+    logger.error('DMN list error', errorDetails);
 
     res.status(500).json({
       success: false,
       error: {
         code: 'QUERY_ERROR',
-        message: error.message,
+        message: getErrorMessage(error),
       },
       timestamp: new Date().toISOString(),
     } as ApiResponse);
@@ -65,14 +67,15 @@ router.get('/:identifier', async (req: Request, res: Response) => {
       data: dmn,
       timestamp: new Date().toISOString(),
     } as ApiResponse);
-  } catch (error: any) {
-    logger.error('DMN details error', { error: error.message });
+  } catch (error: unknown) {
+    const errorDetails = getErrorDetails(error);
+    logger.error('DMN details error', errorDetails);
 
     res.status(500).json({
       success: false,
       error: {
         code: 'QUERY_ERROR',
-        message: error.message,
+        message: getErrorMessage(error),
       },
       timestamp: new Date().toISOString(),
     } as ApiResponse);

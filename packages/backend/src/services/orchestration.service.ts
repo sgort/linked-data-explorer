@@ -2,7 +2,7 @@ import { DmnModel, ChainExecutionResult, ExecutionStep } from '../types/dmn.type
 import { operatonService } from './operaton.service';
 import { sparqlService } from './sparql.service';
 import logger from '../utils/logger';
-import { config } from '../utils/config';
+import { getErrorMessage, getErrorDetails } from '../utils/errors';
 
 /**
  * Service for orchestrating DMN chain execution
@@ -19,7 +19,7 @@ export class OrchestrationService {
    */
   async executeChain(
     dmnIdentifiers: string[],
-    initialInputs: Record<string, any>
+    initialInputs: Record<string, unknown> // ✅ Changed from any
   ): Promise<ChainExecutionResult> {
     const chainStartTime = Date.now();
     const steps: ExecutionStep[] = [];
@@ -76,12 +76,13 @@ export class OrchestrationService {
 
           // Flatten/merge outputs into current variables (like BPMN script task)
           currentVariables = { ...currentVariables, ...outputs };
-        } catch (error: any) {
-          step.error = error.message;
+        } catch (error: unknown) {
+          // ✅ Changed from any
+          step.error = getErrorMessage(error); // ✅ Use helper
           step.endTime = Date.now();
           step.duration = step.endTime - stepStartTime;
 
-          logger.error(`DMN execution failed: ${dmn.identifier}`, { error: error.message });
+          logger.error(`DMN execution failed: ${dmn.identifier}`, getErrorDetails(error)); // ✅ Use helper
           throw error;
         }
 
@@ -103,12 +104,13 @@ export class OrchestrationService {
         steps,
         finalOutputs: currentVariables,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // ✅ Changed from any
       const chainEndTime = Date.now();
       const totalDuration = chainEndTime - chainStartTime;
 
       logger.error('Chain execution failed', {
-        error: error.message,
+        ...getErrorDetails(error), // ✅ Use helper
         duration: totalDuration,
       });
 
@@ -118,7 +120,7 @@ export class OrchestrationService {
         executionTime: totalDuration,
         steps,
         finalOutputs: currentVariables,
-        error: error.message,
+        error: getErrorMessage(error), // ✅ Use helper
       };
     }
   }
@@ -127,7 +129,8 @@ export class OrchestrationService {
    * Execute the Heusdenpas chain (SVB → SZW → Heusden)
    * This is a convenience method for the production chain
    */
-  async executeHeusdenpasChain(inputs: Record<string, any>): Promise<ChainExecutionResult> {
+  async executeHeusdenpasChain(inputs: Record<string, unknown>): Promise<ChainExecutionResult> {
+    // ✅ Changed from any
     const chain = [
       'SVB_LeeftijdsInformatie',
       'SZW_BijstandsnormInformatie',
@@ -144,7 +147,7 @@ export class OrchestrationService {
    */
   validateChainInputs(
     dmns: DmnModel[],
-    inputs: Record<string, any>
+    inputs: Record<string, unknown> // ✅ Changed from any
   ): { valid: boolean; missingInputs: string[]; errors: string[] } {
     const errors: string[] = [];
     const requiredInputs = new Set<string>();

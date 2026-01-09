@@ -3,7 +3,9 @@ import { orchestrationService } from '../services/orchestration.service';
 import { sparqlService } from '../services/sparql.service';
 import logger from '../utils/logger';
 import { ApiResponse, ChainExecutionRequest } from '../types/api.types';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ChainExecutionResult } from '../types/dmn.types';
+import { getErrorMessage, getErrorDetails } from '../utils/errors';
 
 const router = Router();
 
@@ -15,7 +17,9 @@ router.post('/execute', async (req: Request, res: Response) => {
   try {
     const { dmnIds, inputs, options }: ChainExecutionRequest = req.body;
 
+    // Validate dmnIds exists and is not empty
     if (!dmnIds || dmnIds.length === 0) {
+      // ✅ Now TypeScript knows dmnIds exists after this
       return res.status(400).json({
         success: false,
         error: {
@@ -39,103 +43,33 @@ router.post('/execute', async (req: Request, res: Response) => {
 
     logger.info('Chain execution request', { dmnIds, inputCount: Object.keys(inputs).length });
 
-    // Execute the chain
+    // ✅ After the check above, TypeScript knows dmnIds is string[]
     const result = await orchestrationService.executeChain(dmnIds, inputs);
 
-    // Filter response based on options
-    const responseData: any = {
+    const responseData = {
       success: result.success,
       chainId: result.chainId,
       executionTime: result.executionTime,
       finalOutputs: result.finalOutputs,
+      ...(options?.includeIntermediateSteps && { steps: result.steps }),
+      ...(result.error && { error: result.error }),
     };
-
-    if (options?.includeIntermediateSteps) {
-      responseData.steps = result.steps;
-    }
-
-    if (result.error) {
-      responseData.error = result.error;
-    }
 
     const statusCode = result.success ? 200 : 500;
 
     res.status(statusCode).json({
       success: result.success,
       data: responseData,
-      timestamp: new Date().toISOString(),
-    } as ApiResponse<typeof responseData>);
-  } catch (error: any) {
-    logger.error('Chain execution error', { error: error.message });
-
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'EXECUTION_ERROR',
-        message: error.message,
-      },
       timestamp: new Date().toISOString(),
     } as ApiResponse);
-  }
-});
-
-/**
- * POST /api/chains/execute/heusdenpas
- * Execute the Heusdenpas chain (convenience endpoint)
- */
-router.post('/execute/heusdenpas', async (req: Request, res: Response) => {
-  try {
-    const { inputs, options } = req.body;
-
-    if (!inputs || Object.keys(inputs).length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_REQUEST',
-          message: 'inputs object is required',
-        },
-        timestamp: new Date().toISOString(),
-      } as ApiResponse);
-    }
-
-    logger.info('Heusdenpas chain execution request', {
-      inputCount: Object.keys(inputs).length,
-    });
-
-    // Execute Heusdenpas chain
-    const result = await orchestrationService.executeHeusdenpasChain(inputs);
-
-    // Build response
-    const responseData: any = {
-      success: result.success,
-      chainId: result.chainId,
-      executionTime: result.executionTime,
-      finalOutputs: result.finalOutputs,
-    };
-
-    if (options?.includeIntermediateSteps) {
-      responseData.steps = result.steps;
-    }
-
-    if (result.error) {
-      responseData.error = result.error;
-    }
-
-    const statusCode = result.success ? 200 : 500;
-
-    res.status(statusCode).json({
-      success: result.success,
-      data: responseData,
-      timestamp: new Date().toISOString(),
-    } as ApiResponse<typeof responseData>);
-  } catch (error: any) {
-    logger.error('Heusdenpas chain execution error', { error: error.message });
+  } catch (error: unknown) {
+    logger.error('Chain execution error', getErrorDetails(error));
 
     res.status(500).json({
       success: false,
       error: {
         code: 'EXECUTION_ERROR',
-        message: error.message,
+        message: getErrorMessage(error),
       },
       timestamp: new Date().toISOString(),
     } as ApiResponse);
@@ -153,8 +87,18 @@ router.get('/', async (req: Request, res: Response) => {
     // Get chain links from SPARQL
     const links = await sparqlService.findChainLinks();
 
-    // Group links by source DMN
-    const chainMap = new Map<string, any>();
+    // ✅ Define proper type for chain map entries
+    interface ChainMapEntry {
+      from: string;
+      connections: Array<{
+        to: string;
+        variable: string;
+        variableType: string;
+      }>;
+    }
+
+    // ✅ Use the type
+    const chainMap = new Map<string, ChainMapEntry>();
 
     for (const link of links) {
       if (!chainMap.has(link.from)) {
@@ -164,11 +108,15 @@ router.get('/', async (req: Request, res: Response) => {
         });
       }
 
-      chainMap.get(link.from)!.connections.push({
-        to: link.to,
-        variable: link.variable,
-        variableType: link.variableType,
-      });
+      // ✅ Type-safe access
+      const chainData = chainMap.get(link.from);
+      if (chainData) {
+        chainData.connections.push({
+          to: link.to,
+          variable: link.variable,
+          variableType: link.variableType,
+        });
+      }
     }
 
     const chains = Array.from(chainMap.values());
@@ -181,14 +129,14 @@ router.get('/', async (req: Request, res: Response) => {
       },
       timestamp: new Date().toISOString(),
     } as ApiResponse);
-  } catch (error: any) {
-    logger.error('Chain discovery error', { error: error.message });
+  } catch (error: unknown) {
+    logger.error('Chain discovery error', getErrorDetails(error));
 
     res.status(500).json({
       success: false,
       error: {
         code: 'DISCOVERY_ERROR',
-        message: error.message,
+        message: getErrorMessage(error),
       },
       timestamp: new Date().toISOString(),
     } as ApiResponse);

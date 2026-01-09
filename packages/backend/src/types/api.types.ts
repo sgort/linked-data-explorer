@@ -2,7 +2,7 @@
  * API Request and Response type definitions
  */
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: ApiError;
@@ -12,7 +12,7 @@ export interface ApiResponse<T = any> {
 export interface ApiError {
   code: string;
   message: string;
-  details?: any;
+  details?: unknown;
 }
 
 export interface PaginationParams {
@@ -31,7 +31,7 @@ export interface PaginatedResponse<T> {
 export interface ChainExecutionRequest {
   chainId?: string;
   dmnIds?: string[]; // Manual chain specification
-  inputs: Record<string, any>;
+  inputs: Record<string, unknown>;
   options?: {
     includeIntermediateSteps?: boolean;
     timeout?: number;
