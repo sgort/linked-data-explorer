@@ -143,7 +143,9 @@ export class OperatonService {
    * OR [{ variableName: { value: X, type: Y } }] (array with single object)
    * We want just { variableName: X }
    */
-  extractValues(operatonResponse: OperatonEvaluationResponse | OperatonEvaluationResponse[]): Record<string, unknown> {
+  extractValues(
+    operatonResponse: OperatonEvaluationResponse | OperatonEvaluationResponse[]
+  ): Record<string, unknown> {
     const extracted: Record<string, unknown> = {};
 
     // Handle array response - Operaton sometimes wraps response in array
@@ -164,7 +166,7 @@ export class OperatonService {
 
     logger.info('Extracted values:', {
       extractedKeys: Object.keys(extracted),
-      extractedCount: Object.keys(extracted).length
+      extractedCount: Object.keys(extracted).length,
     });
 
     return extracted;

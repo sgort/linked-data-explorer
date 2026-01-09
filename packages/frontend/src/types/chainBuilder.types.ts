@@ -9,11 +9,20 @@ export interface ChainBuilderState {
   isLoadingDmns: boolean;
 }
 
+export interface RequiredInput {
+  identifier: string;
+  title: string;
+  type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double';
+  requiredBy: string;
+  description?: string;
+}
+
 export interface ChainValidation {
   isValid: boolean;
   errors: ValidationError[];
   warnings: ValidationWarning[];
-  missingInputs: MissingInput[];
+  requiredInputs: RequiredInput[]; // Always show these in form
+  missingInputs: RequiredInput[]; // For validation only
   estimatedTime: number;
 }
 

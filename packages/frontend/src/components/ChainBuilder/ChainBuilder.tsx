@@ -47,7 +47,7 @@ const ChainBuilder: React.FC = () => {
     } else {
       setValidation(null);
     }
-  }, [selectedChain, availableDmns]);
+  }, [selectedChain, availableDmns, inputs]);
 
   /**
    * Load available DMNs from backend
@@ -123,56 +123,94 @@ const ChainBuilder: React.FC = () => {
 
     const errors: ChainValidation['errors'] = [];
     const warnings: ChainValidation['warnings'] = [];
+    const requiredInputs: ChainValidation['requiredInputs'] = [];
     const missingInputs: ChainValidation['missingInputs'] = [];
-    const providedOutputs = new Set<string>();
 
-    // Check each DMN in sequence
+    // ✅ Track outputs available at each step (considering order!)
+    const availableOutputsAtStep = new Map<number, Set<string>>();
+
+    // ✅ Process each DMN in sequence
     chainDmns.forEach((dmn, index) => {
-      // Check if required inputs are available
-      dmn.inputs.forEach((input) => {
-        // ✅ FIX: Check for undefined/null instead of falsy
-        const hasInput = input.identifier in inputs;
+      // Get outputs available from previous DMNs
+      const previousOutputs = new Set<string>();
+      for (let i = 0; i < index; i++) {
+        chainDmns[i].outputs.forEach((output) => {
+          previousOutputs.add(output.identifier);
+        });
+      }
+      availableOutputsAtStep.set(index, previousOutputs);
 
-        // First DMN needs inputs from user
-        if (index === 0 && !hasInput) {
-          missingInputs.push({
-            identifier: input.identifier,
-            title: input.title,
-            type: input.type,
-            requiredBy: dmn.identifier,
-          });
-        }
-        // Later DMNs can get inputs from previous DMNs or user
-        else if (index > 0 && !providedOutputs.has(input.identifier) && !hasInput) {
-          errors.push({
-            type: 'missing_input',
-            message: `${dmn.identifier} requires '${input.identifier}' but no previous DMN provides it`,
-            dmnId: dmn.identifier,
-            variableId: input.identifier,
-          });
+      // Check each input
+      dmn.inputs.forEach((input) => {
+        const providedByPreviousDmn = previousOutputs.has(input.identifier);
+
+        // ✅ User must provide this input if:
+        // 1. No PREVIOUS DMN outputs it, AND
+        // 2. User hasn't provided it yet
+        if (!providedByPreviousDmn) {
+          const alreadyAdded = requiredInputs.some((ri) => ri.identifier === input.identifier);
+          if (!alreadyAdded) {
+            const inputData = {
+              identifier: input.identifier,
+              title: input.title,
+              type: input.type,
+              requiredBy: dmn.identifier,
+              description: input.description,
+            };
+
+            // ✅ Always add to requiredInputs (for form rendering)
+            requiredInputs.push(inputData);
+
+            // ✅ Also add to missingInputs if not filled yet
+            const hasValue = input.identifier in inputs;
+            if (!hasValue) {
+              missingInputs.push(inputData);
+            }
+          }
         }
       });
 
-      // Add this DMN's outputs to available set
+      // Check for duplicate outputs (warnings)
       dmn.outputs.forEach((output) => {
-        if (providedOutputs.has(output.identifier)) {
+        const outputCount = chainDmns.filter((d) =>
+          d.outputs.some((o) => o.identifier === output.identifier)
+        ).length;
+
+        if (outputCount > 1) {
           warnings.push({
             type: 'duplicate_dmn',
             message: `Multiple DMNs output '${output.identifier}'`,
             dmnId: dmn.identifier,
           });
         }
-        providedOutputs.add(output.identifier);
       });
     });
 
     // Estimate execution time (150ms per DMN + 50ms overhead)
     const estimatedTime = chainDmns.length * 150 + 50;
 
+    // ✅ ADD DEBUG LOGGING
+    console.log('=== VALIDATION DEBUG ===');
+    console.log('Chain order:', selectedChain);
+    console.log(
+      'Chain DMNs:',
+      chainDmns.map((d) => d.identifier)
+    );
+    console.log(
+      'Required inputs:',
+      requiredInputs.map((r) => r.identifier)
+    );
+    console.log(
+      'Missing inputs:',
+      missingInputs.map((m) => m.identifier)
+    );
+    console.log('========================');
+
     setValidation({
-      isValid: errors.length === 0,
+      isValid: missingInputs.length === 0,
       errors,
       warnings,
+      requiredInputs,
       missingInputs,
       estimatedTime,
     });

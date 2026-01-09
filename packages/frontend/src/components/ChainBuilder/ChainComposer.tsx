@@ -175,7 +175,8 @@ const ChainComposer: React.FC<ChainComposerProps> = ({
               <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
                 <AlertCircle size={16} />
                 <span>
-                  {validation.errors.length} error{validation.errors.length !== 1 ? 's' : ''} found
+                  {validation.missingInputs.length} input
+                  {validation.missingInputs.length !== 1 ? 's' : ''} required
                 </span>
               </div>
             )}

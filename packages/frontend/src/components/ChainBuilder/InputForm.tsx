@@ -14,24 +14,8 @@ interface InputFormProps {
  * Dynamic input form based on chain requirements
  */
 const InputForm: React.FC<InputFormProps> = ({ chain, inputs, onInputChange, validation }) => {
-  // Collect all required inputs
-  const requiredInputs = validation?.missingInputs || [];
-
-  // Also collect inputs from first DMN
-  const firstDmnInputs = chain[0]?.inputs || [];
-
-  // Merge and deduplicate
-  const allInputs = [...firstDmnInputs];
-  requiredInputs.forEach((req) => {
-    if (!allInputs.find((i) => i.identifier === req.identifier)) {
-      allInputs.push({
-        identifier: req.identifier,
-        title: req.title,
-        type: req.type as 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double',
-        description: `Required by ${req.requiredBy}`,
-      });
-    }
-  });
+  // ✅ Use requiredInputs instead of missingInputs
+  const allInputs = validation?.requiredInputs || [];
 
   if (allInputs.length === 0) {
     return (
