@@ -16,6 +16,10 @@
       "@/*": ["./*"]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "../../node_modules/@types" // ← Points to hoisted types
+    ]
   }
 }

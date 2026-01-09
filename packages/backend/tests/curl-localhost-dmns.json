@@ -1,0 +1,482 @@
+{
+  "success": true,
+  "data": {
+    "total": 6,
+    "dmns": [
+      {
+        "id": "https://regels.overheid.nl/services/aow-leeftijd/dmn",
+        "identifier": "RONL_BerekenLeeftijden",
+        "title": "RONL_BerekenLeeftijden_CPRMV.dmn",
+        "description": "DMN decision model for service evaluation",
+        "deploymentId": "6760e60e-ec8e-11f0-a5a4-3a5e81cd33b0",
+        "deployedAt": "2026-01-08T12:34:41.612Z",
+        "implementedBy": "https://operaton-doc.open-regels.nl/engine-rest/decision-definition/key/RONL_BerekenLeeftijden/evaluate",
+        "lastTested": "2026-01-08T12:34:54.857Z",
+        "testStatus": "passed",
+        "inputs": [
+          {
+            "identifier": "dagVanAanvraag",
+            "title": "dagVanAanvraag",
+            "type": "String"
+          },
+          {
+            "identifier": "geboortedatumAanvrager",
+            "title": "geboortedatumAanvrager",
+            "type": "String"
+          },
+          {
+            "identifier": "geboortedatumPartner",
+            "title": "geboortedatumPartner",
+            "type": "String"
+          }
+        ],
+        "outputs": [
+          {
+            "identifier": "AOWDatumAanvrager",
+            "title": "AOWDatumAanvrager",
+            "type": "String"
+          },
+          {
+            "identifier": "AOWDatumPartner",
+            "title": "AOWDatumPartner",
+            "type": "String"
+          },
+          {
+            "identifier": "leeftijdAanvrager",
+            "title": "leeftijdAanvrager",
+            "type": "Integer"
+          },
+          {
+            "identifier": "leeftijdPartner",
+            "title": "leeftijdPartner",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "id": "https://regels.overheid.nl/services/bijstand-berekening/dmn",
+        "identifier": "RONL_BijstandBerekening",
+        "title": "RONL_BijstandBerekening_CPRMV.dmn",
+        "description": "DMN model voor berekening hoogte bijstandsuitkering conform Participatiewet",
+        "deploymentId": "a3f8e92d-1c4a-44f9-b2e1-7d9c3f8a2b1e",
+        "deployedAt": "2026-01-08T14:23:15.382Z",
+        "implementedBy": "https://operaton-doc.open-regels.nl/engine-rest/decision-definition/key/RONL_BijstandBerekening/evaluate",
+        "lastTested": "2026-01-08T14:23:28.741Z",
+        "testStatus": "passed",
+        "inputs": [
+          {
+            "identifier": "leeftijdAanvrager",
+            "title": "Leeftijd aanvrager",
+            "type": "Integer",
+            "description": "Leeftijd van de aanvrager in jaren"
+          },
+          {
+            "identifier": "maandinkomen",
+            "title": "Maandinkomen",
+            "type": "Integer",
+            "description": "Totaal maandinkomen uit werk en andere bronnen in euro's"
+          },
+          {
+            "identifier": "vermogen",
+            "title": "Vermogen",
+            "type": "Integer",
+            "description": "Totaal vermogen inclusief spaargeld, aandelen en onroerend goed in euro's"
+          },
+          {
+            "identifier": "woonsituatie",
+            "title": "Woonsituatie",
+            "type": "String",
+            "description": "Woonsituatie: alleenstaand, samenwonend, of alleenstaande_ouder"
+          }
+        ],
+        "outputs": [
+          {
+            "identifier": "bijstandsnorm",
+            "title": "Toepasselijke bijstandsnorm",
+            "type": "String",
+            "description": "Welke bijstandsnorm van toepassing is"
+          },
+          {
+            "identifier": "bijstandsrechtVoldaan",
+            "title": "Voldoet aan bijstandsrecht",
+            "type": "Boolean",
+            "description": "Indicatie of aan voorwaarden voor bijstand wordt voldaan"
+          },
+          {
+            "identifier": "bijstandsuitkeringMaand",
+            "title": "Bijstandsuitkering per maand",
+            "type": "Integer",
+            "description": "Hoogte van de maandelijkse bijstandsuitkering in euro's"
+          }
+        ]
+      },
+      {
+        "id": "https://regels.overheid.nl/services/heusden-heusdenpas/dmn",
+        "identifier": "RONL_HeusdenpasEindresultaat",
+        "title": "RONL Heusdenpas Eindresultaat",
+        "description": "DMN model voor beoordeling Heusdenpas en Kindpakket aanvraag gemeente Heusden",
+        "deploymentId": "heusdenpas-heusden-001",
+        "deployedAt": "2026-01-09T00:00:00Z",
+        "implementedBy": "https://operaton.open-regels.nl/engine-rest/decision-definition/key/RONL_HeusdenpasEindresultaat/evaluate",
+        "lastTested": "2026-01-09T00:00:00Z",
+        "testStatus": "passed",
+        "inputs": [
+          {
+            "identifier": "aanvragerAanmerkingStudieFinanciering",
+            "title": "Aanvrager komt in aanmerking voor studiefinanciering",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager in aanmerking komt voor studiefinanciering"
+          },
+          {
+            "identifier": "aanvragerDitKalenderjaarAlAangevraagd",
+            "title": "Aanvrager heeft dit kalenderjaar al aangevraagd",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager dit kalenderjaar al een Heusdenpas heeft aangevraagd"
+          },
+          {
+            "identifier": "aanvragerHeeftAOWLeeftijd",
+            "title": "Aanvrager heeft AOW-leeftijd",
+            "type": "Boolean",
+            "description": "Indicatie of aanvrager de AOW-gerechtigde leeftijd heeft bereikt"
+          },
+          {
+            "identifier": "aanvragerHeeftKind4Tm17",
+            "title": "Aanvrager heeft kind 4 t/m 17 jaar",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager een inwonend kind heeft van 4 t/m 17 jaar"
+          },
+          {
+            "identifier": "aanvragerInwonerHeusden",
+            "title": "Aanvrager is inwoner Heusden",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager ingeschreven staat als inwoner van Heusden"
+          },
+          {
+            "identifier": "aanvragerIs181920",
+            "title": "Aanvrager is 18, 19 of 20",
+            "type": "Boolean",
+            "description": "Indicatie of aanvrager 18, 19 of 20 jaar oud is"
+          },
+          {
+            "identifier": "aanvragerIsTenminste21",
+            "title": "Aanvrager is tenminste 21",
+            "type": "Boolean",
+            "description": "Indicatie of aanvrager 21 jaar of ouder is"
+          },
+          {
+            "identifier": "aanvragerKwijtscheldingGemeentelijkeBelastingen",
+            "title": "Aanvrager heeft kwijtschelding gemeentelijke belastingen",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager kwijtschelding heeft van gemeentelijke belastingen"
+          },
+          {
+            "identifier": "aanvragerSchuldhulptrajectKredietbankNederland",
+            "title": "Aanvrager heeft schuldhulptraject Kredietbank Nederland",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager een schuldhulptraject heeft bij de Kredietbank Nederland"
+          },
+          {
+            "identifier": "aanvragerUitkeringBaanbrekers",
+            "title": "Aanvrager heeft uitkering Baanbrekers",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager een uitkering heeft van Baanbrekers"
+          },
+          {
+            "identifier": "aanvragerVoedselbankpasDenBosch",
+            "title": "Aanvrager heeft voedselbankpas Den Bosch",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager een voedselbankpas van Den Bosch heeft"
+          },
+          {
+            "identifier": "bijstandsNorm",
+            "title": "Bijstandsnorm",
+            "type": "Integer",
+            "description": "Het toepasselijke bijstandsnorm bedrag in euro's per maand"
+          },
+          {
+            "identifier": "maandelijksBrutoInkomenAanvrager",
+            "title": "Maandelijks bruto inkomen aanvrager",
+            "type": "Integer",
+            "description": "Het maandelijkse bruto inkomen van de aanvrager in euro's"
+          }
+        ],
+        "outputs": [
+          {
+            "identifier": "aanmerkingHeusdenPas",
+            "title": "Aanmerking voor Heusdenpas",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager in aanmerking komt voor de Heusdenpas"
+          },
+          {
+            "identifier": "aanmerkingKindPakket",
+            "title": "Aanmerking voor Kindpakket",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvraag voor het Kindpakket succesvol is"
+          }
+        ]
+      },
+      {
+        "id": "https://regels.overheid.nl/services/huurtoeslag-berekening/dmn",
+        "identifier": "RONL_HuurtoeslagBerekening",
+        "title": "RONL_HuurtoeslagBerekening_CPRMV.dmn",
+        "description": "DMN model voor berekening hoogte huurtoeslag conform Wet op de huurtoeslag",
+        "deploymentId": "b7c9d54f-2e8b-41a0-9f3e-6a1d8b4e9c2f",
+        "deployedAt": "2026-01-08T15:12:43.627Z",
+        "implementedBy": "https://operaton-doc.open-regels.nl/engine-rest/decision-definition/key/RONL_HuurtoeslagBerekening/evaluate",
+        "lastTested": "2026-01-08T15:12:56.891Z",
+        "testStatus": "passed",
+        "inputs": [
+          {
+            "identifier": "huishoudensamenstelling",
+            "title": "Huishoudensamenstelling",
+            "type": "String",
+            "description": "Type huishouden: alleenstaand, meerpersoonshuishouden, of alleenstaande_ouder"
+          },
+          {
+            "identifier": "huurprijsMaand",
+            "title": "Huurprijs per maand",
+            "type": "Integer",
+            "description": "Kale huurprijs per maand in euro's"
+          },
+          {
+            "identifier": "leeftijdAanvrager",
+            "title": "Leeftijd aanvrager",
+            "type": "Integer",
+            "description": "Leeftijd van de hoofdaanvrager in jaren"
+          },
+          {
+            "identifier": "maandinkomen",
+            "title": "Maandinkomen",
+            "type": "Integer",
+            "description": "Totaal toetsingsinkomen per maand in euro's"
+          },
+          {
+            "identifier": "postcode",
+            "title": "Postcode woning",
+            "type": "String",
+            "description": "Postcode van de woning waarvoor huurtoeslag wordt aangevraagd"
+          }
+        ],
+        "outputs": [
+          {
+            "identifier": "basishuur",
+            "title": "Basishuur",
+            "type": "Integer",
+            "description": "Basishuur volgens Wet op de huurtoeslag in euro's per maand"
+          },
+          {
+            "identifier": "huurtoeslagJaar",
+            "title": "Huurtoeslag per jaar",
+            "type": "Integer",
+            "description": "Totale huurtoeslag per jaar in euro's"
+          },
+          {
+            "identifier": "huurtoeslagMaand",
+            "title": "Huurtoeslag per maand",
+            "type": "Integer",
+            "description": "Hoogte van de maandelijkse huurtoeslag in euro's"
+          },
+          {
+            "identifier": "huurtoeslagRechtVoldaan",
+            "title": "Voldoet aan voorwaarden",
+            "type": "Boolean",
+            "description": "Indicatie of aan voorwaarden voor huurtoeslag wordt voldaan"
+          }
+        ]
+      },
+      {
+        "id": "https://regels.overheid.nl/services/svb-leeftijden/dmn",
+        "identifier": "SVB_LeeftijdsInformatie",
+        "title": "SVB Leeftijdsinformatie Berekening",
+        "description": "DMN model voor berekening van leeftijdscategorieën en AOW-datums conform Algemene Ouderdomswet",
+        "deploymentId": "heusdenpas-svb-001",
+        "deployedAt": "2026-01-09T00:00:00Z",
+        "implementedBy": "https://operaton.open-regels.nl/engine-rest/decision-definition/key/SVB_LeeftijdsInformatie/evaluate",
+        "lastTested": "2026-01-09T00:00:00Z",
+        "testStatus": "passed",
+        "inputs": [
+          {
+            "identifier": "dagVanAanvraag",
+            "title": "Dag van aanvraag",
+            "type": "String",
+            "description": "De datum waarop de aanvraag wordt ingediend (format: YYYY-MM-DD)"
+          },
+          {
+            "identifier": "geboortedatumAanvrager",
+            "title": "Geboortedatum aanvrager",
+            "type": "String",
+            "description": "Geboortedatum van de aanvrager (format: YYYY-MM-DD)"
+          },
+          {
+            "identifier": "geboortedatumPartner",
+            "title": "Geboortedatum partner",
+            "type": "String",
+            "description": "Geboortedatum van de partner (optioneel, null indien geen partner)"
+          }
+        ],
+        "outputs": [
+          {
+            "identifier": "AOWDatumAanvrager",
+            "title": "AOW-datum aanvrager",
+            "type": "String",
+            "description": "De datum waarop aanvrager AOW-gerechtigd wordt (format: YYYY-MM-DD)"
+          },
+          {
+            "identifier": "AOWDatumPartner",
+            "title": "AOW-datum partner",
+            "type": "String",
+            "description": "De datum waarop partner AOW-gerechtigd wordt (format: YYYY-MM-DD)"
+          },
+          {
+            "identifier": "aanvragerHeeftAOWLeeftijd",
+            "title": "Aanvrager heeft AOW-leeftijd",
+            "type": "Boolean",
+            "description": "Indicatie of aanvrager de AOW-gerechtigde leeftijd heeft bereikt"
+          },
+          {
+            "identifier": "aanvragerIs181920",
+            "title": "Aanvrager is 18, 19 of 20",
+            "type": "Boolean",
+            "description": "Indicatie of aanvrager 18, 19 of 20 jaar oud is"
+          },
+          {
+            "identifier": "aanvragerIsJongerDan18",
+            "title": "Aanvrager is jonger dan 18",
+            "type": "Boolean",
+            "description": "Indicatie of aanvrager jonger is dan 18 jaar"
+          },
+          {
+            "identifier": "aanvragerIsTenminste21",
+            "title": "Aanvrager is tenminste 21",
+            "type": "Boolean",
+            "description": "Indicatie of aanvrager 21 jaar of ouder is"
+          },
+          {
+            "identifier": "leeftijdAanvrager",
+            "title": "Leeftijd aanvrager",
+            "type": "Integer",
+            "description": "De berekende leeftijd van de aanvrager in jaren"
+          },
+          {
+            "identifier": "leeftijdPartner",
+            "title": "Leeftijd partner",
+            "type": "Integer",
+            "description": "De berekende leeftijd van de partner in jaren"
+          },
+          {
+            "identifier": "partnerHeeftAOWLeeftijd",
+            "title": "Partner heeft AOW-leeftijd",
+            "type": "Boolean",
+            "description": "Indicatie of partner de AOW-gerechtigde leeftijd heeft bereikt"
+          },
+          {
+            "identifier": "partnerIs181920",
+            "title": "Partner is 18, 19 of 20",
+            "type": "Boolean",
+            "description": "Indicatie of partner 18, 19 of 20 jaar oud is"
+          },
+          {
+            "identifier": "partnerIsJongerDan18",
+            "title": "Partner is jonger dan 18",
+            "type": "Boolean",
+            "description": "Indicatie of partner jonger is dan 18 jaar"
+          },
+          {
+            "identifier": "partnerIsTenminste21",
+            "title": "Partner is tenminste 21",
+            "type": "Boolean",
+            "description": "Indicatie of partner 21 jaar of ouder is"
+          }
+        ]
+      },
+      {
+        "id": "https://regels.overheid.nl/services/szw-bijstandsnorm/dmn",
+        "identifier": "SZW_BijstandsnormInformatie",
+        "title": "SZW Bijstandsnorm Informatie",
+        "description": "DMN model voor berekening van bijstandsnorm conform Participatiewet",
+        "deploymentId": "heusdenpas-szw-001",
+        "deployedAt": "2026-01-09T00:00:00Z",
+        "implementedBy": "https://operaton.open-regels.nl/engine-rest/decision-definition/key/SZW_BijstandsnormInformatie/evaluate",
+        "lastTested": "2026-01-09T00:00:00Z",
+        "testStatus": "passed",
+        "inputs": [
+          {
+            "identifier": "aanvragerAlleenstaand",
+            "title": "Aanvrager alleenstaand",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager alleenstaand is"
+          },
+          {
+            "identifier": "aanvragerHeeftAOWLeeftijd",
+            "title": "Aanvrager heeft AOW-leeftijd",
+            "type": "Boolean",
+            "description": "Indicatie of aanvrager de AOW-gerechtigde leeftijd heeft bereikt"
+          },
+          {
+            "identifier": "aanvragerHeeftKinderen",
+            "title": "Aanvrager heeft kinderen",
+            "type": "Boolean",
+            "description": "Indicatie of de aanvrager inwonende kinderen heeft"
+          },
+          {
+            "identifier": "aanvragerIs181920",
+            "title": "Aanvrager is 18, 19 of 20",
+            "type": "Boolean",
+            "description": "Indicatie of aanvrager 18, 19 of 20 jaar oud is"
+          },
+          {
+            "identifier": "aanvragerIsTenminste21",
+            "title": "Aanvrager is tenminste 21",
+            "type": "Boolean",
+            "description": "Indicatie of aanvrager 21 jaar of ouder is"
+          },
+          {
+            "identifier": "dagVanAanvraag",
+            "title": "Dag van aanvraag",
+            "type": "String",
+            "description": "De datum waarop de aanvraag wordt ingediend (format: YYYY-MM-DD)"
+          },
+          {
+            "identifier": "partnerHeeftAOWLeeftijd",
+            "title": "Partner heeft AOW-leeftijd",
+            "type": "Boolean",
+            "description": "Indicatie of partner de AOW-gerechtigde leeftijd heeft bereikt"
+          },
+          {
+            "identifier": "partnerIs181920",
+            "title": "Partner is 18, 19 of 20",
+            "type": "Boolean",
+            "description": "Indicatie of partner 18, 19 of 20 jaar oud is"
+          },
+          {
+            "identifier": "partnerIsTenminste21",
+            "title": "Partner is tenminste 21",
+            "type": "Boolean",
+            "description": "Indicatie of partner 21 jaar of ouder is"
+          }
+        ],
+        "outputs": [
+          {
+            "identifier": "bijstandsNorm",
+            "title": "Bijstandsnorm bedrag",
+            "type": "Integer",
+            "description": "Het toepasselijke bijstandsnorm bedrag in euro's per maand"
+          },
+          {
+            "identifier": "bijstandsnormTermijn",
+            "title": "Bijstandsnorm termijn",
+            "type": "String",
+            "description": "De toepasselijke normtermijn (1e helft 2025, 2e helft 2025, etc.)"
+          },
+          {
+            "identifier": "bijstandsnormType",
+            "title": "Bijstandsnorm type",
+            "type": "String",
+            "description": "Type bijstandsnorm (bijv. MOK=met ouderkorting, M=alleen, P=paar)"
+          }
+        ]
+      }
+    ]
+  },
+  "timestamp": "2026-01-09T10:19:23.068Z"
+}
