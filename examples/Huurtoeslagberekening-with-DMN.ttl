@@ -1,0 +1,165 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix cv: <http://data.europa.eu/m8g/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix eli: <http://data.europa.eu/eli/ontology#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix ronl: <https://regels.overheid.nl/termen/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix cprmv: <https://cprmv.open-regels.nl/0.3.0/> .
+
+
+# ============================================================
+#  Public Service
+# ============================================================
+
+<https://regels.overheid.nl/services/huurtoeslag-berekening> a cpsv:PublicService ;
+    dct:identifier "huurtoeslag-berekening" ;
+    dct:title "Berekening huurtoeslag"@nl ;
+    dct:description "Berekening van de hoogte van de huurtoeslag op basis van inkomen, huurprijs en huishoudsamenstelling."@nl ;
+    cv:thematicArea <https://standaarden.overheid.nl/owms/terms/huurtoeslag> ;
+    cv:sector <https://publications.europa.eu/resource/authority/corporate-body-classification/NATIONAL> ;
+    dcat:keyword "huurtoeslag"@nl, "huursubsidie"@nl, "wonen"@nl ;
+    dct:language <https://publications.europa.eu/resource/authority/language/NL> ;
+    cv:hasCompetentAuthority <https://organisaties.overheid.nl/00000003560458830000/Belastingdienst_Toeslagen> ;
+    cv:hasLegalResource <https://wetten.overheid.nl/BWBR0008659> ;
+    cv:hasCost <https://regels.overheid.nl/costs/cost-huurtoeslag-001> ;
+    cpsv:produces <https://regels.overheid.nl/outputs/huurtoeslag-besluit> ;
+    cprmv:hasDecisionModel <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> .
+
+
+# ============================================================
+#  Cost
+# ============================================================
+
+<https://regels.overheid.nl/costs/cost-huurtoeslag-001> a cv:Cost ;
+    dct:identifier "cost-huurtoeslag-001" ;
+    cv:value "0" ;
+    cv:currency "EUR" ;
+    dct:description "Geen kosten voor aanvraag huurtoeslag"@nl .
+
+
+# ============================================================
+#  Output
+# ============================================================
+
+<https://regels.overheid.nl/outputs/huurtoeslag-besluit> a cv:Output ;
+    dct:identifier "huurtoeslag-besluit" ;
+    dct:title "Besluit huurtoeslag"@nl ;
+    dct:description "Beschikking met hoogte van de maandelijkse huurtoeslag"@nl ;
+    dct:type <Digital document> .
+
+
+# ============================================================
+#  Organization
+# ============================================================
+
+<https://organisaties.overheid.nl/00000003560458830000/Belastingdienst_Toeslagen> a cv:PublicOrganisation ;
+    dct:identifier "Belastingdienst_Toeslagen" ;
+    skos:prefLabel "Belastingdienst/Toeslagen"@nl ;
+    foaf:homepage <https://www.belastingdienst.nl/wps/wcm/connect/nl/toeslagen/toeslagen> ;
+    cv:spatial <https://publications.europa.eu/resource/authority/country/NLD> .
+
+
+# ============================================================
+#  Legal Resource
+# ============================================================
+
+<https://wetten.overheid.nl/BWBR0008659> a eli:LegalResource ;
+    dct:identifier "BWBR0008659" ;
+    dct:title "Wet op de huurtoeslag"@nl ;
+    dct:description "Wet van 24 december 1997, houdende regels inzake de verstrekking van een bijdrage in de huurkosten van woonruimte."@nl ;
+    eli:is_realized_by <https://wetten.overheid.nl/BWBR0008659/2025-01-01> .
+
+
+# ============================================================
+#  DMN Decision Model
+# ============================================================
+
+<https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> a cprmv:DecisionModel ;
+    dct:identifier "RONL_HuurtoeslagBerekening" ;
+    dct:title "RONL_HuurtoeslagBerekening_CPRMV.dmn"@nl ;
+    dct:source <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn/file> ;
+    cprmv:deploymentId "b7c9d54f-2e8b-41a0-9f3e-6a1d8b4e9c2f" ;
+    cprmv:deployedAt "2026-01-08T15:12:43.627Z"^^xsd:dateTime ;
+    ronl:implementedBy <https://operaton-doc.open-regels.nl/engine-rest/decision-definition/key/RONL_HuurtoeslagBerekening/evaluate> ;
+    cprmv:lastTested "2026-01-08T15:12:56.891Z"^^xsd:dateTime ;
+    cprmv:testStatus "passed" ;
+    dct:description "DMN model voor berekening hoogte huurtoeslag conform Wet op de huurtoeslag"@nl .
+
+# Input Variables
+<https://regels.overheid.nl/services/huurtoeslag-berekening/dmn/input/1> a cpsv:Input ;
+    dct:identifier "maandinkomen" ;
+    dct:title "Maandinkomen"@nl ;
+    dct:type "Integer" ;
+    schema:value 1450 ;
+    dct:description "Totaal toetsingsinkomen per maand in euro's"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> .
+
+<https://regels.overheid.nl/services/huurtoeslag-berekening/dmn/input/2> a cpsv:Input ;
+    dct:identifier "huurprijsMaand" ;
+    dct:title "Huurprijs per maand"@nl ;
+    dct:type "Integer" ;
+    schema:value 750 ;
+    dct:description "Kale huurprijs per maand in euro's"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> .
+
+<https://regels.overheid.nl/services/huurtoeslag-berekening/dmn/input/3> a cpsv:Input ;
+    dct:identifier "huishoudensamenstelling" ;
+    dct:title "Huishoudensamenstelling"@nl ;
+    dct:type "String" ;
+    schema:value "alleenstaand" ;
+    dct:description "Type huishouden: alleenstaand, meerpersoonshuishouden, of alleenstaande_ouder"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> .
+
+<https://regels.overheid.nl/services/huurtoeslag-berekening/dmn/input/4> a cpsv:Input ;
+    dct:identifier "leeftijdAanvrager" ;
+    dct:title "Leeftijd aanvrager"@nl ;
+    dct:type "Integer" ;
+    schema:value 58 ;
+    dct:description "Leeftijd van de hoofdaanvrager in jaren"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> .
+
+<https://regels.overheid.nl/services/huurtoeslag-berekening/dmn/input/5> a cpsv:Input ;
+    dct:identifier "postcode" ;
+    dct:title "Postcode woning"@nl ;
+    dct:type "String" ;
+    schema:value "3511AA" ;
+    dct:description "Postcode van de woning waarvoor huurtoeslag wordt aangevraagd"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> .
+
+# Output Variables
+<https://regels.overheid.nl/services/huurtoeslag-berekening/dmn/output/1> a cpsv:Output ;
+    dct:identifier "huurtoeslagMaand" ;
+    dct:title "Huurtoeslag per maand"@nl ;
+    dct:type "Integer" ;
+    schema:value 285 ;
+    dct:description "Hoogte van de maandelijkse huurtoeslag in euro's"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> .
+
+<https://regels.overheid.nl/services/huurtoeslag-berekening/dmn/output/2> a cpsv:Output ;
+    dct:identifier "huurtoeslagJaar" ;
+    dct:title "Huurtoeslag per jaar"@nl ;
+    dct:type "Integer" ;
+    schema:value 3420 ;
+    dct:description "Totale huurtoeslag per jaar in euro's"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> .
+
+<https://regels.overheid.nl/services/huurtoeslag-berekening/dmn/output/3> a cpsv:Output ;
+    dct:identifier "huurtoeslagRechtVoldaan" ;
+    dct:title "Voldoet aan voorwaarden"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of aan voorwaarden voor huurtoeslag wordt voldaan"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> .
+
+<https://regels.overheid.nl/services/huurtoeslag-berekening/dmn/output/4> a cpsv:Output ;
+    dct:identifier "basishuur" ;
+    dct:title "Basishuur"@nl ;
+    dct:type "Integer" ;
+    schema:value 452 ;
+    dct:description "Basishuur volgens Wet op de huurtoeslag in euro's per maand"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/huurtoeslag-berekening/dmn> .

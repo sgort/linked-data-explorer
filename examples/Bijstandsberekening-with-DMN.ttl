@@ -1,0 +1,149 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix cv: <http://data.europa.eu/m8g/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix eli: <http://data.europa.eu/eli/ontology#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix ronl: <https://regels.overheid.nl/termen/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix cprmv: <https://cprmv.open-regels.nl/0.3.0/> .
+
+
+# ============================================================
+#  Public Service
+# ============================================================
+
+<https://regels.overheid.nl/services/bijstand-berekening> a cpsv:PublicService ;
+    dct:identifier "bijstand-berekening" ;
+    dct:title "Berekening hoogte bijstandsuitkering"@nl ;
+    dct:description "Berekening van de hoogte van de bijstandsuitkering op basis van leeftijd, inkomen en woonsituatie."@nl ;
+    cv:thematicArea <https://standaarden.overheid.nl/owms/terms/bijstand> ;
+    cv:sector <https://publications.europa.eu/resource/authority/corporate-body-classification/NATIONAL> ;
+    dcat:keyword "bijstand"@nl, "participatiewet"@nl, "uitkering"@nl ;
+    dct:language <https://publications.europa.eu/resource/authority/language/NL> ;
+    cv:hasCompetentAuthority <https://organisaties.overheid.nl/00000001003214345000/Gemeente_Utrecht> ;
+    cv:hasLegalResource <https://wetten.overheid.nl/BWBR0015703> ;
+    cv:hasCost <https://regels.overheid.nl/costs/cost-bijstand-001> ;
+    cpsv:produces <https://regels.overheid.nl/outputs/bijstand-uitkering> ;
+    cprmv:hasDecisionModel <https://regels.overheid.nl/services/bijstand-berekening/dmn> .
+
+
+# ============================================================
+#  Cost
+# ============================================================
+
+<https://regels.overheid.nl/costs/cost-bijstand-001> a cv:Cost ;
+    dct:identifier "cost-bijstand-001" ;
+    cv:value "0" ;
+    cv:currency "EUR" ;
+    dct:description "Geen kosten voor aanvraag bijstand"@nl .
+
+
+# ============================================================
+#  Output
+# ============================================================
+
+<https://regels.overheid.nl/outputs/bijstand-uitkering> a cv:Output ;
+    dct:identifier "bijstand-uitkering-besluit" ;
+    dct:title "Besluit bijstandsuitkering"@nl ;
+    dct:description "Beschikking met hoogte van de maandelijkse bijstandsuitkering"@nl ;
+    dct:type <Digital document> .
+
+
+# ============================================================
+#  Organization
+# ============================================================
+
+<https://organisaties.overheid.nl/00000001003214345000/Gemeente_Utrecht> a cv:PublicOrganisation ;
+    dct:identifier "Gemeente_Utrecht" ;
+    skos:prefLabel "Gemeente Utrecht"@nl ;
+    foaf:homepage <https://www.utrecht.nl> ;
+    cv:spatial <https://publications.europa.eu/resource/authority/country/NLD> .
+
+
+# ============================================================
+#  Legal Resource
+# ============================================================
+
+<https://wetten.overheid.nl/BWBR0015703> a eli:LegalResource ;
+    dct:identifier "BWBR0015703" ;
+    dct:title "Participatiewet"@nl ;
+    dct:description "Wet van 30 januari 2014, houdende regels voor ondersteuning bij arbeidsinschakeling en verlening van bijstand door gemeenten."@nl ;
+    eli:is_realized_by <https://wetten.overheid.nl/BWBR0015703/2025-01-01> .
+
+
+# ============================================================
+#  DMN Decision Model
+# ============================================================
+
+<https://regels.overheid.nl/services/bijstand-berekening/dmn> a cprmv:DecisionModel ;
+    dct:identifier "RONL_BijstandBerekening" ;
+    dct:title "RONL_BijstandBerekening_CPRMV.dmn"@nl ;
+    dct:source <https://regels.overheid.nl/services/bijstand-berekening/dmn/file> ;
+    cprmv:deploymentId "a3f8e92d-1c4a-44f9-b2e1-7d9c3f8a2b1e" ;
+    cprmv:deployedAt "2026-01-08T14:23:15.382Z"^^xsd:dateTime ;
+    ronl:implementedBy <https://operaton-doc.open-regels.nl/engine-rest/decision-definition/key/RONL_BijstandBerekening/evaluate> ;
+    cprmv:lastTested "2026-01-08T14:23:28.741Z"^^xsd:dateTime ;
+    cprmv:testStatus "passed" ;
+    dct:description "DMN model voor berekening hoogte bijstandsuitkering conform Participatiewet"@nl .
+
+# Input Variables
+<https://regels.overheid.nl/services/bijstand-berekening/dmn/input/1> a cpsv:Input ;
+    dct:identifier "leeftijdAanvrager" ;
+    dct:title "Leeftijd aanvrager"@nl ;
+    dct:type "Integer" ;
+    schema:value 58 ;
+    dct:description "Leeftijd van de aanvrager in jaren"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/bijstand-berekening/dmn> .
+
+<https://regels.overheid.nl/services/bijstand-berekening/dmn/input/2> a cpsv:Input ;
+    dct:identifier "maandinkomen" ;
+    dct:title "Maandinkomen"@nl ;
+    dct:type "Integer" ;
+    schema:value 0 ;
+    dct:description "Totaal maandinkomen uit werk en andere bronnen in euro's"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/bijstand-berekening/dmn> .
+
+<https://regels.overheid.nl/services/bijstand-berekening/dmn/input/3> a cpsv:Input ;
+    dct:identifier "woonsituatie" ;
+    dct:title "Woonsituatie"@nl ;
+    dct:type "String" ;
+    schema:value "alleenstaand" ;
+    dct:description "Woonsituatie: alleenstaand, samenwonend, of alleenstaande_ouder"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/bijstand-berekening/dmn> .
+
+<https://regels.overheid.nl/services/bijstand-berekening/dmn/input/4> a cpsv:Input ;
+    dct:identifier "vermogen" ;
+    dct:title "Vermogen"@nl ;
+    dct:type "Integer" ;
+    schema:value 5000 ;
+    dct:description "Totaal vermogen inclusief spaargeld, aandelen en onroerend goed in euro's"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/bijstand-berekening/dmn> .
+
+# Output Variables
+<https://regels.overheid.nl/services/bijstand-berekening/dmn/output/1> a cpsv:Output ;
+    dct:identifier "bijstandsuitkeringMaand" ;
+    dct:title "Bijstandsuitkering per maand"@nl ;
+    dct:type "Integer" ;
+    schema:value 1450 ;
+    dct:description "Hoogte van de maandelijkse bijstandsuitkering in euro's"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/bijstand-berekening/dmn> .
+
+<https://regels.overheid.nl/services/bijstand-berekening/dmn/output/2> a cpsv:Output ;
+    dct:identifier "bijstandsnorm" ;
+    dct:title "Toepasselijke bijstandsnorm"@nl ;
+    dct:type "String" ;
+    schema:value "100% norm alleenstaande" ;
+    dct:description "Welke bijstandsnorm van toepassing is"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/bijstand-berekening/dmn> .
+
+<https://regels.overheid.nl/services/bijstand-berekening/dmn/output/3> a cpsv:Output ;
+    dct:identifier "bijstandsrechtVoldaan" ;
+    dct:title "Voldoet aan bijstandsrecht"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of aan voorwaarden voor bijstand wordt voldaan"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/bijstand-berekening/dmn> .

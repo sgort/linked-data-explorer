@@ -30,6 +30,22 @@
 
 ## 🏗️ Architecture Overview
 
+### Flow
+
+User Question  
+↓  
+Chatbot (clarify intent)  
+↓  
+Question Analysis → Select relevant DMNs  
+↓  
+BPMN Orchestration Engine (Operaton)  
+↓  
+Sequential DMN Execution (gather inputs → execute → pass outputs)  
+↓  
+Legal Decision + Explanation
+
+### Stack
+
 ![Architecture Overview](./static/img/architecture-overview.png)
 
 ## 🎯 Overview

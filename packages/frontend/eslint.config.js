@@ -1,10 +1,10 @@
 import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
+import prettierConfig from 'eslint-config-prettier';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import reactRefreshPlugin from 'eslint-plugin-react-refresh';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
-import prettierConfig from 'eslint-config-prettier';
+import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   // Ignore patterns
@@ -31,6 +31,7 @@ export default tseslint.config(
   // React plugin configuration
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
+    // ✅ NO languageOptions section - simpler and works!
     plugins: {
       react: reactPlugin,
       'react-hooks': reactHooksPlugin,
@@ -46,8 +47,8 @@ export default tseslint.config(
       // React rules
       ...reactPlugin.configs.recommended.rules,
       ...reactPlugin.configs['jsx-runtime'].rules,
-      'react/prop-types': 'off', // Using TypeScript for prop validation
-      'react/react-in-jsx-scope': 'off', // Not needed with new JSX transform
+      'react/prop-types': 'off',
+      'react/react-in-jsx-scope': 'off',
 
       // React Hooks rules
       ...reactHooksPlugin.configs.recommended.rules,

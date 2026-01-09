@@ -2,19 +2,47 @@
   "versions": [
     {
       "version": "0.2.0",
-      "status": "Enhancement",
+      "status": "New Features",
       "statusColor": "purple",
       "borderColor": "purple",
-      "date": "January X, 2026",
+      "date": "January 8, 2026",
       "sections": [
         {
-          "title": "DMN Orchestration",
+          "title": "DMN Orchestration (Phase B.1)",
           "icon": "🚀",
           "iconColor": "emerald",
           "items": [
-            "Added DMN discovery and visualization",
-            "SPARQL queries for DMN models",
-            "Three-panel orchestration view"
+            "Added DMN discovery via SPARQL queries with cprmv vocabulary support",
+            "Three-panel orchestration view: DMN list, chain builder placeholder, and details panel",
+            "Search and filter DMN models by name or identifier in real-time",
+            "View DMN input variables (blue cards) and output variables (green cards) with types",
+            "Discover DMN chains automatically where output of DMN1 matches input of DMN2",
+            "Display chain connections and variable mappings with visual indicators",
+            "Smart query library filtering - shows only relevant queries per view mode",
+            "Phase B.3 placeholder for visual drag-and-drop chain builder"
+          ]
+        },
+        {
+          "title": "SPARQL Enhancements",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "Added cprmv (CPSV Rule Model) vocabulary prefix for decision models",
+            "Added schema.org vocabulary prefix for additional metadata",
+            "5 new DMN-specific SPARQL queries: Find All DMNs, Input/Output Details, Find Chains, Chain Paths, Complete Metadata",
+            "Intelligent SPARQL result parsing handles multiple query response formats"
+          ]
+        },
+        {
+          "title": "Architecture & UI",
+          "icon": "🏗️",
+          "iconColor": "indigo",
+          "items": [
+            "New ViewMode.ORCHESTRATION enum value for navigation state",
+            "5 new TypeScript interfaces: DmnModel, DmnVariable, DmnChainLink, DmnChain, OrchestrationState",
+            "OrchestrationView component with automatic query type detection",
+            "4th navigation button (GitBranch icon) for orchestration workflows",
+            "Consistent design language with existing components using Tailwind CSS"
           ]
         }
       ]
