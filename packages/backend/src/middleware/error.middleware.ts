@@ -1,14 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
+import { getErrorMessage, getErrorDetails } from '../utils/errors';
 
 /**
  * Global error handling middleware
  */
-export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
+export const errorHandler = (err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  const errorDetails = getErrorDetails(err);
+
   logger.error('Unhandled error', {
-    error: err.message,
-    stack: err.stack,
+    ...errorDetails,
     path: req.path,
     method: req.method,
   });
@@ -17,8 +19,9 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     success: false,
     error: {
       code: 'INTERNAL_ERROR',
-      message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-      details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      message:
+        process.env.NODE_ENV === 'production' ? 'Internal server error' : getErrorMessage(err),
+      details: process.env.NODE_ENV === 'development' ? errorDetails.stack : undefined,
     },
     timestamp: new Date().toISOString(),
   };

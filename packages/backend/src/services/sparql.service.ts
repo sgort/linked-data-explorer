@@ -2,9 +2,35 @@ import axios, { AxiosInstance } from 'axios';
 import { config } from '../utils/config';
 import logger from '../utils/logger';
 import { DmnModel, DmnVariable, ChainLink } from '../types/dmn.types';
+import { getErrorMessage, getErrorDetails } from '../utils/errors';
+
+/**
+ * Type for SPARQL query result bindings
+ */
+interface SparqlBinding {
+  value: string;
+  type?: string;
+  datatype?: string;
+  'xml:lang'?: string;
+}
+
+/**
+ * Type for a single SPARQL result row
+ */
+type SparqlResultRow = Record<string, SparqlBinding>;
+
+/**
+ * Type for complete SPARQL query results
+ */
+interface SparqlQueryResult {
+  results?: {
+    bindings?: SparqlResultRow[];
+  };
+}
 
 /**
  * Service for querying TriplyDB via SPARQL
+ * Provides methods to discover DMN models and their relationships
  */
 export class SparqlService {
   private client: AxiosInstance;
@@ -17,28 +43,39 @@ export class SparqlService {
         Accept: 'application/sparql-results+json',
       },
     });
+
+    logger.info('SPARQL Service initialized', {
+      endpoint: config.triplydb.endpoint,
+      timeout: config.triplydb.timeout,
+    });
   }
 
   /**
-   * Execute a SPARQL query
+   * Execute a SPARQL query against TriplyDB
+   *
+   * @param query - SPARQL query string
+   * @returns Query results
+   * @throws Error if query fails
    */
-  private async executeQuery(query: string): Promise<any> {
+  private async executeQuery(query: string): Promise<SparqlQueryResult> {
     try {
-      logger.debug('Executing SPARQL query', { query });
+      logger.debug('Executing SPARQL query', { query: query.substring(0, 200) });
 
       const response = await this.client.post('', query, {
         headers: { 'Content-Type': 'application/sparql-query' },
       });
 
-      return response.data;
-    } catch (error: any) {
-      logger.error('SPARQL query failed', { error: error.message });
-      throw new Error(`SPARQL query failed: ${error.message}`);
+      return response.data as SparqlQueryResult;
+    } catch (error: unknown) {
+      logger.error('SPARQL query failed', getErrorDetails(error));
+      throw new Error(`SPARQL query failed: ${getErrorMessage(error)}`);
     }
   }
 
   /**
-   * Get all DMN models
+   * Get all DMN models from TriplyDB
+   *
+   * @returns Array of DMN models with inputs and outputs
    */
   async getAllDmns(): Promise<DmnModel[]> {
     const query = `
@@ -66,7 +103,9 @@ ORDER BY ?identifier
     const data = await this.executeQuery(query);
     const bindings = data.results?.bindings || [];
 
-    // Get unique DMNs
+    logger.info(`Found ${bindings.length} DMN records`);
+
+    // Group by DMN URI to handle duplicates
     const dmnMap = new Map<string, DmnModel>();
 
     for (const binding of bindings) {
@@ -81,25 +120,33 @@ ORDER BY ?identifier
           deployedAt: binding.deployedAt?.value,
           implementedBy: binding.implementedBy?.value,
           lastTested: binding.lastTested?.value,
-          testStatus: binding.testStatus?.value as 'passed' | 'failed' | 'pending',
+          testStatus: binding.testStatus?.value as 'passed' | 'failed' | 'pending' | undefined,
           inputs: [],
           outputs: [],
         });
       }
     }
 
-    // Now get inputs and outputs for each DMN
+    // Get unique DMNs and enrich with inputs/outputs
     const dmns = Array.from(dmnMap.values());
+    logger.info(`Processing ${dmns.length} unique DMNs`);
+
     for (const dmn of dmns) {
       dmn.inputs = await this.getDmnInputs(dmn.id);
       dmn.outputs = await this.getDmnOutputs(dmn.id);
+      logger.debug(
+        `DMN ${dmn.identifier}: ${dmn.inputs.length} inputs, ${dmn.outputs.length} outputs`
+      );
     }
 
     return dmns;
   }
 
   /**
-   * Get input variables for a DMN
+   * Get input variables for a specific DMN
+   *
+   * @param dmnId - URI of the DMN model
+   * @returns Array of input variables
    */
   private async getDmnInputs(dmnId: string): Promise<DmnVariable[]> {
     const query = `
@@ -122,16 +169,19 @@ ORDER BY ?identifier
     const data = await this.executeQuery(query);
     const bindings = data.results?.bindings || [];
 
-    return bindings.map((b: any) => ({
+    return bindings.map((b: SparqlResultRow) => ({
       identifier: b.identifier.value,
       title: b.title.value,
-      type: b.type.value,
+      type: b.type.value as 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double',
       description: b.description?.value,
     }));
   }
 
   /**
-   * Get output variables for a DMN
+   * Get output variables for a specific DMN
+   *
+   * @param dmnId - URI of the DMN model
+   * @returns Array of output variables
    */
   private async getDmnOutputs(dmnId: string): Promise<DmnVariable[]> {
     const query = `
@@ -153,17 +203,19 @@ ORDER BY ?identifier
     const data = await this.executeQuery(query);
     const bindings = data.results?.bindings || [];
 
-    return bindings.map((b: any) => ({
+    return bindings.map((b: SparqlResultRow) => ({
       identifier: b.identifier.value,
       title: b.title.value,
-      type: b.type.value,
+      type: b.type.value as 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double',
       description: b.description?.value,
     }));
   }
 
   /**
-   * Find chain links between DMNs
+   * Find chain links between DMNs based on variable matching
    * A link exists when DMN1 outputs a variable that DMN2 requires as input
+   *
+   * @returns Array of chain links
    */
   async findChainLinks(): Promise<ChainLink[]> {
     const query = `
@@ -195,7 +247,9 @@ ORDER BY ?dmn1Identifier ?dmn2Identifier ?variableId
     const data = await this.executeQuery(query);
     const bindings = data.results?.bindings || [];
 
-    return bindings.map((b: any) => ({
+    logger.info(`Found ${bindings.length} chain links`);
+
+    return bindings.map((b: SparqlResultRow) => ({
       from: b.dmn1Identifier.value,
       to: b.dmn2Identifier.value,
       variable: b.variableId.value,
@@ -204,15 +258,28 @@ ORDER BY ?dmn1Identifier ?dmn2Identifier ?variableId
   }
 
   /**
-   * Get a specific DMN by identifier
+   * Get a specific DMN by its identifier
+   *
+   * @param identifier - DMN identifier (e.g., "SVB_LeeftijdsInformatie")
+   * @returns DMN model or null if not found
    */
   async getDmnByIdentifier(identifier: string): Promise<DmnModel | null> {
+    logger.debug(`Looking up DMN by identifier: ${identifier}`);
+
     const dmns = await this.getAllDmns();
-    return dmns.find((d) => d.identifier === identifier) || null;
+    const dmn = dmns.find((d) => d.identifier === identifier) || null;
+
+    if (!dmn) {
+      logger.warn(`DMN not found: ${identifier}`);
+    }
+
+    return dmn;
   }
 
   /**
    * Health check - verify TriplyDB is accessible
+   *
+   * @returns Health status with latency
    */
   async healthCheck(): Promise<{ status: 'up' | 'down'; latency?: number; error?: string }> {
     try {
@@ -220,15 +287,20 @@ ORDER BY ?dmn1Identifier ?dmn2Identifier ?variableId
       await this.executeQuery('SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 1');
       const latency = Date.now() - startTime;
 
+      logger.debug('TriplyDB health check successful', { latency });
+
       return { status: 'up', latency };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      logger.error('TriplyDB health check failed', getErrorDetails(error));
+
       return {
         status: 'down',
-        error: error.message,
+        error: getErrorMessage(error),
       };
     }
   }
 }
 
+// Export singleton instance
 export const sparqlService = new SparqlService();
 export default sparqlService;

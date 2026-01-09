@@ -1,7 +1,9 @@
 import axios, { AxiosInstance } from 'axios';
 import { config } from '../utils/config';
 import logger from '../utils/logger';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { OperatonEvaluationRequest, OperatonEvaluationResponse } from '../types/dmn.types';
+import { getErrorMessage, getErrorDetails, isError } from '../utils/errors';
 
 /**
  * Service for interacting with Operaton REST API
@@ -55,7 +57,7 @@ export class OperatonService {
    */
   async evaluateDecision(
     decisionKey: string,
-    variables: Record<string, any>
+    variables: Record<string, unknown>
   ): Promise<OperatonEvaluationResponse> {
     try {
       const startTime = Date.now();
@@ -73,12 +75,22 @@ export class OperatonService {
       logger.info(`DMN evaluation completed: ${decisionKey}`, { duration });
 
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorDetails = getErrorDetails(error);
+
+      // Extract additional context for axios errors
+      const additionalContext: Record<string, unknown> = {};
+      if (isError(error) && 'response' in error) {
+        const axiosError = error as { response?: { data?: unknown } };
+        additionalContext.response = axiosError.response?.data;
+      }
+
       logger.error(`Failed to evaluate DMN: ${decisionKey}`, {
-        error: error.message,
-        response: error.response?.data,
+        ...errorDetails,
+        ...additionalContext,
       });
-      throw new Error(`DMN evaluation failed: ${error.message}`);
+
+      throw new Error(`DMN evaluation failed: ${getErrorMessage(error)}`);
     }
   }
 
@@ -87,9 +99,9 @@ export class OperatonService {
    * Each variable needs to be wrapped with value and type
    */
   private transformVariablesToOperatonFormat(
-    variables: Record<string, any>
-  ): Record<string, { value: any; type: string }> {
-    const transformed: Record<string, { value: any; type: string }> = {};
+    variables: Record<string, unknown>
+  ): Record<string, { value: unknown; type: string }> {
+    const transformed: Record<string, { value: unknown; type: string }> = {};
 
     for (const [key, value] of Object.entries(variables)) {
       transformed[key] = {
@@ -104,7 +116,7 @@ export class OperatonService {
   /**
    * Infer Operaton type from JavaScript value
    */
-  private inferType(value: any): string {
+  private inferType(value: unknown): string {
     if (value === null || value === undefined) {
       return 'Null';
     }
@@ -130,8 +142,8 @@ export class OperatonService {
    * Operaton returns { variableName: { value: X, type: Y } }
    * We want just { variableName: X }
    */
-  extractValues(operatonResponse: OperatonEvaluationResponse): Record<string, any> {
-    const extracted: Record<string, any> = {};
+  extractValues(operatonResponse: OperatonEvaluationResponse): Record<string, unknown> {
+    const extracted: Record<string, unknown> = {};
 
     for (const [key, valueObj] of Object.entries(operatonResponse)) {
       extracted[key] = valueObj.value;
@@ -150,10 +162,10 @@ export class OperatonService {
       const latency = Date.now() - startTime;
 
       return { status: 'up', latency };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         status: 'down',
-        error: error.message,
+        error: getErrorMessage(error),
       };
     }
   }

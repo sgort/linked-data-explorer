@@ -7,7 +7,7 @@ export interface DmnVariable {
   title: string;
   type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double';
   description?: string;
-  value?: any;
+  value?: unknown;
 }
 
 export interface DmnModel {
@@ -47,8 +47,8 @@ export interface ExecutionStep {
   startTime: number;
   endTime?: number;
   duration?: number;
-  inputs: Record<string, any>;
-  outputs?: Record<string, any>;
+  inputs: Record<string, unknown>;
+  outputs?: Record<string, unknown>;
   error?: string;
 }
 
@@ -57,17 +57,17 @@ export interface ChainExecutionResult {
   chainId: string;
   executionTime: number;
   steps: ExecutionStep[];
-  finalOutputs: Record<string, any>;
+  finalOutputs: Record<string, unknown>;
   error?: string;
 }
 
 export interface OperatonEvaluationRequest {
-  variables: Record<string, { value: any; type: string }>;
+  variables: Record<string, { value: unknown; type: string }>;
 }
 
 export interface OperatonEvaluationResponse {
   [key: string]: {
-    value: any;
+    value: unknown;
     type: string;
   };
 }
