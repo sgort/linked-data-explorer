@@ -1,0 +1,221 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix cv: <http://data.europa.eu/m8g/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix eli: <http://data.europa.eu/eli/ontology#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix ronl: <https://regels.overheid.nl/termen/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix cprmv: <https://cprmv.open-regels.nl/0.3.0/> .
+
+
+# ============================================================
+#  Public Service
+# ============================================================
+
+<https://regels.overheid.nl/services/svb-leeftijden> a cpsv:PublicService ;
+    dct:identifier "svb-leeftijden" ;
+    dct:title "SVB Leeftijdsinformatie"@nl ;
+    dct:description "Berekening van leeftijdscategorieën en AOW-datums voor aanvrager en partner."@nl ;
+    cv:thematicArea <https://standaarden.overheid.nl/owms/terms/sociale-zekerheid> ;
+    cv:sector <https://publications.europa.eu/resource/authority/corporate-body-classification/NATIONAL> ;
+    dcat:keyword "leeftijd"@nl, "AOW"@nl, "pensioengerechtigde leeftijd"@nl ;
+    dct:language <https://publications.europa.eu/resource/authority/language/NL> ;
+    cv:hasCompetentAuthority <https://organisaties.overheid.nl/28212263/Sociale_Verzekeringsbank> ;
+    cv:hasLegalResource <https://wetten.overheid.nl/BWBR0002221> ;
+    cv:hasCost <https://regels.overheid.nl/costs/cost-svb-001> ;
+    cpsv:produces <https://regels.overheid.nl/outputs/svb-leeftijdsinformatie> ;
+    cprmv:hasDecisionModel <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+
+# ============================================================
+#  Cost
+# ============================================================
+
+<https://regels.overheid.nl/costs/cost-svb-001> a cv:Cost ;
+    dct:identifier "cost-svb-001" ;
+    cv:value "0" ;
+    cv:currency "EUR" ;
+    dct:description "Geen kosten voor SVB leeftijdsberekening"@nl .
+
+
+# ============================================================
+#  Output
+# ============================================================
+
+<https://regels.overheid.nl/outputs/svb-leeftijdsinformatie> a cv:Output ;
+    dct:identifier "svb-leeftijdsinformatie" ;
+    dct:title "SVB Leeftijdsinformatie"@nl ;
+    dct:description "Berekende leeftijdscategorieën en AOW-datums"@nl ;
+    dct:type <Structured data> .
+
+
+# ============================================================
+#  Organization
+# ============================================================
+
+<https://organisaties.overheid.nl/28212263/Sociale_Verzekeringsbank> a cv:PublicOrganisation ;
+    dct:identifier "Sociale_Verzekeringsbank" ;
+    skos:prefLabel "Sociale Verzekeringsbank"@nl ;
+    foaf:homepage <https://www.svb.nl> ;
+    cv:spatial <https://publications.europa.eu/resource/authority/country/NLD> .
+
+
+# ============================================================
+#  Legal Resource
+# ============================================================
+
+<https://wetten.overheid.nl/BWBR0002221> a eli:LegalResource ;
+    dct:identifier "BWBR0002221" ;
+    dct:title "Algemene Ouderdomswet"@nl ;
+    dct:description "De informatie op wetten.overheid.nl onderdeel vormt geen bekendmaking in de zin van de Grondwet."@nl ;
+    eli:is_realized_by <https://wetten.overheid.nl/BWBR0002221/2025-01-01> .
+
+
+# ============================================================
+#  DMN Decision Model
+# ============================================================
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn> a cprmv:DecisionModel ;
+    dct:identifier "SVB_LeeftijdsInformatie" ;
+    dct:title "SVB Leeftijdsinformatie Berekening"@nl ;
+    dct:source <https://regels.overheid.nl/services/svb-leeftijden/dmn/file> ;
+    cprmv:deploymentId "heusdenpas-svb-001" ;
+    cprmv:deployedAt "2026-01-09T00:00:00.000Z"^^xsd:dateTime ;
+    ronl:implementedBy <https://operaton.open-regels.nl/engine-rest/decision-definition/key/SVB_LeeftijdsInformatie/evaluate> ;
+    cprmv:lastTested "2026-01-09T00:00:00.000Z"^^xsd:dateTime ;
+    cprmv:testStatus "passed" ;
+    dct:description "DMN model voor berekening van leeftijdscategorieën en AOW-datums conform Algemene Ouderdomswet"@nl .
+
+
+# ============================================================
+#  Input Variables
+# ============================================================
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/input/1> a cpsv:Input ;
+    dct:identifier "dagVanAanvraag" ;
+    dct:title "Dag van aanvraag"@nl ;
+    dct:type "String" ;
+    schema:value "2025-12-24" ;
+    dct:description "De datum waarop de aanvraag wordt ingediend (format: YYYY-MM-DD)"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/input/2> a cpsv:Input ;
+    dct:identifier "geboortedatumAanvrager" ;
+    dct:title "Geboortedatum aanvrager"@nl ;
+    dct:type "String" ;
+    schema:value "1980-01-23" ;
+    dct:description "Geboortedatum van de aanvrager (format: YYYY-MM-DD)"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/input/3> a cpsv:Input ;
+    dct:identifier "geboortedatumPartner" ;
+    dct:title "Geboortedatum partner"@nl ;
+    dct:type "String" ;
+    schema:value "1982-05-15" ;
+    dct:description "Geboortedatum van de partner (optioneel, null indien geen partner)"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+
+# ============================================================
+#  Output Variables
+# ============================================================
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/1> a cpsv:Output ;
+    dct:identifier "aanvragerIsJongerDan18" ;
+    dct:title "Aanvrager is jonger dan 18"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of aanvrager jonger is dan 18 jaar"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/2> a cpsv:Output ;
+    dct:identifier "aanvragerIs181920" ;
+    dct:title "Aanvrager is 18, 19 of 20"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of aanvrager 18, 19 of 20 jaar oud is"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/3> a cpsv:Output ;
+    dct:identifier "aanvragerIsTenminste21" ;
+    dct:title "Aanvrager is tenminste 21"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of aanvrager 21 jaar of ouder is"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/4> a cpsv:Output ;
+    dct:identifier "aanvragerHeeftAOWLeeftijd" ;
+    dct:title "Aanvrager heeft AOW-leeftijd"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of aanvrager de AOW-gerechtigde leeftijd heeft bereikt"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/5> a cpsv:Output ;
+    dct:identifier "partnerIsJongerDan18" ;
+    dct:title "Partner is jonger dan 18"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of partner jonger is dan 18 jaar"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/6> a cpsv:Output ;
+    dct:identifier "partnerIs181920" ;
+    dct:title "Partner is 18, 19 of 20"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of partner 18, 19 of 20 jaar oud is"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/7> a cpsv:Output ;
+    dct:identifier "partnerIsTenminste21" ;
+    dct:title "Partner is tenminste 21"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of partner 21 jaar of ouder is"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/8> a cpsv:Output ;
+    dct:identifier "partnerHeeftAOWLeeftijd" ;
+    dct:title "Partner heeft AOW-leeftijd"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of partner de AOW-gerechtigde leeftijd heeft bereikt"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/9> a cpsv:Output ;
+    dct:identifier "leeftijdAanvrager" ;
+    dct:title "Leeftijd aanvrager"@nl ;
+    dct:type "Integer" ;
+    schema:value 45 ;
+    dct:description "De berekende leeftijd van de aanvrager in jaren"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/10> a cpsv:Output ;
+    dct:identifier "leeftijdPartner" ;
+    dct:title "Leeftijd partner"@nl ;
+    dct:type "Integer" ;
+    schema:value 43 ;
+    dct:description "De berekende leeftijd van de partner in jaren"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/11> a cpsv:Output ;
+    dct:identifier "AOWDatumAanvrager" ;
+    dct:title "AOW-datum aanvrager"@nl ;
+    dct:type "String" ;
+    schema:value "2047-01-23" ;
+    dct:description "De datum waarop aanvrager AOW-gerechtigd wordt (format: YYYY-MM-DD)"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .
+
+<https://regels.overheid.nl/services/svb-leeftijden/dmn/output/12> a cpsv:Output ;
+    dct:identifier "AOWDatumPartner" ;
+    dct:title "AOW-datum partner"@nl ;
+    dct:type "String" ;
+    schema:value "2049-05-15" ;
+    dct:description "De datum waarop partner AOW-gerechtigd wordt (format: YYYY-MM-DD)"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/svb-leeftijden/dmn> .

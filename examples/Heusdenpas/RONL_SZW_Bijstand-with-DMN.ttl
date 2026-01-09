@@ -1,0 +1,197 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix cv: <http://data.europa.eu/m8g/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix eli: <http://data.europa.eu/eli/ontology#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix ronl: <https://regels.overheid.nl/termen/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix cprmv: <https://cprmv.open-regels.nl/0.3.0/> .
+
+
+# ============================================================
+#  Public Service
+# ============================================================
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm> a cpsv:PublicService ;
+    dct:identifier "szw-bijstandsnorm" ;
+    dct:title "SZW Bijstandsnorm Berekening"@nl ;
+    dct:description "Berekening van de toepasselijke bijstandsnorm op basis van gezinssamenstelling en leeftijdscategorieën."@nl ;
+    cv:thematicArea <https://standaarden.overheid.nl/owms/terms/bijstand> ;
+    cv:sector <https://publications.europa.eu/resource/authority/corporate-body-classification/NATIONAL> ;
+    dcat:keyword "bijstandsnorm"@nl, "participatiewet"@nl, "sociale zekerheid"@nl ;
+    dct:language <https://publications.europa.eu/resource/authority/language/NL> ;
+    cv:hasCompetentAuthority <https://organisaties.overheid.nl/00000001824919400000/Ministerie_van_Sociale_Zaken_en_Werkgelegenheid> ;
+    cv:hasLegalResource <https://wetten.overheid.nl/BWBR0015703> ;
+    cv:hasCost <https://regels.overheid.nl/costs/cost-szw-001> ;
+    cpsv:produces <https://regels.overheid.nl/outputs/szw-bijstandsnorm> ;
+    cprmv:hasDecisionModel <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+
+# ============================================================
+#  Cost
+# ============================================================
+
+<https://regels.overheid.nl/costs/cost-szw-001> a cv:Cost ;
+    dct:identifier "cost-szw-001" ;
+    cv:value "0" ;
+    cv:currency "EUR" ;
+    dct:description "Geen kosten voor bijstandsnorm berekening"@nl .
+
+
+# ============================================================
+#  Output
+# ============================================================
+
+<https://regels.overheid.nl/outputs/szw-bijstandsnorm> a cv:Output ;
+    dct:identifier "szw-bijstandsnorm-resultaat" ;
+    dct:title "Bijstandsnorm Resultaat"@nl ;
+    dct:description "Berekende bijstandsnorm inclusief type en termijn"@nl ;
+    dct:type <Structured data> .
+
+
+# ============================================================
+#  Organization
+# ============================================================
+
+<https://organisaties.overheid.nl/00000001824919400000/Ministerie_van_Sociale_Zaken_en_Werkgelegenheid> a cv:PublicOrganisation ;
+    dct:identifier "Ministerie_van_Sociale_Zaken_en_Werkgelegenheid" ;
+    skos:prefLabel "Ministerie van Sociale Zaken en Werkgelegenheid"@nl ;
+    foaf:homepage <https://www.rijksoverheid.nl/ministeries/ministerie-van-sociale-zaken-en-werkgelegenheid> ;
+    cv:spatial <https://publications.europa.eu/resource/authority/country/NLD> .
+
+
+# ============================================================
+#  Legal Resource
+# ============================================================
+
+<https://wetten.overheid.nl/BWBR0015703> a eli:LegalResource ;
+    dct:identifier "BWBR0015703" ;
+    dct:title "Participatiewet"@nl ;
+    dct:description "Wet van 30 januari 2014, houdende regels voor ondersteuning bij arbeidsinschakeling en verlening van bijstand door gemeenten."@nl ;
+    eli:is_realized_by <https://wetten.overheid.nl/BWBR0015703/2025-01-01> .
+
+
+# ============================================================
+#  DMN Decision Model
+# ============================================================
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> a cprmv:DecisionModel ;
+    dct:identifier "SZW_BijstandsnormInformatie" ;
+    dct:title "SZW Bijstandsnorm Informatie"@nl ;
+    dct:source <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/file> ;
+    cprmv:deploymentId "heusdenpas-szw-001" ;
+    cprmv:deployedAt "2026-01-09T00:00:00.000Z"^^xsd:dateTime ;
+    ronl:implementedBy <https://operaton.open-regels.nl/engine-rest/decision-definition/key/SZW_BijstandsnormInformatie/evaluate> ;
+    cprmv:lastTested "2026-01-09T00:00:00.000Z"^^xsd:dateTime ;
+    cprmv:testStatus "passed" ;
+    dct:description "DMN model voor berekening van bijstandsnorm conform Participatiewet"@nl .
+
+
+# ============================================================
+#  Input Variables
+# ============================================================
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/input/1> a cpsv:Input ;
+    dct:identifier "dagVanAanvraag" ;
+    dct:title "Dag van aanvraag"@nl ;
+    dct:type "String" ;
+    schema:value "2025-12-24" ;
+    dct:description "De datum waarop de aanvraag wordt ingediend (format: YYYY-MM-DD)"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/input/2> a cpsv:Input ;
+    dct:identifier "aanvragerAlleenstaand" ;
+    dct:title "Aanvrager alleenstaand"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of de aanvrager alleenstaand is"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/input/3> a cpsv:Input ;
+    dct:identifier "aanvragerHeeftKinderen" ;
+    dct:title "Aanvrager heeft kinderen"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of de aanvrager inwonende kinderen heeft"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/input/4> a cpsv:Input ;
+    dct:identifier "aanvragerIs181920" ;
+    dct:title "Aanvrager is 18, 19 of 20"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of aanvrager 18, 19 of 20 jaar oud is"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/input/5> a cpsv:Input ;
+    dct:identifier "aanvragerIsTenminste21" ;
+    dct:title "Aanvrager is tenminste 21"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of aanvrager 21 jaar of ouder is"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/input/6> a cpsv:Input ;
+    dct:identifier "aanvragerHeeftAOWLeeftijd" ;
+    dct:title "Aanvrager heeft AOW-leeftijd"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of aanvrager de AOW-gerechtigde leeftijd heeft bereikt"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/input/7> a cpsv:Input ;
+    dct:identifier "partnerIs181920" ;
+    dct:title "Partner is 18, 19 of 20"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of partner 18, 19 of 20 jaar oud is"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/input/8> a cpsv:Input ;
+    dct:identifier "partnerIsTenminste21" ;
+    dct:title "Partner is tenminste 21"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of partner 21 jaar of ouder is"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/input/9> a cpsv:Input ;
+    dct:identifier "partnerHeeftAOWLeeftijd" ;
+    dct:title "Partner heeft AOW-leeftijd"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of partner de AOW-gerechtigde leeftijd heeft bereikt"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+
+# ============================================================
+#  Output Variables
+# ============================================================
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/output/1> a cpsv:Output ;
+    dct:identifier "bijstandsNorm" ;
+    dct:title "Bijstandsnorm bedrag"@nl ;
+    dct:type "Integer" ;
+    schema:value 1574 ;
+    dct:description "Het toepasselijke bijstandsnorm bedrag in euro's per maand"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/output/2> a cpsv:Output ;
+    dct:identifier "bijstandsnormType" ;
+    dct:title "Bijstandsnorm type"@nl ;
+    dct:type "String" ;
+    schema:value "MOK" ;
+    dct:description "Type bijstandsnorm (bijv. MOK=met ouderkorting, M=alleen, P=paar)"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .
+
+<https://regels.overheid.nl/services/szw-bijstandsnorm/dmn/output/3> a cpsv:Output ;
+    dct:identifier "bijstandsnormTermijn" ;
+    dct:title "Bijstandsnorm termijn"@nl ;
+    dct:type "String" ;
+    schema:value "2e helft 2025" ;
+    dct:description "De toepasselijke normtermijn (1e helft 2025, 2e helft 2025, etc.)"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/szw-bijstandsnorm/dmn> .

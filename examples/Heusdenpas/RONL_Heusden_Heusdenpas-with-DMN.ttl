@@ -1,0 +1,221 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix cv: <http://data.europa.eu/m8g/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix eli: <http://data.europa.eu/eli/ontology#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix ronl: <https://regels.overheid.nl/termen/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix cprmv: <https://cprmv.open-regels.nl/0.3.0/> .
+
+
+# ============================================================
+#  Public Service
+# ============================================================
+
+<https://regels.overheid.nl/services/heusden-heusdenpas> a cpsv:PublicService ;
+    dct:identifier "heusden-heusdenpas" ;
+    dct:title "Gemeente Heusden Heusdenpas Aanvraag"@nl ;
+    dct:description "Beoordeling van een aanvraag voor de Heusdenpas en Kindpakket op basis van inkomen, woonsituatie en specifieke criteria."@nl ;
+    cv:thematicArea <https://standaarden.overheid.nl/owms/terms/minimabeleid> ;
+    cv:sector <https://publications.europa.eu/resource/authority/corporate-body-classification/LOCAL> ;
+    dcat:keyword "heusdenpas"@nl, "kindpakket"@nl, "minimabeleid"@nl, "gemeente heusden"@nl ;
+    dct:language <https://publications.europa.eu/resource/authority/language/NL> ;
+    cv:hasCompetentAuthority <https://organisaties.overheid.nl/00000001828079090000/Gemeente_Heusden> ;
+    cv:hasLegalResource <https://lokaleregelgeving.overheid.nl/heusden/heusdenpas-regeling> ;
+    cv:hasCost <https://regels.overheid.nl/costs/cost-heusden-001> ;
+    cpsv:produces <https://regels.overheid.nl/outputs/heusden-heusdenpas-besluit> ;
+    cprmv:hasDecisionModel <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+
+# ============================================================
+#  Cost
+# ============================================================
+
+<https://regels.overheid.nl/costs/cost-heusden-001> a cv:Cost ;
+    dct:identifier "cost-heusden-001" ;
+    cv:value "0" ;
+    cv:currency "EUR" ;
+    dct:description "Geen kosten voor aanvraag Heusdenpas"@nl .
+
+
+# ============================================================
+#  Output
+# ============================================================
+
+<https://regels.overheid.nl/outputs/heusden-heusdenpas-besluit> a cv:Output ;
+    dct:identifier "heusden-heusdenpas-besluit" ;
+    dct:title "Besluit Heusdenpas en Kindpakket"@nl ;
+    dct:description "Beschikking over aanmerking voor Heusdenpas en Kindpakket"@nl ;
+    dct:type <Digital document> .
+
+
+# ============================================================
+#  Organization
+# ============================================================
+
+<https://organisaties.overheid.nl/00000001828079090000/Gemeente_Heusden> a cv:PublicOrganisation ;
+    dct:identifier "Gemeente_Heusden" ;
+    skos:prefLabel "Gemeente Heusden"@nl ;
+    foaf:homepage <https://www.heusden.nl> ;
+    cv:spatial <https://publications.europa.eu/resource/authority/country/NLD> .
+
+
+# ============================================================
+#  Legal Resource
+# ============================================================
+
+<https://lokaleregelgeving.overheid.nl/heusden/heusdenpas-regeling> a eli:LegalResource ;
+    dct:identifier "heusden-heusdenpas-regeling" ;
+    dct:title "Regeling Heusdenpas"@nl ;
+    dct:description "Gemeentelijke regeling voor de Heusdenpas en Kindpakket Heusden."@nl ;
+    eli:is_realized_by <https://lokaleregelgeving.overheid.nl/heusden/heusdenpas-regeling/2025> .
+
+
+# ============================================================
+#  DMN Decision Model
+# ============================================================
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn> a cprmv:DecisionModel ;
+    dct:identifier "RONL_HeusdenpasEindresultaat" ;
+    dct:title "RONL Heusdenpas Eindresultaat"@nl ;
+    dct:source <https://regels.overheid.nl/services/heusden-heusdenpas/dmn/file> ;
+    cprmv:deploymentId "heusdenpas-heusden-001" ;
+    cprmv:deployedAt "2026-01-09T00:00:00.000Z"^^xsd:dateTime ;
+    ronl:implementedBy <https://operaton.open-regels.nl/engine-rest/decision-definition/key/RONL_HeusdenpasEindresultaat/evaluate> ;
+    cprmv:lastTested "2026-01-09T00:00:00.000Z"^^xsd:dateTime ;
+    cprmv:testStatus "passed" ;
+    dct:description "DMN model voor beoordeling Heusdenpas en Kindpakket aanvraag gemeente Heusden"@nl .
+
+
+# ============================================================
+#  Input Variables
+# ============================================================
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/1> a cpsv:Input ;
+    dct:identifier "aanvragerInwonerHeusden" ;
+    dct:title "Aanvrager is inwoner Heusden"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of de aanvrager ingeschreven staat als inwoner van Heusden"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/2> a cpsv:Input ;
+    dct:identifier "aanvragerHeeftKind4Tm17" ;
+    dct:title "Aanvrager heeft kind 4 t/m 17 jaar"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of de aanvrager een inwonend kind heeft van 4 t/m 17 jaar"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/3> a cpsv:Input ;
+    dct:identifier "maandelijksBrutoInkomenAanvrager" ;
+    dct:title "Maandelijks bruto inkomen aanvrager"@nl ;
+    dct:type "Integer" ;
+    schema:value 1500 ;
+    dct:description "Het maandelijkse bruto inkomen van de aanvrager in euro's"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/4> a cpsv:Input ;
+    dct:identifier "bijstandsNorm" ;
+    dct:title "Bijstandsnorm"@nl ;
+    dct:type "Integer" ;
+    schema:value 1574 ;
+    dct:description "Het toepasselijke bijstandsnorm bedrag in euro's per maand"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/5> a cpsv:Input ;
+    dct:identifier "aanvragerUitkeringBaanbrekers" ;
+    dct:title "Aanvrager heeft uitkering Baanbrekers"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of de aanvrager een uitkering heeft van Baanbrekers"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/6> a cpsv:Input ;
+    dct:identifier "aanvragerVoedselbankpasDenBosch" ;
+    dct:title "Aanvrager heeft voedselbankpas Den Bosch"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of de aanvrager een voedselbankpas van Den Bosch heeft"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/7> a cpsv:Input ;
+    dct:identifier "aanvragerKwijtscheldingGemeentelijkeBelastingen" ;
+    dct:title "Aanvrager heeft kwijtschelding gemeentelijke belastingen"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of de aanvrager kwijtschelding heeft van gemeentelijke belastingen"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/8> a cpsv:Input ;
+    dct:identifier "aanvragerSchuldhulptrajectKredietbankNederland" ;
+    dct:title "Aanvrager heeft schuldhulptraject Kredietbank Nederland"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of de aanvrager een schuldhulptraject heeft bij de Kredietbank Nederland"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/9> a cpsv:Input ;
+    dct:identifier "aanvragerDitKalenderjaarAlAangevraagd" ;
+    dct:title "Aanvrager heeft dit kalenderjaar al aangevraagd"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of de aanvrager dit kalenderjaar al een Heusdenpas heeft aangevraagd"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/10> a cpsv:Input ;
+    dct:identifier "aanvragerAanmerkingStudieFinanciering" ;
+    dct:title "Aanvrager komt in aanmerking voor studiefinanciering"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of de aanvrager in aanmerking komt voor studiefinanciering"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/11> a cpsv:Input ;
+    dct:identifier "aanvragerIs181920" ;
+    dct:title "Aanvrager is 18, 19 of 20"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of aanvrager 18, 19 of 20 jaar oud is"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/12> a cpsv:Input ;
+    dct:identifier "aanvragerIsTenminste21" ;
+    dct:title "Aanvrager is tenminste 21"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of aanvrager 21 jaar of ouder is"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/input/13> a cpsv:Input ;
+    dct:identifier "aanvragerHeeftAOWLeeftijd" ;
+    dct:title "Aanvrager heeft AOW-leeftijd"@nl ;
+    dct:type "Boolean" ;
+    schema:value false ;
+    dct:description "Indicatie of aanvrager de AOW-gerechtigde leeftijd heeft bereikt"@nl ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+
+# ============================================================
+#  Output Variables
+# ============================================================
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/output/1> a cpsv:Output ;
+    dct:identifier "aanmerkingHeusdenPas" ;
+    dct:title "Aanmerking voor Heusdenpas"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of de aanvrager in aanmerking komt voor de Heusdenpas"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
+
+<https://regels.overheid.nl/services/heusden-heusdenpas/dmn/output/2> a cpsv:Output ;
+    dct:identifier "aanmerkingKindPakket" ;
+    dct:title "Aanmerking voor Kindpakket"@nl ;
+    dct:type "Boolean" ;
+    schema:value true ;
+    dct:description "Indicatie of de aanvraag voor het Kindpakket succesvol is"@nl ;
+    cpsv:produces <https://regels.overheid.nl/services/heusden-heusdenpas/dmn> .
