@@ -128,7 +128,11 @@ export class OrchestrationService {
    * This is a convenience method for the production chain
    */
   async executeHeusdenpasChain(inputs: Record<string, any>): Promise<ChainExecutionResult> {
-    const chain = ['SVB_LeeftijdsInformatie', 'SZW_BijstandsnormInformatie', 'RONL_HeusdenpasEindresultaat'];
+    const chain = [
+      'SVB_LeeftijdsInformatie',
+      'SZW_BijstandsnormInformatie',
+      'RONL_HeusdenpasEindresultaat',
+    ];
 
     logger.info('Executing Heusdenpas chain', { inputs: Object.keys(inputs) });
 

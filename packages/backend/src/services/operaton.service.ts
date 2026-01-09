@@ -65,10 +65,9 @@ export class OperatonService {
 
       logger.info(`Evaluating DMN: ${decisionKey}`, { variables: operatonVariables });
 
-      const response = await this.client.post(
-        `/decision-definition/key/${decisionKey}/evaluate`,
-        { variables: operatonVariables }
-      );
+      const response = await this.client.post(`/decision-definition/key/${decisionKey}/evaluate`, {
+        variables: operatonVariables,
+      });
 
       const duration = Date.now() - startTime;
       logger.info(`DMN evaluation completed: ${decisionKey}`, { duration });
