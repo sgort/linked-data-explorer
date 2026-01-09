@@ -1,0 +1,94 @@
+{
+  "success": true,
+  "data": {
+    "total": 3,
+    "chains": [
+      {
+        "from": "RONL_BerekenLeeftijden",
+        "connections": [
+          {
+            "to": "RONL_BijstandBerekening",
+            "variable": "leeftijdAanvrager",
+            "variableType": "Integer"
+          },
+          {
+            "to": "RONL_HuurtoeslagBerekening",
+            "variable": "leeftijdAanvrager",
+            "variableType": "Integer"
+          }
+        ]
+      },
+      {
+        "from": "SVB_LeeftijdsInformatie",
+        "connections": [
+          {
+            "to": "RONL_BijstandBerekening",
+            "variable": "leeftijdAanvrager",
+            "variableType": "Integer"
+          },
+          {
+            "to": "RONL_HeusdenpasEindresultaat",
+            "variable": "aanvragerHeeftAOWLeeftijd",
+            "variableType": "Boolean"
+          },
+          {
+            "to": "RONL_HeusdenpasEindresultaat",
+            "variable": "aanvragerIs181920",
+            "variableType": "Boolean"
+          },
+          {
+            "to": "RONL_HeusdenpasEindresultaat",
+            "variable": "aanvragerIsTenminste21",
+            "variableType": "Boolean"
+          },
+          {
+            "to": "RONL_HuurtoeslagBerekening",
+            "variable": "leeftijdAanvrager",
+            "variableType": "Integer"
+          },
+          {
+            "to": "SZW_BijstandsnormInformatie",
+            "variable": "aanvragerHeeftAOWLeeftijd",
+            "variableType": "Boolean"
+          },
+          {
+            "to": "SZW_BijstandsnormInformatie",
+            "variable": "aanvragerIs181920",
+            "variableType": "Boolean"
+          },
+          {
+            "to": "SZW_BijstandsnormInformatie",
+            "variable": "aanvragerIsTenminste21",
+            "variableType": "Boolean"
+          },
+          {
+            "to": "SZW_BijstandsnormInformatie",
+            "variable": "partnerHeeftAOWLeeftijd",
+            "variableType": "Boolean"
+          },
+          {
+            "to": "SZW_BijstandsnormInformatie",
+            "variable": "partnerIs181920",
+            "variableType": "Boolean"
+          },
+          {
+            "to": "SZW_BijstandsnormInformatie",
+            "variable": "partnerIsTenminste21",
+            "variableType": "Boolean"
+          }
+        ]
+      },
+      {
+        "from": "SZW_BijstandsnormInformatie",
+        "connections": [
+          {
+            "to": "RONL_HeusdenpasEindresultaat",
+            "variable": "bijstandsNorm",
+            "variableType": "Integer"
+          }
+        ]
+      }
+    ]
+  },
+  "timestamp": "2026-01-09T10:23:10.152Z"
+}

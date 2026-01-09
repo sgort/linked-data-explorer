@@ -1,0 +1,17 @@
+{
+  "status": "healthy",
+  "uptime": 373.4556977,
+  "timestamp": "2026-01-09T10:24:03.587Z",
+  "services": {
+    "triplydb": {
+      "status": "up",
+      "latency": 174,
+      "lastCheck": "2026-01-09T10:24:03.587Z"
+    },
+    "operaton": {
+      "status": "up",
+      "latency": 151,
+      "lastCheck": "2026-01-09T10:24:03.587Z"
+    }
+  }
+}
