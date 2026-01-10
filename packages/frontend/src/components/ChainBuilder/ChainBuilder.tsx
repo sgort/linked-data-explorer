@@ -98,11 +98,60 @@ const ChainBuilder: React.FC = () => {
       if (data.success) {
         setExecutionResult(data.data);
       } else {
-        alert(`Execution failed: ${data.error?.message || 'Unknown error'}`);
+        // ✅ CORRECTED: Check BOTH error locations
+        // API-level error: data.error.message
+        // Execution-level error: data.data.error
+        const errorMessage =
+          data.error?.message || // API validation errors
+          data.data?.error || // Execution errors (Operaton, deployment)
+          data.error || // Fallback if error is a string
+          'Unknown error occurred';
+
+        const errorCode = data.error?.code || 'EXECUTION_ERROR';
+
+        // Show detailed error message
+        alert(
+          `❌ Execution Failed\n\n` +
+            `${errorMessage}\n\n` +
+            `Error Code: ${errorCode}\n\n` +
+            `Common causes:\n` +
+            `• Missing deployment keys in Operaton\n` +
+            `  (Check if DMN is deployed with correct key)\n` +
+            `• DMN model not found in Operaton\n` +
+            `• Invalid input values or types\n` +
+            `• Network connectivity issues\n\n` +
+            `Backend: ${API_BASE_URL}\n` +
+            `Check browser console for technical details.`
+        );
+
+        // Log comprehensive error details
+        console.error('Chain execution error:', {
+          code: errorCode,
+          message: errorMessage,
+          apiError: data.error,
+          executionError: data.data?.error,
+          fullResponse: data,
+          chain: selectedChain,
+          inputs: inputs,
+        });
       }
     } catch (error) {
-      console.error('Execution error:', error);
-      alert('Failed to execute chain');
+      // ✅ Handle network/fetch errors
+      console.error('Network/fetch error:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown network error';
+
+      alert(
+        `❌ Connection Failed\n\n` +
+          `${errorMessage}\n\n` +
+          `Possible causes:\n` +
+          `• Backend server is not running\n` +
+          `  (Expected at: ${API_BASE_URL})\n` +
+          `• Network connectivity issues\n` +
+          `• CORS configuration problems\n` +
+          `• Firewall blocking the connection\n\n` +
+          `Check browser console for details.`
+      );
     } finally {
       setIsExecuting(false);
     }
@@ -189,23 +238,6 @@ const ChainBuilder: React.FC = () => {
     // Estimate execution time (150ms per DMN + 50ms overhead)
     const estimatedTime = chainDmns.length * 150 + 50;
 
-    // ✅ ADD DEBUG LOGGING
-    console.log('=== VALIDATION DEBUG ===');
-    console.log('Chain order:', selectedChain);
-    console.log(
-      'Chain DMNs:',
-      chainDmns.map((d) => d.identifier)
-    );
-    console.log(
-      'Required inputs:',
-      requiredInputs.map((r) => r.identifier)
-    );
-    console.log(
-      'Missing inputs:',
-      missingInputs.map((m) => m.identifier)
-    );
-    console.log('========================');
-
     setValidation({
       isValid: missingInputs.length === 0,
       errors,
@@ -290,6 +322,7 @@ const ChainBuilder: React.FC = () => {
     if (preset.defaultInputs) {
       setInputs(preset.defaultInputs);
     }
+    setExecutionResult(null); // Clear previous results when loading preset
   };
 
   /**

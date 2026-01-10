@@ -8,7 +8,7 @@ import {
   Play,
   Zap,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { ChainExecutionResult, DmnModel } from '../../types';
 import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
@@ -42,6 +42,30 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
 }) => {
   const [showValidation, setShowValidation] = useState(true);
   const [showInputs, setShowInputs] = useState(true);
+
+  // Add refs for scrollable container and execution area
+  const scrollableContainerRef = useRef<HTMLDivElement>(null);
+  const executionAreaRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to execution area when execution starts
+  useEffect(() => {
+    if (isExecuting && scrollableContainerRef.current && executionAreaRef.current) {
+      // Calculate the position to scroll to
+      const container = scrollableContainerRef.current;
+      const executionArea = executionAreaRef.current;
+
+      // Get the position of execution area relative to container
+      const executionTop = executionArea.offsetTop;
+      const containerHeight = container.clientHeight;
+      const executionHeight = executionArea.clientHeight;
+
+      // Scroll so execution area is visible at the top of the viewport
+      container.scrollTo({
+        top: executionTop - 20, // 20px padding from top
+        behavior: 'smooth',
+      });
+    }
+  }, [isExecuting]);
 
   // Preset chains
   const presets: ChainPreset[] = [
@@ -127,7 +151,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={scrollableContainerRef} className="flex-1 overflow-y-auto">
         {/* Validation Section */}
         {validation && (
           <div className="border-b border-slate-200">
@@ -215,7 +239,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
             )}
           </div>
         )}
-
         {/* Inputs Section */}
         <div className="border-b border-slate-200">
           <button
@@ -236,24 +259,35 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
                 inputs={inputs}
                 onInputChange={onInputChange}
                 validation={validation}
+                presetInputs={
+                  presets.find(
+                    (p) =>
+                      JSON.stringify(p.dmnIds.sort()) ===
+                      JSON.stringify(chain.map((d) => d.identifier).sort())
+                  )?.defaultInputs
+                } // ✅ ADD THIS LINE - Pass preset inputs if chain matches a preset
               />
             </div>
           )}
         </div>
-
-        {/* Execution Progress */}
-        {isExecuting && (
-          <div className="p-4 border-b border-slate-200">
-            <ExecutionProgress chain={chain} />
-          </div>
-        )}
-
-        {/* Results */}
-        {executionResult && (
-          <div className="p-4">
-            <ChainResults result={executionResult} />
-          </div>
-        )}
+        {/* Execution Area - Always rendered for scroll target */}
+        <div ref={executionAreaRef}>
+          {' '}
+          {/* ✅ ADD THIS WRAPPER */}
+          {/* Execution Progress */}
+          {isExecuting && (
+            <div className="p-4 border-b border-slate-200">
+              <ExecutionProgress chain={chain} />
+            </div>
+          )}
+          {/* Results */}
+          {executionResult && (
+            <div className="p-4">
+              <ChainResults result={executionResult} />
+            </div>
+          )}
+        </div>{' '}
+        {/* ✅ CLOSE WRAPPER */}
       </div>
 
       {/* Execute Button (Footer) */}

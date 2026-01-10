@@ -8,13 +8,19 @@ interface InputFormProps {
   inputs: Record<string, unknown>;
   onInputChange: (identifier: string, value: unknown) => void;
   validation: ChainValidation | null;
+  presetInputs?: Record<string, unknown>;
 }
 
 /**
  * Dynamic input form based on chain requirements
  */
-const InputForm: React.FC<InputFormProps> = ({ chain, inputs, onInputChange, validation }) => {
-  // ✅ Use requiredInputs instead of missingInputs
+const InputForm: React.FC<InputFormProps> = ({
+  chain,
+  inputs,
+  onInputChange,
+  validation,
+  presetInputs,
+}) => {
   const allInputs = validation?.requiredInputs || [];
 
   if (allInputs.length === 0) {
@@ -117,36 +123,48 @@ const InputForm: React.FC<InputFormProps> = ({ chain, inputs, onInputChange, val
         );
       })}
 
-      {/* Quick Fill Button (for testing) */}
+      {/* Quick Fill Button */}
       <button
         onClick={() => {
-          // Fill with test data
-          allInputs.forEach((input) => {
-            let testValue: unknown;
-            switch (input.type) {
-              case 'Boolean':
-                testValue = true;
-                break;
-              case 'Integer':
-                testValue = 100;
-                break;
-              case 'Double':
-                testValue = 100.0;
-                break;
-              case 'Date':
-                testValue = '2025-01-01';
-                break;
-              case 'String':
-              default:
-                testValue = 'test';
-                break;
-            }
-            onInputChange(input.identifier, testValue);
-          });
+          // ✅ IMPROVED: Use preset inputs if available, otherwise use generic test data
+          if (presetInputs && Object.keys(presetInputs).length > 0) {
+            // Use preset-specific test data
+            allInputs.forEach((input) => {
+              if (input.identifier in presetInputs) {
+                onInputChange(input.identifier, presetInputs[input.identifier]);
+              }
+            });
+          } else {
+            // Fall back to generic test data
+            allInputs.forEach((input) => {
+              let testValue: unknown;
+              switch (input.type) {
+                case 'Boolean':
+                  testValue = true;
+                  break;
+                case 'Integer':
+                  testValue = 1500; // ✅ More realistic than 100
+                  break;
+                case 'Double':
+                  testValue = 1500.0;
+                  break;
+                case 'Date':
+                  testValue = '2025-01-24'; // ✅ More realistic than 2025-01-01
+                  break;
+                case 'String':
+                default:
+                  testValue = 'test';
+                  break;
+              }
+              onInputChange(input.identifier, testValue);
+            });
+          }
         }}
         className="w-full mt-2 px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors border border-slate-200"
       >
-        Fill with test data
+        {presetInputs && Object.keys(presetInputs).length > 0
+          ? 'Fill with preset test data'
+          : 'Fill with test data'}
       </button>
     </div>
   );
