@@ -153,12 +153,12 @@ const Changelog: React.FC = () => {
           </p>
           <div className="flex flex-wrap gap-4 text-xs">
             <a
-              href="https://github.com/yourorg/linked-data-explorer"
+              href="https://git.open-regels.nl/hosting/linked-data-explorer"
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
             >
-              📦 GitHub Repository
+              📦 GitLab Repository
             </a>
             <a
               href="https://acc.linkeddata.open-regels.nl"
