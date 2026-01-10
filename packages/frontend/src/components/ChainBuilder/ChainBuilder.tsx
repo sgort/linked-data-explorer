@@ -47,6 +47,7 @@ const ChainBuilder: React.FC = () => {
     } else {
       setValidation(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChain, availableDmns, inputs]);
 
   /**
@@ -274,6 +275,7 @@ const ChainBuilder: React.FC = () => {
     if (overId === 'chain-droppable') {
       // Check if DMN already in chain
       if (selectedChain.includes(activeId)) {
+        // eslint-disable-next-line no-console
         console.log('DMN already in chain');
         return;
       }

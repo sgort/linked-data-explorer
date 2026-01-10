@@ -15,7 +15,6 @@ interface InputFormProps {
  * Dynamic input form based on chain requirements
  */
 const InputForm: React.FC<InputFormProps> = ({
-  chain,
   inputs,
   onInputChange,
   validation,
@@ -36,7 +35,6 @@ const InputForm: React.FC<InputFormProps> = ({
    */
   const renderInput = (input: (typeof allInputs)[0]) => {
     const value = inputs[input.identifier];
-    const hasValue = value !== undefined && value !== null && value !== '';
 
     switch (input.type) {
       case 'Boolean':

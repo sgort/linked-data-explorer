@@ -5,7 +5,6 @@ import {
   ChevronUp,
   Clock,
   FileInput,
-  Play,
   Zap,
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
@@ -56,8 +55,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
 
       // Get the position of execution area relative to container
       const executionTop = executionArea.offsetTop;
-      const containerHeight = container.clientHeight;
-      const executionHeight = executionArea.clientHeight;
 
       // Scroll so execution area is visible at the top of the viewport
       container.scrollTo({
