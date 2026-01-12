@@ -10,7 +10,7 @@ import {
 import React, { useEffect, useRef, useState } from 'react';
 
 import { ChainExecutionResult, DmnModel } from '../../types';
-import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
+import { ChainValidation } from '../../types/chainBuilder.types';
 import ChainResults from './ChainResults';
 import ExecutionProgress from './ExecutionProgress';
 import InputForm from './InputForm';
@@ -21,7 +21,6 @@ interface ChainConfigProps {
   inputs: Record<string, unknown>;
   onInputChange: (identifier: string, value: unknown) => void;
   onExecute: () => void;
-  onLoadPreset: (preset: ChainPreset) => void;
   executionResult: ChainExecutionResult | null;
   isExecuting: boolean;
 }
@@ -35,7 +34,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   inputs,
   onInputChange,
   onExecute,
-  onLoadPreset,
   executionResult,
   isExecuting,
 }) => {
@@ -64,78 +62,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
     }
   }, [isExecuting]);
 
-  // Preset chains
-  const presets: ChainPreset[] = [
-    {
-      id: 'heusdenpas',
-      name: 'Heusdenpas Chain',
-      description: 'SVB → SZW → Heusden (Production chain)',
-      dmnIds: [
-        'SVB_LeeftijdsInformatie',
-        'SZW_BijstandsnormInformatie',
-        'RONL_HeusdenpasEindresultaat',
-      ],
-      defaultInputs: {
-        // SVB inputs
-        dagVanAanvraag: '2025-01-24',
-        geboortedatumAanvrager: '1980-01-23',
-        geboortedatumPartner: null, // ← Changed to null (single person)
-
-        // SZW inputs
-        aanvragerAlleenstaand: true, // ← Changed to true (single person)
-        aanvragerHeeftKinderen: true,
-        aanvragerHeeftAOWLeeftijd: false,
-
-        // Heusden inputs
-        aanvragerInwonerHeusden: true,
-        aanvragerHeeftKind4Tm17: true,
-        maandelijksBrutoInkomenAanvrager: 1500,
-        aanvragerUitkeringBaanbrekers: false,
-        aanvragerVoedselbankpasDenBosch: false,
-        aanvragerKwijtscheldingGemeentelijkeBelastingen: false,
-        aanvragerSchuldhulptrajectKredietbankNederland: false,
-        aanvragerDitKalenderjaarAlAangevraagd: false,
-        aanvragerAanmerkingStudieFinanciering: false,
-        aanvragerIs181920: false,
-        aanvragerIsTenminste21: true,
-      },
-    },
-  ];
-
-  if (chain.length === 0) {
-    return (
-      <div className="w-96 bg-white border-l border-slate-200 flex flex-col">
-        <div className="p-4 border-b border-slate-200">
-          <h2 className="font-semibold text-slate-900">Chain Configuration</h2>
-        </div>
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center">
-            <div className="text-slate-400 mb-2">
-              <FileInput size={48} className="mx-auto" />
-            </div>
-            <p className="text-sm text-slate-500">
-              Add DMNs to your chain to configure and execute
-            </p>
-            {presets.length > 0 && (
-              <div className="mt-6">
-                <p className="text-xs text-slate-600 mb-2">Or load a preset:</p>
-                {presets.map((preset) => (
-                  <button
-                    key={preset.id}
-                    onClick={() => onLoadPreset(preset)}
-                    className="w-full px-3 py-2 text-sm text-left text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
-                  >
-                    <div className="font-medium">{preset.name}</div>
-                    <div className="text-xs text-slate-500">{preset.description}</div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // No presets needed - test data handled by InputForm
 
   return (
     <div className="w-96 bg-white border-l border-slate-200 flex flex-col">
@@ -256,13 +183,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
                 inputs={inputs}
                 onInputChange={onInputChange}
                 validation={validation}
-                presetInputs={
-                  presets.find(
-                    (p) =>
-                      JSON.stringify(p.dmnIds.sort()) ===
-                      JSON.stringify(chain.map((d) => d.identifier).sort())
-                  )?.defaultInputs
-                } // ✅ ADD THIS LINE - Pass preset inputs if chain matches a preset
               />
             </div>
           )}
