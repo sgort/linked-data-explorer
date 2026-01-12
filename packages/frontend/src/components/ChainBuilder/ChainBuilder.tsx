@@ -304,6 +304,11 @@ const ChainBuilder: React.FC = () => {
    */
   const handleRemoveDmn = (identifier: string) => {
     setSelectedChain(selectedChain.filter((id) => id !== identifier));
+    // Also clear inputs, results, and validation
+    // This matches the behavior of Clear Chain
+    setInputs({});
+    setExecutionResult(null);
+    setValidation(null);
   };
 
   /**
