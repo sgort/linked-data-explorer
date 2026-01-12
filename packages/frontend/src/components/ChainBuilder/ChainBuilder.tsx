@@ -9,7 +9,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import React, { useEffect, useState } from 'react';
 
 import { ChainExecutionResult, DmnModel } from '../../types';
-import { ChainValidation } from '../../types/chainBuilder.types';
+import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
 import ChainComposer from './ChainComposer';
 import ChainConfig from './ChainConfig';
 import DmnList from './DmnList';
@@ -317,6 +317,19 @@ const ChainBuilder: React.FC = () => {
   };
 
   /**
+   * Hanlde preset
+   * @param preset
+   */
+
+  const handleLoadPreset = (preset: ChainPreset) => {
+    setSelectedChain(preset.dmnIds);
+    if (preset.defaultInputs) {
+      setInputs(preset.defaultInputs);
+    }
+    setExecutionResult(null);
+  };
+
+  /**
    * Update input value
    */
   const handleInputChange = (identifier: string, value: unknown) => {
@@ -362,6 +375,7 @@ const ChainBuilder: React.FC = () => {
           inputs={inputs}
           onInputChange={handleInputChange}
           onExecute={handleExecute}
+          onLoadPreset={handleLoadPreset}
           executionResult={executionResult}
           isExecuting={isExecuting}
         />
