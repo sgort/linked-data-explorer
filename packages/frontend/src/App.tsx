@@ -61,13 +61,7 @@ const App: React.FC = () => {
 
     if (queryObj) {
       setQuery(queryObj.sparql);
-
-      // If it's an orchestration query, switch to orchestration view
-      if ('category' in queryObj && queryObj.category === 'orchestration') {
-        setViewMode(ViewMode.ORCHESTRATION);
-      } else {
-        setViewMode(ViewMode.QUERY);
-      }
+      // ✅ Don't auto-switch views - let user stay where they are
     }
   };
 
@@ -95,7 +89,7 @@ const App: React.FC = () => {
   const getLibraryQueries = () => {
     // For now, always show SAMPLE_QUERIES
     // DMN queries are accessed via "Discover DMNs" button
-    return SAMPLE_QUERIES;
+    return ALL_QUERIES;
   };
 
   return (
