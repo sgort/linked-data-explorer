@@ -1,6 +1,35 @@
 {
   "versions": [
     {
+      "version": "0.3.2",
+      "status": "New Feature",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "January 12, 2026",
+      "sections": [
+        {
+          "title": "Tutorial System",
+          "icon": "🎓",
+          "iconColor": "emerald",
+          "items": [
+            "In-app tutorial system with 5 comprehensive guides (36 total steps)",
+            "Quick Start: Heusdenpas Chain Demo - Step-by-step first execution (10 steps)",
+            "Building Chains Manually - Drag-and-drop workflow guide (7 steps)",
+            "Understanding DMN Models - Decision model concepts explained (6 steps)",
+            "Advanced Features - SPARQL, graphs, performance monitoring (7 steps)",
+            "Troubleshooting Guide - Common issues and solutions (6 steps)",
+            "Accordion navigation: only one tutorial open at a time",
+            "Auto-scroll behavior: tutorials automatically position at top when opened",
+            "Quick jump buttons for instant navigation between tutorials",
+            "10-term glossary with key definitions (DMN, SPARQL, CPRMV, etc.)",
+            "Accessible via new Help icon (?) in sidebar navigation",
+            "Full-width view with collapsible sections",
+            "JSON-configurable content for easy future updates"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.3.1",
       "status": "Bug Fixes",
       "statusColor": "blue",
