@@ -1,0 +1,596 @@
+{
+  "title": "Getting Started with Linked Data Explorer",
+  "subtitle": "Learn how to discover, orchestrate, and execute DMN chains for Dutch Government services",
+  "tutorials": [
+    {
+      "id": "quick-start",
+      "title": "Quick Start: Heusdenpas Chain Demo",
+      "description": "Follow this step-by-step guide to run your first DMN chain execution",
+      "icon": "🚀",
+      "iconColor": "emerald",
+      "difficulty": "Beginner",
+      "estimatedTime": "5 minutes",
+      "steps": [
+        {
+          "number": 1,
+          "title": "View Available Content",
+          "description": "Start by exploring the available DMN models in the system.",
+          "action": "Open https://linkeddata.open-regels.nl/",
+          "details": [
+            "The landing page shows the SPARQL Query Editor",
+            "This view connects to TriplyDB where DMN metadata is stored",
+            "You'll use this to discover available decision models"
+          ],
+          "tip": "💡 The 'Run Query' button executes the current SPARQL query to retrieve data"
+        },
+        {
+          "number": 2,
+          "title": "Execute Discovery Query",
+          "description": "Click the 'Run Query' button in the upper right corner to retrieve available DMNs.",
+          "action": "Click 'Run Query' button",
+          "details": [
+            "This executes a SPARQL query against TriplyDB",
+            "Results show DMN models with their metadata",
+            "You'll see identifiers, names, and available variables"
+          ],
+          "tip": "💡 Sample queries are available in the left panel for different discovery scenarios"
+        },
+        {
+          "number": 3,
+          "title": "Switch to Orchestration View",
+          "description": "Navigate to the DMN Orchestration interface where you can build chains.",
+          "action": "Click the GitBranch icon (🔀) in the left sidebar",
+          "details": [
+            "The Orchestration view has three panels:",
+            "• Left: Available DMNs you can drag",
+            "• Middle: Chain composer (drop zone)",
+            "• Right: Configuration and execution"
+          ],
+          "tip": "💡 The sidebar icons represent different views: Query Editor, Orchestration, Visualization, and Changelog"
+        },
+        {
+          "number": 4,
+          "title": "Observe Available DMNs",
+          "description": "Check the left panel to see the DMN models loaded from TriplyDB.",
+          "action": "Review the DMN list in the left panel",
+          "details": [
+            "You should see 6 DMN models available",
+            "Each DMN card shows:",
+            "• Model name and identifier",
+            "• Input variables (blue tags)",
+            "• Output variables (green tags)"
+          ],
+          "tip": "💡 DMNs with matching input/output variables can be chained together"
+        },
+        {
+          "number": 5,
+          "title": "Load Preset Configuration",
+          "description": "Use a pre-configured chain to see how DMN orchestration works.",
+          "action": "In the right panel, find and click 'Heusdenpas Chain' preset",
+          "details": [
+            "The preset loads three DMNs in the correct order:",
+            "1. SVB_LeeftijdsInformatie - Age calculation",
+            "2. SZW_BijstandsnormInformatie - Benefits eligibility",
+            "3. RONL_HeusdenpasEindresultaat - Municipal benefits",
+            "These appear in the middle panel as a chain"
+          ],
+          "tip": "💡 Presets are shortcuts for common workflows you might use frequently"
+        },
+        {
+          "number": 6,
+          "title": "Fill Test Data",
+          "description": "Populate input fields with sample data for testing.",
+          "action": "Scroll down in the right panel and click 'Fill with test data (3 DMNs)'",
+          "details": [
+            "Test data includes:",
+            "• Birth date: 1975-05-15",
+            "• Partner birth date: 1978-03-22",
+            "• Municipality code: 0794",
+            "All required inputs are automatically filled"
+          ],
+          "tip": "💡 You can manually edit any input field after filling test data"
+        },
+        {
+          "number": 7,
+          "title": "Review Configuration",
+          "description": "Examine the prefilled inputs in the Chain Configuration section.",
+          "action": "Review the input fields in the right panel",
+          "details": [
+            "Notice each input field shows:",
+            "• Variable name and type",
+            "• Current value",
+            "• Green checkmark when filled",
+            "The validation section shows chain is ready to execute"
+          ],
+          "tip": "💡 Missing inputs will be highlighted with warnings in the validation section"
+        },
+        {
+          "number": 8,
+          "title": "Execute the Chain",
+          "description": "Run the DMN chain to see automated eligibility determination.",
+          "action": "Click the 'Execute Chain' button",
+          "details": [
+            "The backend orchestrates execution:",
+            "1. Calls Operaton DMN engine for each model",
+            "2. Passes outputs as inputs to next DMN",
+            "3. Collects all results and intermediate steps",
+            "Typical execution time: ~1100ms for 3 DMNs"
+          ],
+          "tip": "💡 Watch the execution progress indicator to see each DMN being processed"
+        },
+        {
+          "number": 9,
+          "title": "Review Results",
+          "description": "Examine the execution results and eligibility determinations.",
+          "action": "Browse through the results shown in the right panel",
+          "details": [
+            "Results include:",
+            "• Final eligibility determinations",
+            "• Intermediate outputs from each DMN",
+            "• Execution timing for performance",
+            "• Complete variable tracing through the chain"
+          ],
+          "tip": "💡 The step-by-step breakdown shows how data flows between DMNs"
+        },
+        {
+          "number": 10,
+          "title": "Clear and Rebuild",
+          "description": "Learn how to start fresh and build chains manually.",
+          "action": "Click 'Clear Chain' button",
+          "details": [
+            "This removes all DMNs from the chain",
+            "Clears all input values",
+            "Resets execution results",
+            "You're ready to build a new chain"
+          ],
+          "tip": "💡 Clearing the chain is useful when you want to start over or test different configurations"
+        }
+      ]
+    },
+    {
+      "id": "manual-chain-building",
+      "title": "Building Chains Manually",
+      "description": "Learn to create custom DMN chains using drag-and-drop",
+      "icon": "🔧",
+      "iconColor": "blue",
+      "difficulty": "Intermediate",
+      "estimatedTime": "10 minutes",
+      "steps": [
+        {
+          "number": 1,
+          "title": "Drag First DMN",
+          "description": "Start building your chain by dragging a DMN to the composer.",
+          "action": "Drag 'SVB_LeeftijdsInformatie' from left panel to middle panel",
+          "details": [
+            "Click and hold on the DMN card",
+            "Drag it to the drop zone in the middle",
+            "Release to add it to your chain",
+            "The DMN appears as the first step"
+          ],
+          "tip": "💡 The order matters! Start with DMNs that have fewer input requirements"
+        },
+        {
+          "number": 2,
+          "title": "Add Second DMN",
+          "description": "Continue building by adding the next decision model.",
+          "action": "Drag 'SZW_BijstandsnormInformatie' below the first DMN",
+          "details": [
+            "Look for output variables from SVB that match SZW inputs",
+            "Age and date outputs from SVB feed into SZW",
+            "The chain validates automatically as you build",
+            "Variable matching is shown in the validation panel"
+          ],
+          "tip": "💡 Green checkmarks in validation indicate successful variable matching"
+        },
+        {
+          "number": 3,
+          "title": "Complete the Chain",
+          "description": "Add the final DMN to complete the workflow.",
+          "action": "Drag 'RONL_HeusdenpasEindresultaat' as the third step",
+          "details": [
+            "This DMN receives outputs from both previous steps",
+            "It produces final eligibility determinations",
+            "The complete chain now processes eligibility end-to-end"
+          ],
+          "tip": "💡 Watch the validation panel update as each DMN is added"
+        },
+        {
+          "number": 4,
+          "title": "Reorder DMNs",
+          "description": "Learn how chain order affects execution and validation.",
+          "action": "Try dragging a DMN to a different position in the chain",
+          "details": [
+            "Click and drag any DMN card up or down",
+            "The chain re-validates automatically",
+            "Invalid orders show warning messages",
+            "Correct order ensures proper data flow"
+          ],
+          "tip": "💡 The validation panel explains why certain orders don't work"
+        },
+        {
+          "number": 5,
+          "title": "Fill Incremental Test Data",
+          "description": "Use test data that adapts to your current chain configuration.",
+          "action": "Scroll to inputs and click 'Fill with test data' button",
+          "details": [
+            "Test data adapts to the DMNs in your chain",
+            "Only relevant inputs are filled",
+            "Works for partial chains (1, 2, or 3 DMNs)",
+            "Helps test chains during development"
+          ],
+          "tip": "💡 The button text shows how many DMNs will get test data"
+        },
+        {
+          "number": 6,
+          "title": "Execute Your Custom Chain",
+          "description": "Run your manually built chain to verify it works.",
+          "action": "Click 'Execute Chain' and review results",
+          "details": [
+            "Execution follows the order you created",
+            "Each DMN receives outputs from previous steps",
+            "Results show the complete execution trace",
+            "Timing helps identify performance bottlenecks"
+          ],
+          "tip": "💡 Compare results with the preset to verify correctness"
+        },
+        {
+          "number": 7,
+          "title": "Understand Chain Validity",
+          "description": "Learn what makes a chain valid or invalid.",
+          "action": "Review the validation section in the right panel",
+          "details": [
+            "Valid chains show green status",
+            "Required inputs are listed with their sources",
+            "Missing inputs show in red",
+            "Variable type mismatches cause errors"
+          ],
+          "tip": "💡 You cannot execute chains with validation errors"
+        }
+      ]
+    },
+    {
+      "id": "understanding-dmns",
+      "title": "Understanding DMN Models",
+      "description": "Learn about Decision Model and Notation in government workflows",
+      "icon": "📚",
+      "iconColor": "indigo",
+      "difficulty": "Beginner",
+      "estimatedTime": "8 minutes",
+      "steps": [
+        {
+          "number": 1,
+          "title": "What is a DMN?",
+          "description": "Decision Model and Notation (DMN) is a standard for modeling decision logic.",
+          "action": "Review the DMN cards in the left panel",
+          "details": [
+            "DMNs encode government rules and policies",
+            "They take inputs and produce deterministic outputs",
+            "Examples: age calculation, eligibility checks, benefit amounts",
+            "RONL uses DMNs to automate legal decisions"
+          ],
+          "tip": "💡 DMNs make government decisions transparent and auditable"
+        },
+        {
+          "number": 2,
+          "title": "Input Variables",
+          "description": "Inputs are the data a DMN needs to make decisions.",
+          "action": "Look at the blue tags on DMN cards",
+          "details": [
+            "Common input types:",
+            "• Dates (birth dates, application dates)",
+            "• Booleans (yes/no questions)",
+            "• Integers (amounts, counts)",
+            "• Strings (municipality codes, names)",
+            "Each input has a specific data type"
+          ],
+          "tip": "💡 Input variable names help identify what data is needed"
+        },
+        {
+          "number": 3,
+          "title": "Output Variables",
+          "description": "Outputs are the decisions or calculated values produced by a DMN.",
+          "action": "Look at the green tags on DMN cards",
+          "details": [
+            "Outputs can be:",
+            "• Eligibility flags (true/false)",
+            "• Calculated amounts (benefit levels)",
+            "• Derived dates (eligibility periods)",
+            "• Status codes (approval/rejection)",
+            "Outputs can become inputs for other DMNs"
+          ],
+          "tip": "💡 Chaining works when output types match input types"
+        },
+        {
+          "number": 4,
+          "title": "DMN Metadata",
+          "description": "Understanding the information stored about each DMN.",
+          "action": "Examine a DMN card's complete information",
+          "details": [
+            "Each DMN has:",
+            "• Unique identifier (e.g., SVB_LeeftijdsInformatie)",
+            "• Human-readable name",
+            "• Input/output variable definitions",
+            "• Deployment information",
+            "Metadata comes from TriplyDB via CPRMV vocabulary"
+          ],
+          "tip": "💡 The identifier is used to reference DMNs in chains"
+        },
+        {
+          "number": 5,
+          "title": "Variable Matching",
+          "description": "How the system determines which DMNs can be chained.",
+          "action": "Try adding incompatible DMNs to see validation errors",
+          "details": [
+            "Matching rules:",
+            "• Output variable names must match input names",
+            "• Data types must be compatible",
+            "• Required inputs must have sources",
+            "The system validates chains automatically"
+          ],
+          "tip": "💡 Good DMN design uses consistent variable naming"
+        },
+        {
+          "number": 6,
+          "title": "Real-World Example",
+          "description": "How the Heusdenpas chain works in practice.",
+          "action": "Review the preset chain configuration",
+          "details": [
+            "Step 1 (SVB): Calculates age from birth date",
+            "Step 2 (SZW): Checks benefit eligibility using age",
+            "Step 3 (Heusden): Determines municipal programs",
+            "This automates what civil servants do manually"
+          ],
+          "tip": "💡 DMN chains can replace complex manual workflows"
+        }
+      ]
+    },
+    {
+      "id": "advanced-features",
+      "title": "Advanced Features",
+      "description": "Explore additional capabilities of the Linked Data Explorer",
+      "icon": "⚡",
+      "iconColor": "purple",
+      "difficulty": "Advanced",
+      "estimatedTime": "15 minutes",
+      "steps": [
+        {
+          "number": 1,
+          "title": "SPARQL Query Editor",
+          "description": "Learn to write custom queries for DMN discovery.",
+          "action": "Switch to the Query Editor view (first icon in sidebar)",
+          "details": [
+            "The editor supports SPARQL 1.1 syntax",
+            "Sample queries are available in the left panel",
+            "You can modify queries to filter or sort DMNs",
+            "Results can be viewed as tables or graphs"
+          ],
+          "tip": "💡 Use the sample queries as templates for your own queries"
+        },
+        {
+          "number": 2,
+          "title": "Graph Visualization",
+          "description": "Visualize DMN relationships as an interactive graph.",
+          "action": "Switch to Visualization view (third icon in sidebar)",
+          "details": [
+            "After running a query, switch to this view",
+            "Nodes represent RDF resources",
+            "Edges show relationships between resources",
+            "Drag nodes to explore connections",
+            "Zoom and pan to navigate large graphs"
+          ],
+          "tip": "💡 Graph view helps understand complex DMN relationships"
+        },
+        {
+          "number": 3,
+          "title": "Custom Endpoints",
+          "description": "Configure different SPARQL endpoints for various data sources.",
+          "action": "Click the Settings icon (gear) in the sidebar",
+          "details": [
+            "You can add custom SPARQL endpoints",
+            "Switch between TriplyDB and other sources",
+            "Useful for testing against different datasets",
+            "Settings reset on page refresh"
+          ],
+          "tip": "💡 Keep the default TriplyDB endpoint for production DMN data"
+        },
+        {
+          "number": 4,
+          "title": "Execution Performance",
+          "description": "Understanding and monitoring chain execution times.",
+          "action": "Execute a chain and review the timing information",
+          "details": [
+            "Each DMN execution is timed separately",
+            "Total chain time includes orchestration overhead",
+            "Target: <1000ms for typical 3-DMN chains",
+            "Performance varies based on:",
+            "• DMN complexity",
+            "• Network latency",
+            "• Operaton engine load"
+          ],
+          "tip": "💡 Execution time is shown in the results panel"
+        },
+        {
+          "number": 5,
+          "title": "Version History",
+          "description": "Track application updates and new features.",
+          "action": "Click the Changelog icon (book) in the sidebar",
+          "details": [
+            "Complete version history with dates",
+            "Feature announcements and bug fixes",
+            "Organized by version with collapsible sections",
+            "Helps understand new capabilities"
+          ],
+          "tip": "💡 Check the changelog after deployments to see what's new"
+        },
+        {
+          "number": 6,
+          "title": "Error Handling",
+          "description": "Understanding and troubleshooting execution errors.",
+          "action": "Try executing a chain with invalid inputs to see error messages",
+          "details": [
+            "Common error types:",
+            "• Missing required inputs",
+            "• Type mismatches",
+            "• DMN execution failures",
+            "• Network connectivity issues",
+            "Error messages guide you to solutions"
+          ],
+          "tip": "💡 Read error messages carefully - they usually explain the fix needed"
+        },
+        {
+          "number": 7,
+          "title": "Browser Developer Tools",
+          "description": "Use browser tools for debugging and deeper insights.",
+          "action": "Open browser DevTools (F12 or Right-click → Inspect)",
+          "details": [
+            "Console shows detailed execution logs",
+            "Network tab displays API calls to backend",
+            "Useful for debugging complex chains",
+            "Can see raw JSON request/response data"
+          ],
+          "tip": "💡 Console logs show variable mapping and orchestration details"
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting",
+      "title": "Troubleshooting Guide",
+      "description": "Common issues and how to resolve them",
+      "icon": "🔍",
+      "iconColor": "red",
+      "difficulty": "All Levels",
+      "estimatedTime": "As needed",
+      "steps": [
+        {
+          "number": 1,
+          "title": "No DMNs Loading",
+          "description": "When the DMN list is empty in orchestration view.",
+          "action": "Check backend connectivity",
+          "details": [
+            "Verify you're connected to the internet",
+            "Check that backend is running (ACC environment)",
+            "Look for error messages in the console",
+            "Try refreshing the page",
+            "Contact system administrator if persistent"
+          ],
+          "tip": "💡 The backend must be reachable for DMN discovery"
+        },
+        {
+          "number": 2,
+          "title": "Chain Validation Errors",
+          "description": "Chain shows as invalid and won't execute.",
+          "action": "Review the validation panel messages",
+          "details": [
+            "Check for missing required inputs",
+            "Verify DMN order matches variable flow",
+            "Ensure all input fields are filled",
+            "Look for type mismatch warnings",
+            "Try using the preset as reference"
+          ],
+          "tip": "💡 Each validation message explains what's wrong"
+        },
+        {
+          "number": 3,
+          "title": "Execution Failures",
+          "description": "Chain executes but returns errors.",
+          "action": "Check the error message in results panel",
+          "details": [
+            "Common causes:",
+            "• Invalid input values",
+            "• DMN execution engine errors",
+            "• Network timeouts",
+            "• Deployment mismatches",
+            "Review error details and try again"
+          ],
+          "tip": "💡 Error messages often include the specific DMN that failed"
+        },
+        {
+          "number": 4,
+          "title": "Slow Execution",
+          "description": "Chain takes longer than expected to execute.",
+          "action": "Monitor execution timing in results",
+          "details": [
+            "Normal execution: 800-1100ms for 3 DMNs",
+            "Factors affecting speed:",
+            "• Number of DMNs in chain",
+            "• Complexity of decision logic",
+            "• Backend server load",
+            "• Network latency"
+          ],
+          "tip": "💡 Performance is expected to improve in future releases"
+        },
+        {
+          "number": 5,
+          "title": "UI Display Issues",
+          "description": "Visual or layout problems in the interface.",
+          "action": "Try these steps",
+          "details": [
+            "Refresh the browser page (F5)",
+            "Clear browser cache",
+            "Try a different browser",
+            "Ensure browser is up-to-date",
+            "Check browser console for JavaScript errors"
+          ],
+          "tip": "💡 The app works best in modern browsers (Chrome, Firefox, Edge)"
+        },
+        {
+          "number": 6,
+          "title": "Getting Help",
+          "description": "Where to find additional support and resources.",
+          "action": "Use available support channels",
+          "details": [
+            "Resources:",
+            "• GitLab Issues for bug reports",
+            "• Project documentation in README",
+            "• Changelog for recent changes",
+            "• Contact RONL development team",
+            "• Regels Overheid project site"
+          ],
+          "tip": "💡 Include error messages and screenshots when reporting issues"
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "term": "DMN",
+      "definition": "Decision Model and Notation - A standard for modeling business decision logic"
+    },
+    {
+      "term": "SPARQL",
+      "definition": "Query language for RDF (Resource Description Framework) data"
+    },
+    {
+      "term": "TriplyDB",
+      "definition": "SPARQL endpoint hosting DMN metadata and relationships"
+    },
+    {
+      "term": "Operaton",
+      "definition": "DMN execution engine that runs decision models"
+    },
+    {
+      "term": "Chain",
+      "definition": "Sequence of DMN models where outputs feed into subsequent inputs"
+    },
+    {
+      "term": "Orchestration",
+      "definition": "Automated coordination of multiple DMN executions"
+    },
+    {
+      "term": "CPRMV",
+      "definition": "CPSV Rule Model Vocabulary - Standard for describing decision models"
+    },
+    {
+      "term": "Variable Mapping",
+      "definition": "Matching output variables from one DMN to input variables of another"
+    },
+    {
+      "term": "Validation",
+      "definition": "Checking if a chain is properly configured and ready to execute"
+    },
+    {
+      "term": "RONL",
+      "definition": "Regels Overheid Nederland - Dutch Government Rules initiative"
+    }
+  ]
+}

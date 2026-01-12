@@ -23,7 +23,7 @@
     "linked-data",
     "operaton"
   ],
-  "author": "ICTU - Regels Overheid Nederland",
+  "author": "RONL - Regels Overheid Nederland",
   "license": "EUPL-1.2",
   "dependencies": {
     "express": "^4.18.2",

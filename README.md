@@ -142,7 +142,23 @@ Backend (Node.js + Express)
 
 </details>
 
-### 5. Changelog
+### 5. Tutorial System ✨ NEW
+
+<details>
+<summary>View Features</summary>
+
+- **In-app tutorial system** - 5 comprehensive guides (36 total steps)
+- **Quick Start** - Heusdenpas Chain Demo - Step-by-step first execution (10 steps)
+- **Building Chains Manually** - Drag-and-drop workflow guide (7 steps)
+- **Understanding DMN Models** - Decision model concepts explained (6 steps)
+- **Advanced Features** - SPARQL, graphs, performance monitoring (7 steps)
+- **Troubleshooting Guide** - Common issues and solutions (6 steps)
+- **Accordion navigation** - only one tutorial open at a time
+- **Auto-scroll behavior** - tutorials automatically position at top when opened
+
+</details>
+
+### 6. Changelog
 
 <details>
 <summary>View Features</summary>
@@ -154,7 +170,7 @@ Backend (Node.js + Express)
 
 </details>
 
-### 6. Settings & Configuration
+### 7. Settings & Configuration
 
 <details>
 <summary>View Features</summary>
@@ -309,7 +325,7 @@ linked-data-explorer/
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/ictu/linked-data-explorer.git
+git clone https://github.com/sgort/linked-data-explorer.git
 cd linked-data-explorer
 
 # 2. Install dependencies (all packages)
@@ -754,7 +770,7 @@ EUPL v. 1.2 License - See [LICENSE](./LICENSE) file for details
 
 - **Issues**: [Gitlab Issues](https://git.open-regels.nl/hosting/linked-data-explorer/-/issues)
 - **Project**: [Regels Overheid](https://regels.overheid.nl/)
-- **Maintainer**: ICTU Development Team
+- **Maintainer**: RONL Development Team
 
 ---
 

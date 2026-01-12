@@ -362,6 +362,6 @@ LOG_LEVEL=info
 
 ## 🤝 Contributing
 
-This service is part of the ICTU Regels Overheid Nederland (RONL) initiative.
+This service is part of the Regels Overheid Nederland (RONL) initiative.
 
 **Contact:** [RONL Team]

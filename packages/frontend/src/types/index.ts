@@ -52,6 +52,7 @@ export enum ViewMode {
   VISUALIZE = 'VISUALIZE',
   CHANGELOG = 'CHANGELOG',
   ORCHESTRATION = 'ORCHESTRATION',
+  TUTORIAL = 'TUTORIAL',
 }
 
 export interface EndpointConfig {
