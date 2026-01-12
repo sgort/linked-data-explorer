@@ -1,6 +1,44 @@
 {
   "versions": [
     {
+      "version": "0.3.0",
+      "status": "New Features",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "January 10, 2026",
+      "sections": [
+        {
+          "title": "Phase B.3 - Chain Builder UI",
+          "icon": "🚀",
+          "iconColor": "emerald",
+          "items": [
+            "Visual drag-and-drop chain builder interface",
+            "Real-time chain validation with input requirements",
+            "Dynamic form generation for DMN inputs",
+            "Test data filling for rapid testing",
+            "Chain execution with progress tracking",
+            "Results display with execution timing",
+            "Step-by-step execution breakdown",
+            "Frontend-backend integration via REST API"
+          ]
+        },
+        {
+          "title": "Phase B.2 - Backend Orchestration Service (Complete)",
+          "icon": "🚀",
+          "iconColor": "emerald",
+          "items": [
+            "Node.js/Express REST API backend",
+            "TriplyDB SPARQL integration",
+            "Operaton DMN execution integration",
+            "Variable mapping and orchestration logic",
+            "Azure App Service deployment (ACC environment)",
+            "Structured logging with Winston",
+            "CORS configuration for frontend integration"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.2.0",
       "status": "New Features",
       "statusColor": "purple",
@@ -8,7 +46,7 @@
       "date": "January 8, 2026",
       "sections": [
         {
-          "title": "DMN Orchestration (Phase B.1)",
+          "title": "Phase B.1 - Backend Orchestration Service",
           "icon": "🚀",
           "iconColor": "emerald",
           "items": [
