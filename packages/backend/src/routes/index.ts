@@ -21,7 +21,7 @@ router.get('/', (req, res) => {
       dmns: '/api/dmns',
       chains: '/api/chains',
     },
-    documentation: 'https://github.com/ictu/linked-data-explorer',
+    documentation: 'https://git.open-regels.nl/hosting/linked-data-explorer',
   });
 });
 

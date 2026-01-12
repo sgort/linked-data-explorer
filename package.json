@@ -32,8 +32,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ictu/linked-data-explorer.git"
+    "url": "https://github.com/sgort/linked-data-explorer.git"
   },
-  "author": "ICTU - Regels Overheid",
+  "author": "Regels Overheid",
   "license": "EUPL-1.2"
 }
