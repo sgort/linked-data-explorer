@@ -1,6 +1,28 @@
 {
   "versions": [
     {
+      "version": "0.3.1",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "January 12, 2026",
+      "sections": [
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "blue",
+          "items": [
+            "Enhanced error messages to show specific deployment and Operaton errors",
+            "Synchronized test data between current preset and manual chain",
+            "Fixed execution progress visibility on first run",
+            "Missing Metadata (Definition Key, Deployment ID, API Endpoint)",
+            "Incremental Test Data for Demo (only worked for complete chain)",
+            "All 5 DMN queries now visible in Library view"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.3.0",
       "status": "New Features",
       "statusColor": "purple",
