@@ -47,6 +47,7 @@ const ChainBuilder: React.FC = () => {
     } else {
       setValidation(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChain, availableDmns, inputs]);
 
   /**
@@ -274,6 +275,7 @@ const ChainBuilder: React.FC = () => {
     if (overId === 'chain-droppable') {
       // Check if DMN already in chain
       if (selectedChain.includes(activeId)) {
+        // eslint-disable-next-line no-console
         console.log('DMN already in chain');
         return;
       }
@@ -302,6 +304,11 @@ const ChainBuilder: React.FC = () => {
    */
   const handleRemoveDmn = (identifier: string) => {
     setSelectedChain(selectedChain.filter((id) => id !== identifier));
+    // Also clear inputs, results, and validation
+    // This matches the behavior of Clear Chain
+    setInputs({});
+    setExecutionResult(null);
+    setValidation(null);
   };
 
   /**
@@ -315,14 +322,16 @@ const ChainBuilder: React.FC = () => {
   };
 
   /**
-   * Load a preset chain
+   * Hanlde preset
+   * @param preset
    */
+
   const handleLoadPreset = (preset: ChainPreset) => {
     setSelectedChain(preset.dmnIds);
     if (preset.defaultInputs) {
       setInputs(preset.defaultInputs);
     }
-    setExecutionResult(null); // Clear previous results when loading preset
+    setExecutionResult(null);
   };
 
   /**
