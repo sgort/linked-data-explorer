@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -60,6 +61,37 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-slate-900">{dmn.identifier}</h3>
               {dmn.description && <p className="text-xs text-slate-500 mt-1">{dmn.description}</p>}
+
+              {/* METADATA SECTION */}
+              <div className="mt-2 space-y-1">
+                {dmn.identifier && (
+                  <div className="flex items-start gap-2 text-xs">
+                    <span className="font-medium text-slate-600 flex-shrink-0">
+                      Definition Key:
+                    </span>
+                    <span className="text-slate-500 font-mono text-[10px] break-all">
+                      {dmn.identifier}
+                    </span>
+                  </div>
+                )}{' '}
+                {dmn.deploymentId && (
+                  <div className="flex items-start gap-2 text-xs">
+                    <span className="font-medium text-slate-600 flex-shrink-0">Deployment ID:</span>
+                    <span className="text-slate-500 font-mono text-[10px] break-all">
+                      {dmn.deploymentId}
+                    </span>
+                  </div>
+                )}
+                {dmn.implementedBy && (
+                  <div className="flex items-start gap-2 text-xs">
+                    <span className="font-medium text-slate-600 flex-shrink-0">API Endpoint:</span>
+                    <span className="text-slate-500 font-mono text-[10px] break-all">
+                      {dmn.implementedBy}
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
                 <span>
                   {dmn.inputs.length} input{dmn.inputs.length !== 1 ? 's' : ''}

@@ -5,7 +5,6 @@ import {
   ChevronUp,
   Clock,
   FileInput,
-  Play,
   Zap,
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
@@ -56,8 +55,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
 
       // Get the position of execution area relative to container
       const executionTop = executionArea.offsetTop;
-      const containerHeight = container.clientHeight;
-      const executionHeight = executionArea.clientHeight;
 
       // Scroll so execution area is visible at the top of the viewport
       container.scrollTo({
@@ -67,41 +64,16 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
     }
   }, [isExecuting]);
 
-  // Preset chains
   const presets: ChainPreset[] = [
     {
-      id: 'heusdenpas',
+      id: 'full-chain',
       name: 'Heusdenpas Chain',
-      description: 'SVB → SZW → Heusden (Production chain)',
+      description: 'SVB → SZW → Heusden',
       dmnIds: [
         'SVB_LeeftijdsInformatie',
         'SZW_BijstandsnormInformatie',
         'RONL_HeusdenpasEindresultaat',
       ],
-      defaultInputs: {
-        // SVB inputs
-        dagVanAanvraag: '2025-01-24',
-        geboortedatumAanvrager: '1980-01-23',
-        geboortedatumPartner: null, // ← Changed to null (single person)
-
-        // SZW inputs
-        aanvragerAlleenstaand: true, // ← Changed to true (single person)
-        aanvragerHeeftKinderen: true,
-        aanvragerHeeftAOWLeeftijd: false,
-
-        // Heusden inputs
-        aanvragerInwonerHeusden: true,
-        aanvragerHeeftKind4Tm17: true,
-        maandelijksBrutoInkomenAanvrager: 1500,
-        aanvragerUitkeringBaanbrekers: false,
-        aanvragerVoedselbankpasDenBosch: false,
-        aanvragerKwijtscheldingGemeentelijkeBelastingen: false,
-        aanvragerSchuldhulptrajectKredietbankNederland: false,
-        aanvragerDitKalenderjaarAlAangevraagd: false,
-        aanvragerAanmerkingStudieFinanciering: false,
-        aanvragerIs181920: false,
-        aanvragerIsTenminste21: true,
-      },
     },
   ];
 
@@ -119,7 +91,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
             <p className="text-sm text-slate-500">
               Add DMNs to your chain to configure and execute
             </p>
-            {presets.length > 0 && (
+            {presets.length > 0 && ( // ← This code exists, needs presets array!
               <div className="mt-6">
                 <p className="text-xs text-slate-600 mb-2">Or load a preset:</p>
                 {presets.map((preset) => (
@@ -259,13 +231,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
                 inputs={inputs}
                 onInputChange={onInputChange}
                 validation={validation}
-                presetInputs={
-                  presets.find(
-                    (p) =>
-                      JSON.stringify(p.dmnIds.sort()) ===
-                      JSON.stringify(chain.map((d) => d.identifier).sort())
-                  )?.defaultInputs
-                } // ✅ ADD THIS LINE - Pass preset inputs if chain matches a preset
               />
             </div>
           )}

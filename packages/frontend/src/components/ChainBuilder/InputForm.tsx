@@ -2,25 +2,19 @@ import React from 'react';
 
 import { DmnModel } from '../../types';
 import { ChainValidation } from '../../types/chainBuilder.types';
+import { getCombinedTestData } from '../../utils/testData';
 
 interface InputFormProps {
   chain: DmnModel[];
   inputs: Record<string, unknown>;
   onInputChange: (identifier: string, value: unknown) => void;
   validation: ChainValidation | null;
-  presetInputs?: Record<string, unknown>;
 }
 
 /**
  * Dynamic input form based on chain requirements
  */
-const InputForm: React.FC<InputFormProps> = ({
-  chain,
-  inputs,
-  onInputChange,
-  validation,
-  presetInputs,
-}) => {
+const InputForm: React.FC<InputFormProps> = ({ chain, inputs, onInputChange, validation }) => {
   const allInputs = validation?.requiredInputs || [];
 
   if (allInputs.length === 0) {
@@ -36,6 +30,8 @@ const InputForm: React.FC<InputFormProps> = ({
    */
   const renderInput = (input: (typeof allInputs)[0]) => {
     const value = inputs[input.identifier];
+    // hasValue is being used - it shows a green checkmark (✓) when an input has a value: typescript{hasValue && <span className="text-green-600">✓</span>}
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const hasValue = value !== undefined && value !== null && value !== '';
 
     switch (input.type) {
@@ -123,48 +119,23 @@ const InputForm: React.FC<InputFormProps> = ({
         );
       })}
 
-      {/* Quick Fill Button */}
+      {/* ✅ UPDATED: Fill with incremental test data */}
       <button
         onClick={() => {
-          // ✅ IMPROVED: Use preset inputs if available, otherwise use generic test data
-          if (presetInputs && Object.keys(presetInputs).length > 0) {
-            // Use preset-specific test data
-            allInputs.forEach((input) => {
-              if (input.identifier in presetInputs) {
-                onInputChange(input.identifier, presetInputs[input.identifier]);
-              }
-            });
-          } else {
-            // Fall back to generic test data
-            allInputs.forEach((input) => {
-              let testValue: unknown;
-              switch (input.type) {
-                case 'Boolean':
-                  testValue = true;
-                  break;
-                case 'Integer':
-                  testValue = 1500; // ✅ More realistic than 100
-                  break;
-                case 'Double':
-                  testValue = 1500.0;
-                  break;
-                case 'Date':
-                  testValue = '2025-01-24'; // ✅ More realistic than 2025-01-01
-                  break;
-                case 'String':
-                default:
-                  testValue = 'test';
-                  break;
-              }
-              onInputChange(input.identifier, testValue);
-            });
-          }
+          // Get test data for current chain DMNs
+          const chainDmnIds = chain.map((dmn) => dmn.identifier);
+          const combinedTestData = getCombinedTestData(chainDmnIds);
+
+          // Fill inputs that match the combined test data
+          allInputs.forEach((input) => {
+            if (input.identifier in combinedTestData) {
+              onInputChange(input.identifier, combinedTestData[input.identifier]);
+            }
+          });
         }}
         className="w-full mt-2 px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors border border-slate-200"
       >
-        {presetInputs && Object.keys(presetInputs).length > 0
-          ? 'Fill with preset test data'
-          : 'Fill with test data'}
+        Fill with test data ({chain.length} DMN{chain.length !== 1 ? 's' : ''})
       </button>
     </div>
   );
