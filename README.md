@@ -196,8 +196,6 @@ Backend (Node.js + Express)
 
 ## 🛠️ Technology Stack
 
-## 🛠️ Technology Stack
-
 ### Frontend
 
 | Technology         | Version | Purpose                    |
