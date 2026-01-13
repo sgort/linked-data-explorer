@@ -44,15 +44,25 @@ app.use(versionMiddleware);
 // Mount API routes (routes already include /api and /v1 prefixes)
 app.use(routes);
 
-// Root endpoint
+// Root endpoint - FIXED: Point to v1 endpoints
 app.get('/', (req, res) => {
   res.json({
     name: 'Linked Data Explorer Backend',
     version: packageJson.version,
     status: 'running',
     environment: config.nodeEnv,
-    documentation: '/api',
-    health: '/api/health',
+    documentation: '/v1/openapi.json',
+    health: '/v1/health',
+    endpoints: {
+      health: '/v1/health',
+      dmns: '/v1/dmns',
+      chains: '/v1/chains',
+    },
+    legacy: {
+      health: '/api/health (deprecated)',
+      dmns: '/api/dmns (deprecated)',
+      chains: '/api/chains (deprecated)',
+    },
   });
 });
 
@@ -77,8 +87,9 @@ const startServer = () => {
       operatonBaseUrl: config.operaton.baseUrl,
     });
 
-    logger.info(`API available at: http://${host}:${port}/api`);
-    logger.info(`Health check: http://${host}:${port}/api/health`);
+    logger.info(`API available at: http://${host}:${port}/v1`);
+    logger.info(`Health check: http://${host}:${port}/v1/health`);
+    logger.info(`Legacy API: http://${host}:${port}/api (deprecated)`);
   });
 };
 
