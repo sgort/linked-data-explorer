@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Azure profiles
+profiles/*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
