@@ -1,6 +1,53 @@
 {
   "versions": [
     {
+      "version": "0.4.0",
+      "status": "Deployment & Automation",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "January 13, 2026",
+      "sections": [
+        {
+          "title": "CI/CD Automation",
+          "icon": "🚀",
+          "iconColor": "blue",
+          "items": [
+            "GitHub Actions workflows for automated front- & backend deployment (production + acceptance)",
+            "Manual approval workflow for production backend deployments via GitHub environment protection",
+            "Automated health checks post-deployment with retry logic (5 attempts, 10s intervals)",
+            "Environment-specific build commands (build:prod, build:acc)",
+            "Deployment history tracking in GitHub Actions",
+            "One-click rollback capabilities via Azure Portal"
+          ]
+        },
+        {
+          "title": "Environment Configuration",
+          "icon": "⚙️",
+          "iconColor": "purple",
+          "items": [
+            "Three distinct frontend .env files (development, acceptance, production)",
+            "Environment-specific backend NODE_ENV (acceptance vs production)",
+            "Proper CORS configuration for each environment",
+            "Separate API endpoint URLs for local, ACC, and production",
+            "Azure App Settings management via CLI and Portal"
+          ]
+        },
+        {
+          "title": "Infrastructure",
+          "icon": "🏗️",
+          "iconColor": "amber",
+          "items": [
+            "Production backend deployed to backend.linkeddata.open-regels.nl",
+            "Acceptance backend deployed to acc.backend.linkeddata.open-regels.nl",
+            "Azure App Service (Node.js 22) for both backend environments",
+            "Azure Static Web Apps for frontend (both environments)",
+            "Custom domain configuration with HTTPS for all endpoints",
+            "Health monitoring endpoints with TriplyDB and Operaton connectivity status"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.3.2",
       "status": "New Feature",
       "statusColor": "emerald",
@@ -25,6 +72,19 @@
             "Accessible via new Help icon (?) in sidebar navigation",
             "Full-width view with collapsible sections",
             "JSON-configurable content for easy future updates"
+          ]
+        },
+        {
+          "title": "UX Improvements",
+          "icon": "✨",
+          "iconColor": "emerald",
+          "items": [
+            "Deployment metadata display in Chain Builder (API endpoint + deployment ID)",
+            "Incremental test data system for step-by-step demonstrations",
+            "DMN query library integration without auto-view switching",
+            "Enhanced error reporting with screenshots and console logs",
+            "Preset loading UI restored in Chain Configuration panel",
+            "Fixed DMN card removal to properly clear configuration state"
           ]
         }
       ]

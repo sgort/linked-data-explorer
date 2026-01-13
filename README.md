@@ -190,25 +190,28 @@ Backend (Node.js + Express)
 
 ### Frontend
 
-| Environment    | URL                                                                    | Branch | Purpose             |
-| -------------- | ---------------------------------------------------------------------- | ------ | ------------------- |
-| **Production** | [linkeddata.open-regels.nl](https://linkeddata.open-regels.nl)         | `main` | Stable release      |
-| **Acceptance** | [acc.linkeddata.open-regels.nl](https://acc.linkeddata.open-regels.nl) | `acc`  | Testing environment |
+| Environment | URL | Branch | CI/CD | Purpose |
+|-------------|-----|--------|-------|---------|
+| **Production** | [linkeddata.open-regels.nl](https://linkeddata.open-regels.nl) | `main` | GitHub Actions ✅ | Stable release |
+| **Acceptance** | [acc.linkeddata.open-regels.nl](https://acc.linkeddata.open-regels.nl) | `acc` | GitHub Actions ✅ | Testing environment |
 
 **Platform:** Azure Static Web Apps  
-**CI/CD:** GitHub Actions (automated on push)
+**Deployment:** Automated via GitHub Actions on push  
+**Build Command:** `npm run build:prod` (production) / `npm run build:acc` (acceptance)
 
 ### Backend
 
-| Environment    | URL                                                                                      | Branch | Purpose             |
-| -------------- | ---------------------------------------------------------------------------------------- | ------ | ------------------- |
-| **Acceptance** | [acc.backend.linkeddata.open-regels.nl](https://acc.backend.linkeddata.open-regels.nl) | `acc`  | API & orchestration |
+| Environment | URL | Branch | CI/CD | Purpose |
+|-------------|-----|--------|-------|---------|
+| **Production** | [backend.linkeddata.open-regels.nl](https://backend.linkeddata.open-regels.nl) | `main` | GitHub Actions ✅ | API & orchestration |
+| **Acceptance** | [acc.backend.linkeddata.open-regels.nl](https://acc.backend.linkeddata.open-regels.nl) | `acc` | GitHub Actions ✅ | Testing environment |
 
 **Platform:** Azure App Service (Linux, Node.js 22)  
-**CI/CD:** Manual deployment → GitHub Actions (planned)  
-**Health Check:** `/api/health` - Returns TriplyDB and Operaton connectivity status
+**Deployment:** Automated via GitHub Actions with manual approval for production  
+**Build Process:** TypeScript compilation, dependency installation, automated health checks
 
 ---
+
 
 ## 🛠️ Technology Stack
 
@@ -268,45 +271,58 @@ Backend (Node.js + Express)
 ```bash
 linked-data-explorer/
 ├── packages/
-│   ├── frontend/                    # React application
+│   ├── frontend/                      # React application
 │   │   ├── src/
-│   │   │   ├── components/          # React components
-│   │   │   │   ├── ChainBuilder/    # Phase B.3 - Chain Builder UI
-│   │   │   │   ├── GraphView/       # D3.js graph visualization
-│   │   │   │   ├── QueryEditor/     # SPARQL query interface
-│   │   │   │   └── Changelog/       # Version tracking
-│   │   │   ├── types/               # TypeScript definitions
-│   │   │   ├── constants.ts         # Sample queries, endpoints
-│   │   │   └── changelog.json       # Version history
-│   │   ├── .env.production          # Backend API URL configuration
+│   │   │   ├── components/
+│   │   │   │   ├── ChainBuilder/      # Phase B.3 - Chain Builder UI
+│   │   │   │   │   ├── ChainBuilder.tsx
+│   │   │   │   │   ├── DmnList.tsx
+│   │   │   │   │   ├── ChainComposer.tsx
+│   │   │   │   │   ├── ChainConfig.tsx
+│   │   │   │   │   ├── InputForm.tsx
+│   │   │   │   │   ├── ChainResults.tsx
+│   │   │   │   │   └── ExecutionProgress.tsx
+│   │   │   │   ├── GraphView/         # D3.js visualization
+│   │   │   │   ├── QueryEditor/       # SPARQL interface
+│   │   │   │   ├── Tutorial/          # In-app tutorials
+│   │   │   │   └── Changelog/         # Version tracking
+│   │   │   ├── types/                 # TypeScript definitions
+│   │   │   ├── utils/
+│   │   │   │   └── testData.ts        # Incremental test data
+│   │   │   ├── constants.ts           # Sample queries, endpoints
+│   │   │   └── changelog.json         # Version history
+│   │   ├── .env.development           # Local config
+│   │   ├── .env.acceptance            # ACC config
+│   │   ├── .env.production            # Production config
 │   │   └── package.json
 │   │
-│   └── backend/                     # Node.js/Express API
+│   └── backend/                       # Node.js/Express API
 │       ├── src/
-│       │   ├── routes/              # API endpoints
-│       │   │   ├── dmn.routes.ts    # /api/dmns - DMN discovery
-│       │   │   ├── chain.routes.ts  # /api/chains - Chain execution
-│       │   │   └── health.routes.ts # /api/health - Health check
+│       │   ├── routes/
+│       │   │   ├── dmn.routes.ts      # /api/dmns
+│       │   │   ├── chain.routes.ts    # /api/chains
+│       │   │   └── health.routes.ts   # /api/health
 │       │   ├── services/
-│       │   │   ├── sparql.service.ts      # TriplyDB queries
-│       │   │   ├── operaton.service.ts    # DMN execution
-│       │   │   └── orchestration.service.ts # Chain orchestration
-│       │   ├── types/               # TypeScript definitions
-│       │   ├── middleware/          # Express middleware
-│       │   ├── utils/               # Utilities (logger, config)
-│       │   └── index.ts             # Entry point
-│       ├── .env.example             # Environment template
+│       │   │   ├── sparql.service.ts
+│       │   │   ├── operaton.service.ts
+│       │   │   └── orchestration.service.ts
+│       │   ├── types/
+│       │   ├── middleware/
+│       │   ├── utils/                 # Logger, config
+│       │   └── index.ts
+│       ├── .env.example
 │       └── package.json
 │
-├── examples/                        # Test data
-│   └── ttl/                         # Turtle files with 6 DMN models
+├── examples/ttl/                      # Test data (6 DMN models)
 │
-├── .github/workflows/               # CI/CD pipelines
-│   ├── azure-static-web-apps-*.yml  # Frontend deployment
-│   └── [backend workflow - planned]
+├── .github/workflows/                 # CI/CD pipelines
+│   ├── azure-frontend-production.yml  # Frontend prod deployment
+│   ├── azure-frontend-acc.yml         # Frontend ACC deployment
+│   ├── azure-backend-production.yml   # Backend prod (with approval)
+│   └── azure-backend-acc.yml          # Backend ACC (auto)
 │
-├── package.json                     # Workspace configuration
-└── README.md                        # This file
+├── package.json                       # Workspace configuration
+└── README.md                          # This file
 ```
 
 ---
@@ -368,17 +384,17 @@ cd packages/frontend
 # Start dev server with hot reload
 npm run dev
 
-# Build for production
-npm run build
+# Build for specific environment
+npm run build              # Production (default)
+npm run build:prod         # Production (explicit)
+npm run build:acc          # Acceptance
 
 # Preview production build
 npm run preview
 
-# Linting
+# Code quality
 npm run lint
 npm run lint:fix
-
-# Formatting
 npm run format
 npm run check-format
 ```
@@ -397,12 +413,12 @@ npm run build
 # Start production server
 npm start
 
-# Run tests
+# Testing
 npm test
 npm run test:watch
 npm run test:coverage
 
-# Linting & formatting
+# Code quality
 npm run lint
 npm run lint:fix
 npm run format
@@ -466,64 +482,203 @@ npx tsc --noEmit
 
 ---
 
-## 🚢 Deployment
+## 🚀 CI/CD & Deployment
 
-### Frontend Deployment
+### Deployment Architecture
 
-**Azure Static Web Apps** - Automatic via GitHub Actions
-
-```yaml
-# .github/workflows/azure-static-web-apps-*.yml
-on:
-  push:
-    branches: [main, acc]
-
-jobs:
-  build_and_deploy:
-    - app_location: '/packages/frontend'
-    - output_location: 'dist'
+```
+Push to Branch → GitHub Actions → Build → Lint → Test → Deploy → Health Check → ✅
 ```
 
-**Manual deployment:**
+### GitHub Actions Workflows
+
+#### Frontend Workflows
+
+**`.github/workflows/azure-frontend-production.yml`**
+- **Trigger:** Push to `main` with changes in `packages/frontend/**`
+- **Build Command:** `npm run build:prod`
+- **Environment:** `.env.production` → `https://backend.linkeddata.open-regels.nl`
+- **Platform:** Azure Static Web Apps
+- **URL:** https://linkeddata.open-regels.nl
+- **Approval:** ❌ Not required (auto-deploy)
+
+**`.github/workflows/azure-frontend-acc.yml`**
+- **Trigger:** Push to `acc` with changes in `packages/frontend/**`
+- **Build Command:** `npm run build:acc`
+- **Environment:** `.env.acceptance` → `https://acc.backend.linkeddata.open-regels.nl`
+- **Platform:** Azure Static Web Apps
+- **URL:** https://acc.linkeddata.open-regels.nl
+- **Approval:** ❌ Not required (auto-deploy)
+
+#### Backend Workflows
+
+**`.github/workflows/azure-backend-production.yml`**
+- **Trigger:** Push to `main` with changes in `packages/backend/**` (or manual)
+- **Build Steps:**
+  1. Install dependencies (`npm ci`)
+  2. Run linter (`npm run lint`)
+  3. Build TypeScript (`npm run build`)
+  4. Install production dependencies
+  5. Package for deployment
+- **Approval:** ✅ **Manual approval required** (GitHub environment protection)
+- **Health Check:** Automatic verification with retries (5 attempts, 10s intervals)
+- **Platform:** Azure App Service (Node.js 22)
+- **URL:** https://backend.linkeddata.open-regels.nl
+
+**`.github/workflows/azure-backend-acc.yml`**
+- **Trigger:** Push to `acc` with changes in `packages/backend/**` (or manual)
+- **Build Steps:** Same as production
+- **Approval:** ❌ Not required (auto-deploy)
+- **Health Check:** Automatic verification with retries
+- **Platform:** Azure App Service (Node.js 22)
+- **URL:** https://acc.backend.linkeddata.open-regels.nl
+
+### Deployment Process
+
+#### Production Deployment (main branch)
+
 ```bash
-cd packages/frontend
-npm run build
-# Deploy via Azure CLI or portal
+# 1. Make changes
+git checkout main
+# ... make changes ...
+
+# 2. Commit and push
+git add .
+git commit -m "feat: add new feature"
+git push origin main
+
+# 3. GitHub Actions runs automatically
+# - Frontend: Builds and deploys immediately
+# - Backend: Builds, waits for approval, then deploys
+
+# 4. Approve backend deployment (if needed)
+# Go to: https://github.com/ictu/linked-data-explorer/actions
+# Click on the running workflow
+# Click "Review deployments" → Select "production" → "Approve and deploy"
+
+# 5. Verify deployment
+curl https://backend.linkeddata.open-regels.nl/api/health
 ```
 
-### Backend Deployment
+#### Acceptance Deployment (acc branch)
 
-**Azure App Service** - Manual deployment (GitHub Actions planned)
-
-**Current ACC deployment:**
 ```bash
-# 1. Build locally
-cd packages/backend
-npm install
-npm run build
+# 1. Make changes
+git checkout acc
+# ... make changes ...
 
-# 2. Set environment variables in Azure Portal
-# - NODE_ENV=production
-# - PORT=8080
-# - CORS_ORIGIN=https://acc.linkeddata.open-regels.nl,...
-# - TRIPLYDB_ENDPOINT=...
-# - OPERATON_BASE_URL=...
+# 2. Commit and push
+git add .
+git commit -m "feat: test new feature"
+git push origin acc
 
-# 3. Deploy via Azure CLI
-az webapp up \
-  --resource-group RONL-Preproduction \
+# 3. GitHub Actions deploys automatically (no approval needed)
+
+# 4. Verify deployment
+curl https://acc.backend.linkeddata.open-regels.nl/api/health
+```
+
+### Health Check Verification
+
+All backend deployments include automatic health checks:
+
+```bash
+# Production
+curl https://backend.linkeddata.open-regels.nl/api/health
+
+# Acceptance
+curl https://acc.backend.linkeddata.open-regels.nl/api/health
+
+# Expected response:
+{
+  "name": "Linked Data Explorer Backend",
+  "version": "0.1.0",
+  "status": "running",
+  "environment": "production",  # or "acceptance"
+  "documentation": "/api"
+}
+```
+
+### Monitoring & Rollback
+
+**View workflow runs:**
+```
+https://github.com/ictu/linked-data-explorer/actions
+```
+
+**Rollback options:**
+1. Revert commit and push
+2. Redeploy previous version via Azure Portal
+3. Re-run previous successful GitHub Actions workflow
+
+---
+
+## ⚙️ Environment Configuration
+
+### Frontend Environment Files
+
+The frontend uses Vite's environment system with three configurations:
+
+**`.env.development`** (Local)
+```env
+VITE_API_BASE_URL=http://localhost:3001
+```
+
+**`.env.acceptance`** (ACC)
+```env
+VITE_API_BASE_URL=https://acc.backend.linkeddata.open-regels.nl
+```
+
+**`.env.production`** (Production)
+```env
+VITE_API_BASE_URL=https://backend.linkeddata.open-regels.nl
+```
+
+### Backend Environment Variables
+
+**Azure App Service Settings:**
+
+```bash
+# Core settings
+NODE_ENV=production                    # or "acceptance"
+PORT=8080
+HOST=0.0.0.0
+
+# CORS configuration
+CORS_ORIGIN=https://linkeddata.open-regels.nl,https://backend.linkeddata.open-regels.nl
+
+# External services
+TRIPLYDB_ENDPOINT=https://api.open-regels.triply.cc/datasets/stevengort/DMN-discovery/services/DMN-discovery/sparql
+OPERATON_BASE_URL=https://operaton.open-regels.nl/engine-rest
+
+# Logging
+LOG_LEVEL=info                         # info (production), debug (development)
+
+# Deployment
+SCM_DO_BUILD_DURING_DEPLOYMENT=false   # We build in GitHub Actions
+```
+
+### Setting Environment Variables
+
+```bash
+# Backend ACC
+az webapp config appsettings set \
   --name ronl-linkeddata-backend-acc \
-  --runtime "NODE:22-lts"
-```
+  --resource-group RONL-Preproduction \
+  --settings \
+    NODE_ENV=acceptance \
+    PORT=8080 \
+    CORS_ORIGIN="https://acc.linkeddata.open-regels.nl,https://acc.backend.linkeddata.open-regels.nl"
 
-**Environment Variables (Azure):**
-- `NODE_ENV` - production
-- `PORT` - 8080
-- `HOST` - 0.0.0.0
-- `CORS_ORIGIN` - Comma-separated frontend URLs
-- `TRIPLYDB_ENDPOINT` - SPARQL endpoint URL
-- `OPERATON_BASE_URL` - Operaton REST API URL
-- `LOG_LEVEL` - info (production), debug (development)
+# Backend Production
+az webapp config appsettings set \
+  --name ronl-linkeddata-backend-prod \
+  --resource-group RONL-Preproduction \
+  --settings \
+    NODE_ENV=production \
+    PORT=8080 \
+    CORS_ORIGIN="https://linkeddata.open-regels.nl,https://backend.linkeddata.open-regels.nl"
+```
 
 ---
 
@@ -591,97 +746,6 @@ Edit `changelog.json`:
 
 ---
 
-## 🗺️ Roadmap
-
-### ✅ Phase A - Foundation (Complete)
-- [x] SPARQL query editor with syntax support
-- [x] D3.js force-directed graph visualization
-- [x] Multiple endpoint support (TriplyDB, local, custom)
-- [x] Results table with formatted display
-- [x] Changelog component with version tracking
-- [x] Azure Static Web Apps deployment pipeline
-
-### ✅ Phase B.1 - DMN Discovery (Complete)
-- [x] CPRMV vocabulary integration for DMN metadata
-- [x] DMN list view with search and filter capabilities
-- [x] Input/output variable display with type tags
-- [x] Automatic chain detection based on variable matching
-- [x] Three-panel orchestration interface
-- [x] Support for Integer, String, Boolean, Date types
-
-### ✅ Phase B.2 - Backend Orchestration Service (Complete)
-- [x] Node.js/Express REST API backend
-- [x] `/api/dmns` - DMN discovery endpoint
-- [x] `/api/chains` - Chain execution endpoint  
-- [x] `/api/health` - Service health monitoring
-- [x] TriplyDB SPARQL integration
-- [x] Operaton DMN execution integration
-- [x] Variable mapping and orchestration logic
-- [x] Azure App Service deployment (ACC environment)
-- [x] Structured logging with Winston
-- [x] CORS configuration for frontend integration
-
-**Deployment:**
-- ACC: `https://acc.backend.linkeddata.open-regels.nl`
-- Production: Planned
-
-### ✅ Phase B.3 - Chain Builder UI (Complete)
-- [x] Visual drag-and-drop chain builder interface
-- [x] Real-time chain validation with input requirements
-- [x] Dynamic form generation for DMN inputs
-- [x] Test data filling for rapid testing
-- [x] Chain execution with progress tracking
-- [x] Results display with execution timing
-- [x] Step-by-step execution breakdown
-- [x] Frontend-backend integration via REST API
-
-**Working Example:**
-```
-SVB_Leeftijdsinformatie (age calculation)
-    ↓
-SZW_Bijstandsnorminformatie (benefits eligibility)
-    ↓  
-RONL_HeusdenPasEindresultaat (municipal benefits)
-```
-- Execution time: ~1100ms
-- Full variable passing between steps
-- Comprehensive output display
-
-### 🔄 Phase C - Advanced Orchestration (In Progress)
-
-**Goals:**
-- [ ] GitHub Actions deployment for backend
-- [ ] Production backend deployment
-- [ ] Chain templates and presets
-- [ ] Chain export (JSON, BPMN)
-- [ ] Advanced chain validation and scoring
-- [ ] Cycle detection in complex chains
-- [ ] Performance optimization (<800ms for 3-DMN chains)
-
-### 📅 Phase D - User Experience Enhancements (Planned)
-
-**Goals:**
-- [ ] User authentication and profiles
-- [ ] Saved chains and favorites
-- [ ] Collaborative chain building
-- [ ] Chain version history
-- [ ] Mobile-responsive design improvements
-- [ ] Accessibility (WCAG 2.1 AA compliance)
-
-### 🚀 Phase E - Production Features (Future)
-
-**Goals:**
-- [ ] BPMN process modeling integration
-- [ ] Multi-step input gathering workflows
-- [ ] Legal decision explanations (XAI)
-- [ ] Audit trail and compliance logging
-- [ ] API rate limiting and quotas
-- [ ] Caching layer for frequently used chains
-- [ ] Batch execution capabilities
-- [ ] Webhook support for async execution
-
----
-
 ## 🧪 Testing
 
 ### Running Tests
@@ -708,7 +772,7 @@ npm run test:coverage # Coverage report
 5. Fill test data and execute
 6. Verify results display correctly
 
-**Backend:**
+**Backend API:**
 ```bash
 # Health check
 curl https://acc.backend.linkeddata.open-regels.nl/api/health
@@ -716,11 +780,85 @@ curl https://acc.backend.linkeddata.open-regels.nl/api/health
 # List DMNs
 curl https://acc.backend.linkeddata.open-regels.nl/api/dmns
 
-# Execute chain (requires POST with chain configuration)
+# Execute chain
 curl -X POST https://acc.backend.linkeddata.open-regels.nl/api/chains/execute \
   -H "Content-Type: application/json" \
-  -d '{"chain": [...], "inputs": {...}}'
+  -d '{"dmnIds": [...], "inputs": {...}}'
 ```
+
+---
+
+## 🗺️ Roadmap
+### ✅ Phase A - Foundation (Complete)
+- [x] SPARQL query editor with syntax support
+- [x] D3.js force-directed graph visualization
+- [x] Multiple endpoint support
+- [x] Results table with formatted display
+- [x] Changelog component
+- [x] Azure Static Web Apps deployment
+
+### ✅ Phase B.1 - DMN Discovery (Complete)
+- [x] CPRMV vocabulary integration
+- [x] DMN list view with search/filter
+- [x] Input/output variable display
+- [x] Automatic chain detection
+- [x] Three-panel orchestration interface
+- [x] Type support (Integer, String, Boolean, Date)
+
+### ✅ Phase B.2 - Backend Orchestration (Complete)
+- [x] Node.js/Express REST API
+- [x] `/api/dmns`, `/api/chains`, `/api/health` endpoints
+- [x] TriplyDB SPARQL integration
+- [x] Operaton DMN execution integration
+- [x] Variable mapping and orchestration
+- [x] Azure App Service deployment (ACC + Production)
+- [x] Structured logging with Winston
+- [x] CORS configuration
+
+### ✅ Phase B.3 - Chain Builder UI (Complete)
+- [x] Drag-and-drop chain builder interface
+- [x] Real-time validation
+- [x] Dynamic form generation
+- [x] Incremental test data filling
+- [x] Chain execution with progress tracking
+- [x] Results display with timing
+- [x] Frontend-backend integration
+- [x] In-app tutorial system (36 steps)
+- [x] Deployment metadata display
+
+### ✅ Phase C.1 - CI/CD Automation (Complete)
+- [x] GitHub Actions workflows for frontend (production + ACC)
+- [x] GitHub Actions workflows for backend (production + ACC)
+- [x] Environment-specific builds (`.env` files)
+- [x] Automated health checks post-deployment
+- [x] Manual approval for production backend
+- [x] Deployment history and rollback capabilities
+
+### 🔄 Phase C.2 - Advanced Orchestration (In Progress)
+- [ ] Chain templates and presets
+- [ ] Chain export (JSON, BPMN)
+- [ ] Advanced chain validation and scoring
+- [ ] Cycle detection in complex chains
+- [ ] Performance optimization (<800ms for 3-DMN chains)
+- [ ] Caching layer for frequently used chains
+
+### 📅 Phase D - User Experience (Planned)
+- [ ] User authentication and profiles
+- [ ] Saved chains and favorites
+- [ ] Collaborative chain building
+- [ ] Chain version history
+- [ ] Mobile-responsive design
+- [ ] Accessibility (WCAG 2.1 AA)
+
+### 🚀 Phase E - Production Features (Future)
+- [ ] BPMN process modeling integration
+- [ ] Multi-step input gathering workflows
+- [ ] Legal decision explanations (XAI)
+- [ ] Audit trail and compliance logging
+- [ ] API rate limiting and quotas
+- [ ] Batch execution capabilities
+- [ ] Webhook support for async execution
+
 
 ---
 
@@ -774,22 +912,18 @@ EUPL v. 1.2 License - See [LICENSE](./LICENSE) file for details
 
 ## 🎯 Current Status (January 2026)
 
-**Version:** 0.3.0  
-**Phase:** B.3 Complete, C.1 In Progress  
-**Deployment:** ACC environment fully operational
+### What's New in 0.4.0
+- **Automated Deployments** - Both frontend and backend deploy automatically via GitHub Actions
+- **Environment Separation** - Distinct `.env` files for development, acceptance, and production
+- **Production Ready** - Full production deployment with health monitoring
+- **Approval Workflow** - Manual approval required for production backend changes
+- **Enhanced UX** - Deployment metadata, incremental test data, improved tutorials
 
-**Recent Milestones:**
-- ✅ Chain Builder UI launched with drag-and-drop
-- ✅ Backend deployed to Azure App Service
-- ✅ Full frontend-backend integration
-- ✅ End-to-end DMN chain execution working
-- ✅ Production-ready architecture in place
-
-**Next Steps:**
-- 🔄 Production backend deployment
-- 🔄 GitHub Actions automation for backend
-- 🔄 Performance optimization
+### Next Steps
 - 🔄 Chain templates and presets
+- 🔄 Performance optimization (<800ms for 3-DMN chains)
+- 🔄 Advanced chain validation
+- 🔄 Chain export capabilities (JSON, BPMN)
 
 ---
 
