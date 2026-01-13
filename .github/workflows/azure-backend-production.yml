@@ -1,0 +1,78 @@
+name: Deploy Backend to Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/backend/**'
+      - '.github/workflows/azure-backend-production.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://backend.linkeddata.open-regels.nl
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'packages/backend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: packages/backend
+        run: npm ci
+
+      - name: Run linter
+        working-directory: packages/backend
+        run: npm run lint
+
+      - name: Build TypeScript
+        working-directory: packages/backend
+        run: npm run build
+
+      - name: Prepare deployment package
+        working-directory: packages/backend
+        run: |
+          mkdir -p deploy
+          cp -r dist deploy/
+          cp package.json deploy/
+          cp package-lock.json deploy/
+          echo "[config]" > deploy/.deployment
+          echo "SCM_DO_BUILD_DURING_DEPLOYMENT = false" >> deploy/.deployment
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'ronl-linkeddata-backend-prod'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
+          package: './packages/backend/deploy'
+
+      - name: Wait for deployment
+        run: sleep 15
+
+      - name: Health check
+        run: |
+          echo "Checking production backend health..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://backend.linkeddata.open-regels.nl/api/health)
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ Health check passed! Backend is healthy."
+          else
+            echo "❌ Health check failed! Got HTTP $response"
+            exit 1
+          fi
+
+      - name: Deployment success
+        if: success()
+        run: |
+          echo "🚀 Backend successfully deployed to production!"
+          echo "URL: https://backend.linkeddata.open-regels.nl"
