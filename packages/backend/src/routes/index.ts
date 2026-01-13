@@ -1,28 +1,27 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import healthRoutes from './health.routes';
 import dmnRoutes from './dmn.routes';
 import chainRoutes from './chain.routes';
 
 const router = Router();
 
-// Mount routes
-router.use('/health', healthRoutes);
-router.use('/dmns', dmnRoutes);
-router.use('/chains', chainRoutes);
+// Deprecation middleware helper
+const deprecationMiddleware = (successorPath: string) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    res.set('Deprecation', 'true');
+    res.set('Link', `<${successorPath}>; rel="successor-version"`);
+    next();
+  };
+};
 
-// API info endpoint
-router.get('/', (req, res) => {
-  res.json({
-    name: 'Linked Data Explorer Backend API',
-    version: '0.1.0',
-    description: 'DMN orchestration and chain execution service',
-    endpoints: {
-      health: '/api/health',
-      dmns: '/api/dmns',
-      chains: '/api/chains',
-    },
-    documentation: 'https://git.open-regels.nl/hosting/linked-data-explorer',
-  });
-});
+// API v1 routes (new - compliant)
+router.use('/v1/health', healthRoutes);
+router.use('/v1/dmns', dmnRoutes);
+router.use('/v1/chains', chainRoutes);
+
+// Legacy /api/* routes (deprecated but working)
+router.use('/api/health', deprecationMiddleware('/v1/health'), healthRoutes);
+router.use('/api/dmns', deprecationMiddleware('/v1/dmns'), dmnRoutes);
+router.use('/api/chains', deprecationMiddleware('/v1/chains'), chainRoutes);
 
 export default router;

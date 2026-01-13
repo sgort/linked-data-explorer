@@ -5,6 +5,8 @@ import { config } from './utils/config';
 import logger from './utils/logger';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { versionMiddleware } from './middleware/version.middleware';
+import packageJson from '../package.json';
 
 const app: Express = express();
 
@@ -36,17 +38,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Mount API routes
-app.use('/api', routes);
+// API version middleware (adds API-Version header to all responses)
+app.use(versionMiddleware);
+
+// Mount API routes (routes already include /api and /v1 prefixes)
+app.use(routes);
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
     name: 'Linked Data Explorer Backend',
-    version: '0.1.0',
+    version: packageJson.version,
     status: 'running',
     environment: config.nodeEnv,
     documentation: '/api',
+    health: '/api/health',
   });
 });
 

@@ -1,78 +1,125 @@
+// packages/backend/src/routes/health.routes.ts
+// Dutch Government API Design Rules Compliant Implementation - CORRECTED
+
 import { Router, Request, Response } from 'express';
-import { operatonService } from '../services/operaton.service';
-import { sparqlService } from '../services/sparql.service';
-import { HealthCheckResponse } from '../types/api.types';
-import { getErrorMessage } from '../utils/errors';
+import axios from 'axios';
+import { config } from '../utils/config';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
+// Get package.json for version info
+import packageJson from '../../package.json';
+
 /**
- * GET /api/health
- * Health check endpoint
+ * Health check endpoint - Compliant with Dutch Government API Design Rules
+ * 
+ * GET /v1/health
+ * 
+ * Compliance notes:
+ * - API-05: Uses noun "health" for resource name
+ * - API-54: Singular resource (standalone, not in collection)
+ * - API-57: Returns API-Version header with full semantic version
+ * - API-04: English is acceptable for technical/monitoring endpoints
+ * 
+ * Returns comprehensive health information including:
+ * - Application metadata (name, version, environment)
+ * - Service status (TriplyDB, Operaton)
+ * - System uptime and timestamp
  */
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const startTime = Date.now();
-
-    // Check TriplyDB
-    const triplydbStatus = await sparqlService.healthCheck();
-
-    // Check Operaton
-    const operatonStatus = await operatonService.healthCheck();
-
-    // Determine overall status
-    const allUp = triplydbStatus.status === 'up' && operatonStatus.status === 'up';
-    const anyDown = triplydbStatus.status === 'down' || operatonStatus.status === 'down';
-
-    const overallStatus = allUp ? 'healthy' : anyDown ? 'unhealthy' : 'degraded';
-
-    const response: HealthCheckResponse = {
-      status: overallStatus,
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-      services: {
-        triplydb: {
-          status: triplydbStatus.status,
-          latency: triplydbStatus.latency,
-          lastCheck: new Date().toISOString(),
-          error: triplydbStatus.error,
-        },
-        operaton: {
-          status: operatonStatus.status,
-          latency: operatonStatus.latency,
-          lastCheck: new Date().toISOString(),
-          error: operatonStatus.error,
-        },
+router.get('/', async (_req: Request, res: Response) => {
+  const healthCheck = {
+    // Application metadata (integrated from root endpoint)
+    name: 'Linked Data Explorer Backend',
+    version: packageJson.version,
+    environment: config.nodeEnv,
+    
+    // Health status
+    status: 'healthy', // 'healthy' | 'degraded' | 'unhealthy'
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    
+    // Service checks
+    services: {
+      triplydb: {
+        status: 'unknown', // 'up' | 'down' | 'unknown'
+        latency: 0,
+        lastCheck: new Date().toISOString(),
       },
-    };
+      operaton: {
+        status: 'unknown',
+        latency: 0,
+        lastCheck: new Date().toISOString(),
+      },
+    },
+    
+    // API documentation reference (API-51 compliant)
+    documentation: '/v1/openapi.json',
+  };
 
-    const statusCode = overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503;
+  // Set API-Version header (API-57 requirement)
+  res.set('API-Version', packageJson.version);
 
-    res.status(statusCode).json(response);
-  } catch (error: unknown) {
-    res.status(500).json({
+  try {
+    // Check TriplyDB connection - CORRECTED: use config.triplydb.endpoint
+    const triplyStart = Date.now();
+    try {
+      await axios.get(config.triplydb.endpoint, {
+        timeout: config.triplydb.timeout || 5000,
+        headers: { Accept: 'application/sparql-results+json' },
+      });
+      healthCheck.services.triplydb.status = 'up';
+      healthCheck.services.triplydb.latency = Date.now() - triplyStart;
+    } catch (error) {
+      logger.warn('TriplyDB health check failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+      healthCheck.services.triplydb.status = 'down';
+      healthCheck.status = 'degraded';
+    }
+
+    // Check Operaton connection - CORRECTED: use config.operaton.baseUrl
+    const operatonStart = Date.now();
+    try {
+      await axios.get(`${config.operaton.baseUrl}/version`, {
+        timeout: config.operaton.timeout || 5000,
+      });
+      healthCheck.services.operaton.status = 'up';
+      healthCheck.services.operaton.latency = Date.now() - operatonStart;
+    } catch (error) {
+      logger.warn('Operaton health check failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+      healthCheck.services.operaton.status = 'down';
+      healthCheck.status = 'degraded';
+    }
+
+    // Update last check timestamp
+    healthCheck.services.triplydb.lastCheck = new Date().toISOString();
+    healthCheck.services.operaton.lastCheck = new Date().toISOString();
+
+    // Return appropriate HTTP status code based on health
+    const statusCode = healthCheck.status === 'healthy' ? 200 : 503;
+    
+    // Set Content-Type explicitly (security best practice)
+    res.set('Content-Type', 'application/json');
+    
+    res.status(statusCode).json(healthCheck);
+  } catch (error) {
+    logger.error('Health check failed', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    
+    // Set API-Version header even for error responses
+    res.set('API-Version', packageJson.version);
+    res.set('Content-Type', 'application/json');
+    
+    res.status(503).json({
+      ...healthCheck,
       status: 'unhealthy',
-      error: getErrorMessage(error),
-      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'Health check failed',
     });
   }
-});
-
-/**
- * GET /api/health/ready
- * Readiness probe
- */
-router.get('/ready', (req: Request, res: Response) => {
-  res.status(200).json({ ready: true });
-});
-
-/**
- * GET /api/health/live
- * Liveness probe
- */
-router.get('/live', (req: Request, res: Response) => {
-  res.status(200).json({ alive: true });
 });
 
 export default router;
