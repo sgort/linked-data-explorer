@@ -41,20 +41,20 @@ jobs:
         working-directory: packages/backend
         run: |
           mkdir -p deploy
-          cp -r dist deploy/
+          
+          # Copy built JavaScript files
+          cp -r dist/* deploy/
+          
+          # Copy package.json for Azure
           cp package.json deploy/
           
-          # Copy package-lock.json only if it exists
-          if [ -f package-lock.json ]; then
-            cp package-lock.json deploy/
-            echo "✅ Copied package-lock.json"
-          else
-            echo "⚠️ package-lock.json not found, skipping (this is fine)"
-          fi
+          # Install production dependencies in deploy folder
+          cd deploy
+          npm install --production --omit=dev
           
-          # Tell Azure not to build during deployment
-          echo "[config]" > deploy/.deployment
-          echo "SCM_DO_BUILD_DURING_DEPLOYMENT = false" >> deploy/.deployment
+          # Tell Azure not to rebuild (we already built)
+          echo "[config]" > .deployment
+          echo "SCM_DO_BUILD_DURING_DEPLOYMENT = false" >> .deployment
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
@@ -64,19 +64,27 @@ jobs:
           package: './packages/backend/deploy'
 
       - name: Wait for deployment
-        run: sleep 15
+        run: sleep 20  # Increased from 15 to 20
 
       - name: Health check
         run: |
           echo "Checking production backend health..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://backend.linkeddata.open-regels.nl/api/health)
           
-          if [ "$response" = "200" ]; then
-            echo "✅ Health check passed! Backend is healthy."
-          else
-            echo "❌ Health check failed! Got HTTP $response"
-            exit 1
-          fi
+          # Retry up to 5 times
+          for i in {1..5}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://backend.linkeddata.open-regels.nl/api/health)
+            
+            if [ "$response" = "200" ]; then
+              echo "✅ Health check passed! Backend is healthy."
+              exit 0
+            fi
+            
+            echo "Attempt $i: Got HTTP $response, retrying in 10 seconds..."
+            sleep 10
+          done
+          
+          echo "❌ Health check failed after 5 attempts"
+          exit 1
 
       - name: Deployment success
         if: success()
