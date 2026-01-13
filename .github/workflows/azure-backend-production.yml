@@ -24,8 +24,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Install dependencies
         working-directory: packages/backend
@@ -45,7 +43,16 @@ jobs:
           mkdir -p deploy
           cp -r dist deploy/
           cp package.json deploy/
-          cp package-lock.json deploy/
+          
+          # Copy package-lock.json only if it exists
+          if [ -f package-lock.json ]; then
+            cp package-lock.json deploy/
+            echo "✅ Copied package-lock.json"
+          else
+            echo "⚠️ package-lock.json not found, skipping (this is fine)"
+          fi
+          
+          # Tell Azure not to build during deployment
           echo "[config]" > deploy/.deployment
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT = false" >> deploy/.deployment
 
