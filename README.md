@@ -793,6 +793,6 @@ EUPL v. 1.2 License - See [LICENSE](./LICENSE) file for details
 
 ---
 
-**Built with ❤️ for Dutch Government Services**
+**Built with ❤️ for Dutch Government Services **
 
 [⬆ Back to top](#linked-data-explorer)
