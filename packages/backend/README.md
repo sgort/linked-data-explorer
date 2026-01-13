@@ -313,15 +313,22 @@ Content-Type: application/json
         "dmnId": "RONL_HeusdenpasEindresultaat",
         "dmnTitle": "Heusden Pas Eindresultaat",
         "inputs": {
+          "aanvragerHeeftKind4Tm17": true,
+          "aanvragerInwonerHeusden": true,
           "maandelijksBrutoInkomenAanvrager": 1500,
           "bijstandsNorm": 1234.56,
-          "aanvragerInwonerHeusden": true
+          "aanvragerUitkeringBaanbrekers": false,
+          "aanvragerVoedselbankpasDenBosch": false,
+          "aanvragerKwijtscheldingGemeentelijkeBelastingen": false,
+          "aanvragerSchuldhulptrajectKredietbankNederland": false,
+          "aanvragerDitKalenderjaarAlAangevraagd": false,
+          "aanvragerAanmerkingStudieFinanciering": false
         },
         "outputs": {
           "aanmerkingHeusdenPas": true,
           "aanmerkingKindPakket": true
         },
-        "executionTime": 156
+        "executionTime": 415
       }
     ]
   },
@@ -329,177 +336,29 @@ Content-Type: application/json
 }
 ```
 
-**Response Headers:**
+### Error Response Format
 
-```http
-HTTP/1.1 200 OK
-API-Version: 0.4.0
-Content-Type: application/json
-Access-Control-Allow-Origin: *
-```
-
-### Execute Custom Chain (v1)
-
-```bash
-POST /v1/chains/execute
-Content-Type: application/json
-
+```json
 {
-  "dmnIds": ["SVB_LeeftijdsInformatie", "SZW_BijstandsnormInformatie"],
-  "inputs": {
-    "geboortedatumAanvrager": "1980-01-23",
-    "dagVanAanvraag": "2025-12-24",
-    "aanvragerAlleenstaand": true,
-    "aanvragerHeeftKinderen": true
+  "success": false,
+  "error": {
+    "code": "EXECUTION_ERROR",
+    "message": "Chain execution failed: DMN not found"
   },
-  "options": {
-    "includeIntermediateSteps": true
-  }
+  "timestamp": "2026-01-13T19:44:15.401Z"
 }
 ```
 
-### List All DMNs (v1)
-
-```bash
-GET /v1/dmns
-
-Response:
-{
-  "success": true,
-  "data": {
-    "total": 6,
-    "dmns": [
-      {
-        "id": "https://identifier.overheid.nl/tooi/id/beslismodel/...",
-        "identifier": "SVB_LeeftijdsInformatie",
-        "title": "SVB Leeftijdsinformatie Berekening",
-        "description": "Berekent leeftijd op basis van geboortedatum",
-        "inputs": [
-          {
-            "name": "geboortedatumAanvrager",
-            "type": "Date",
-            "label": "Geboortedatum Aanvrager"
-          },
-          {
-            "name": "dagVanAanvraag",
-            "type": "Date",
-            "label": "Dag van Aanvraag"
-          }
-        ],
-        "outputs": [
-          {
-            "name": "aanvragerLeeftijd",
-            "type": "Integer",
-            "label": "Leeftijd Aanvrager"
-          },
-          {
-            "name": "aanvragerIs18",
-            "type": "Boolean",
-            "label": "Aanvrager is 18+"
-          }
-        ]
-      },
-      {
-        "id": "https://identifier.overheid.nl/tooi/id/beslismodel/...",
-        "identifier": "SZW_BijstandsnormInformatie",
-        "title": "SZW Bijstandsnorm Informatie",
-        "description": "Bepaalt toepasselijke bijstandsnorm",
-        "inputs": [...],
-        "outputs": [...]
-      }
-    ]
-  }
-}
-```
-
-### Discover Chains (v1)
-
-```bash
-GET /v1/chains
-
-Response:
-{
-  "success": true,
-  "data": {
-    "total": 5,
-    "chains": [
-      {
-        "from": "SVB_LeeftijdsInformatie",
-        "connections": [
-          {
-            "to": "SZW_BijstandsnormInformatie",
-            "variable": "aanvragerIs18",
-            "variableType": "Boolean"
-          },
-          {
-            "to": "RONL_HeusdenpasEindresultaat",
-            "variable": "aanvragerLeeftijd",
-            "variableType": "Integer"
-          }
-        ]
-      },
-      {
-        "from": "SZW_BijstandsnormInformatie",
-        "connections": [
-          {
-            "to": "RONL_HeusdenpasEindresultaat",
-            "variable": "bijstandsNorm",
-            "variableType": "Number"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-### Check Health (v1)
-
-```bash
-# Detailed health with service status
-curl http://localhost:3001/v1/health
-
-# Check response headers
-curl -I http://localhost:3001/v1/health
-
-Response Headers:
-HTTP/1.1 200 OK
-API-Version: 0.4.0
-Content-Type: application/json
-Access-Control-Allow-Origin: *
-```
+**Error Codes:**
+- `INVALID_REQUEST` - Invalid request parameters
+- `NOT_FOUND` - Resource not found
+- `QUERY_ERROR` - SPARQL query failed
+- `EXECUTION_ERROR` - DMN execution failed
+- `DISCOVERY_ERROR` - Chain discovery failed
 
 ---
 
 ## 🧪 Testing
-
-### Production Test Data
-
-Use this test case to validate the Heusdenpas chain:
-
-```json
-{
-  "geboortedatumAanvrager": "1980-01-23",
-  "dagVanAanvraag": "2025-12-24",
-  "aanvragerAlleenstaand": true,
-  "aanvragerHeeftKinderen": true,
-  "aanvragerHeeftKind4Tm17": true,
-  "aanvragerInwonerHeusden": true,
-  "maandelijksBrutoInkomenAanvrager": 1500,
-  "aanvragerUitkeringBaanbrekers": false,
-  "aanvragerVoedselbankpasDenBosch": false,
-  "aanvragerKwijtscheldingGemeentelijkeBelastingen": false,
-  "aanvragerSchuldhulptrajectKredietbankNederland": false,
-  "aanvragerDitKalenderjaarAlAangevraagd": false,
-  "aanvragerAanmerkingStudieFinanciering": false,
-  "geboortedatumPartner": null
-}
-```
-
-**Expected Result:**
-- `aanmerkingHeusdenPas`: true
-- `aanmerkingKindPakket`: true
-- Execution time: ~800-900ms
 
 ### Local Testing
 
@@ -507,14 +366,11 @@ Use this test case to validate the Heusdenpas chain:
 # Start development server
 npm run dev
 
-# Test v1 endpoints
+# Test endpoints
 curl http://localhost:3001/v1/health | jq
 curl http://localhost:3001/v1/dmns | jq
 
-# Test legacy endpoints (with deprecation headers)
-curl -I http://localhost:3001/api/health | grep -E "API-Version|Deprecation"
-
-# Test chain execution
+# Execute test chain
 curl -X POST http://localhost:3001/v1/chains/execute/heusdenpas \
   -H "Content-Type: application/json" \
   -d @test-data.json | jq
@@ -752,6 +608,155 @@ curl https://acc.backend.linkeddata.open-regels.nl/v1/health
 
 ---
 
+## 🐛 Recent Bug Fixes
+
+#### 1. TriplyDB Health Check (HTTP 400 Error)
+
+**Problem:**  
+The `/v1/health` endpoint was returning HTTP 400 errors when checking TriplyDB connectivity. The health check was using a raw `axios.get()` request to the SPARQL endpoint without sending a valid SPARQL query.
+
+**Root Cause:**  
+SPARQL endpoints don't accept simple GET requests without query parameters. They require either:
+- POST requests with SPARQL queries in the body
+- GET requests with a `?query=...` parameter
+
+**Solution:**  
+Updated `health.routes.ts` to use the existing `sparqlService.healthCheck()` method, which correctly executes a minimal SPARQL query:
+
+```typescript
+// BEFORE (incorrect)
+await axios.get(config.triplydb.endpoint, {
+  headers: { Accept: 'application/sparql-results+json' }
+});
+
+// AFTER (correct)
+const triplyHealth = await sparqlService.healthCheck();
+// Executes: SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 1
+```
+
+**Files Modified:**  
+- `packages/backend/src/routes/health.routes.ts`
+
+**Impact:**  
+- ✅ Health checks now succeed locally and in production
+- ✅ TriplyDB status correctly shows "up" with latency metrics
+- ✅ All `/v1/health` and `/api/health` endpoints operational
+
+---
+
+#### 2. Deployment Folder Structure (Module Resolution Errors)
+
+**Problem:**  
+After deployment to Azure, the `/v1/*` endpoints returned 404 errors, despite the code being correct in the repository. The server was running old code or failing to load the new route definitions.
+
+**Root Cause:**  
+The GitHub Actions workflow was flattening the deployment structure with `cp -r dist/* deploy/`, which broke TypeScript's compiled module paths. The code expected:
+
+```
+deploy/
+  ├── package.json        # "start": "node dist/index.js"
+  └── dist/
+      ├── index.js
+      └── routes/
+          └── health.routes.js  # require('../../package.json')
+```
+
+But was receiving:
+```
+deploy/
+  ├── package.json
+  ├── index.js            # Flattened!
+  └── routes/             # Wrong level!
+      └── health.routes.js  # require('../../package.json') fails!
+```
+
+**Solution:**  
+Changed the deployment preparation step to preserve the `dist/` folder structure:
+
+```yaml
+# BEFORE (incorrect)
+cp -r dist/* deploy/
+
+# AFTER (correct)
+cp -r dist deploy/
+```
+
+**Files Modified:**  
+- `.github/workflows/azure-backend-acc.yml`
+- `.github/workflows/azure-backend-production.yml`
+
+**Impact:**  
+- ✅ All `/v1/*` endpoints now work correctly
+- ✅ Module resolution errors eliminated
+- ✅ Health checks return proper metadata format
+- ✅ Deployment verification steps added to catch future issues
+
+---
+
+#### 3. Root Endpoint API References
+
+**Problem:**  
+The root endpoint (`/`) was pointing to deprecated `/api/*` endpoints instead of the new versioned `/v1/*` endpoints.
+
+**Root Cause:**  
+The root endpoint response hadn't been updated when API versioning was implemented, causing confusion about which endpoints to use.
+
+**Solution:**  
+Updated `index.ts` to reference `/v1/*` endpoints in the root response and added comprehensive endpoint listing:
+
+```typescript
+// BEFORE
+{
+  "documentation": "/api",
+  "health": "/api/health"
+}
+
+// AFTER
+{
+  "documentation": "/v1/openapi.json",
+  "health": "/v1/health",
+  "endpoints": {
+    "health": "/v1/health",
+    "dmns": "/v1/dmns",
+    "chains": "/v1/chains"
+  },
+  "legacy": {
+    "health": "/api/health (deprecated)",
+    "dmns": "/api/dmns (deprecated)",
+    "chains": "/api/chains (deprecated)"
+  }
+}
+```
+
+**Files Modified:**  
+- `packages/backend/src/index.ts`
+
+**Impact:**  
+- ✅ Clear guidance on which endpoints to use
+- ✅ Legacy endpoints marked as deprecated
+- ✅ Better API discoverability
+- ✅ Improved developer experience
+
+---
+
+### Verification
+
+All fixes have been deployed and verified on both ACC and production environments:
+
+```bash
+# All endpoints operational
+✅ https://acc.backend.linkeddata.open-regels.nl/v1/health
+✅ https://acc.backend.linkeddata.open-regels.nl/v1/dmns
+✅ https://acc.backend.linkeddata.open-regels.nl/v1/chains
+
+# Legacy endpoints working with deprecation headers
+✅ https://acc.backend.linkeddata.open-regels.nl/api/health
+✅ https://acc.backend.linkeddata.open-regels.nl/api/dmns
+✅ https://acc.backend.linkeddata.open-regels.nl/api/chains
+```
+
+---
+
 ## 🗺️ Roadmap
 
 ### v0.4.0 (Current)
@@ -818,16 +823,6 @@ This service is part of the **Regels Overheid Nederland (RONL)** initiative.
 **Issues:** [GitHub Issues](https://github.com/sgort/linked-data-explorer/issues)  
 **Project:** [Regels Overheid Nederland](https://regels.overheid.nl/)  
 **Maintainer:** RONL Development Team
-
----
-
-## 🔗 Related Resources
-
-- [Frontend Application](../frontend/README.md)
-- [Dutch Government API Design Rules](https://publicatie.centrumvoorstandaarden.nl/api/adr/)
-- [OpenAPI Specification](https://spec.openapis.org/oas/latest.html)
-- [TriplyDB Documentation](https://triply.cc/docs/)
-- [Operaton Documentation](https://docs.operaton.org/)
 
 ---
 
