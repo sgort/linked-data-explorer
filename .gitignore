@@ -12,8 +12,14 @@ dist
 dist-ssr
 *.local
 
-# Azure profiles
-profiles/*
+# Keep committed (environment configs)
+# .env.development
+# .env.acceptance
+# .env.production
+
+# Ignore local overrides
+.env.local
+.env.*.local
 
 # Editor directories and files
 .vscode/*
