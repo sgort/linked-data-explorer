@@ -2,8 +2,7 @@
 
 > Node.js/Express backend service for DMN chain orchestration and execution
 
-**Version:** 0.1.0  
-**Phase:** B.2 - Orchestration Service  
+**Version:** 0.4.0   
 **Architecture:** Hybrid (SPARQL Discovery + Operaton Execution)
 
 ---
@@ -37,6 +36,21 @@ Backend (Express)
               ↓
           DMN Models
 ```
+
+---
+
+## 🌐 Live Deployments
+
+### Backend
+
+| Environment | URL | Branch | CI/CD | Purpose |
+|-------------|-----|--------|-------|---------|
+| **Production** | [backend.linkeddata.open-regels.nl](https://backend.linkeddata.open-regels.nl) | `main` | GitHub Actions ✅ | API & orchestration |
+| **Acceptance** | [acc.backend.linkeddata.open-regels.nl](https://acc.backend.linkeddata.open-regels.nl) | `acc` | GitHub Actions ✅ | Testing environment |
+
+**Platform:** Azure App Service (Linux, Node.js 22)  
+**Deployment:** Automated via GitHub Actions with manual approval for production  
+**Build Process:** TypeScript compilation, dependency installation, automated health checks
 
 ---
 
@@ -327,29 +341,6 @@ npm run lint:fix
 # Formatting
 npm run format
 npm run format:check
-```
-
----
-
-## 🚢 Deployment
-
-### Azure App Service
-
-**Planned deployment:**
-- ACC: `https://acc-backend.linkeddata.open-regels.nl`
-- Production: `https://backend.linkeddata.open-regels.nl`
-
-### Environment Variables (Azure)
-
-Configure these in Azure App Service → Configuration:
-
-```
-NODE_ENV=production
-PORT=8080
-TRIPLYDB_ENDPOINT=...
-OPERATON_BASE_URL=...
-CORS_ORIGIN=https://linkeddata.open-regels.nl
-LOG_LEVEL=info
 ```
 
 ---
