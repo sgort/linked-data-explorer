@@ -13,7 +13,7 @@ import {
   Share2,
   Trash2,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import ChainBuilder from './components/ChainBuilder/ChainBuilder';
 import Changelog from './components/Changelog';
@@ -24,20 +24,32 @@ import { executeSparqlQuery } from './services/sparqlService';
 import { SparqlResponse, ViewMode } from './types';
 import { ALL_QUERIES, PRESET_ENDPOINTS, SAMPLE_QUERIES } from './utils/constants';
 
+const VIEWMODE_STORAGE_KEY = 'linkedDataExplorer_activeView';
+
 const App: React.FC = () => {
-  // Purely in-memory state. No localStorage is used.
+  // Load saved viewMode from localStorage, default to QUERY
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem(VIEWMODE_STORAGE_KEY);
+    if (saved && Object.values(ViewMode).includes(saved as ViewMode)) {
+      return saved as ViewMode;
+    }
+    return ViewMode.QUERY;
+  });
+
   const [savedEndpoints, setSavedEndpoints] = useState(PRESET_ENDPOINTS);
   const [endpoint, setEndpoint] = useState(PRESET_ENDPOINTS[1]?.url || PRESET_ENDPOINTS[0].url);
-
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].sparql);
   const [sparqlResult, setSparqlResult] = useState<SparqlResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.QUERY);
   const [showSettings, setShowSettings] = useState(false);
-
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
+
+  // Save viewMode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(VIEWMODE_STORAGE_KEY, viewMode);
+  }, [viewMode]);
 
   const handleRunQuery = async () => {
     setIsLoading(true);
