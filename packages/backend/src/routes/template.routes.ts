@@ -27,7 +27,8 @@ router.get('/', async (req: Request, res: Response) => {
       templates = await templateService.getAllTemplates();
     }
 
-    const categories = await templateService.getCategories();
+    // Extract categories from already-fetched templates (no duplicate call!)
+    const categories = Array.from(new Set(templates.map((t) => t.category))).sort();
 
     const response: ChainTemplateListResponse = {
       total: templates.length,
