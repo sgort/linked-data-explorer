@@ -7,6 +7,43 @@ import { sparqlService } from './sparql.service';
  * Provides predefined and custom chain configurations
  */
 export class TemplateService {
+  // Cache for DMN list (to avoid repeated SPARQL queries)
+  private dmnCache: {
+    data: Set<string> | null;
+    timestamp: number;
+  } = {
+    data: null,
+    timestamp: 0,
+  };
+
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Get cached DMN identifiers or fetch from SPARQL
+   */
+  private async getAvailableDmnIds(): Promise<Set<string>> {
+    const now = Date.now();
+
+    // Return cached data if still valid
+    if (this.dmnCache.data && now - this.dmnCache.timestamp < this.CACHE_TTL) {
+      logger.info('Using cached DMN list', { age: Math.round((now - this.dmnCache.timestamp) / 1000) + 's' });
+      return this.dmnCache.data;
+    }
+
+    // Fetch fresh data
+    logger.info('Fetching fresh DMN list', { reason: this.dmnCache.data ? 'cache expired' : 'cache empty' });
+    const allDmns = await sparqlService.getAllDmns();
+    const dmnIds = new Set(allDmns.map((dmn) => dmn.identifier));
+
+    // Update cache
+    this.dmnCache = {
+      data: dmnIds,
+      timestamp: now,
+    };
+
+    return dmnIds;
+  }
+
   /**
    * Predefined chain templates
    * These represent common government service workflows
@@ -130,9 +167,8 @@ export class TemplateService {
   async getAllTemplates(): Promise<ChainTemplate[]> {
     logger.info('Fetching all chain templates');
 
-    // Get all DMNs once (instead of querying for each template DMN)
-    const allDmns = await sparqlService.getAllDmns();
-    const availableDmnIds = new Set(allDmns.map((dmn) => dmn.identifier));
+    // Get cached or fresh DMN list (only queries SPARQL once per 5 minutes)
+    const availableDmnIds = await this.getAvailableDmnIds();
 
     // Validate that DMNs in templates exist
     const validatedTemplates: ChainTemplate[] = [];
@@ -221,6 +257,17 @@ export class TemplateService {
     logger.info('Incrementing template usage count', { id });
     // For now, this is in-memory only
     // Future: Update database
+  }
+
+  /**
+   * Clear DMN cache (useful for testing or when DMNs are updated)
+   */
+  clearCache(): void {
+    logger.info('Clearing DMN cache');
+    this.dmnCache = {
+      data: null,
+      timestamp: 0,
+    };
   }
 }
 
