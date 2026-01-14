@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import healthRoutes from './health.routes';
 import dmnRoutes from './dmn.routes';
 import chainRoutes from './chain.routes';
+import templateRoutes from './template.routes';
 
 const router = Router();
 
@@ -17,11 +18,13 @@ const deprecationMiddleware = (successorPath: string) => {
 // API v1 routes (new - compliant)
 router.use('/v1/health', healthRoutes);
 router.use('/v1/dmns', dmnRoutes);
+router.use('/v1/chains/templates', templateRoutes); // Mount templates before general chain routes
 router.use('/v1/chains', chainRoutes);
 
 // Legacy /api/* routes (deprecated but working)
 router.use('/api/health', deprecationMiddleware('/v1/health'), healthRoutes);
 router.use('/api/dmns', deprecationMiddleware('/v1/dmns'), dmnRoutes);
+router.use('/api/chains/templates', deprecationMiddleware('/v1/chains/templates'), templateRoutes);
 router.use('/api/chains', deprecationMiddleware('/v1/chains'), chainRoutes);
 
 export default router;

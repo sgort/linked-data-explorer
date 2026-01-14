@@ -5,10 +5,13 @@ import {
   ChevronUp,
   Clock,
   FileInput,
+  Layers,
+  Tag,
   Zap,
 } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { ChainTemplate, templateService } from '../../services/templateService';
 import { ChainExecutionResult, DmnModel } from '../../types';
 import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
 import ChainResults from './ChainResults';
@@ -41,69 +44,179 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
 }) => {
   const [showValidation, setShowValidation] = useState(true);
   const [showInputs, setShowInputs] = useState(true);
+  const [templates, setTemplates] = useState<ChainTemplate[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   // Add refs for scrollable container and execution area
   const scrollableContainerRef = useRef<HTMLDivElement>(null);
   const executionAreaRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Load templates from backend
+   */
+  const loadTemplates = useCallback(async () => {
+    setIsLoadingTemplates(true);
+    try {
+      let fetchedTemplates: ChainTemplate[];
+
+      if (selectedCategory === 'all') {
+        fetchedTemplates = await templateService.getAllTemplates();
+      } else {
+        fetchedTemplates = await templateService.getTemplatesByCategory(selectedCategory);
+      }
+
+      setTemplates(fetchedTemplates);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  }, [selectedCategory]);
+
+  // Load templates on mount and when category changes
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
+
   // Scroll to execution area when execution starts
   useEffect(() => {
     if (isExecuting && scrollableContainerRef.current && executionAreaRef.current) {
-      // Calculate the position to scroll to
       const container = scrollableContainerRef.current;
       const executionArea = executionAreaRef.current;
-
-      // Get the position of execution area relative to container
       const executionTop = executionArea.offsetTop;
 
-      // Scroll so execution area is visible at the top of the viewport
       container.scrollTo({
-        top: executionTop - 20, // 20px padding from top
+        top: executionTop - 20,
         behavior: 'smooth',
       });
     }
   }, [isExecuting]);
 
-  const presets: ChainPreset[] = [
-    {
-      id: 'full-chain',
-      name: 'Heusdenpas Chain',
-      description: 'SVB → SZW → Heusden',
-      dmnIds: [
-        'SVB_LeeftijdsInformatie',
-        'SZW_BijstandsnormInformatie',
-        'RONL_HeusdenpasEindresultaat',
-      ],
-    },
-  ];
+  /**
+   * Get badge color for complexity
+   */
+  const getComplexityColor = (complexity: string) => {
+    switch (complexity) {
+      case 'simple':
+        return 'bg-green-100 text-green-700';
+      case 'medium':
+        return 'bg-amber-100 text-amber-700';
+      case 'complex':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-slate-100 text-slate-700';
+    }
+  };
 
+  /**
+   * Get badge color for category
+   */
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'social':
+        return 'bg-blue-100 text-blue-700';
+      case 'financial':
+        return 'bg-emerald-100 text-emerald-700';
+      case 'legal':
+        return 'bg-purple-100 text-purple-700';
+      case 'custom':
+        return 'bg-slate-100 text-slate-700';
+      default:
+        return 'bg-slate-100 text-slate-700';
+    }
+  };
+
+  // Empty state with templates
   if (chain.length === 0) {
     return (
       <div className="w-96 bg-white border-l border-slate-200 flex flex-col">
         <div className="p-4 border-b border-slate-200">
           <h2 className="font-semibold text-slate-900">Chain Configuration</h2>
         </div>
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center">
-            <div className="text-slate-400 mb-2">
-              <FileInput size={48} className="mx-auto" />
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            <div className="text-center mb-6">
+              <div className="text-slate-400 mb-2">
+                <FileInput size={48} className="mx-auto" />
+              </div>
+              <p className="text-sm text-slate-500">
+                Add DMNs to your chain to configure and execute
+              </p>
             </div>
-            <p className="text-sm text-slate-500">
-              Add DMNs to your chain to configure and execute
-            </p>
-            {presets.length > 0 && ( // ← This code exists, needs presets array!
-              <div className="mt-6">
-                <p className="text-xs text-slate-600 mb-2">Or load a preset:</p>
-                {presets.map((preset) => (
-                  <button
-                    key={preset.id}
-                    onClick={() => onLoadPreset(preset)}
-                    className="w-full px-3 py-2 text-sm text-left text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
+
+            {/* Template Selection */}
+            {templates.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-slate-700">Load Template:</p>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="text-xs px-2 py-1 border border-slate-200 rounded-md"
                   >
-                    <div className="font-medium">{preset.name}</div>
-                    <div className="text-xs text-slate-500">{preset.description}</div>
-                  </button>
-                ))}
+                    <option value="all">All Categories</option>
+                    <option value="social">Social</option>
+                    <option value="financial">Financial</option>
+                    <option value="legal">Legal</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+
+                {isLoadingTemplates ? (
+                  <div className="text-center text-xs text-slate-400 py-4">
+                    Loading templates...
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {templates.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => onLoadPreset(template)}
+                        className="w-full px-3 py-2.5 text-left hover:bg-blue-50 rounded-lg transition-colors border border-slate-200 hover:border-blue-300"
+                      >
+                        {/* Template Name */}
+                        <div className="font-medium text-sm text-slate-900 mb-1">
+                          {template.name}
+                        </div>
+
+                        {/* Description */}
+                        <div className="text-xs text-slate-500 mb-2">{template.description}</div>
+
+                        {/* Metadata Row */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Category Badge */}
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(template.category)}`}
+                          >
+                            <Tag size={10} />
+                            {template.category}
+                          </span>
+
+                          {/* Complexity Badge */}
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getComplexityColor(template.complexity)}`}
+                          >
+                            <Layers size={10} />
+                            {template.complexity}
+                          </span>
+
+                          {/* Estimated Time */}
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-slate-600 bg-slate-100">
+                            <Clock size={10} />~{template.estimatedTime}ms
+                          </span>
+
+                          {/* Usage Count */}
+                          {template.usageCount && (
+                            <span className="text-xs text-slate-400">
+                              {template.usageCount} uses
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -112,6 +225,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
     );
   }
 
+  // Chain loaded state
   return (
     <div className="w-96 bg-white border-l border-slate-200 flex flex-col">
       {/* Header */}
@@ -143,74 +257,47 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
             </button>
 
             {showValidation && (
-              <div className="px-4 pb-4 space-y-3">
-                {/* Errors */}
-                {validation.errors.length > 0 && (
-                  <div>
-                    <div className="text-xs font-medium text-red-600 mb-1">Errors:</div>
-                    <div className="space-y-1">
-                      {validation.errors.map((error, i) => (
-                        <div key={i} className="text-xs text-red-600 bg-red-50 px-2 py-1.5 rounded">
-                          • {error.message}
-                        </div>
-                      ))}
-                    </div>
+              <div className="px-4 pb-4 space-y-2">
+                {/* Validation Status */}
+                {validation.isValid ? (
+                  <div className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">
+                    ✓ Chain is valid and ready to execute
                   </div>
+                ) : (
+                  <>
+                    {validation.errors.map((error, index) => (
+                      <div
+                        key={index}
+                        className="text-sm text-red-700 bg-red-50 px-3 py-2 rounded-lg"
+                      >
+                        {error.message}
+                      </div>
+                    ))}
+                  </>
                 )}
 
                 {/* Warnings */}
-                {validation.warnings.length > 0 && (
-                  <div>
-                    <div className="text-xs font-medium text-amber-600 mb-1">Warnings:</div>
-                    <div className="space-y-1">
-                      {validation.warnings.map((warning, i) => (
-                        <div
-                          key={i}
-                          className="text-xs text-amber-600 bg-amber-50 px-2 py-1.5 rounded"
-                        >
-                          • {warning.message}
-                        </div>
-                      ))}
-                    </div>
+                {validation.warnings.map((warning, index) => (
+                  <div
+                    key={index}
+                    className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg"
+                  >
+                    {warning.message}
                   </div>
-                )}
-
-                {/* Missing Inputs */}
-                {validation.missingInputs.length > 0 && (
-                  <div>
-                    <div className="text-xs font-medium text-slate-600 mb-1">
-                      Required Inputs ({validation.missingInputs.length}):
-                    </div>
-                    <div className="space-y-1">
-                      {validation.missingInputs.slice(0, 5).map((input) => (
-                        <div
-                          key={input.identifier}
-                          className="text-xs text-slate-600 bg-slate-50 px-2 py-1.5 rounded"
-                        >
-                          • {input.identifier}
-                          <span className="text-slate-400 ml-1">({input.type})</span>
-                        </div>
-                      ))}
-                      {validation.missingInputs.length > 5 && (
-                        <div className="text-xs text-slate-400 px-2">
-                          +{validation.missingInputs.length - 5} more...
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                ))}
 
                 {/* Estimated Time */}
-                {validation.isValid && (
-                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                {validation.estimatedTime && (
+                  <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-3 py-2 rounded-lg">
                     <Clock size={14} />
-                    <span>Est. execution time: ~{validation.estimatedTime}ms</span>
+                    <span>Estimated execution time: ~{validation.estimatedTime}ms</span>
                   </div>
                 )}
               </div>
             )}
           </div>
         )}
+
         {/* Inputs Section */}
         <div className="border-b border-slate-200">
           <button
@@ -235,24 +322,23 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
             </div>
           )}
         </div>
-        {/* Execution Area - Always rendered for scroll target */}
+
+        {/* Execution Area */}
         <div ref={executionAreaRef}>
-          {' '}
-          {/* ✅ ADD THIS WRAPPER */}
           {/* Execution Progress */}
           {isExecuting && (
             <div className="p-4 border-b border-slate-200">
               <ExecutionProgress chain={chain} />
             </div>
           )}
+
           {/* Results */}
           {executionResult && (
             <div className="p-4">
               <ChainResults result={executionResult} />
             </div>
           )}
-        </div>{' '}
-        {/* ✅ CLOSE WRAPPER */}
+        </div>
       </div>
 
       {/* Execute Button (Footer) */}
