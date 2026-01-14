@@ -35,6 +35,17 @@ interface SparqlQueryResult {
 export class SparqlService {
   private client: AxiosInstance;
 
+  // Cache for full DMN list (to avoid repeated SPARQL queries)
+  private dmnListCache: {
+    data: DmnModel[] | null;
+    timestamp: number;
+  } = {
+    data: null,
+    timestamp: 0,
+  };
+
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
   constructor() {
     this.client = axios.create({
       baseURL: config.triplydb.endpoint,
@@ -74,10 +85,25 @@ export class SparqlService {
 
   /**
    * Get all DMN models from TriplyDB
+   * Uses 5-minute cache to avoid repeated queries
    *
    * @returns Array of DMN models with inputs and outputs
    */
   async getAllDmns(): Promise<DmnModel[]> {
+    const now = Date.now();
+
+    // Return cached data if still valid
+    if (this.dmnListCache.data && now - this.dmnListCache.timestamp < this.CACHE_TTL) {
+      const age = Math.round((now - this.dmnListCache.timestamp) / 1000);
+      logger.info('Using cached DMN list', { count: this.dmnListCache.data.length, age: age + 's' });
+      return this.dmnListCache.data;
+    }
+
+    // Fetch fresh data
+    logger.info('Fetching fresh DMN list from TriplyDB', {
+      reason: this.dmnListCache.data ? 'cache expired' : 'cache empty',
+    });
+
     const query = `
 PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
@@ -138,6 +164,14 @@ ORDER BY ?identifier
         `DMN ${dmn.identifier}: ${dmn.inputs.length} inputs, ${dmn.outputs.length} outputs`
       );
     }
+
+    // Update cache
+    this.dmnListCache = {
+      data: dmns,
+      timestamp: now,
+    };
+
+    logger.info(`Cached ${dmns.length} DMNs for 5 minutes`);
 
     return dmns;
   }
@@ -266,6 +300,7 @@ ORDER BY ?dmn1Identifier ?dmn2Identifier ?variableId
   async getDmnByIdentifier(identifier: string): Promise<DmnModel | null> {
     logger.debug(`Looking up DMN by identifier: ${identifier}`);
 
+    // Use cached list if available
     const dmns = await this.getAllDmns();
     const dmn = dmns.find((d) => d.identifier === identifier) || null;
 
@@ -274,6 +309,17 @@ ORDER BY ?dmn1Identifier ?dmn2Identifier ?variableId
     }
 
     return dmn;
+  }
+
+  /**
+   * Clear DMN list cache (useful for testing or when DMNs are updated)
+   */
+  clearCache(): void {
+    logger.info('Clearing DMN list cache');
+    this.dmnListCache = {
+      data: null,
+      timestamp: 0,
+    };
   }
 
   /**
