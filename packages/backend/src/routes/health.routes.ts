@@ -14,15 +14,15 @@ import packageJson from '../../package.json';
 
 /**
  * Health check endpoint - Compliant with Dutch Government API Design Rules
- * 
+ *
  * GET /v1/health
- * 
+ *
  * Compliance notes:
  * - API-05: Uses noun "health" for resource name
  * - API-54: Singular resource (standalone, not in collection)
  * - API-57: Returns API-Version header with full semantic version
  * - API-04: English is acceptable for technical/monitoring endpoints
- * 
+ *
  * Returns comprehensive health information including:
  * - Application metadata (name, version, environment)
  * - Service status (TriplyDB, Operaton)
@@ -70,13 +70,13 @@ router.get('/', async (_req: Request, res: Response) => {
 
       if (triplyHealth.status === 'down') {
         logger.warn('TriplyDB health check failed', {
-          error: triplyHealth.error
+          error: triplyHealth.error,
         });
         healthCheck.status = 'degraded';
       }
     } catch (error) {
       logger.warn('TriplyDB health check failed', {
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       healthCheck.services.triplydb.status = 'down';
       healthCheck.status = 'degraded';
@@ -92,7 +92,7 @@ router.get('/', async (_req: Request, res: Response) => {
       healthCheck.services.operaton.latency = Date.now() - operatonStart;
     } catch (error) {
       logger.warn('Operaton health check failed', {
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       healthCheck.services.operaton.status = 'down';
       healthCheck.status = 'degraded';
@@ -111,7 +111,7 @@ router.get('/', async (_req: Request, res: Response) => {
     res.status(statusCode).json(healthCheck);
   } catch (error) {
     logger.error('Health check failed', {
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
 
     // Set API-Version header even for error responses
