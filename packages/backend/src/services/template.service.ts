@@ -130,19 +130,16 @@ export class TemplateService {
   async getAllTemplates(): Promise<ChainTemplate[]> {
     logger.info('Fetching all chain templates');
 
+    // Get all DMNs once (instead of querying for each template DMN)
+    const allDmns = await sparqlService.getAllDmns();
+    const availableDmnIds = new Set(allDmns.map((dmn) => dmn.identifier));
+
     // Validate that DMNs in templates exist
     const validatedTemplates: ChainTemplate[] = [];
 
     for (const template of this.PREDEFINED_TEMPLATES) {
-      // Check if all DMNs in template exist in TriplyDB
-      const missingDmns: string[] = [];
-
-      for (const dmnId of template.dmnIds) {
-        const dmn = await sparqlService.getDmnByIdentifier(dmnId);
-        if (!dmn) {
-          missingDmns.push(dmnId);
-        }
-      }
+      // Check if all DMNs in template exist (using cached set)
+      const missingDmns = template.dmnIds.filter((dmnId) => !availableDmnIds.has(dmnId));
 
       if (missingDmns.length > 0) {
         logger.warn('Template references missing DMNs', {

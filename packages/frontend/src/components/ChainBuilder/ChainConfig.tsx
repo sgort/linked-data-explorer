@@ -146,79 +146,75 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
             </div>
 
             {/* Template Selection */}
-            {templates.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-slate-700">Load Template:</p>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="text-xs px-2 py-1 border border-slate-200 rounded-md"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="social">Social</option>
-                    <option value="financial">Financial</option>
-                    <option value="legal">Legal</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                </div>
-
-                {isLoadingTemplates ? (
-                  <div className="text-center text-xs text-slate-400 py-4">
-                    Loading templates...
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {templates.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => onLoadPreset(template)}
-                        className="w-full px-3 py-2.5 text-left hover:bg-blue-50 rounded-lg transition-colors border border-slate-200 hover:border-blue-300"
-                      >
-                        {/* Template Name */}
-                        <div className="font-medium text-sm text-slate-900 mb-1">
-                          {template.name}
-                        </div>
-
-                        {/* Description */}
-                        <div className="text-xs text-slate-500 mb-2">{template.description}</div>
-
-                        {/* Metadata Row */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {/* Category Badge */}
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(template.category)}`}
-                          >
-                            <Tag size={10} />
-                            {template.category}
-                          </span>
-
-                          {/* Complexity Badge */}
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getComplexityColor(template.complexity)}`}
-                          >
-                            <Layers size={10} />
-                            {template.complexity}
-                          </span>
-
-                          {/* Estimated Time */}
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-slate-600 bg-slate-100">
-                            <Clock size={10} />~{template.estimatedTime}ms
-                          </span>
-
-                          {/* Usage Count */}
-                          {template.usageCount && (
-                            <span className="text-xs text-slate-400">
-                              {template.usageCount} uses
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-700">Load Template:</p>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="text-xs px-2 py-1 border border-slate-200 rounded-md"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="social">Social</option>
+                  <option value="financial">Financial</option>
+                  <option value="legal">Legal</option>
+                  <option value="custom">Custom</option>
+                </select>
               </div>
-            )}
+
+              {isLoadingTemplates ? (
+                <div className="text-center text-xs text-slate-400 py-4">Loading templates...</div>
+              ) : templates.length === 0 ? (
+                <div className="text-center text-xs text-slate-500 py-4 bg-slate-50 rounded-lg border border-slate-200">
+                  No templates in this category
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {templates.map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => onLoadPreset(template)}
+                      className="w-full px-3 py-2.5 text-left hover:bg-blue-50 rounded-lg transition-colors border border-slate-200 hover:border-blue-300"
+                    >
+                      {/* Template Name */}
+                      <div className="font-medium text-sm text-slate-900 mb-1">{template.name}</div>
+
+                      {/* Description */}
+                      <div className="text-xs text-slate-500 mb-2">{template.description}</div>
+
+                      {/* Metadata Row */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Category Badge */}
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(template.category)}`}
+                        >
+                          <Tag size={10} />
+                          {template.category}
+                        </span>
+
+                        {/* Complexity Badge */}
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getComplexityColor(template.complexity)}`}
+                        >
+                          <Layers size={10} />
+                          {template.complexity}
+                        </span>
+
+                        {/* Estimated Time */}
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-slate-600 bg-slate-100">
+                          <Clock size={10} />~{template.estimatedTime}ms
+                        </span>
+
+                        {/* Usage Count */}
+                        {template.usageCount && (
+                          <span className="text-xs text-slate-400">{template.usageCount} uses</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
