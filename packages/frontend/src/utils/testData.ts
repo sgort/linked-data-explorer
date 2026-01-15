@@ -1,9 +1,9 @@
 /**
  * Test data for DMN chain execution
- * Imports from shared testData.json for consistency
+ * Imports from local testData.json for consistency
  */
 
-import testDataConfig from '../../../../testData.json';
+import testDataConfig from '../testData.json';
 
 // Inline type definitions (to avoid rootDir issues)
 interface DmnTestInputs {

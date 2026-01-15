@@ -1,7 +1,7 @@
 import { ChainTemplate } from '../types/template.types';
 import logger from '../utils/logger';
 import { sparqlService } from './sparql.service';
-import testDataConfig from '../../../../testData.json';
+import testDataConfig from '../testData.json';
 
 // Inline type definitions (to avoid rootDir issues)
 interface DmnTestInputs {
@@ -41,9 +41,9 @@ export class TemplateService {
     data: Set<string> | null;
     timestamp: number;
   } = {
-      data: null,
-      timestamp: 0,
-    };
+    data: null,
+    timestamp: 0,
+  };
 
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -90,8 +90,9 @@ export class TemplateService {
       dmnIds: typedTestData.chainTemplates['heusdenpas-full'].dmnIds,
       defaultInputs: {
         ...typedTestData.chainTemplates['heusdenpas-full'].testInputs,
-        dagVanAanvraag: new Date().toISOString().split('T')[0],  // Always today
-      }, tags: ['social', 'benefits', 'municipal', 'heusden'],
+        dagVanAanvraag: new Date().toISOString().split('T')[0], // Always today
+      },
+      tags: ['social', 'benefits', 'municipal', 'heusden'],
       complexity: 'complex',
       estimatedTime: 1100,
       usageCount: 156,
@@ -108,8 +109,9 @@ export class TemplateService {
       dmnIds: typedTestData.chainTemplates['age-verification'].dmnIds,
       defaultInputs: {
         ...typedTestData.chainTemplates['age-verification'].testInputs,
-        dagVanAanvraag: new Date().toISOString().split('T')[0],  // Always today
-      }, tags: ['age', 'simple', 'svb'],
+        dagVanAanvraag: new Date().toISOString().split('T')[0], // Always today
+      },
+      tags: ['age', 'simple', 'svb'],
       complexity: 'simple',
       estimatedTime: 200,
       usageCount: 89,
@@ -126,12 +128,32 @@ export class TemplateService {
       dmnIds: typedTestData.chainTemplates['benefits-calculation'].dmnIds,
       defaultInputs: {
         ...typedTestData.chainTemplates['benefits-calculation'].testInputs,
-        dagVanAanvraag: new Date().toISOString().split('T')[0],  // Always today
-      }, tags: ['benefits', 'financial', 'svb', 'szw'],
+        dagVanAanvraag: new Date().toISOString().split('T')[0], // Always today
+      },
+      tags: ['benefits', 'financial', 'svb', 'szw'],
       complexity: 'medium',
       estimatedTime: 450,
       usageCount: 67,
       createdAt: '2026-01-09T11:30:00Z',
+      updatedAt: new Date().toISOString(),
+      author: 'RONL Team',
+      isPublic: true,
+    },
+    {
+      id: 'municipal-eligibility',
+      name: typedTestData.chainTemplates['municipal-eligibility'].name,
+      description: typedTestData.chainTemplates['municipal-eligibility'].description,
+      category: 'social',
+      dmnIds: typedTestData.chainTemplates['municipal-eligibility'].dmnIds,
+      defaultInputs: {
+        ...typedTestData.chainTemplates['municipal-eligibility'].testInputs,
+        dagVanAanvraag: new Date().toISOString().split('T')[0], // Always today
+      },
+      tags: ['municipal', 'heusden', 'benefits'],
+      complexity: 'medium',
+      estimatedTime: 650,
+      usageCount: 34,
+      createdAt: '2026-01-10T14:20:00Z',
       updatedAt: new Date().toISOString(),
       author: 'RONL Team',
       isPublic: true,
