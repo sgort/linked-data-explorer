@@ -1,6 +1,35 @@
 import { ChainTemplate } from '../types/template.types';
 import logger from '../utils/logger';
 import { sparqlService } from './sparql.service';
+import testDataConfig from '../../../../testData.json';
+
+// Inline type definitions (to avoid rootDir issues)
+interface DmnTestInputs {
+  [key: string]: string | number | boolean | null;
+}
+
+interface ChainTemplateConfig {
+  name: string;
+  description: string;
+  dmnIds: string[];
+  scenario: string;
+  testInputs: DmnTestInputs;
+}
+
+interface TestDataConfig {
+  dmnTestData: {
+    [dmnId: string]: {
+      description: string;
+      defaultInputs: DmnTestInputs;
+    };
+  };
+  chainTemplates: {
+    [templateId: string]: ChainTemplateConfig;
+  };
+}
+
+// Type assertion for imported JSON
+const typedTestData = testDataConfig as TestDataConfig;
 
 /**
  * Service for managing chain templates
@@ -12,9 +41,9 @@ export class TemplateService {
     data: Set<string> | null;
     timestamp: number;
   } = {
-    data: null,
-    timestamp: 0,
-  };
+      data: null,
+      timestamp: 0,
+    };
 
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -26,12 +55,16 @@ export class TemplateService {
 
     // Return cached data if still valid
     if (this.dmnCache.data && now - this.dmnCache.timestamp < this.CACHE_TTL) {
-      logger.info('Using cached DMN list', { age: Math.round((now - this.dmnCache.timestamp) / 1000) + 's' });
+      logger.info('Using cached DMN list', {
+        age: Math.round((now - this.dmnCache.timestamp) / 1000) + 's',
+      });
       return this.dmnCache.data;
     }
 
     // Fetch fresh data
-    logger.info('Fetching fresh DMN list', { reason: this.dmnCache.data ? 'cache expired' : 'cache empty' });
+    logger.info('Fetching fresh DMN list', {
+      reason: this.dmnCache.data ? 'cache expired' : 'cache empty',
+    });
     const allDmns = await sparqlService.getAllDmns();
     const dmnIds = new Set(allDmns.map((dmn) => dmn.identifier));
 
@@ -46,115 +79,60 @@ export class TemplateService {
 
   /**
    * Predefined chain templates
-   * These represent common government service workflows
+   * Default inputs loaded from shared testData.json
    */
   private readonly PREDEFINED_TEMPLATES: ChainTemplate[] = [
     {
       id: 'heusdenpas-full',
-      name: 'Heusdenpas Eligibility Check',
-      description: 'Complete eligibility determination for Heusden municipal benefits',
+      name: typedTestData.chainTemplates['heusdenpas-full'].name,
+      description: typedTestData.chainTemplates['heusdenpas-full'].description,
       category: 'social',
-      dmnIds: [
-        'SVB_LeeftijdsInformatie',
-        'SZW_BijstandsnormInformatie',
-        'RONL_HeusdenpasEindresultaat',
-      ],
+      dmnIds: typedTestData.chainTemplates['heusdenpas-full'].dmnIds,
       defaultInputs: {
-        geboortedatumAanvrager: '1975-05-15',
-        geboortedatumPartner: '1978-03-22',
-        dagVanAanvraag: new Date().toISOString().split('T')[0],
-        aanvragerAlleenstaand: false,
-        aanvragerHeeftKinderen: true,
-        aanvragerHeeftKind4Tm17: true,
-        aanvragerInwonerHeusden: true,
-        gemeenteCodeWoonplaats: '0794',
-        maandelijksBrutoInkomenAanvrager: 1500,
-        maandelijksBrutoInkomenPartner: 1200,
-        aanvragerUitkeringBaanbrekers: false,
-        aanvragerVoedselbankpasDenBosch: false,
-        aanvragerKwijtscheldingGemeentelijkeBelastingen: false,
-        aanvragerSchuldhulptrajectKredietbankNederland: false,
-        aanvragerDitKalenderjaarAlAangevraagd: false,
-        aanvragerAanmerkingStudieFinanciering: false,
-      },
-      tags: ['social', 'benefits', 'municipal', 'heusden'],
+        ...typedTestData.chainTemplates['heusdenpas-full'].testInputs,
+        dagVanAanvraag: new Date().toISOString().split('T')[0],  // Always today
+      }, tags: ['social', 'benefits', 'municipal', 'heusden'],
       complexity: 'complex',
       estimatedTime: 1100,
       usageCount: 156,
       createdAt: '2026-01-08T10:00:00Z',
-      updatedAt: '2026-01-14T14:30:00Z',
+      updatedAt: new Date().toISOString(),
       author: 'RONL Team',
       isPublic: true,
     },
     {
       id: 'age-verification',
-      name: 'Age Verification Only',
-      description: 'Simple age calculation from birth date',
+      name: typedTestData.chainTemplates['age-verification'].name,
+      description: typedTestData.chainTemplates['age-verification'].description,
       category: 'social',
-      dmnIds: ['SVB_LeeftijdsInformatie'],
+      dmnIds: typedTestData.chainTemplates['age-verification'].dmnIds,
       defaultInputs: {
-        geboortedatumAanvrager: '1990-06-15',
-        dagVanAanvraag: new Date().toISOString().split('T')[0],
-      },
-      tags: ['age', 'simple', 'svb'],
+        ...typedTestData.chainTemplates['age-verification'].testInputs,
+        dagVanAanvraag: new Date().toISOString().split('T')[0],  // Always today
+      }, tags: ['age', 'simple', 'svb'],
       complexity: 'simple',
       estimatedTime: 200,
       usageCount: 89,
       createdAt: '2026-01-08T10:00:00Z',
-      updatedAt: '2026-01-12T09:15:00Z',
+      updatedAt: new Date().toISOString(),
       author: 'RONL Team',
       isPublic: true,
     },
     {
       id: 'benefits-calculation',
-      name: 'Social Benefits Calculation',
-      description: 'Calculate social assistance amounts (SVB → SZW)',
+      name: typedTestData.chainTemplates['benefits-calculation'].name,
+      description: typedTestData.chainTemplates['benefits-calculation'].description,
       category: 'financial',
-      dmnIds: ['SVB_LeeftijdsInformatie', 'SZW_BijstandsnormInformatie'],
+      dmnIds: typedTestData.chainTemplates['benefits-calculation'].dmnIds,
       defaultInputs: {
-        geboortedatumAanvrager: '1985-03-20',
-        geboortedatumPartner: null,
-        dagVanAanvraag: new Date().toISOString().split('T')[0],
-        aanvragerAlleenstaand: true,
-        aanvragerHeeftKinderen: false,
-        gemeenteCodeWoonplaats: '0794',
-        maandelijksBrutoInkomenAanvrager: 800,
-      },
-      tags: ['benefits', 'financial', 'svb', 'szw'],
+        ...typedTestData.chainTemplates['benefits-calculation'].testInputs,
+        dagVanAanvraag: new Date().toISOString().split('T')[0],  // Always today
+      }, tags: ['benefits', 'financial', 'svb', 'szw'],
       complexity: 'medium',
       estimatedTime: 450,
       usageCount: 67,
       createdAt: '2026-01-09T11:30:00Z',
-      updatedAt: '2026-01-13T16:45:00Z',
-      author: 'RONL Team',
-      isPublic: true,
-    },
-    {
-      id: 'municipal-eligibility',
-      name: 'Municipal Benefits Eligibility',
-      description: 'Heusden municipal benefits determination (SZW → Heusden)',
-      category: 'social',
-      dmnIds: ['SZW_BijstandsnormInformatie', 'RONL_HeusdenpasEindresultaat'],
-      defaultInputs: {
-        aanvragerAlleenstaand: true,
-        aanvragerHeeftKinderen: true,
-        aanvragerHeeftKind4Tm17: true,
-        aanvragerInwonerHeusden: true,
-        gemeenteCodeWoonplaats: '0794',
-        maandelijksBrutoInkomenAanvrager: 1200,
-        aanvragerUitkeringBaanbrekers: false,
-        aanvragerVoedselbankpasDenBosch: false,
-        aanvragerKwijtscheldingGemeentelijkeBelastingen: false,
-        aanvragerSchuldhulptrajectKredietbankNederland: false,
-        aanvragerDitKalenderjaarAlAangevraagd: false,
-        aanvragerAanmerkingStudieFinanciering: false,
-      },
-      tags: ['municipal', 'heusden', 'benefits'],
-      complexity: 'medium',
-      estimatedTime: 650,
-      usageCount: 34,
-      createdAt: '2026-01-10T14:20:00Z',
-      updatedAt: '2026-01-14T10:00:00Z',
+      updatedAt: new Date().toISOString(),
       author: 'RONL Team',
       isPublic: true,
     },
@@ -196,23 +174,22 @@ export class TemplateService {
 
   /**
    * Get template by ID
+   *
+   * @param id - Template identifier
+   * @returns Template or null if not found
    */
   async getTemplateById(id: string): Promise<ChainTemplate | null> {
     logger.info('Fetching template by ID', { id });
 
     const templates = await this.getAllTemplates();
-    const template = templates.find((t) => t.id === id);
-
-    if (!template) {
-      logger.warn('Template not found', { id });
-      return null;
-    }
-
-    return template;
+    return templates.find((t) => t.id === id) || null;
   }
 
   /**
    * Get templates by category
+   *
+   * @param category - Template category (e.g., 'social', 'financial')
+   * @returns Filtered templates
    */
   async getTemplatesByCategory(category: string): Promise<ChainTemplate[]> {
     logger.info('Fetching templates by category', { category });
@@ -223,6 +200,9 @@ export class TemplateService {
 
   /**
    * Get templates by tag
+   *
+   * @param tag - Template tag (e.g., 'benefits', 'municipal')
+   * @returns Filtered templates
    */
   async getTemplatesByTag(tag: string): Promise<ChainTemplate[]> {
     logger.info('Fetching templates by tag', { tag });
@@ -233,6 +213,8 @@ export class TemplateService {
 
   /**
    * Get all unique categories
+   *
+   * @returns Array of category names
    */
   async getCategories(): Promise<string[]> {
     const templates = await this.getAllTemplates();
@@ -242,6 +224,8 @@ export class TemplateService {
 
   /**
    * Get all unique tags
+   *
+   * @returns Array of tag names
    */
   async getTags(): Promise<string[]> {
     const templates = await this.getAllTemplates();
@@ -271,5 +255,6 @@ export class TemplateService {
   }
 }
 
+// Export singleton instance
 export const templateService = new TemplateService();
 export default templateService;
