@@ -139,25 +139,6 @@ export class TemplateService {
       author: 'RONL Team',
       isPublic: true,
     },
-    {
-      id: 'municipal-eligibility',
-      name: typedTestData.chainTemplates['municipal-eligibility'].name,
-      description: typedTestData.chainTemplates['municipal-eligibility'].description,
-      category: 'social',
-      dmnIds: typedTestData.chainTemplates['municipal-eligibility'].dmnIds,
-      defaultInputs: {
-        ...typedTestData.chainTemplates['municipal-eligibility'].testInputs,
-        dagVanAanvraag: new Date().toISOString().split('T')[0], // Always today
-      },
-      tags: ['municipal', 'heusden', 'benefits'],
-      complexity: 'medium',
-      estimatedTime: 650,
-      usageCount: 34,
-      createdAt: '2026-01-10T14:20:00Z',
-      updatedAt: new Date().toISOString(),
-      author: 'RONL Team',
-      isPublic: true,
-    },
   ];
 
   /**
