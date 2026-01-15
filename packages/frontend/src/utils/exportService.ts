@@ -4,6 +4,7 @@
  */
 
 import { DmnModel } from '../types';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ChainExportData, ExportFormat, ExportOptions, ExportResult } from '../types/export.types';
 import { generateFilename, getFormatById } from './exportFormats';
 
