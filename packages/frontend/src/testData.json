@@ -183,30 +183,6 @@
         "gemeenteCodeWoonplaats": "0794",
         "maandelijksBrutoInkomenAanvrager": 800
       }
-    },
-
-    "municipal-eligibility": {
-      "name": "Municipal Benefits Eligibility",
-      "description": "Heusden municipal benefits determination (SZW → Heusden)",
-      "dmnIds": ["SZW_BijstandsnormInformatie", "RONL_HeusdenpasEindresultaat"],
-      "scenario": "single_parent_eligible",
-      "testInputs": {
-        "aanvragerAlleenstaand": true,
-        "aanvragerHeeftKinderen": true,
-        "aanvragerHeeftAOWLeeftijd": false,
-        "aanvragerHeeftKind4Tm17": true,
-        "aanvragerInwonerHeusden": true,
-        "gemeenteCodeWoonplaats": "0794",
-        "maandelijksBrutoInkomenAanvrager": 1200,
-        "aanvragerUitkeringBaanbrekers": false,
-        "aanvragerVoedselbankpasDenBosch": false,
-        "aanvragerKwijtscheldingGemeentelijkeBelastingen": false,
-        "aanvragerSchuldhulptrajectKredietbankNederland": false,
-        "aanvragerDitKalenderjaarAlAangevraagd": false,
-        "aanvragerAanmerkingStudieFinanciering": false,
-        "aanvragerIs181920": false,
-        "aanvragerIsTenminste21": true
-      }
     }
   },
 
