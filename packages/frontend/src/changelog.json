@@ -1,6 +1,28 @@
 {
   "versions": [
     {
+      "version": "0.5.0",
+      "status": "New Features",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "January 15, 2026",
+      "sections": [
+        {
+          "title": "Chain Export",
+          "icon": "📥",
+          "iconColor": "blue",
+          "items": [
+            "Export chains to JSON (configuration) and BPMN 2.0 (process diagram) formats",
+            "Export button with validation - only enabled for valid chains",
+            "Modal dialog with filename customization and format selection",
+            "Operaton namespace integration (open-source Camunda fork)",
+            "BPMN 2.0 compliant with proper extensionElements structure",
+            "DMN metadata preservation (IDs, titles, descriptions) in BPMN exports"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.4.0",
       "status": "Deployment & Automation",
       "statusColor": "blue",

@@ -16,6 +16,7 @@ import { ChainExecutionResult, DmnModel } from '../../types';
 import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
 import ChainResults from './ChainResults';
 import ExecutionProgress from './ExecutionProgress';
+import ExportChain from './ExportChain';
 import InputForm from './InputForm';
 
 interface ChainConfigProps {
@@ -337,33 +338,45 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         </div>
       </div>
 
-      {/* Execute Button (Footer) */}
+      {/* Action Buttons (Footer) */}
       <div className="p-4 border-t border-slate-200 bg-slate-50">
-        <button
-          onClick={onExecute}
-          disabled={!validation?.isValid || isExecuting}
-          className={`
-            w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium
-            transition-all duration-150
-            ${
-              validation?.isValid && !isExecuting
-                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            }
-          `}
-        >
-          {isExecuting ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>Executing...</span>
-            </>
-          ) : (
-            <>
-              <Zap size={18} />
-              <span>Execute Chain</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Execute Button (Left) */}
+          <button
+            onClick={onExecute}
+            disabled={!validation?.isValid || isExecuting}
+            className={`
+              flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
+              transition-all duration-150
+              ${
+                validation?.isValid && !isExecuting
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }
+            `}
+          >
+            {isExecuting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Executing...</span>
+              </>
+            ) : (
+              <>
+                <Zap size={16} />
+                <span>Execute Chain</span>
+              </>
+            )}
+          </button>
+
+          {/* Export Button (Right) */}
+          <ExportChain
+            dmnIds={chain.map((dmn) => dmn.identifier)}
+            inputs={inputs}
+            chainDmns={chain}
+            chainName={`chain-${chain.length}-dmns`}
+            validation={validation}
+          />
+        </div>
 
         {!validation?.isValid && chain.length > 0 && (
           <p className="text-xs text-center text-amber-600 mt-2">

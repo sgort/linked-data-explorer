@@ -142,7 +142,23 @@ Backend (Node.js + Express)
 
 </details>
 
-### 5. Tutorial System ✨ NEW
+### 5. Chain Export ✨ NEW
+
+<details>
+<summary>View Features</summary>
+
+- **Export Formats**: JSON and BPMN 2.0
+- **Filename Customization**: Edit filename before export via modal dialog
+- **Format Selection**: Choose between JSON (chain configuration) or BPMN (process diagram)
+- **Validation**: Export only enabled for valid chains
+- **Operaton Integration**: BPMN exports use Operaton namespace (open-source Camunda fork)
+- **Metadata Preservation**: DMN IDs, titles, and descriptions included in exports
+- **BPMN 2.0 Compliance**: Proper extensionElements structure, no warnings in modelers
+- **Timestamped Files**: Automatic timestamp addition to prevent overwrites
+
+</details>
+
+### 6. Tutorial System
 
 <details>
 <summary>View Features</summary>
@@ -158,7 +174,7 @@ Backend (Node.js + Express)
 
 </details>
 
-### 6. Changelog
+### 7. Changelog
 
 <details>
 <summary>View Features</summary>
@@ -170,7 +186,7 @@ Backend (Node.js + Express)
 
 </details>
 
-### 7. Settings & Configuration
+### 8. Settings & Configuration
 
 <details>
 <summary>View Features</summary>
@@ -270,59 +286,69 @@ Backend (Node.js + Express)
 
 ```bash
 linked-data-explorer/
+│
 ├── packages/
-│   ├── frontend/                      # React application
+│   ├── frontend/                             # React TypeScript SPA
 │   │   ├── src/
 │   │   │   ├── components/
-│   │   │   │   ├── ChainBuilder/      # Phase B.3 - Chain Builder UI
-│   │   │   │   │   ├── ChainBuilder.tsx
-│   │   │   │   │   ├── DmnList.tsx
-│   │   │   │   │   ├── ChainComposer.tsx
-│   │   │   │   │   ├── ChainConfig.tsx
-│   │   │   │   │   ├── InputForm.tsx
-│   │   │   │   │   ├── ChainResults.tsx
-│   │   │   │   │   └── ExecutionProgress.tsx
-│   │   │   │   ├── GraphView/         # D3.js visualization
-│   │   │   │   ├── QueryEditor/       # SPARQL interface
-│   │   │   │   ├── Tutorial/          # In-app tutorials
-│   │   │   │   └── Changelog/         # Version tracking
-│   │   │   ├── types/                 # TypeScript definitions
+│   │   │   │   ├── ChainBuilder/
+│   │   │   │   │   ├── ChainBuilder.tsx      # Main orchestration component
+│   │   │   │   │   ├── ChainComposer.tsx     # Drag-drop chain builder
+│   │   │   │   │   ├── ChainConfig.tsx       # Configuration panel
+│   │   │   │   │   ├── ChainResults.tsx      # Execution results display
+│   │   │   │   │   ├── DmnCard.tsx           # DMN card component
+│   │   │   │   │   ├── DmnList.tsx           # Available DMNs list
+│   │   │   │   │   ├── ExecutionProgress.tsx # Progress indicator
+│   │   │   │   │   ├── InputForm.tsx         # Dynamic input form
+│   │   │   │   │   └── ExportChain.tsx       # Export modal & logic
+│   │   │   │   ├── Tutorial/                 # In-app tutorial
+│   │   │   │   ├── Changelog.tsx             # Version history
+│   │   │   │   ├── GraphView.tsx             # D3.js visualization
+│   │   │   │   └── ResultsTable.tsx          # SPARQL results table
+│   │   │   ├── services/
+│   │   │   │   ├── sparqlService.ts          # SPARQL query execution
+│   │   │   │   └── templateService.ts        # Chain templates
 │   │   │   ├── utils/
-│   │   │   │   └── testData.ts        # Incremental test data
-│   │   │   ├── constants.ts           # Sample queries, endpoints
-│   │   │   └── changelog.json         # Version history
-│   │   ├── .env.development           # Local config
-│   │   ├── .env.acceptance            # ACC config
-│   │   ├── .env.production            # Production config
+│   │   │   │   ├── exportService.ts          # Export logic (JSON/BPMN)
+│   │   │   │   ├── exportFormats.ts          # Export format definitions
+│   │   │   │   └── constants.ts              # Sample queries, endpoints
+│   │   │   ├── types/
+│   │   │   │   ├── index.ts                  # Core types
+│   │   │   │   ├── chainBuilder.types.ts     # Chain builder types
+│   │   │   │   └── export.types.ts           # Export types
+│   │   │   └── changelog.json                # Version history
+│   │   ├── .env.development                  # Local config
+│   │   ├── .env.acceptance                   # ACC config
+│   │   ├── .env.production                   # Production config
 │   │   └── package.json
 │   │
-│   └── backend/                       # Node.js/Express API
+│   └── backend/                              # Node.js/Express API
 │       ├── src/
 │       │   ├── routes/
-│       │   │   ├── dmn.routes.ts      # /api/dmns
-│       │   │   ├── chain.routes.ts    # /api/chains
-│       │   │   └── health.routes.ts   # /api/health
+│       │   │   ├── dmn.routes.ts             # /api/dmns
+│       │   │   ├── chain.routes.ts           # /api/chains
+│       │   │   └── health.routes.ts          # /api/health
 │       │   ├── services/
-│       │   │   ├── sparql.service.ts
-│       │   │   ├── operaton.service.ts
-│       │   │   └── orchestration.service.ts
+│       │   │   ├── sparql.service.ts         # SPARQL queries
+│       │   │   ├── operaton.service.ts       # Operaton DMN engine
+│       │   │   └── orchestration.service.ts  # Chain execution
 │       │   ├── types/
 │       │   ├── middleware/
-│       │   ├── utils/                 # Logger, config
+│       │   ├── utils/                        # Logger, config
 │       │   └── index.ts
 │       ├── .env.example
 │       └── package.json
 │
-├── examples/ttl/                      # Test data (6 DMN models)
+├── examples/ttl/                             # Test data (6 DMN models)
 │
-├── .github/workflows/                 # CI/CD pipelines
-│   ├── azure-frontend-production.yml  # Frontend prod deployment
-│   ├── azure-frontend-acc.yml         # Frontend ACC deployment
-│   ├── azure-backend-production.yml   # Backend prod (with approval)
-│   └── azure-backend-acc.yml          # Backend ACC (auto)
+├── .github/workflows/                        # CI/CD pipelines
+│   ├── azure-frontend-production.yml         # Frontend prod deployment
+│   ├── azure-frontend-acc.yml                # Frontend ACC deployment
+│   ├── azure-backend-production.yml          # Backend prod (with approval)
+│   └── azure-backend-acc.yml                 # Backend ACC (auto)
 │
-├── package.json                       # Workspace configuration
-└── README.md                          # This file
+├── package.json                              # Workspace configuration
+└── README.md                                 # This file
 ```
 
 ---
