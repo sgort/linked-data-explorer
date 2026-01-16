@@ -95,7 +95,10 @@ export class SparqlService {
     // Return cached data if still valid
     if (this.dmnListCache.data && now - this.dmnListCache.timestamp < this.CACHE_TTL) {
       const age = Math.round((now - this.dmnListCache.timestamp) / 1000);
-      logger.info('Using cached DMN list', { count: this.dmnListCache.data.length, age: age + 's' });
+      logger.info('Using cached DMN list', {
+        count: this.dmnListCache.data.length,
+        age: age + 's',
+      });
       return this.dmnListCache.data;
     }
 

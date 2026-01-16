@@ -1,5 +1,6 @@
 import express, { Express } from 'express';
 import cors from 'cors';
+import dmnXmlRoutes from './routes/dmn-xml.routes';
 import helmet from 'helmet';
 import { config } from './utils/config';
 import logger from './utils/logger';
@@ -22,6 +23,9 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
+// Register routes
+app.use('/api/dmns', dmnXmlRoutes);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));

@@ -377,7 +377,7 @@ cd packages/frontend
 # 4. Start development server
 npm run dev
 
-# Frontend runs at: http://localhost:5173
+# Frontend runs at: http://localhost:3000
 ```
 
 ### Backend Setup (Optional - for local development)

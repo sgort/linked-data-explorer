@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
     },
     plugins: [react()],
+    build: {
+      chunkSizeWarningLimit: 1000, // Vite's default threshold is 500 KB uncompressed
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
