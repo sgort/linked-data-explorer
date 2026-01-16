@@ -5,7 +5,7 @@
       "status": "New Features",
       "statusColor": "purple",
       "borderColor": "purple",
-      "date": "January 15, 2026",
+      "date": "January 16, 2026",
       "sections": [
         {
           "title": "Chain Export",
@@ -17,6 +17,8 @@
             "Modal dialog with filename customization and format selection",
             "Operaton namespace integration (open-source Camunda fork)",
             "BPMN 2.0 compliant with proper extensionElements structure",
+            "2-step deployment instructions in README",
+            "DMN XML fetching from Operaton",
             "DMN metadata preservation (IDs, titles, descriptions) in BPMN exports"
           ]
         }

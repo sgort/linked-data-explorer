@@ -2,7 +2,7 @@
  * Export format types and interfaces
  */
 
-export type ExportFormat = 'json' | 'bpmn';
+export type ExportFormat = 'json' | 'bpmn' | 'package';
 
 export interface ExportFormatDefinition {
   id: ExportFormat;

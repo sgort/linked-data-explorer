@@ -133,6 +133,7 @@ Backend (Node.js + Express)
 - **Execution Engine** - Execute chains directly from the UI with live progress tracking
 - **Results Display** - View final outputs, intermediate results, and execution timing
 - **Chain Configuration** - Configure and reorder DMNs with visual feedback
+- **Chain Export** - the backend supports exporting DMN chains as complete deployment packages
 
 **Working Example:**
 - **SVB** → Calculates age eligibility and provides dates

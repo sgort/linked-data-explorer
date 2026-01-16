@@ -22,6 +22,14 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatDefinition> = {
     mimeType: 'application/xml',
     icon: '📊',
   },
+  package: {
+    id: 'package',
+    name: 'Complete Package (ZIP)',
+    description: 'BPMN diagram + all DMN files (ready to deploy)',
+    extension: 'zip',
+    mimeType: 'application/zip',
+    icon: '📦',
+  },
 };
 
 /**
