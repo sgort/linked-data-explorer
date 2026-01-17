@@ -191,36 +191,48 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
 
       // Check each required input
       for (const input of dmn.inputs) {
-        // Add to required inputs list (avoiding duplicates)
-        if (
-          !requiredInputs.some(
-            (ri) => ri.identifier === input.identifier && ri.requiredBy === dmn.identifier
-          )
-        ) {
-          requiredInputs.push({
-            identifier: input.identifier,
-            title: input.title,
-            type: input.type,
-            requiredBy: dmn.identifier,
-            description: input.description,
-          });
-        }
+        // Check if input is provided by previous DMN
+        const providedByPreviousDmn = availableOutputs.has(input.identifier);
 
-        // Check if input is available (from user input or previous DMN)
-        const inputKey = `${dmn.identifier}.${input.identifier}`;
-        const hasUserInput = inputKey in inputs;
-        const hasOutputFromPrevious = availableOutputs.has(input.identifier);
+        if (!providedByPreviousDmn) {
+          // Deduplicate by identifier only (not identifier+requiredBy)
+          // This ensures each unique input appears once in the form
+          const alreadyAdded = requiredInputs.some((ri) => ri.identifier === input.identifier);
+          if (!alreadyAdded) {
+            const inputData = {
+              identifier: input.identifier,
+              title: input.title,
+              type: input.type,
+              requiredBy: dmn.identifier,
+              description: input.description,
+            };
 
-        if (!hasUserInput && !hasOutputFromPrevious) {
-          missingInputs.push({
-            identifier: input.identifier,
-            title: input.title,
-            type: input.type,
-            requiredBy: dmn.identifier,
-            description: input.description,
-          });
+            // Always add to requiredInputs (for form rendering)
+            requiredInputs.push(inputData);
+
+            // Also add to missingInputs if not filled yet
+            const hasValue = input.identifier in inputs;
+            if (!hasValue) {
+              missingInputs.push(inputData);
+            }
+          }
         }
       }
+
+      // Check for duplicate outputs (warnings)
+      dmn.outputs.forEach((output) => {
+        const outputCount = chainDmns.filter((d) =>
+          d.outputs.some((o) => o.identifier === output.identifier)
+        ).length;
+
+        if (outputCount > 1) {
+          warnings.push({
+            type: 'duplicate_dmn',
+            message: `Multiple DMNs output '${output.identifier}'`,
+            dmnId: dmn.identifier,
+          });
+        }
+      });
 
       // Add this DMN's outputs to available outputs
       for (const output of dmn.outputs) {
