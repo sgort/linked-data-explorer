@@ -11,6 +11,87 @@ const router = Router();
 import packageJson from '../../package.json';
 
 /**
+ * POST /v1/triplydb/query
+ * Execute a SPARQL query against any TriplyDB endpoint
+ *
+ * Compliance notes:
+ * - API-05: Uses noun "query" for resource name
+ * - API-57: Returns API-Version header
+ * - API-48: POST used for query execution with payload
+ *
+ * Purpose: Allows frontend to execute SPARQL queries against different TriplyDB
+ * endpoints without hardcoding the endpoint. This enables dynamic dataset switching
+ * in the Orchestration view while avoiding CORS issues.
+ *
+ * Request body:
+ * {
+ *   "endpoint": "https://api.open-regels.triply.cc/datasets/.../sparql",
+ *   "query": "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 10"
+ * }
+ *
+ * Response:
+ * {
+ *   "success": true,
+ *   "results": {
+ *     "bindings": [...]
+ *   }
+ * }
+ */
+router.post('/query', async (req: Request, res: Response) => {
+  // Set API-Version header (API-57 requirement)
+  res.set('API-Version', packageJson.version);
+  res.set('Content-Type', 'application/json');
+
+  try {
+    const { endpoint, query } = req.body;
+
+    // Validate request
+    if (!endpoint || !query) {
+      logger.warn('[TriplyDB Routes] Invalid query request: missing endpoint or query', {
+        hasEndpoint: !!endpoint,
+        hasQuery: !!query,
+      });
+
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: endpoint and query',
+        status: 400,
+      });
+    }
+
+    logger.info('[TriplyDB Routes] SPARQL query request received', {
+      endpoint: endpoint,
+      queryLength: query.length,
+    });
+
+    const startTime = Date.now();
+    const result = await triplydbService.executeQuery(endpoint, query);
+    const duration = Date.now() - startTime;
+
+    logger.info('[TriplyDB Routes] Query executed successfully', {
+      duration: `${duration}ms`,
+      resultCount: result.results?.bindings?.length || 0,
+    });
+
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    logger.error('[TriplyDB Routes] Query execution failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Query execution failed',
+      status: 500,
+    });
+  }
+});
+
+/**
  * POST /v1/triplydb/update-service
  * Update a TriplyDB service to include all graphs in the dataset
  *

@@ -17,6 +17,65 @@ interface Graph {
   graphName?: string;
 }
 
+interface SparqlBinding {
+  value: string;
+  type?: string;
+  datatype?: string;
+  'xml:lang'?: string;
+}
+
+interface SparqlQueryResult {
+  results?: {
+    bindings?: Record<string, SparqlBinding>[];
+  };
+}
+
+/**
+ * Execute a SPARQL query against any TriplyDB endpoint
+ * Used by the /v1/triplydb/query endpoint to enable dynamic endpoint selection
+ */
+export async function executeQuery(endpoint: string, query: string): Promise<SparqlQueryResult> {
+  logger.info('[TriplyDB Service] Executing SPARQL query', {
+    endpoint: endpoint,
+    queryLength: query.length,
+  });
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/sparql-query',
+        Accept: 'application/sparql-results+json',
+      },
+      body: query,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('[TriplyDB Service] Query execution failed', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
+      throw new Error(`Query failed: ${response.status} ${errorText}`);
+    }
+
+    const data = (await response.json()) as SparqlQueryResult;
+
+    logger.info('[TriplyDB Service] Query executed successfully', {
+      resultCount: data.results?.bindings?.length || 0,
+    });
+
+    return data;
+  } catch (error) {
+    logger.error('[TriplyDB Service] Error executing query', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw new Error(`Failed to execute query: ${(error as Error).message}`);
+  }
+}
+
 /**
  * List all graphs in a TriplyDB dataset
  */
@@ -121,11 +180,12 @@ export async function updateService(
     // Get response text (may be empty for success)
     const responseText = await syncResponse.text();
 
-    let responseData: any = {};
+    let responseData: { message?: string; error?: string } = {};
     if (responseText) {
       try {
         responseData = JSON.parse(responseText);
-      } catch (e) {
+      } catch {
+        // Failed to parse JSON, treat as plain text
         responseData = { message: responseText };
       }
     }

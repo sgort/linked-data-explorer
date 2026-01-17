@@ -1,3 +1,6 @@
+// packages/backend/src/routes/dmn.routes.ts
+// UPDATED: Added optional endpoint parameter for dynamic TriplyDB endpoint selection
+
 import { Router, Request, Response } from 'express';
 import { sparqlService } from '../services/sparql.service';
 import logger from '../utils/logger';
@@ -9,12 +12,28 @@ const router = Router();
 /**
  * GET /api/dmns
  * List all DMN models
+ * 
+ * NEW: Optional query parameter 'endpoint' for dynamic TriplyDB endpoint selection
+ * Example: GET /api/dmns?endpoint=https://api.open-regels.triply.cc/datasets/stevengort/Facts/services/facts-jena/sparql
+ * 
+ * If no endpoint is provided, uses default from config (TRIPLYDB_ENDPOINT)
+ * Cache is maintained separately per endpoint (5 minute TTL per endpoint)
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    logger.info('DMN list request');
+    // NEW: Extract optional endpoint parameter
+    const requestedEndpoint = req.query.endpoint as string | undefined;
 
-    const dmns = await sparqlService.getAllDmns();
+    if (requestedEndpoint) {
+      logger.info('DMN list request with custom endpoint', {
+        endpoint: requestedEndpoint,
+      });
+    } else {
+      logger.info('DMN list request (using default endpoint)');
+    }
+
+    // Pass endpoint to sparqlService (undefined = use default)
+    const dmns = await sparqlService.getAllDmns(requestedEndpoint);
 
     res.json({
       success: true,
@@ -42,14 +61,20 @@ router.get('/', async (req: Request, res: Response) => {
 /**
  * GET /api/dmns/:identifier
  * Get a specific DMN by identifier
+ * 
+ * NEW: Optional query parameter 'endpoint' for dynamic TriplyDB endpoint selection
  */
 router.get('/:identifier', async (req: Request, res: Response) => {
   try {
     const { identifier } = req.params;
+    const requestedEndpoint = req.query.endpoint as string | undefined;
 
-    logger.info('DMN details request', { identifier });
+    logger.info('DMN details request', { 
+      identifier,
+      ...(requestedEndpoint && { endpoint: requestedEndpoint }),
+    });
 
-    const dmn = await sparqlService.getDmnByIdentifier(identifier);
+    const dmn = await sparqlService.getDmnByIdentifier(identifier, requestedEndpoint);
 
     if (!dmn) {
       return res.status(404).json({
