@@ -61,11 +61,13 @@ app.get('/', (req, res) => {
       health: '/v1/health',
       dmns: '/v1/dmns',
       chains: '/v1/chains',
+      triplydb: '/v1/triplydb',
     },
     legacy: {
       health: '/api/health (deprecated)',
       dmns: '/api/dmns (deprecated)',
       chains: '/api/chains (deprecated)',
+      triplydb: '/api/triplydb (deprecated)',
     },
   });
 });
