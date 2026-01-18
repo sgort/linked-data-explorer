@@ -1,6 +1,27 @@
 {
   "versions": [
     {
+      "version": "0.5.1",
+      "status": "Performance & Flexibility",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "January 17, 2026",
+      "sections": [
+        {
+          "title": "Dynamic Endpoints",
+          "icon": "🔄",
+          "iconColor": "blue",
+          "items": [
+            "Switch between TriplyDB datasets without page reload",
+            "Per-endpoint backend caching (5-minute TTL per dataset)",
+            "Connection status indicators (Direct/Proxied)",
+            "Session endpoint management (save, switch, delete, reset)",
+            "Optional ?endpoint= query parameter on /v1/dmns API"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.5.0",
       "status": "New Features",
       "statusColor": "purple",

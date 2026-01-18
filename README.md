@@ -64,16 +64,15 @@ Backend (Node.js + Express)
 
 **Linked Data Explorer** is a web application for visualizing and querying SPARQL endpoints, with specialized support for DMN (Decision Model and Notation) orchestration. Built as part of the **Regels Overheid Nederland (RONL)** initiative, it enables discovery and exploration of government decision models using Linked Data principles.
 
-### Key Capabilities
+### What It Does
 
-- 🔍 **SPARQL Query Editor** - Execute and visualize SPARQL queries with interactive graph visualization
-- 🔗 **DMN Discovery** - Automatically discover Decision Models from TriplyDB using CPRMV vocabulary
-- 🎯 **Chain Builder** - Visual drag-and-drop interface for creating DMN execution chains
-- ⚡ **Real-Time Execution** - Execute DMN chains via Operaton with automatic variable mapping
-- 📊 **Results Visualization** - View execution results with detailed step-by-step breakdown
-- 📖 **Version Tracking** - Built-in changelog documenting features and improvements
-- ⚙️ **Configurable Endpoints** - Connect to multiple SPARQL endpoints and DMN engines
-
+- **Discover DMNs** - Browse available Decision Models from TriplyDB
+- **Dynamic Endpoints** - Switch between multiple TriplyDB datasets in real-time
+- **Build Chains** - Drag-and-drop interface for creating DMN execution sequences
+- **Execute Chains** - Run sequential DMN workflows with automatic variable orchestration
+- **Export Chains** - Save configurations as JSON or BPMN 2.0 diagrams
+- **Visualize Data** - Interactive graph visualization of SPARQL query results
+- **Query Editor** - Execute custom SPARQL queries with syntax highlighting
 ---
 
 ## ✨ Features
@@ -111,13 +110,14 @@ Backend (Node.js + Express)
 <details>
 <summary>View Features</summary>
 
-- **REST API** - Express-based backend with `/api/dmns`, `/api/chains`, `/api/health` endpoints
-- **Chain Discovery** - Advanced algorithms for finding DMN relationships
-- **Operaton Integration** - Direct integration with Operaton DMN execution engine
-- **Variable Orchestration** - Automatic variable mapping and flattening between chain steps
-- **Performance Optimized** - Target execution time <1000ms for typical 3-DMN chains
-- **Health Monitoring** - Built-in health checks for TriplyDB and Operaton connectivity
-- **Structured Logging** - Winston-based JSON logging for production monitoring
+- **Dynamic Endpoint Selection** - Switch between TriplyDB datasets without page reload
+- **Intelligent Caching** - Backend caches DMN metadata per endpoint (5-minute TTL)
+- **Connection Indicators** - Visual status showing direct vs proxied connections
+- **Drag-and-Drop Chain Building** - Visual composer for creating DMN sequences
+- **Smart Validation** - Real-time validation with data flow analysis
+- **Variable Orchestration** - Automatic input/output mapping between DMNs
+- **Template System** - Pre-configured chains with test data
+- **Chain Export** - Export as JSON or BPMN 2.0 diagrams
 
 </details>
 
@@ -133,17 +133,10 @@ Backend (Node.js + Express)
 - **Execution Engine** - Execute chains directly from the UI with live progress tracking
 - **Results Display** - View final outputs, intermediate results, and execution timing
 - **Chain Configuration** - Configure and reorder DMNs with visual feedback
-- **Chain Export** - the backend supports exporting DMN chains as complete deployment packages
-
-**Working Example:**
-- **SVB** → Calculates age eligibility and provides dates
-- **SZW** → Checks social benefits (bijstandsnorm) eligibility  
-- **Heusden** → Determines municipal benefit eligibility (Heusdenpas, Kindpakket)
-- **Execution Time:** ~1100ms for complete 3-DMN chain
 
 </details>
 
-### 5. Chain Export ✨ NEW
+### 5. Chain Export
 
 <details>
 <summary>View Features</summary>
@@ -397,6 +390,55 @@ cp .env.example .env
 npm run dev
 
 # Backend runs at: http://localhost:3001
+```
+
+---
+
+### API Endpoints
+
+#### Version 1 (Current)
+
+```
+GET  /v1/health              - Health check with service status
+GET  /v1/dmns                - Get all DMNs (with optional ?endpoint= parameter)
+GET  /v1/dmns/:identifier    - Get specific DMN
+GET  /v1/dmns/:id/inputs     - Get DMN inputs
+GET  /v1/dmns/:id/outputs    - Get DMN outputs
+POST /v1/chains/execute      - Execute DMN chain
+GET  /v1/chains/templates    - Get chain templates
+POST /v1/triplydb/query      - Execute SPARQL query
+```
+
+#### Legacy (Deprecated)
+
+```
+GET  /api/health             - Deprecated (redirects to /v1/health)
+GET  /api/dmns               - Deprecated (use /v1/dmns)
+POST /api/chains/execute     - Deprecated (use /v1/chains/execute)
+```
+
+### Dynamic Endpoint Feature
+
+**New in v0.5.1:** Switch between TriplyDB datasets without page reload.
+
+**Backend Implementation:**
+- Optional `?endpoint=` query parameter on `/v1/dmns`
+- Per-endpoint caching (Map-based, 5-minute TTL)
+- Falls back to `TRIPLYDB_ENDPOINT` env var if not specified
+
+**Frontend Implementation:**
+- Endpoint selector in top-right corner
+- Visual connection indicators (Direct/Proxied)
+- Session storage for saved endpoints
+- Reset to defaults option
+
+**Example Usage:**
+```bash
+# Default endpoint (from TRIPLYDB_ENDPOINT env var)
+GET /v1/dmns
+
+# Custom endpoint
+GET /v1/dmns?endpoint=https://api.open-regels.triply.cc/datasets/stevengort/Facts/services/Facts/sparql
 ```
 
 ---
@@ -816,54 +858,10 @@ curl -X POST https://acc.backend.linkeddata.open-regels.nl/api/chains/execute \
 ---
 
 ## 🗺️ Roadmap
-### ✅ Phase A - Foundation (Complete)
-- [x] SPARQL query editor with syntax support
-- [x] D3.js force-directed graph visualization
-- [x] Multiple endpoint support
-- [x] Results table with formatted display
-- [x] Changelog component
-- [x] Azure Static Web Apps deployment
-
-### ✅ Phase B.1 - DMN Discovery (Complete)
-- [x] CPRMV vocabulary integration
-- [x] DMN list view with search/filter
-- [x] Input/output variable display
-- [x] Automatic chain detection
-- [x] Three-panel orchestration interface
-- [x] Type support (Integer, String, Boolean, Date)
-
-### ✅ Phase B.2 - Backend Orchestration (Complete)
-- [x] Node.js/Express REST API
-- [x] `/api/dmns`, `/api/chains`, `/api/health` endpoints
-- [x] TriplyDB SPARQL integration
-- [x] Operaton DMN execution integration
-- [x] Variable mapping and orchestration
-- [x] Azure App Service deployment (ACC + Production)
-- [x] Structured logging with Winston
-- [x] CORS configuration
-
-### ✅ Phase B.3 - Chain Builder UI (Complete)
-- [x] Drag-and-drop chain builder interface
-- [x] Real-time validation
-- [x] Dynamic form generation
-- [x] Incremental test data filling
-- [x] Chain execution with progress tracking
-- [x] Results display with timing
-- [x] Frontend-backend integration
-- [x] In-app tutorial system (36 steps)
-- [x] Deployment metadata display
-
-### ✅ Phase C.1 - CI/CD Automation (Complete)
-- [x] GitHub Actions workflows for frontend (production + ACC)
-- [x] GitHub Actions workflows for backend (production + ACC)
-- [x] Environment-specific builds (`.env` files)
-- [x] Automated health checks post-deployment
-- [x] Manual approval for production backend
-- [x] Deployment history and rollback capabilities
 
 ### 🔄 Phase C.2 - Advanced Orchestration (In Progress)
-- [ ] Chain templates and presets
-- [ ] Chain export (JSON, BPMN)
+- [X] Chain templates and presets
+- [X] Chain export (JSON, BPMN)
 - [ ] Advanced chain validation and scoring
 - [ ] Cycle detection in complex chains
 - [ ] Performance optimization (<800ms for 3-DMN chains)
@@ -934,23 +932,6 @@ EUPL v. 1.2 License - See [LICENSE](./LICENSE) file for details
 - **Issues**: [Gitlab Issues](https://git.open-regels.nl/hosting/linked-data-explorer/-/issues)
 - **Project**: [Regels Overheid](https://regels.overheid.nl/)
 - **Maintainer**: RONL Development Team
-
----
-
-## 🎯 Current Status (January 2026)
-
-### What's New in 0.4.0
-- **Automated Deployments** - Both frontend and backend deploy automatically via GitHub Actions
-- **Environment Separation** - Distinct `.env` files for development, acceptance, and production
-- **Production Ready** - Full production deployment with health monitoring
-- **Approval Workflow** - Manual approval required for production backend changes
-- **Enhanced UX** - Deployment metadata, incremental test data, improved tutorials
-
-### Next Steps
-- 🔄 Chain templates and presets
-- 🔄 Performance optimization (<800ms for 3-DMN chains)
-- 🔄 Advanced chain validation
-- 🔄 Chain export capabilities (JSON, BPMN)
 
 ---
 
