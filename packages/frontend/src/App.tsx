@@ -9,6 +9,7 @@ import {
   Loader2,
   Play,
   Plus,
+  RefreshCw,
   Settings,
   Share2,
   Trash2,
@@ -39,12 +40,15 @@ const App: React.FC = () => {
   const [savedEndpoints, setSavedEndpoints] = useState(PRESET_ENDPOINTS);
   const [endpoint, setEndpoint] = useState(PRESET_ENDPOINTS[1]?.url || PRESET_ENDPOINTS[0].url);
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].sparql);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [sparqlResult, setSparqlResult] = useState<SparqlResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
   /**
    * Determine connection type based on active view
@@ -106,6 +110,37 @@ const App: React.FC = () => {
     if (confirm('Reset endpoints to default system presets?')) {
       setSavedEndpoints(PRESET_ENDPOINTS);
       setEndpoint(PRESET_ENDPOINTS[1]?.url || PRESET_ENDPOINTS[0].url);
+    }
+  };
+
+  /**
+   * Handle cache refresh for Orchestration view
+   * Clears the DMN cache and triggers a fresh fetch
+   */
+  const handleRefreshCache = async () => {
+    if (viewMode !== ViewMode.ORCHESTRATION) return;
+
+    setIsRefreshing(true);
+    setError(null);
+
+    try {
+      // Clear cache for current endpoint
+      const clearUrl = `${API_BASE_URL}/api/cache/clear?endpoint=${encodeURIComponent(endpoint)}`;
+      const clearResponse = await fetch(clearUrl, { method: 'DELETE' });
+
+      if (!clearResponse.ok) {
+        throw new Error('Failed to clear cache');
+      }
+
+      // The ChainBuilder component will automatically refetch when endpoint changes
+      // We trigger a re-render by briefly toggling the endpoint
+      const currentEndpoint = endpoint;
+      setEndpoint('');
+      setTimeout(() => setEndpoint(currentEndpoint), 10);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh cache');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -209,6 +244,26 @@ const App: React.FC = () => {
                   ))}
                 </datalist>
               </div>
+
+              {/* Refresh Cache Button (Orchestration View Only) */}
+              {viewMode === ViewMode.ORCHESTRATION && (
+                <button
+                  onClick={handleRefreshCache}
+                  disabled={isRefreshing}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm border transition-all
+                    ${
+                      isRefreshing
+                        ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed'
+                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 shadow-sm hover:shadow'
+                    }
+                  `}
+                  title="Refresh DMN cache (clears 5-minute cache)"
+                >
+                  <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                  {isRefreshing ? 'Refreshing...' : 'Refresh Cache'}
+                </button>
+              )}
+
               <button
                 onClick={handleRunQuery}
                 disabled={isLoading}

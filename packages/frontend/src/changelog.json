@@ -8,6 +8,29 @@
       "date": "January 17, 2026",
       "sections": [
         {
+          "title": "Cache Management",
+          "icon": "🔄",
+          "iconColor": "blue",
+          "items": [
+            "Refresh button in Orchestration view for instant cache clearing (no more 5-minute wait for newly published DMNs)",
+            "GET /api/cache/stats endpoint to view cache age and entry count per endpoint",
+            "DELETE /api/cache/clear endpoint to programmatically clear specific or all endpoint caches",
+            "GET /api/dmns?refresh=true query parameter to bypass cache and fetch fresh data",
+            "Response now includes 'fromCache' field for debugging cache behavior"
+          ]
+        },
+        {
+          "title": "Developer Experience",
+          "icon": "🛠️",
+          "iconColor": "purple",
+          "items": [
+            "Demo-ready: Published DMNs appear immediately after clicking Refresh Cache",
+            "Backwards compatible: Existing 5-minute cache TTL still works by default",
+            "Cache statistics API for monitoring and debugging cache performance",
+            "Per-endpoint cache isolation ensures multi-dataset workflows remain efficient"
+          ]
+        },
+        {
           "title": "Dynamic Endpoints",
           "icon": "🔄",
           "iconColor": "blue",

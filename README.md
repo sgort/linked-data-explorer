@@ -417,6 +417,47 @@ GET  /api/dmns               - Deprecated (use /v1/dmns)
 POST /api/chains/execute     - Deprecated (use /v1/chains/execute)
 ```
 
+---
+
+## Cache Refresh
+
+The application uses a 5-minute cache for DMN data from TriplyDB to improve performance. For demo purposes or when working with newly published DMNs, you can bypass or clear this cache.
+
+### Frontend (Orchestration View)
+
+Click the **Refresh Cache** button in the header to clear the cache and fetch fresh DMN data immediately.
+
+![Refresh Button](path/to/screenshot.png)
+
+### API Endpoints
+
+**Get Cache Statistics:**
+```bash
+GET /api/cache/stats
+```
+
+Returns age (in seconds) and count of cached DMNs per endpoint.
+
+**Clear Cache:**
+```bash
+# Clear all caches
+DELETE /api/cache/clear
+
+# Clear specific endpoint
+DELETE /api/cache/clear?endpoint=https://...
+```
+
+**Bypass Cache on DMN Fetch:**
+```bash
+GET /api/dmns?refresh=true
+```
+
+Fetches fresh data and updates the cache. Response includes `fromCache: false`.
+
+**Use Case:** When publishing new DMNs to TriplyDB during demos, use the Refresh button to make them immediately visible without waiting for cache expiration.
+
+---
+
 ### Dynamic Endpoint Feature
 
 **New in v0.5.1:** Switch between TriplyDB datasets without page reload.

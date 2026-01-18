@@ -113,30 +113,42 @@ export class SparqlService {
    * Get all DMN models from TriplyDB
    * Uses 5-minute cache to avoid repeated queries (separate cache per endpoint)
    * NEW: Accepts optional endpoint parameter
+   * NEW: Accepts optional refresh parameter to bypass cache
    *
    * @param endpoint - Optional SPARQL endpoint URL (defaults to config endpoint)
+   * @param refresh - If true, bypass cache and fetch fresh data
    * @returns Array of DMN models with inputs and outputs
    */
-  async getAllDmns(endpoint?: string): Promise<DmnModel[]> {
+  async getAllDmns(endpoint?: string, refresh = false): Promise<DmnModel[]> {
     const now = Date.now();
     const targetEndpoint = endpoint || config.triplydb.endpoint;
 
-    // Check cache for this specific endpoint
-    const cached = this.dmnCacheMap.get(targetEndpoint);
-    if (cached && now - cached.timestamp < this.CACHE_TTL) {
-      const age = Math.round((now - cached.timestamp) / 1000);
-      logger.info('Using cached DMN list', {
-        endpoint: targetEndpoint,
-        count: cached.data.length,
-        age: age + 's',
-      });
-      return cached.data;
+    // If refresh requested, skip cache check
+    if (refresh) {
+      logger.info('Refresh requested, bypassing cache', { endpoint: targetEndpoint });
+      // Continue to fetch fresh data...
+    } else {
+      // Check cache for this specific endpoint
+      const cached = this.dmnCacheMap.get(targetEndpoint);
+      if (cached && now - cached.timestamp < this.CACHE_TTL) {
+        const age = Math.round((now - cached.timestamp) / 1000);
+        logger.info('Using cached DMN list', {
+          endpoint: targetEndpoint,
+          count: cached.data.length,
+          age: age + 's',
+        });
+        return cached.data;
+      }
     }
 
     // Fetch fresh data
     logger.info('Fetching fresh DMN list from TriplyDB', {
       endpoint: targetEndpoint,
-      reason: cached ? 'cache expired' : 'cache empty',
+      reason: refresh
+        ? 'refresh requested'
+        : this.dmnCacheMap.get(targetEndpoint)
+          ? 'cache expired'
+          : 'cache empty',
     });
 
     const query = `
@@ -376,6 +388,27 @@ ORDER BY ?dmn1Identifier ?dmn2Identifier ?variableId
       logger.info('Clearing all DMN list caches');
       this.dmnCacheMap.clear();
     }
+  }
+
+  /**
+   * Get cache statistics
+   * Returns information about all cached endpoints including age and entry count
+   *
+   * @returns Object with cache statistics per endpoint
+   */
+  getCacheStats(): Record<string, { age: number; count: number }> {
+    const stats: Record<string, { age: number; count: number }> = {};
+    const now = Date.now();
+
+    this.dmnCacheMap.forEach((entry, endpoint) => {
+      const age = Math.floor((now - entry.timestamp) / 1000);
+      stats[endpoint] = {
+        age,
+        count: entry.data.length,
+      };
+    });
+
+    return stats;
   }
 
   /**
