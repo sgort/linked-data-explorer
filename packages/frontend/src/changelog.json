@@ -1,6 +1,28 @@
 {
   "versions": [
     {
+      "version": "0.5.2",
+      "status": "New Feature",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "January X, 2026",
+      "sections": [
+        {
+          "title": "UX Improvements",
+          "icon": "✨",
+          "iconColor": "emerald",
+          "items": [
+            "Search input field - Located below the 'Available DMNs' header with search icon",
+            "Real-time filtering - Searches across:",
+            "DMN identifier (e.g., 'heusden-pas')",
+            "Description text",
+            "Input variable names",
+            "Output variable names"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.5.1",
       "status": "Performance & Flexibility",
       "statusColor": "blue",
