@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core';
-import { CheckCircle, Database, Loader2 } from 'lucide-react';
-import React from 'react';
+import { CheckCircle, Database, Loader2, Search, X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 
 import { DmnModel } from '../../types';
 
@@ -106,6 +106,44 @@ const SkeletonCard: React.FC = () => {
  * Left panel: List of draggable DMNs
  */
 const DmnList: React.FC<DmnListProps> = ({ dmns, usedDmnIds, isLoading }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Filter DMNs based on search term
+  const filteredDmns = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return dmns;
+    }
+
+    const searchLower = searchTerm.toLowerCase();
+    return dmns.filter((dmn) => {
+      // Search in identifier
+      if (dmn.identifier.toLowerCase().includes(searchLower)) {
+        return true;
+      }
+
+      // Search in description
+      if (dmn.description?.toLowerCase().includes(searchLower)) {
+        return true;
+      }
+
+      // Search in input variable names
+      if (dmn.inputs.some((input) => input.identifier.toLowerCase().includes(searchLower))) {
+        return true;
+      }
+
+      // Search in output variable names
+      if (dmn.outputs.some((output) => output.identifier.toLowerCase().includes(searchLower))) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [dmns, searchTerm]);
+
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
   if (isLoading) {
     return (
       <div className="w-80 bg-white border-r border-slate-200 flex flex-col">
@@ -153,25 +191,74 @@ const DmnList: React.FC<DmnListProps> = ({ dmns, usedDmnIds, isLoading }) => {
     <div className="w-80 bg-white border-r border-slate-200 flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-slate-200">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-3">
           <Database size={20} className="text-blue-600" />
           <h2 className="font-semibold text-slate-900">Available DMNs</h2>
         </div>
-        <p className="text-xs text-slate-500 mt-1">Drag DMNs to build your chain</p>
+        <p className="text-xs text-slate-500 mb-3">Drag DMNs to build your chain</p>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={16} className="text-slate-400" />
+          </div>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search DMNs..."
+            className="w-full pl-9 pr-9 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+              aria-label="Clear search"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* DMN List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {dmns.map((dmn) => {
-          const isUsed = usedDmnIds.includes(dmn.identifier);
-          return <DraggableDmnCard key={dmn.identifier} dmn={dmn} isUsed={isUsed} />;
-        })}
+        {filteredDmns.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <Search size={40} className="text-slate-300 mb-3" />
+            <p className="text-sm font-medium text-slate-700 text-center">No DMNs found</p>
+            <p className="text-xs text-slate-500 mt-1 text-center">Try a different search term</p>
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                className="mt-3 text-xs text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredDmns.map((dmn) => {
+            const isUsed = usedDmnIds.includes(dmn.identifier);
+            return <DraggableDmnCard key={dmn.identifier} dmn={dmn} isUsed={isUsed} />;
+          })
+        )}
       </div>
 
       {/* Footer */}
       <div className="p-4 border-t border-slate-200 bg-slate-50">
         <div className="text-xs text-slate-500">
-          {dmns.length} DMN{dmns.length !== 1 ? 's' : ''} available • {usedDmnIds.length} in chain
+          {searchTerm ? (
+            <>
+              Showing {filteredDmns.length} of {dmns.length} DMN{dmns.length !== 1 ? 's' : ''} •{' '}
+              {usedDmnIds.length} in chain
+            </>
+          ) : (
+            <>
+              {dmns.length} DMN{dmns.length !== 1 ? 's' : ''} available • {usedDmnIds.length} in
+              chain
+            </>
+          )}
         </div>
       </div>
     </div>
