@@ -14,6 +14,7 @@ This backend service provides REST APIs for:
 - **DMN Discovery** - Query TriplyDB for available Decision Models
 - **Chain Discovery** - Find relationships between DMNs based on variable matching
 - **Chain Execution** - Execute sequential DMN chains via Operaton REST API
+- **Chain Export** - supports exporting DMN chains as complete deployment packages
 - **Variable Orchestration** - Automatic variable mapping between chain steps
 - **Health Monitoring** - Comprehensive service health checks with dependency status
 
@@ -355,6 +356,111 @@ Content-Type: application/json
 - `QUERY_ERROR` - SPARQL query failed
 - `EXECUTION_ERROR` - DMN execution failed
 - `DISCOVERY_ERROR` - Chain discovery failed
+
+---
+
+## Chain Export Feature
+
+The backend supports exporting DMN chains as complete deployment packages. The frontend handles export functionality, but the backend provides the infrastructure for:
+
+### Export Formats
+
+#### 1. JSON Export
+Exports the chain definition as JSON:
+```json
+{
+  "name": "Heusdenpas Chain",
+  "description": "Complete eligibility check",
+  "version": "1.0",
+  "chain": {
+    "dmnIds": ["SVB_LeeftijdsInformatie", "..."],
+    "inputs": { ... }
+  }
+}
+```
+
+#### 2. BPMN Export
+Generates executable BPMN 2.0 XML:
+- ✅ Business Rule Tasks for each DMN
+- ✅ Proper Operaton namespace attributes
+- ✅ Decision references (`operaton:decisionRef`)
+- ✅ History Time to Live (180 days)
+- ✅ Result variable mapping
+- ✅ Sequential flow from Start → DMN1 → DMN2 → ... → End
+
+**Key BPMN Features:**
+```xml
+
+  
+  
+  
+
+```
+
+#### 3. Complete Package Export (ZIP)
+
+Exports a complete deployment package containing:
+
+**Package Contents:**
+```
+chain-export.zip
+├── chain.bpmn              # BPMN process diagram
+├── SVB_*.dmn              # DMN files
+├── SZW_*.dmn              # DMN files
+├── RONL_*.dmn             # DMN files
+└── README.md              # Deployment instructions
+```
+
+**Package Features:**
+- ✅ Fetches actual DMN XML from Operaton
+- ✅ Generates executable BPMN with DMN references
+- ✅ Includes comprehensive deployment guide
+- ✅ Environment-aware Operaton URLs
+- ✅ 2-step deployment instructions
+- ✅ Verification commands included
+
+### Deployment Instructions (in README.md)
+
+The generated README.md includes:
+
+**Step 1: Deploy DMN Files**
+```bash
+curl -X POST https://operaton.open-regels.nl/engine-rest/deployment/create \
+  -F "deployment-name=chain-dmns-$(date +%Y%m%d-%H%M%S)" \
+  -F "enable-duplicate-filtering=true" \
+  -F "data=@SVB_LeeftijdsInformatie.dmn" \
+  -F "data=@SZW_BijstandsnormInformatie.dmn" \
+  -F "data=@RONL_HeusdenpasEindresultaat.dmn"
+```
+
+**Step 2: Deploy BPMN Process**
+```bash
+curl -X POST https://operaton.open-regels.nl/engine-rest/deployment/create \
+  -F "deployment-name=chain-bpmn-$(date +%Y%m%d-%H%M%S)" \
+  -F "enable-duplicate-filtering=true" \
+  -F "data=@chain.bpmn"
+```
+
+**Why 2 Steps?**
+The BPMN process references DMN files via `operaton:decisionRef`. Operaton validates these references during deployment, so DMNs must exist before the BPMN can be deployed.
+
+### Verification
+
+After deployment, verify with:
+
+```bash
+# Check DMNs
+curl https://operaton.open-regels.nl/engine-rest/decision-definition/key/SVB_LeeftijdsInformatie | jq
+
+# Check BPMN process
+curl https://operaton.open-regels.nl/engine-rest/process-definition/key/chain-name | jq
+```
+
+**Expected Results:**
+- DMN version numbers increment on redeployment
+- BPMN process visible in Operaton Cockpit → Processes
+- `historyTimeToLive: 180` on process definition
+- `startableInTasklist: true` for executable processes
 
 ---
 

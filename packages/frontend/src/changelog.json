@@ -1,6 +1,74 @@
 {
   "versions": [
     {
+      "version": "0.5.1",
+      "status": "Performance & Flexibility",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "January 17, 2026",
+      "sections": [
+        {
+          "title": "Cache Management",
+          "icon": "🔄",
+          "iconColor": "blue",
+          "items": [
+            "Refresh button in Orchestration view for instant cache clearing (no more 5-minute wait for newly published DMNs)",
+            "GET /api/cache/stats endpoint to view cache age and entry count per endpoint",
+            "DELETE /api/cache/clear endpoint to programmatically clear specific or all endpoint caches",
+            "GET /api/dmns?refresh=true query parameter to bypass cache and fetch fresh data",
+            "Response now includes 'fromCache' field for debugging cache behavior"
+          ]
+        },
+        {
+          "title": "Developer Experience",
+          "icon": "🛠️",
+          "iconColor": "purple",
+          "items": [
+            "Demo-ready: Published DMNs appear immediately after clicking Refresh Cache",
+            "Backwards compatible: Existing 5-minute cache TTL still works by default",
+            "Cache statistics API for monitoring and debugging cache performance",
+            "Per-endpoint cache isolation ensures multi-dataset workflows remain efficient"
+          ]
+        },
+        {
+          "title": "Dynamic Endpoints",
+          "icon": "🔄",
+          "iconColor": "blue",
+          "items": [
+            "Switch between TriplyDB datasets without page reload",
+            "Per-endpoint backend caching (5-minute TTL per dataset)",
+            "Connection status indicators (Direct/Proxied)",
+            "Session endpoint management (save, switch, delete, reset)",
+            "Optional ?endpoint= query parameter on /v1/dmns API"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.5.0",
+      "status": "New Features",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "January 16, 2026",
+      "sections": [
+        {
+          "title": "Chain Export",
+          "icon": "📥",
+          "iconColor": "blue",
+          "items": [
+            "Export chains to JSON (configuration) and BPMN 2.0 (process diagram) formats",
+            "Export button with validation - only enabled for valid chains",
+            "Modal dialog with filename customization and format selection",
+            "Operaton namespace integration (open-source Camunda fork)",
+            "BPMN 2.0 compliant with proper extensionElements structure",
+            "2-step deployment instructions in README",
+            "DMN XML fetching from Operaton",
+            "DMN metadata preservation (IDs, titles, descriptions) in BPMN exports"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.4.0",
       "status": "Deployment & Automation",
       "statusColor": "blue",

@@ -189,6 +189,87 @@ export class OperatonService {
       };
     }
   }
+
+  /**
+   * Fetch DMN XML content from Operaton
+   * Add this method to the OperatonService class in operaton.service.ts
+   *
+   * Uses the Operaton REST API to get the DMN definition XML
+   *
+   * @param definitionKey - DMN definition key (e.g., "SVB_LeeftijdsInformatie")
+   * @returns DMN XML string or null if not found
+   */
+  async fetchDmnXml(definitionKey: string): Promise<string | null> {
+    try {
+      logger.info('Fetching DMN XML from Operaton', { definitionKey });
+
+      // Step 1: Get the latest decision definition for this key
+      const definitionsUrl = `/decision-definition/key/${definitionKey}`;
+
+      logger.debug('Fetching decision definition', { url: definitionsUrl });
+
+      const definitionResponse = await this.client.get(definitionsUrl);
+
+      const decisionDefinitionId = definitionResponse.data.id;
+
+      logger.debug('Got decision definition', {
+        id: decisionDefinitionId,
+        key: definitionKey,
+        name: definitionResponse.data.name,
+        version: definitionResponse.data.version,
+      });
+
+      // Step 2: Fetch the DMN XML using the definition ID
+      const xmlUrl = `/decision-definition/${decisionDefinitionId}/xml`;
+
+      logger.debug('Fetching DMN XML', { url: xmlUrl });
+
+      const xmlResponse = await this.client.get(xmlUrl);
+
+      // Response structure: { id, dmnXml } or just the XML string
+      const dmnXml = xmlResponse.data.dmnXml || xmlResponse.data;
+
+      logger.info('Successfully fetched DMN XML', {
+        definitionKey,
+        definitionId: decisionDefinitionId,
+        xmlLength: typeof dmnXml === 'string' ? dmnXml.length : 0,
+      });
+
+      return dmnXml;
+    } catch (error) {
+      // Handle axios errors (this.client is an AxiosInstance)
+      if (error && typeof error === 'object' && 'isAxiosError' in error) {
+        const axiosError = error as unknown as {
+          response?: { status?: number; data?: unknown };
+          message: string;
+        };
+
+        if (axiosError.response?.status === 404) {
+          logger.warn('DMN definition not found in Operaton', {
+            definitionKey,
+            status: 404,
+          });
+          return null;
+        }
+
+        logger.error('Operaton API error while fetching DMN XML', {
+          definitionKey,
+          status: axiosError.response?.status,
+          message: axiosError.message,
+          data: axiosError.response?.data,
+        });
+      } else {
+        logger.error('Unexpected error fetching DMN XML', {
+          definitionKey,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+
+      throw new Error(
+        `Failed to fetch DMN XML: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
 }
 
 export const operatonService = new OperatonService();

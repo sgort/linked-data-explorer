@@ -17,6 +17,15 @@ dist-ssr
 # .env.acceptance
 # .env.production
 
+# TypeScript compiled output
+*.js
+*.js.map
+*.d.ts
+*.d.ts.map
+
+# But keep the source JSON
+!testData.json
+
 # Ignore local overrides
 .env.local
 .env.*.local

@@ -20,6 +20,8 @@
     "typeRoots": [
       "./node_modules/@types",
       "../../node_modules/@types" // ← Points to hoisted types
-    ]
+    ],
+    "resolveJsonModule": true,
+    "esModuleInterop": true
   }
 }

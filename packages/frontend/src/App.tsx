@@ -9,11 +9,12 @@ import {
   Loader2,
   Play,
   Plus,
+  RefreshCw,
   Settings,
   Share2,
   Trash2,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import ChainBuilder from './components/ChainBuilder/ChainBuilder';
 import Changelog from './components/Changelog';
@@ -24,20 +25,44 @@ import { executeSparqlQuery } from './services/sparqlService';
 import { SparqlResponse, ViewMode } from './types';
 import { ALL_QUERIES, PRESET_ENDPOINTS, SAMPLE_QUERIES } from './utils/constants';
 
+const VIEWMODE_STORAGE_KEY = 'linkedDataExplorer_activeView';
+
 const App: React.FC = () => {
-  // Purely in-memory state. No localStorage is used.
+  // Load saved viewMode from localStorage, default to QUERY
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem(VIEWMODE_STORAGE_KEY);
+    if (saved && Object.values(ViewMode).includes(saved as ViewMode)) {
+      return saved as ViewMode;
+    }
+    return ViewMode.QUERY;
+  });
+
   const [savedEndpoints, setSavedEndpoints] = useState(PRESET_ENDPOINTS);
   const [endpoint, setEndpoint] = useState(PRESET_ENDPOINTS[1]?.url || PRESET_ENDPOINTS[0].url);
-
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].sparql);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [sparqlResult, setSparqlResult] = useState<SparqlResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.QUERY);
   const [showSettings, setShowSettings] = useState(false);
-
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+  /**
+   * Determine connection type based on active view
+   * ORCHESTRATION uses proxied backend connection
+   * All other views use direct connection
+   */
+  const getConnectionType = (): 'direct' | 'proxied' => {
+    return viewMode === ViewMode.ORCHESTRATION ? 'proxied' : 'direct';
+  };
+
+  // Save viewMode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(VIEWMODE_STORAGE_KEY, viewMode);
+  }, [viewMode]);
 
   const handleRunQuery = async () => {
     setIsLoading(true);
@@ -85,6 +110,37 @@ const App: React.FC = () => {
     if (confirm('Reset endpoints to default system presets?')) {
       setSavedEndpoints(PRESET_ENDPOINTS);
       setEndpoint(PRESET_ENDPOINTS[1]?.url || PRESET_ENDPOINTS[0].url);
+    }
+  };
+
+  /**
+   * Handle cache refresh for Orchestration view
+   * Clears the DMN cache and triggers a fresh fetch
+   */
+  const handleRefreshCache = async () => {
+    if (viewMode !== ViewMode.ORCHESTRATION) return;
+
+    setIsRefreshing(true);
+    setError(null);
+
+    try {
+      // Clear cache for current endpoint
+      const clearUrl = `${API_BASE_URL}/api/cache/clear?endpoint=${encodeURIComponent(endpoint)}`;
+      const clearResponse = await fetch(clearUrl, { method: 'DELETE' });
+
+      if (!clearResponse.ok) {
+        throw new Error('Failed to clear cache');
+      }
+
+      // The ChainBuilder component will automatically refetch when endpoint changes
+      // We trigger a re-render by briefly toggling the endpoint
+      const currentEndpoint = endpoint;
+      setEndpoint('');
+      setTimeout(() => setEndpoint(currentEndpoint), 10);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh cache');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -188,6 +244,26 @@ const App: React.FC = () => {
                   ))}
                 </datalist>
               </div>
+
+              {/* Refresh Cache Button (Orchestration View Only) */}
+              {viewMode === ViewMode.ORCHESTRATION && (
+                <button
+                  onClick={handleRefreshCache}
+                  disabled={isRefreshing}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm border transition-all
+                    ${
+                      isRefreshing
+                        ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed'
+                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 shadow-sm hover:shadow'
+                    }
+                  `}
+                  title="Refresh DMN cache (clears 5-minute cache)"
+                >
+                  <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                  {isRefreshing ? 'Refreshing...' : 'Refresh Cache'}
+                </button>
+              )}
+
               <button
                 onClick={handleRunQuery}
                 disabled={isLoading}
@@ -225,7 +301,7 @@ const App: React.FC = () => {
           {/* Orchestration View - Chain Builder */}
           {viewMode === ViewMode.ORCHESTRATION && (
             <div className="flex-1 overflow-hidden">
-              <ChainBuilder />
+              <ChainBuilder endpoint={endpoint} />
             </div>
           )}
 
@@ -256,9 +332,56 @@ const App: React.FC = () => {
                     onChange={(e) => setEndpoint(e.target.value)}
                     className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-slate-600"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Changes are reset on browser refresh.
-                  </p>
+
+                  {/* Connection type indicator */}
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-[10px] text-slate-400">
+                      Changes are reset on browser refresh.
+                    </p>
+                    <div
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium ${
+                        getConnectionType() === 'direct'
+                          ? 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-blue-50 text-blue-700 border border-blue-200'
+                      }`}
+                    >
+                      {getConnectionType() === 'direct' ? (
+                        <>
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                            />
+                          </svg>
+                          <span>Direct Connection</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                          <span>Proxied via Backend</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <hr className="border-slate-100" />

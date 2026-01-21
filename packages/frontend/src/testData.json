@@ -1,0 +1,202 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DMN Test Data Configuration",
+  "description": "Shared test data for DMN chain execution across frontend and backend. Single source of truth for all test scenarios.",
+  "version": "1.0.0",
+  "lastUpdated": "2026-01-14",
+
+  "dmnTestData": {
+    "SVB_LeeftijdsInformatie": {
+      "description": "Age calculation DMN - requires birth date and request date",
+      "defaultInputs": {
+        "dagVanAanvraag": "2026-01-14",
+        "geboortedatumAanvrager": "1975-05-15",
+        "geboortedatumPartner": "1978-03-22"
+      },
+      "scenarios": {
+        "young_single": {
+          "geboortedatumAanvrager": "2005-06-15",
+          "geboortedatumPartner": null,
+          "dagVanAanvraag": "2026-01-14"
+        },
+        "elderly_couple": {
+          "geboortedatumAanvrager": "1950-03-20",
+          "geboortedatumPartner": "1952-08-10",
+          "dagVanAanvraag": "2026-01-14"
+        },
+        "middle_aged_partner": {
+          "geboortedatumAanvrager": "1975-05-15",
+          "geboortedatumPartner": "1978-03-22",
+          "dagVanAanvraag": "2026-01-14"
+        }
+      }
+    },
+
+    "SZW_BijstandsnormInformatie": {
+      "description": "Social assistance calculation - requires household and income info",
+      "defaultInputs": {
+        "aanvragerAlleenstaand": false,
+        "aanvragerHeeftKinderen": true,
+        "aanvragerHeeftAOWLeeftijd": false,
+        "gemeenteCodeWoonplaats": "0794",
+        "maandelijksBrutoInkomenAanvrager": 1500,
+        "maandelijksBrutoInkomenPartner": 1200
+      },
+      "scenarios": {
+        "single_no_children": {
+          "aanvragerAlleenstaand": true,
+          "aanvragerHeeftKinderen": false,
+          "aanvragerHeeftAOWLeeftijd": false,
+          "maandelijksBrutoInkomenAanvrager": 800
+        },
+        "couple_with_children": {
+          "aanvragerAlleenstaand": false,
+          "aanvragerHeeftKinderen": true,
+          "aanvragerHeeftAOWLeeftijd": false,
+          "maandelijksBrutoInkomenAanvrager": 1500,
+          "maandelijksBrutoInkomenPartner": 1200
+        },
+        "elderly_couple": {
+          "aanvragerAlleenstaand": false,
+          "aanvragerHeeftKinderen": false,
+          "aanvragerHeeftAOWLeeftijd": true,
+          "maandelijksBrutoInkomenAanvrager": 900,
+          "maandelijksBrutoInkomenPartner": 850
+        }
+      }
+    },
+
+    "RONL_HeusdenpasEindresultaat": {
+      "description": "Heusden municipal benefits eligibility - comprehensive checklist",
+      "defaultInputs": {
+        "aanvragerInwonerHeusden": true,
+        "aanvragerHeeftKind4Tm17": true,
+        "maandelijksBrutoInkomenAanvrager": 1500,
+        "aanvragerUitkeringBaanbrekers": false,
+        "aanvragerVoedselbankpasDenBosch": false,
+        "aanvragerKwijtscheldingGemeentelijkeBelastingen": false,
+        "aanvragerSchuldhulptrajectKredietbankNederland": false,
+        "aanvragerDitKalenderjaarAlAangevraagd": false,
+        "aanvragerAanmerkingStudieFinanciering": false,
+        "aanvragerIs181920": false,
+        "aanvragerIsTenminste21": true
+      },
+      "scenarios": {
+        "eligible_family": {
+          "aanvragerInwonerHeusden": true,
+          "aanvragerHeeftKind4Tm17": true,
+          "maandelijksBrutoInkomenAanvrager": 1200,
+          "aanvragerUitkeringBaanbrekers": false,
+          "aanvragerVoedselbankpasDenBosch": false,
+          "aanvragerKwijtscheldingGemeentelijkeBelastingen": false,
+          "aanvragerSchuldhulptrajectKredietbankNederland": false,
+          "aanvragerDitKalenderjaarAlAangevraagd": false,
+          "aanvragerAanmerkingStudieFinanciering": false,
+          "aanvragerIs181920": false,
+          "aanvragerIsTenminste21": true
+        },
+        "not_resident": {
+          "aanvragerInwonerHeusden": false,
+          "aanvragerHeeftKind4Tm17": true,
+          "maandelijksBrutoInkomenAanvrager": 1200,
+          "aanvragerUitkeringBaanbrekers": false,
+          "aanvragerVoedselbankpasDenBosch": false,
+          "aanvragerKwijtscheldingGemeentelijkeBelastingen": false,
+          "aanvragerSchuldhulptrajectKredietbankNederland": false,
+          "aanvragerDitKalenderjaarAlAangevraagd": false,
+          "aanvragerAanmerkingStudieFinanciering": false
+        },
+        "high_income": {
+          "aanvragerInwonerHeusden": true,
+          "aanvragerHeeftKind4Tm17": true,
+          "maandelijksBrutoInkomenAanvrager": 3000,
+          "aanvragerUitkeringBaanbrekers": false,
+          "aanvragerVoedselbankpasDenBosch": false,
+          "aanvragerKwijtscheldingGemeentelijkeBelastingen": false,
+          "aanvragerSchuldhulptrajectKredietbankNederland": false,
+          "aanvragerDitKalenderjaarAlAangevraagd": false,
+          "aanvragerAanmerkingStudieFinanciering": false,
+          "aanvragerIs181920": false,
+          "aanvragerIsTenminste21": true
+        }
+      }
+    }
+  },
+
+  "chainTemplates": {
+    "heusdenpas-full": {
+      "name": "Heusdenpas Eligibility Check",
+      "description": "Complete eligibility determination for Heusden municipal benefits",
+      "dmnIds": [
+        "SVB_LeeftijdsInformatie",
+        "SZW_BijstandsnormInformatie",
+        "RONL_HeusdenpasEindresultaat"
+      ],
+      "scenario": "middle_aged_partner_eligible",
+      "testInputs": {
+        "geboortedatumAanvrager": "1975-05-15",
+        "geboortedatumPartner": "1978-03-22",
+        "dagVanAanvraag": "2026-01-14",
+        "aanvragerAlleenstaand": false,
+        "aanvragerHeeftKinderen": true,
+        "aanvragerHeeftAOWLeeftijd": false,
+        "aanvragerHeeftKind4Tm17": true,
+        "aanvragerInwonerHeusden": true,
+        "gemeenteCodeWoonplaats": "0794",
+        "maandelijksBrutoInkomenAanvrager": 1500,
+        "maandelijksBrutoInkomenPartner": 1200,
+        "aanvragerUitkeringBaanbrekers": false,
+        "aanvragerVoedselbankpasDenBosch": false,
+        "aanvragerKwijtscheldingGemeentelijkeBelastingen": false,
+        "aanvragerSchuldhulptrajectKredietbankNederland": false,
+        "aanvragerDitKalenderjaarAlAangevraagd": false,
+        "aanvragerAanmerkingStudieFinanciering": false,
+        "aanvragerIs181920": false,
+        "aanvragerIsTenminste21": true
+      }
+    },
+
+    "age-verification": {
+      "name": "Age Verification Only",
+      "description": "Simple age calculation from birth date",
+      "dmnIds": ["SVB_LeeftijdsInformatie"],
+      "scenario": "young_single",
+      "testInputs": {
+        "geboortedatumAanvrager": "1990-06-15",
+        "dagVanAanvraag": "2026-01-14",
+        "geboortedatumPartner": null
+      }
+    },
+
+    "benefits-calculation": {
+      "name": "Social Benefits Calculation",
+      "description": "Calculate social assistance amounts (SVB → SZW)",
+      "dmnIds": ["SVB_LeeftijdsInformatie", "SZW_BijstandsnormInformatie"],
+      "scenario": "single_no_children_age_calc",
+      "testInputs": {
+        "geboortedatumAanvrager": "1985-03-20",
+        "geboortedatumPartner": null,
+        "dagVanAanvraag": "2026-01-14",
+        "aanvragerAlleenstaand": true,
+        "aanvragerHeeftKinderen": false,
+        "aanvragerHeeftAOWLeeftijd": false,
+        "gemeenteCodeWoonplaats": "0794",
+        "maandelijksBrutoInkomenAanvrager": 800
+      }
+    }
+  },
+
+  "metadata": {
+    "dateFormat": "YYYY-MM-DD",
+    "currencyFormat": "EUR",
+    "notes": [
+      "All dates use ISO 8601 format (YYYY-MM-DD)",
+      "Income values are monthly gross amounts in EUR",
+      "Boolean fields use true/false",
+      "null is used for optional fields with no value",
+      "gemeenteCodeWoonplaats '0794' = Heusden municipality code"
+    ],
+    "maintainers": ["RONL Team"],
+    "lastValidated": "2026-01-14"
+  }
+}

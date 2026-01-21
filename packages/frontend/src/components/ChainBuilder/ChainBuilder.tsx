@@ -1,3 +1,7 @@
+// packages/frontend/src/components/ChainBuilder/ChainBuilder.tsx
+// FIXED: Uses /api/dmns?endpoint=... to preserve backend caching (5 min TTL)
+// This replaces 13+ uncached queries with 1 cached request
+
 import {
   closestCenter,
   DndContext,
@@ -24,7 +28,11 @@ import DmnList from './DmnList';
  */
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
-const ChainBuilder: React.FC = () => {
+interface ChainBuilderProps {
+  endpoint: string; // TriplyDB SPARQL endpoint URL
+}
+
+const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
   // State
   const [availableDmns, setAvailableDmns] = useState<DmnModel[]>([]);
   const [selectedChain, setSelectedChain] = useState<string[]>([]);
@@ -35,10 +43,11 @@ const ChainBuilder: React.FC = () => {
   const [validation, setValidation] = useState<ChainValidation | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
-  // Load DMNs on mount
+  // Load DMNs when endpoint changes
   useEffect(() => {
     loadDmns();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint]);
 
   // Validate chain whenever it changes
   useEffect(() => {
@@ -52,20 +61,27 @@ const ChainBuilder: React.FC = () => {
 
   /**
    * Load available DMNs from backend
+   * FIXED: Uses /api/dmns?endpoint=... to leverage backend caching
+   * Backend returns complete DMN objects with inputs/outputs in one request
    */
   const loadDmns = async () => {
     setIsLoadingDmns(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/dmns`);
+      // Build URL with endpoint parameter
+      const url = `${API_BASE_URL}/api/dmns?endpoint=${encodeURIComponent(endpoint)}`;
+
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.success) {
         setAvailableDmns(data.data.dmns);
       } else {
         console.error('Failed to load DMNs:', data.error);
+        setAvailableDmns([]);
       }
     } catch (error) {
       console.error('Error loading DMNs:', error);
+      setAvailableDmns([]);
     } finally {
       setIsLoadingDmns(false);
     }
@@ -99,18 +115,11 @@ const ChainBuilder: React.FC = () => {
       if (data.success) {
         setExecutionResult(data.data);
       } else {
-        // ✅ CORRECTED: Check BOTH error locations
-        // API-level error: data.error.message
-        // Execution-level error: data.data.error
         const errorMessage =
-          data.error?.message || // API validation errors
-          data.data?.error || // Execution errors (Operaton, deployment)
-          data.error || // Fallback if error is a string
-          'Unknown error occurred';
+          data.error?.message || data.data?.error || data.error || 'Unknown error occurred';
 
         const errorCode = data.error?.code || 'EXECUTION_ERROR';
 
-        // Show detailed error message
         alert(
           `❌ Execution Failed\n\n` +
             `${errorMessage}\n\n` +
@@ -125,7 +134,6 @@ const ChainBuilder: React.FC = () => {
             `Check browser console for technical details.`
         );
 
-        // Log comprehensive error details
         console.error('Chain execution error:', {
           code: errorCode,
           message: errorMessage,
@@ -137,7 +145,6 @@ const ChainBuilder: React.FC = () => {
         });
       }
     } catch (error) {
-      // ✅ Handle network/fetch errors
       console.error('Network/fetch error:', error);
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown network error';
@@ -176,28 +183,20 @@ const ChainBuilder: React.FC = () => {
     const requiredInputs: ChainValidation['requiredInputs'] = [];
     const missingInputs: ChainValidation['missingInputs'] = [];
 
-    // ✅ Track outputs available at each step (considering order!)
-    const availableOutputsAtStep = new Map<number, Set<string>>();
+    // Track outputs available at each step
+    const availableOutputs = new Set<string>();
 
-    // ✅ Process each DMN in sequence
-    chainDmns.forEach((dmn, index) => {
-      // Get outputs available from previous DMNs
-      const previousOutputs = new Set<string>();
-      for (let i = 0; i < index; i++) {
-        chainDmns[i].outputs.forEach((output) => {
-          previousOutputs.add(output.identifier);
-        });
-      }
-      availableOutputsAtStep.set(index, previousOutputs);
+    for (let i = 0; i < chainDmns.length; i++) {
+      const dmn = chainDmns[i];
 
-      // Check each input
-      dmn.inputs.forEach((input) => {
-        const providedByPreviousDmn = previousOutputs.has(input.identifier);
+      // Check each required input
+      for (const input of dmn.inputs) {
+        // Check if input is provided by previous DMN
+        const providedByPreviousDmn = availableOutputs.has(input.identifier);
 
-        // ✅ User must provide this input if:
-        // 1. No PREVIOUS DMN outputs it, AND
-        // 2. User hasn't provided it yet
         if (!providedByPreviousDmn) {
+          // Deduplicate by identifier only (not identifier+requiredBy)
+          // This ensures each unique input appears once in the form
           const alreadyAdded = requiredInputs.some((ri) => ri.identifier === input.identifier);
           if (!alreadyAdded) {
             const inputData = {
@@ -208,17 +207,17 @@ const ChainBuilder: React.FC = () => {
               description: input.description,
             };
 
-            // ✅ Always add to requiredInputs (for form rendering)
+            // Always add to requiredInputs (for form rendering)
             requiredInputs.push(inputData);
 
-            // ✅ Also add to missingInputs if not filled yet
+            // Also add to missingInputs if not filled yet
             const hasValue = input.identifier in inputs;
             if (!hasValue) {
               missingInputs.push(inputData);
             }
           }
         }
-      });
+      }
 
       // Check for duplicate outputs (warnings)
       dmn.outputs.forEach((output) => {
@@ -234,13 +233,33 @@ const ChainBuilder: React.FC = () => {
           });
         }
       });
-    });
 
-    // Estimate execution time (150ms per DMN + 50ms overhead)
+      // Add this DMN's outputs to available outputs
+      for (const output of dmn.outputs) {
+        availableOutputs.add(output.identifier);
+      }
+    }
+
+    // Generate validation messages
+    if (missingInputs.length > 0) {
+      errors.push({
+        type: 'missing_input',
+        message: `Missing ${missingInputs.length} required input(s)`,
+      });
+    }
+
+    if (chainDmns.length === 1) {
+      warnings.push({
+        type: 'performance',
+        message: 'Single DMN chain - consider adding more for orchestration',
+      });
+    }
+
+    // Estimate execution time (rough estimate: 150ms per DMN + 50ms base)
     const estimatedTime = chainDmns.length * 150 + 50;
 
     setValidation({
-      isValid: missingInputs.length === 0,
+      isValid: errors.length === 0,
       errors,
       warnings,
       requiredInputs,
@@ -257,7 +276,7 @@ const ChainBuilder: React.FC = () => {
   };
 
   /**
-   * Handle drag end event
+   * Handle drag end - CRITICAL: Preserve original logic for working drag-and-drop
    */
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDragId(null);
@@ -272,6 +291,7 @@ const ChainBuilder: React.FC = () => {
     const overId = over.id as string;
 
     // Dragging from DMN list to chain
+    // CRITICAL: This ID must match the useDroppable ID in ChainComposer
     if (overId === 'chain-droppable') {
       // Check if DMN already in chain
       if (selectedChain.includes(activeId)) {
@@ -304,8 +324,7 @@ const ChainBuilder: React.FC = () => {
    */
   const handleRemoveDmn = (identifier: string) => {
     setSelectedChain(selectedChain.filter((id) => id !== identifier));
-    // Also clear inputs, results, and validation
-    // This matches the behavior of Clear Chain
+    // Clear inputs, results, and validation
     setInputs({});
     setExecutionResult(null);
     setValidation(null);
@@ -322,20 +341,7 @@ const ChainBuilder: React.FC = () => {
   };
 
   /**
-   * Hanlde preset
-   * @param preset
-   */
-
-  const handleLoadPreset = (preset: ChainPreset) => {
-    setSelectedChain(preset.dmnIds);
-    if (preset.defaultInputs) {
-      setInputs(preset.defaultInputs);
-    }
-    setExecutionResult(null);
-  };
-
-  /**
-   * Update input value
+   * Handle input change
    */
   const handleInputChange = (identifier: string, value: unknown) => {
     setInputs((prev) => ({
@@ -344,12 +350,21 @@ const ChainBuilder: React.FC = () => {
     }));
   };
 
-  // Get chain DMNs with full model data
+  /**
+   * Load a preset chain
+   */
+  const handleLoadPreset = (preset: ChainPreset) => {
+    setSelectedChain(preset.dmnIds);
+    setInputs(preset.defaultInputs || {});
+    setExecutionResult(null);
+  };
+
+  // Get chain DMNs in order
   const chainDmns = selectedChain
     .map((id) => availableDmns.find((d) => d.identifier === id))
     .filter((d): d is DmnModel => d !== undefined);
 
-  // Get the active DMN for drag overlay
+  // Get active drag DMN
   const activeDmn = activeDragId ? availableDmns.find((d) => d.identifier === activeDragId) : null;
 
   return (
