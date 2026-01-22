@@ -351,6 +351,134 @@ router.post('/test-connection', async (req: Request, res: Response) => {
   }
 });
 
+// ADD TO: packages/backend/src/routes/triplydb.routes.ts
+// Add these endpoints after the existing /test-connection endpoint
+
+/**
+ * GET /v1/triplydb/assets
+ * List all assets in a TriplyDB dataset
+ *
+ * Compliance notes:
+ * - API-05: Uses noun "assets" for resource name
+ * - API-57: Returns API-Version header
+ * - API-20: GET used for read operations
+ *
+ * Purpose: Retrieves list of all assets in a dataset for logo resolution.
+ * Proxied through backend to avoid CORS issues and handle authentication.
+ *
+ * Query params:
+ * - account: TriplyDB account name
+ * - dataset: TriplyDB dataset name
+ * - apiToken: TriplyDB API token (optional, for private datasets)
+ *
+ * Response:
+ * {
+ *   "success": true,
+ *   "assets": [
+ *     {
+ *       "id": "6971d972d24ef89d5d015ef7",
+ *       "name": "Sociale_Verzekeringsbank_logo.png",
+ *       "url": "https://open-regels.triply.cc/stevengort/facts/assets/6971d972d24ef89d5d015ef7",
+ *       "size": 65536,
+ *       "contentType": "image/png"
+ *     }
+ *   ],
+ *   "count": 1
+ * }
+ */
+router.get('/assets', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  res.set('Content-Type', 'application/json');
+
+  try {
+    const { account, dataset, apiToken } = req.query;
+
+    if (!account || !dataset) {
+      logger.warn('[TriplyDB Routes] Invalid assets request: missing account or dataset');
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters: account and dataset',
+        status: 400,
+      });
+    }
+
+    logger.info('[TriplyDB Routes] Assets list request', {
+      account: account as string,
+      dataset: dataset as string,
+    });
+
+    const baseUrl = 'https://api.open-regels.triply.cc';
+    const url = `${baseUrl}/datasets/${account}/${dataset}/assets`;
+
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+    };
+
+    if (apiToken) {
+      headers.Authorization = `Bearer ${apiToken}`;
+    }
+
+    const startTime = Date.now();
+    const response = await fetch(url, { headers });
+    const duration = Date.now() - startTime;
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('[TriplyDB Routes] Assets list failed', {
+        status: response.status,
+        error: errorText,
+      });
+      return res.status(response.status).json({
+        success: false,
+        error: `Failed to list assets: ${response.statusText}`,
+        status: response.status,
+      });
+    }
+
+    const assets = (await response.json()) as Array<{
+      identifier: string;
+      assetName: string;
+      createdAt: string;
+      versions: Array<{
+        id: string;
+        fileSize: number;
+        url: string;
+      }>;
+    }>;
+
+    // Enrich with full URLs and normalize field names
+    const enrichedAssets = assets.map((asset) => ({
+      id: asset.identifier,
+      name: asset.assetName,
+      // Use the actual URL from TriplyDB's version endpoint
+      url: asset.versions[0]?.url || `https://open-regels.triply.cc/${account}/${dataset}/assets/${asset.identifier}`,
+      size: asset.versions[0]?.fileSize || 0,
+      contentType: 'image/png', // TriplyDB doesn't provide this, assume PNG
+    }));
+
+    logger.info('[TriplyDB Routes] Assets listed successfully', {
+      count: enrichedAssets.length,
+      duration: `${duration}ms`,
+    });
+
+    res.status(200).json({
+      success: true,
+      assets: enrichedAssets,
+      count: enrichedAssets.length,
+    });
+  } catch (error) {
+    logger.error('[TriplyDB Routes] Assets list error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to list assets',
+      status: 500,
+    });
+  }
+});
+
 /**
  * GET /v1/triplydb/health
  * Health check endpoint for TriplyDB proxy service

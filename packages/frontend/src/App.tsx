@@ -567,7 +567,7 @@ const App: React.FC = () => {
                           <p className="text-sm animate-pulse">Running SPARQL query...</p>
                         </div>
                       ) : (
-                        <ResultsTable data={sparqlResult} />
+                        <ResultsTable data={sparqlResult} endpoint={endpoint} />
                       )}
                     </div>
                   </div>

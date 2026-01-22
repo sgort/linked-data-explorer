@@ -124,3 +124,35 @@ export interface ChainExecutionResult {
   finalOutputs: Record<string, unknown>;
   error?: string;
 }
+
+/**
+ * TriplyDB Asset
+ */
+export interface TriplyDBAsset {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  contentType: string;
+}
+
+/**
+ * TriplyDB Assets API Response
+ */
+export interface TriplyDBAssetsResponse {
+  success: boolean;
+  assets: TriplyDBAsset[];
+  count: number;
+}
+
+/**
+ * Organization with logo support
+ */
+export interface Organization {
+  uri: string;
+  identifier: string;
+  name: string;
+  homepage?: string;
+  logo?: string;
+  spatial?: string;
+}
