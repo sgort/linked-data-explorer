@@ -33,6 +33,23 @@ PREFIX schema: <http://schema.org/>
 
 export const SAMPLE_QUERIES = [
   {
+    name: 'Get All Organizations',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?organization ?identifier ?name ?homepage ?spatial ?logo
+WHERE {
+  ?organization a cv:PublicOrganisation ;
+                dct:identifier ?identifier ;
+                skos:prefLabel ?name .
+
+  OPTIONAL { ?organization foaf:homepage ?homepage }
+  OPTIONAL { ?organization cv:spatial ?spatial }
+  OPTIONAL { ?organization foaf:logo ?logo }
+
+  FILTER(LANG(?name) = "nl" || LANG(?name) = "")
+}
+ORDER BY ?name`,
+  },
+  {
     name: 'Get All Public Services',
     sparql: `${COMMON_PREFIXES}
 SELECT ?service ?title ?description
