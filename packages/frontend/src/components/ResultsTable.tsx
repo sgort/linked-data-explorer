@@ -16,6 +16,22 @@ interface ResolvedLogos {
 
 const ResultsTable: React.FC<ResultsTableProps> = ({ data, endpoint }) => {
   const [resolvedLogos, setResolvedLogos] = useState<ResolvedLogos>({});
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [modalImage, setModalImage] = useState<{ url: string; alt: string } | null>(null);
+
+  // Close modal on ESC key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setModalImage(null);
+      }
+    };
+
+    if (modalImage) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [modalImage]);
 
   useEffect(() => {
     if (!data || !endpoint) return;
@@ -48,6 +64,8 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ data, endpoint }) => {
         resolved[path] = url;
       });
       setResolvedLogos(resolved);
+      // Reset errors when new data comes in
+      setImageErrors(new Set());
     });
   }, [data, endpoint]);
 
@@ -73,47 +91,39 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ data, endpoint }) => {
 
     // Logo column - show image if resolved
     if (isLogoColumn(varName)) {
-      // Try resolved URL first, fallback to original value if it's already a full URL
-      const resolvedUrl = resolvedLogos[cell.value] || cell.value;
-      const isFullUrl = resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://');
+      // Only use resolved URL from state, don't fall back to incomplete original URL
+      const resolvedUrl = resolvedLogos[cell.value];
 
-      console.log('[ResultsTable] Rendering logo:', {
-        originalValue: cell.value,
-        resolvedUrl,
-        isFullUrl,
-        inResolvedLogos: cell.value in resolvedLogos,
-      });
+      // Check if original value is already a complete TriplyDB URL with version ID
+      const completeUrlPattern =
+        /^https?:\/\/api\..*\.triply\.cc\/datasets\/[^/]+\/[^/]+\/assets\/[^/]+\/[^/]+$/;
+      const originalIsComplete = completeUrlPattern.test(cell.value);
 
-      if (isFullUrl) {
+      // Only display if we have resolved URL OR original is already complete
+      const displayUrl = resolvedUrl || (originalIsComplete ? cell.value : null);
+      const hasError = displayUrl ? imageErrors.has(displayUrl) : false;
+
+      if (displayUrl && !hasError) {
         return (
           <div className="flex items-center gap-2">
             <img
-              src={resolvedUrl}
+              src={displayUrl}
               alt="Organization logo"
-              className="w-8 h-8 object-contain rounded border border-slate-200"
-              onError={(e) => {
-                console.error('[ResultsTable] Image failed to load:', resolvedUrl);
-                const img = e.target as HTMLImageElement;
-                img.style.display = 'none';
-                // Show error indicator next to link
-                const parent = img.parentElement;
-                if (parent) {
-                  const errorSpan = document.createElement('span');
-                  errorSpan.textContent = '❌';
-                  errorSpan.className = 'text-red-500';
-                  parent.insertBefore(errorSpan, parent.firstChild);
-                }
-              }}
-              onLoad={() => {
-                console.log('[ResultsTable] Image loaded successfully:', resolvedUrl);
+              className="w-8 h-8 object-contain rounded border border-slate-200 cursor-pointer hover:border-blue-400 transition-colors"
+              title="Click to enlarge"
+              onClick={() =>
+                setModalImage({ url: displayUrl, alt: cell.value.split('/').pop() || 'Logo' })
+              }
+              onError={() => {
+                setImageErrors((prev) => new Set(prev).add(displayUrl));
               }}
             />
             <a
-              href={resolvedUrl}
+              href={displayUrl}
               target="_blank"
               rel="noreferrer"
               className="text-xs text-blue-600 hover:underline truncate max-w-xs"
-              title={resolvedUrl}
+              title="Click to download image"
             >
               {cell.value.split('/').pop()}
             </a>
@@ -121,7 +131,25 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ data, endpoint }) => {
         );
       }
 
-      // Fallback for unresolved logos
+      // Show error state or loading state
+      if (hasError) {
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-red-500 text-sm">❌</span>
+            <a
+              href={displayUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-red-600 hover:underline truncate max-w-xs"
+              title={`Failed to load: ${displayUrl}`}
+            >
+              {cell.value.split('/').pop()}
+            </a>
+          </div>
+        );
+      }
+
+      // Fallback for unresolved/loading logos
       return (
         <span className="text-xs text-slate-400 italic truncate" title={cell.value}>
           ⏳ {cell.value.split('/').pop()}
@@ -186,6 +214,31 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ data, endpoint }) => {
           ))}
         </tbody>
       </table>
+
+      {/* Image Modal */}
+      {modalImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
+          onClick={() => setModalImage(null)}
+        >
+          <div className="relative max-w-7xl max-h-full">
+            <button
+              onClick={() => setModalImage(null)}
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 text-2xl font-bold"
+              title="Close (ESC)"
+            >
+              ✕
+            </button>
+            <img
+              src={modalImage.url}
+              alt={modalImage.alt}
+              className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="text-center text-white mt-4 text-sm">{modalImage.alt}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

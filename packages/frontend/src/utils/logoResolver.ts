@@ -83,8 +83,6 @@ async function fetchAssets(account: string, dataset: string, apiToken?: string):
     params.append('apiToken', apiToken);
   }
 
-  console.log('[logoResolver] Fetching assets from:', `${backendUrl}/v1/triplydb/assets?${params}`);
-
   const response = await fetch(`${backendUrl}/v1/triplydb/assets?${params}`);
 
   if (!response.ok) {
@@ -93,8 +91,6 @@ async function fetchAssets(account: string, dataset: string, apiToken?: string):
   }
 
   const data = (await response.json()) as AssetsApiResponse;
-  console.log('[logoResolver] Backend response:', data);
-  console.log('[logoResolver] Assets array:', data.assets);
 
   return data.assets || [];
 }
@@ -149,9 +145,8 @@ export async function resolveLogo(
   endpoint: string,
   apiToken?: string
 ): Promise<string | null> {
-  console.log('[resolveLogo] Called with:', { relativePath, endpoint });
-
   if (!relativePath) {
+    // eslint-disable-next-line no-console
     console.log('[resolveLogo] No path provided, returning null');
     return null;
   }
@@ -168,6 +163,7 @@ export async function resolveLogo(
   const isCompleteTriplyDbUrl = completeTriplyDbPattern.test(relativePath);
 
   if (isCompleteTriplyDbUrl) {
+    // eslint-disable-next-line no-console
     console.log('[resolveLogo] Already a complete TriplyDB URL with version ID, returning as-is');
     return relativePath;
   }
@@ -177,25 +173,19 @@ export async function resolveLogo(
     !isIncompleteTriplyDbUrl &&
     (relativePath.startsWith('http://') || relativePath.startsWith('https://'))
   ) {
+    // eslint-disable-next-line no-console
     console.log('[resolveLogo] Non-TriplyDB full URL, returning as-is');
     return relativePath;
   }
 
   // Extract filename from either relative path or incomplete TriplyDB URL
   const filename = extractFilename(relativePath);
-  console.log('[resolveLogo] Extracted filename:', filename);
 
   // Get assets
   const assets = await getAssets(endpoint, apiToken);
-  console.log('[resolveLogo] Got assets:', assets);
-  console.log(
-    '[resolveLogo] Asset names:',
-    assets.map((a) => a.name)
-  );
 
   // Find matching asset by filename
   const match = assets.find((asset) => asset.name === filename);
-  console.log('[resolveLogo] Match found:', match);
 
   return match ? match.url : null;
 }

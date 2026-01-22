@@ -44,7 +44,7 @@ WHERE {
   OPTIONAL { ?organization foaf:homepage ?homepage }
   OPTIONAL { ?organization cv:spatial ?spatial }
   OPTIONAL { ?organization foaf:logo ?logo }
-  OPTIONAL { ?organization schema:image ?logo }  # ADD THIS LINE
+  OPTIONAL { ?organization schema:image ?logo }
 
   FILTER(LANG(?name) = "nl" || LANG(?name) = "")
 }
