@@ -41,14 +41,31 @@ const DraggableDmnCard: React.FC<DraggableDmnCardProps> = ({ dmn, isUsed }) => {
         }
       `}
       >
-        {/* Icon */}
+        {/* Icon/Logo + Content */}
         <div className="flex items-start gap-3">
+          {/* Icon/Logo */}
           <div
-            className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+            className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden ${
               isUsed ? 'bg-green-500' : 'bg-blue-500'
             }`}
           >
-            {isUsed ? (
+            {dmn.logoUrl ? (
+              <img
+                src={dmn.logoUrl}
+                alt={dmn.organizationName || 'Organization logo'}
+                className="w-full h-full object-contain p-1 bg-white"
+                title={dmn.organizationName || 'Organization'}
+                onError={(e) => {
+                  // Fallback to initials if image fails to load
+                  const img = e.target as HTMLImageElement;
+                  img.style.display = 'none';
+                  const parent = img.parentElement;
+                  if (parent) {
+                    parent.innerHTML = `<span class="text-white text-xs font-bold">${dmn.identifier.substring(0, 2)}</span>`;
+                  }
+                }}
+              />
+            ) : isUsed ? (
               <CheckCircle size={16} className="text-white" />
             ) : (
               <span className="text-white text-xs font-bold">{dmn.identifier.substring(0, 2)}</span>
@@ -64,6 +81,12 @@ const DraggableDmnCard: React.FC<DraggableDmnCardProps> = ({ dmn, isUsed }) => {
             </div>
             {dmn.description && (
               <div className="text-xs text-slate-400 mt-1 line-clamp-2">{dmn.description}</div>
+            )}
+            {/* NEW: Show organization name if available */}
+            {dmn.organizationName && (
+              <div className="text-xs text-blue-600 mt-1 truncate" title={dmn.organizationName}>
+                {dmn.organizationName}
+              </div>
             )}
           </div>
 

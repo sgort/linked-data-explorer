@@ -36,10 +36,10 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
     <div ref={setNodeRef} style={style} className="mb-3">
       <div
         className={`
-        bg-white rounded-lg border-2 shadow-sm
-        ${isDragging ? 'border-blue-500 shadow-lg' : 'border-slate-200'}
-        transition-all duration-150
-      `}
+      bg-white rounded-lg border-2 shadow-sm
+      ${isDragging ? 'border-blue-500 shadow-lg' : 'border-slate-200'}
+      transition-all duration-150
+    `}
       >
         <div className="p-4">
           <div className="flex items-start gap-3">
@@ -62,6 +62,28 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
               <h3 className="font-semibold text-slate-900">{dmn.identifier}</h3>
               {dmn.description && <p className="text-xs text-slate-500 mt-1">{dmn.description}</p>}
 
+              {/* NEW: Logo and Organization */}
+              {(dmn.logoUrl || dmn.organizationName) && (
+                <div className="flex items-center gap-2 mt-2 mb-2">
+                  {dmn.logoUrl && (
+                    <img
+                      src={dmn.logoUrl}
+                      alt={dmn.organizationName || 'Organization'}
+                      className="w-6 h-6 object-contain rounded border border-slate-200 bg-white p-0.5"
+                      title={dmn.organizationName}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  )}
+                  {dmn.organizationName && (
+                    <span className="text-xs text-slate-600 font-medium">
+                      {dmn.organizationName}
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* METADATA SECTION */}
               <div className="mt-2 space-y-1">
                 {dmn.identifier && (
@@ -73,7 +95,7 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
                       {dmn.identifier}
                     </span>
                   </div>
-                )}{' '}
+                )}
                 {dmn.deploymentId && (
                   <div className="flex items-start gap-2 text-xs">
                     <span className="font-medium text-slate-600 flex-shrink-0">Deployment ID:</span>

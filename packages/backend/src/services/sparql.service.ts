@@ -156,8 +156,13 @@ PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX ronl: <https://regels.overheid.nl/termen/>
+PREFIX cv: <http://data.europa.eu/m8g/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 
-SELECT ?dmn ?identifier ?title ?description ?deploymentId ?deployedAt ?implementedBy ?lastTested ?testStatus
+SELECT ?dmn ?identifier ?title ?description ?deploymentId ?deployedAt 
+       ?implementedBy ?lastTested ?testStatus 
+       ?service ?serviceTitle ?organization ?orgName ?logo
 WHERE {
   ?dmn a cprmv:DecisionModel ;
        dct:identifier ?identifier ;
@@ -169,9 +174,24 @@ WHERE {
   OPTIONAL { ?dmn ronl:implementedBy ?implementedBy }
   OPTIONAL { ?dmn cprmv:lastTested ?lastTested }
   OPTIONAL { ?dmn cprmv:testStatus ?testStatus }
+  
+  # NEW: Traverse DMN → Service → Organization → Logo
+  OPTIONAL {
+    ?dmn ronl:implements ?service .
+    ?service dct:title ?serviceTitle .
+    
+    OPTIONAL {
+      ?service cv:hasCompetentAuthority ?organization .
+      ?organization skos:prefLabel ?orgName .
+      
+      OPTIONAL {
+        ?organization foaf:logo ?logo
+      }
+    }
+  }
 }
 ORDER BY ?identifier
-    `;
+`;
 
     const data = await this.executeQuery(query, endpoint);
     const bindings = data.results?.bindings || [];
@@ -184,6 +204,16 @@ ORDER BY ?identifier
     for (const binding of bindings) {
       const id = binding.dmn.value;
       if (!dmnMap.has(id)) {
+        // Resolve logo URL if logo filename is present
+        let logoUrl: string | undefined;
+        if (binding.logo?.value && binding.organization?.value) {
+          logoUrl = await this.resolveLogoUrl(
+            binding.logo.value,
+            binding.organization.value,
+            endpoint
+          );
+        }
+
         dmnMap.set(id, {
           id,
           identifier: binding.identifier.value,
@@ -194,6 +224,11 @@ ORDER BY ?identifier
           implementedBy: binding.implementedBy?.value,
           lastTested: binding.lastTested?.value,
           testStatus: binding.testStatus?.value as 'passed' | 'failed' | 'pending' | undefined,
+          service: binding.service?.value,
+          serviceTitle: binding.serviceTitle?.value,
+          organization: binding.organization?.value,
+          organizationName: binding.orgName?.value,
+          logoUrl, // NEW: Resolved logo URL
           inputs: [],
           outputs: [],
         });
@@ -372,6 +407,89 @@ ORDER BY ?dmn1Identifier ?dmn2Identifier ?variableId
     }
 
     return dmn;
+  }
+
+  /**
+   * Resolve logo URL from filename
+   * Fetches assets from TriplyDB and finds matching logo
+   *
+   * @param logoFilename - Logo filename from RDF (e.g., "Sociale_Verzekeringsbank_logo.png")
+   * @param organizationUri - Organization URI for logging
+   * @param endpoint - SPARQL endpoint URL
+   * @returns Full logo URL with version ID, or undefined if not found
+   */
+  private async resolveLogoUrl(
+    logoFilename: string,
+    organizationUri: string,
+    endpoint?: string
+  ): Promise<string | undefined> {
+    try {
+      // Extract account/dataset from endpoint
+      // Example: https://api.open-regels.triply.cc/datasets/stevengort/facts/services/facts/sparql
+      const match = endpoint?.match(/datasets\/([^/]+)\/([^/]+)/);
+      if (!match) {
+        logger.debug('Could not extract account/dataset from endpoint', { endpoint });
+        return undefined;
+      }
+
+      const [, account, dataset] = match;
+
+      // Clean filename (remove path if present)
+      const filename = logoFilename.split('/').pop();
+      if (!filename) {
+        logger.debug('Invalid logo filename', { logoFilename });
+        return undefined;
+      }
+
+      // Fetch assets from TriplyDB
+      const assetsUrl = `https://api.open-regels.triply.cc/datasets/${account}/${dataset}/assets`;
+      logger.debug('Fetching assets to resolve logo', {
+        assetsUrl,
+        filename,
+        organization: organizationUri,
+      });
+
+      const response = await axios.get(assetsUrl, {
+        timeout: 5000, // 5 second timeout
+      });
+
+      const assets = response.data as Array<{
+        assetName: string;
+        identifier: string;
+        versions: Array<{
+          id: string;
+          url: string;
+          fileSize: number;
+        }>;
+      }>;
+
+      // Find matching asset by filename
+      const matchingAsset = assets.find((a) => a.assetName === filename);
+
+      if (matchingAsset && matchingAsset.versions.length > 0) {
+        const logoUrl = matchingAsset.versions[0].url;
+        logger.debug('Resolved logo URL', {
+          filename,
+          logoUrl,
+          organization: organizationUri,
+        });
+        return logoUrl;
+      }
+
+      logger.debug('Logo asset not found', {
+        filename,
+        availableAssets: assets.map((a) => a.assetName),
+        organization: organizationUri,
+      });
+      return undefined;
+    } catch (error) {
+      logger.warn('Failed to resolve logo URL', {
+        logoFilename,
+        organization: organizationUri,
+        error: getErrorMessage(error),
+      });
+      return undefined;
+    }
   }
 
   /**
