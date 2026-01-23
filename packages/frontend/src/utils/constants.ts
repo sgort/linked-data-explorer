@@ -200,6 +200,35 @@ WHERE {
 ORDER BY ?title ?inputId ?outputId`,
   },
   {
+    name: 'DMNs full path traversed',
+    category: 'orchestration',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?dmn ?dmnTitle ?service ?serviceTitle ?organization ?orgName ?logo
+WHERE {
+  # Start with DMN
+  ?dmn a cprmv:DecisionModel ;
+       dct:title ?dmnTitle ;
+       ronl:implements ?service .
+
+  # Service details
+  ?service a cpsv:PublicService ;
+           dct:title ?serviceTitle ;
+           cv:hasCompetentAuthority ?organization .
+
+  # Organization details
+  ?organization a cv:PublicOrganisation ;
+                skos:prefLabel ?orgName .
+  
+  # Logo (optional)
+  OPTIONAL { ?organization foaf:logo ?logo }
+  
+  FILTER(LANG(?dmnTitle) = "nl" || LANG(?dmnTitle) = "")
+  FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "")
+  FILTER(LANG(?orgName) = "nl" || LANG(?orgName) = "")
+}
+ORDER BY ?dmnTtitle`,
+  },
+  {
     name: 'DMN Input/Output Details',
     category: 'orchestration',
     sparql: `${COMMON_PREFIXES}
