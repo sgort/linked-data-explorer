@@ -6,12 +6,20 @@ import {
   Clock,
   FileInput,
   Layers,
+  Save,
   Tag,
+  Trash2,
   Zap,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ChainTemplate, templateService } from '../../services/templateService';
+import {
+  deleteUserTemplate,
+  getUserTemplates,
+  saveUserTemplate,
+  UserTemplate,
+} from '../../services/userTemplateStorage';
 import { ChainExecutionResult, DmnModel } from '../../types';
 import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
 import ChainResults from './ChainResults';
@@ -28,6 +36,7 @@ interface ChainConfigProps {
   onLoadPreset: (preset: ChainPreset) => void;
   executionResult: ChainExecutionResult | null;
   isExecuting: boolean;
+  endpoint: string;
 }
 
 /**
@@ -42,6 +51,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   onLoadPreset,
   executionResult,
   isExecuting,
+  endpoint,
 }) => {
   const [showValidation, setShowValidation] = useState(true);
   const [showInputs, setShowInputs] = useState(true);
@@ -49,32 +59,52 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
+  // Template save modal state
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   // Add refs for scrollable container and execution area
   const scrollableContainerRef = useRef<HTMLDivElement>(null);
   const executionAreaRef = useRef<HTMLDivElement>(null);
 
   /**
-   * Load templates from backend
-   * Passes endpoint parameter
+   * Load templates from backend and localStorage
    */
   const loadTemplates = useCallback(async () => {
     setIsLoadingTemplates(true);
     try {
-      let fetchedTemplates: ChainTemplate[];
+      // Load predefined templates from backend
+      let predefinedTemplates: ChainTemplate[];
 
       if (selectedCategory === 'all') {
-        fetchedTemplates = await templateService.getAllTemplates();
+        predefinedTemplates = await templateService.getAllTemplates();
+      } else if (selectedCategory === 'custom') {
+        predefinedTemplates = [];
       } else {
-        fetchedTemplates = await templateService.getTemplatesByCategory(selectedCategory);
+        predefinedTemplates = await templateService.getTemplatesByCategory(selectedCategory);
       }
 
-      setTemplates(fetchedTemplates);
+      // Load user templates from localStorage
+      const userTemplates = getUserTemplates(endpoint);
+
+      // Filter user templates by category
+      const filteredUserTemplates =
+        selectedCategory === 'all'
+          ? userTemplates
+          : userTemplates.filter((t) => t.category === selectedCategory);
+
+      // Combine both
+      const combinedTemplates: ChainTemplate[] = [...predefinedTemplates, ...filteredUserTemplates];
+
+      setTemplates(combinedTemplates);
     } catch (error) {
       console.error('Error loading templates:', error);
     } finally {
       setIsLoadingTemplates(false);
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, endpoint]);
 
   // Load templates on mount and when category or endpoint changes
   useEffect(() => {
@@ -94,6 +124,74 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
       });
     }
   }, [isExecuting]);
+
+  /**
+   * Handle save template
+   */
+  const handleSaveTemplate = () => {
+    if (!validation?.isValid) {
+      setSaveError('Cannot save invalid chain as template');
+      return;
+    }
+
+    if (!templateName.trim()) {
+      setSaveError('Template name is required');
+      return;
+    }
+
+    try {
+      saveUserTemplate(endpoint, {
+        name: templateName.trim(),
+        description:
+          templateDescription.trim() ||
+          `Custom template with ${chain.length} DMN${chain.length !== 1 ? 's' : ''}`,
+        category: 'custom',
+        dmnIds: chain.map((dmn) => dmn.identifier),
+        defaultInputs: inputs,
+        tags: ['custom', 'user-created'],
+        complexity: chain.length <= 1 ? 'simple' : chain.length <= 2 ? 'medium' : 'complex',
+        estimatedTime: chain.length * 300,
+        author: 'local-user',
+        isPublic: false,
+        endpoint: '',
+      });
+
+      setShowSaveModal(false);
+      setTemplateName('');
+      setTemplateDescription('');
+      setSaveError(null);
+      loadTemplates();
+      alert('Template saved successfully!');
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      setSaveError('Failed to save template');
+    }
+  };
+
+  /**
+   * Handle delete user template
+   */
+  const handleDeleteTemplate = (templateId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!confirm('Are you sure you want to delete this template?')) {
+      return;
+    }
+
+    const success = deleteUserTemplate(endpoint, templateId);
+    if (success) {
+      loadTemplates();
+    } else {
+      alert('Failed to delete template');
+    }
+  };
+
+  /**
+   * Check if template is a user template
+   */
+  const isUserTemplate = (template: ChainTemplate): template is UserTemplate => {
+    return 'isUserTemplate' in template && template.isUserTemplate === true;
+  };
 
   /**
    * Get badge color for complexity
@@ -171,49 +269,101 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
                   No templates in this category
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {templates.map((template) => (
-                    <button
-                      key={template.id}
-                      onClick={() => onLoadPreset(template)}
-                      className="w-full px-3 py-2.5 text-left hover:bg-blue-50 rounded-lg transition-colors border border-slate-200 hover:border-blue-300"
-                    >
-                      {/* Template Name */}
-                      <div className="font-medium text-sm text-slate-900 mb-1">{template.name}</div>
-
-                      {/* Description */}
-                      <div className="text-xs text-slate-500 mb-2">{template.description}</div>
-
-                      {/* Metadata Row */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {/* Category Badge */}
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(template.category)}`}
-                        >
-                          <Tag size={10} />
-                          {template.category}
-                        </span>
-
-                        {/* Complexity Badge */}
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getComplexityColor(template.complexity)}`}
-                        >
-                          <Layers size={10} />
-                          {template.complexity}
-                        </span>
-
-                        {/* Estimated Time */}
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-slate-600 bg-slate-100">
-                          <Clock size={10} />~{template.estimatedTime}ms
-                        </span>
-
-                        {/* Usage Count */}
-                        {template.usageCount && (
-                          <span className="text-xs text-slate-400">{template.usageCount} uses</span>
-                        )}
+                <div className="space-y-4">
+                  {/* Predefined Templates */}
+                  {templates.filter((t) => !isUserTemplate(t)).length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+                        Example Templates
+                      </h4>
+                      <div className="space-y-2">
+                        {templates
+                          .filter((t) => !isUserTemplate(t))
+                          .map((template) => (
+                            <button
+                              key={template.id}
+                              onClick={() => onLoadPreset(template)}
+                              className="w-full px-3 py-2.5 text-left hover:bg-blue-50 rounded-lg transition-colors border border-slate-200 hover:border-blue-300"
+                            >
+                              <div className="font-medium text-sm text-slate-900 mb-1">
+                                {template.name}
+                              </div>
+                              <div className="text-xs text-slate-500 mb-2">
+                                {template.description}
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(template.category)}`}
+                                >
+                                  <Tag size={10} />
+                                  {template.category}
+                                </span>
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getComplexityColor(template.complexity)}`}
+                                >
+                                  <Layers size={10} />
+                                  {template.complexity}
+                                </span>
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-slate-600 bg-slate-100">
+                                  <Clock size={10} />~{template.estimatedTime}ms
+                                </span>
+                                {template.usageCount && (
+                                  <span className="text-xs text-slate-400">
+                                    {template.usageCount} uses
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          ))}
                       </div>
-                    </button>
-                  ))}
+                    </div>
+                  )}
+
+                  {/* User Templates */}
+                  {templates.filter((t) => isUserTemplate(t)).length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+                        My Templates
+                      </h4>
+                      <div className="space-y-2">
+                        {templates
+                          .filter((t) => isUserTemplate(t))
+                          .map((template) => (
+                            <div key={template.id} className="relative">
+                              <button
+                                onClick={() => onLoadPreset(template)}
+                                className="w-full px-3 py-2.5 text-left hover:bg-blue-50 rounded-lg transition-colors border border-slate-200 hover:border-blue-300"
+                              >
+                                <div className="font-medium text-sm text-slate-900 mb-1 pr-6">
+                                  {template.name}
+                                </div>
+                                <div className="text-xs text-slate-500 mb-2">
+                                  {template.description}
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getComplexityColor(template.complexity)}`}
+                                  >
+                                    <Layers size={10} />
+                                    {template.complexity}
+                                  </span>
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-slate-600 bg-slate-100">
+                                    <Clock size={10} />~{template.estimatedTime}ms
+                                  </span>
+                                </div>
+                              </button>
+                              <button
+                                onClick={(e) => handleDeleteTemplate(template.id, e)}
+                                className="absolute top-2 right-2 p-1 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
+                                title="Delete template"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -227,11 +377,24 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   return (
     <div className="w-96 bg-white border-l border-slate-200 flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200">
-        <h2 className="font-semibold text-slate-900">Chain Configuration</h2>
-        <p className="text-xs text-slate-500 mt-1">
-          {chain.length} DMN{chain.length !== 1 ? 's' : ''} in chain
-        </p>
+      <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+        <div>
+          <h2 className="font-semibold text-slate-900">Chain Configuration</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            {chain.length} DMN{chain.length !== 1 ? 's' : ''} in chain
+          </p>
+        </div>
+
+        {/* Save as Template Button */}
+        <button
+          onClick={() => setShowSaveModal(true)}
+          disabled={!validation?.isValid}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          title={validation?.isValid ? 'Save chain as template' : 'Fix validation errors first'}
+        >
+          <Save size={14} />
+          Save
+        </button>
       </div>
 
       {/* Scrollable Content */}
@@ -385,6 +548,79 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
           </p>
         )}
       </div>
+
+      {/* Save Template Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-96 max-w-[90vw]">
+            <h3 className="text-lg font-semibold mb-4">Save as Template</h3>
+
+            {saveError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                {saveError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Template Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => {
+                    setTemplateName(e.target.value);
+                    setSaveError(null);
+                  }}
+                  placeholder="e.g., My Eligibility Check"
+                  className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Description (optional)
+                </label>
+                <textarea
+                  value={templateDescription}
+                  onChange={(e) => setTemplateDescription(e.target.value)}
+                  placeholder="Describe what this chain does..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded">
+                This template will be saved with {chain.length} DMN{chain.length !== 1 ? 's' : ''}{' '}
+                and current input values for this endpoint.
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={handleSaveTemplate}
+                disabled={!templateName.trim()}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                Save Template
+              </button>
+              <button
+                onClick={() => {
+                  setShowSaveModal(false);
+                  setTemplateName('');
+                  setTemplateDescription('');
+                  setSaveError(null);
+                }}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
