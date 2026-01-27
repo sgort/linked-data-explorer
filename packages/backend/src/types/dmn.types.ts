@@ -20,11 +20,11 @@ export interface DmnModel {
   implementedBy?: string;
   lastTested?: string;
   testStatus?: 'passed' | 'failed' | 'pending';
-  service?: string;              // NEW: Service URI
-  serviceTitle?: string;         // NEW: Service display name
-  organization?: string;         // NEW: Organization URI
-  organizationName?: string;     // NEW: Organization display name
-  logoUrl?: string;              // NEW: Full logo URL (resolved with version ID)
+  service?: string; // NEW: Service URI
+  serviceTitle?: string; // NEW: Service display name
+  organization?: string; // NEW: Organization URI
+  organizationName?: string; // NEW: Organization display name
+  logoUrl?: string; // NEW: Full logo URL (resolved with version ID)
   inputs: DmnVariable[];
   outputs: DmnVariable[];
 }

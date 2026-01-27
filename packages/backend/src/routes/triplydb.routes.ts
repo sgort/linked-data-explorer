@@ -451,7 +451,9 @@ router.get('/assets', async (req: Request, res: Response) => {
       id: asset.identifier,
       name: asset.assetName,
       // Use the actual URL from TriplyDB's version endpoint
-      url: asset.versions[0]?.url || `https://open-regels.triply.cc/${account}/${dataset}/assets/${asset.identifier}`,
+      url:
+        asset.versions[0]?.url ||
+        `https://open-regels.triply.cc/${account}/${dataset}/assets/${asset.identifier}`,
       size: asset.versions[0]?.fileSize || 0,
       contentType: 'image/png', // TriplyDB doesn't provide this, assume PNG
     }));
