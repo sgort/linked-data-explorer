@@ -59,6 +59,7 @@ const OrganizationsView: React.FC<OrganizationsViewProps> = ({ endpoint }) => {
 
   useEffect(() => {
     loadOrganizations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
 
   const parseOrganizations = (result: SparqlResponse): Organization[] => {
