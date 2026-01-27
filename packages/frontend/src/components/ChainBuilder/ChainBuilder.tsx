@@ -398,7 +398,6 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
           onLoadPreset={handleLoadPreset}
           executionResult={executionResult}
           isExecuting={isExecuting}
-          endpoint={endpoint}
         />
       </div>
 

@@ -39,29 +39,6 @@ export class TemplateService {
   // No cache needed - we use sparqlService's per-endpoint cache
 
   /**
-   * Get available DMN identifiers for an endpoint
-   * Uses sparqlService which has per-endpoint caching (5-minute TTL)
-   *
-   * @param endpoint - Optional SPARQL endpoint URL
-   * @returns Set of DMN identifiers available at that endpoint
-   */
-  private async getAvailableDmnIds(endpoint?: string): Promise<Set<string>> {
-    try {
-      // Use sparqlService with endpoint parameter
-      // This already has per-endpoint caching built-in!
-      const dmns = await sparqlService.getAllDmns(endpoint);
-      return new Set(dmns.map((dmn) => dmn.identifier));
-    } catch (error) {
-      logger.error('Failed to fetch DMN list', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        endpoint: endpoint || 'default',
-      });
-      // Return empty set on error (template filtering will exclude all templates)
-      return new Set();
-    }
-  }
-
-  /**
    * Predefined chain templates
    * Default inputs loaded from shared testData.json
    */
@@ -127,77 +104,41 @@ export class TemplateService {
 
   /**
    * Get all available templates
-   * NEW: Accepts endpoint parameter to filter by available DMNs
+   * Returns predefined templates (hardcoded in testData.json)
    *
-   * @param endpoint - Optional SPARQL endpoint URL
-   * @returns Array of validated templates
+   * @param endpoint - Optional SPARQL endpoint URL (reserved for future DB-backed templates)
+   * @returns Array of predefined templates
    */
   async getAllTemplates(endpoint?: string): Promise<ChainTemplate[]> {
     logger.info('Fetching all chain templates', {
-      ...(endpoint && { endpoint }),
+      ...(endpoint && { endpoint: 'parameter-ignored-for-predefined-templates' }),
     });
 
-    // Get available DMN IDs for the specified endpoint
-    const availableDmnIds = await this.getAvailableDmnIds(endpoint);
-
-    // Validate that DMNs in templates exist
-    const validatedTemplates: ChainTemplate[] = [];
-
-    for (const template of this.PREDEFINED_TEMPLATES) {
-      // Check if all DMNs in template exist
-      const missingDmns = template.dmnIds.filter((dmnId) => !availableDmnIds.has(dmnId));
-
-      if (missingDmns.length > 0) {
-        logger.debug('Template skipped - missing DMNs', {
-          templateId: template.id,
-          missingDmns,
-          endpoint: endpoint || 'default',
-        });
-        continue;
-      }
-
-      validatedTemplates.push(template);
-    }
-
+    // Return all predefined templates
+    // NOTE: endpoint parameter kept for future when templates are stored in database
+    // For now, predefined templates are global and not filtered by endpoint
     logger.info('Templates fetched', {
-      total: this.PREDEFINED_TEMPLATES.length,
-      valid: validatedTemplates.length,
-      filtered: this.PREDEFINED_TEMPLATES.length - validatedTemplates.length,
-      ...(endpoint && { endpoint }),
+      count: this.PREDEFINED_TEMPLATES.length,
+      source: 'predefined',
     });
 
-    return validatedTemplates;
+    return this.PREDEFINED_TEMPLATES;
   }
 
   /**
    * Get template by ID
-   * NEW: Accepts endpoint parameter for validation
    *
    * @param id - Template identifier
-   * @param endpoint - Optional SPARQL endpoint URL
-   * @returns Template or null if not found or invalid for endpoint
+   * @param endpoint - Optional SPARQL endpoint URL (reserved for future)
+   * @returns Template or null if not found
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getTemplateById(id: string, endpoint?: string): Promise<ChainTemplate | null> {
-    logger.info('Fetching template by ID', {
-      id,
-      ...(endpoint && { endpoint }),
-    });
+    logger.info('Fetching template by ID', { id });
 
-    // Get all validated templates for this endpoint
-    const templates = await this.getAllTemplates(endpoint);
-
-    // Find the requested template
-    const template = templates.find((t) => t.id === id);
-
-    if (!template) {
-      logger.warn('Template not found or not valid for endpoint', {
-        id,
-        endpoint: endpoint || 'default',
-      });
-      return null;
-    }
-
-    return template;
+    // Get all templates (endpoint ignored for predefined templates)
+    const templates = await this.getAllTemplates();
+    return templates.find((t) => t.id === id) || null;
   }
 
   /**
@@ -268,8 +209,8 @@ export class TemplateService {
   }
 
   /**
-   * Clear DMN cache (useful for testing or when DMNs are updated)
-   * Now delegates to sparqlService which handles per-endpoint caches
+   * Clear DMN cache
+   * Delegates to sparqlService which handles per-endpoint caches
    *
    * @param endpoint - Optional endpoint to clear, or clear all if not provided
    */

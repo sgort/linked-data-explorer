@@ -28,7 +28,6 @@ interface ChainConfigProps {
   onLoadPreset: (preset: ChainPreset) => void;
   executionResult: ChainExecutionResult | null;
   isExecuting: boolean;
-  endpoint: string;
 }
 
 /**
@@ -43,7 +42,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   onLoadPreset,
   executionResult,
   isExecuting,
-  endpoint,
 }) => {
   const [showValidation, setShowValidation] = useState(true);
   const [showInputs, setShowInputs] = useState(true);
@@ -67,7 +65,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
       if (selectedCategory === 'all') {
         fetchedTemplates = await templateService.getAllTemplates();
       } else {
-        fetchedTemplates = await templateService.getTemplatesByCategory(selectedCategory, endpoint);
+        fetchedTemplates = await templateService.getTemplatesByCategory(selectedCategory);
       }
 
       setTemplates(fetchedTemplates);
@@ -76,7 +74,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
     } finally {
       setIsLoadingTemplates(false);
     }
-  }, [selectedCategory, endpoint]);
+  }, [selectedCategory]);
 
   // Load templates on mount and when category or endpoint changes
   useEffect(() => {
