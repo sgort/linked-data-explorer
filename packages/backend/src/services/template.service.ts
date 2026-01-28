@@ -36,46 +36,7 @@ const typedTestData = testDataConfig as TestDataConfig;
  * Provides predefined and custom chain configurations
  */
 export class TemplateService {
-  // Cache for DMN list (to avoid repeated SPARQL queries)
-  private dmnCache: {
-    data: Set<string> | null;
-    timestamp: number;
-  } = {
-    data: null,
-    timestamp: 0,
-  };
-
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-  /**
-   * Get cached DMN identifiers or fetch from SPARQL
-   */
-  private async getAvailableDmnIds(): Promise<Set<string>> {
-    const now = Date.now();
-
-    // Return cached data if still valid
-    if (this.dmnCache.data && now - this.dmnCache.timestamp < this.CACHE_TTL) {
-      logger.info('Using cached DMN list', {
-        age: Math.round((now - this.dmnCache.timestamp) / 1000) + 's',
-      });
-      return this.dmnCache.data;
-    }
-
-    // Fetch fresh data
-    logger.info('Fetching fresh DMN list', {
-      reason: this.dmnCache.data ? 'cache expired' : 'cache empty',
-    });
-    const allDmns = await sparqlService.getAllDmns();
-    const dmnIds = new Set(allDmns.map((dmn) => dmn.identifier));
-
-    // Update cache
-    this.dmnCache = {
-      data: dmnIds,
-      timestamp: now,
-    };
-
-    return dmnIds;
-  }
+  // No cache needed - we use sparqlService's per-endpoint cache
 
   /**
    * Predefined chain templates
@@ -143,77 +104,78 @@ export class TemplateService {
 
   /**
    * Get all available templates
-   * Future: Can be extended to include user-created templates from database
+   * Returns predefined templates (hardcoded in testData.json)
+   *
+   * @param endpoint - Optional SPARQL endpoint URL (reserved for future DB-backed templates)
+   * @returns Array of predefined templates
    */
-  async getAllTemplates(): Promise<ChainTemplate[]> {
-    logger.info('Fetching all chain templates');
+  async getAllTemplates(endpoint?: string): Promise<ChainTemplate[]> {
+    logger.info('Fetching all chain templates', {
+      ...(endpoint && { endpoint: 'parameter-ignored-for-predefined-templates' }),
+    });
 
-    // Get cached or fresh DMN list (only queries SPARQL once per 5 minutes)
-    const availableDmnIds = await this.getAvailableDmnIds();
+    // Return all predefined templates
+    // NOTE: endpoint parameter kept for future when templates are stored in database
+    // For now, predefined templates are global and not filtered by endpoint
+    logger.info('Templates fetched', {
+      count: this.PREDEFINED_TEMPLATES.length,
+      source: 'predefined',
+    });
 
-    // Validate that DMNs in templates exist
-    const validatedTemplates: ChainTemplate[] = [];
-
-    for (const template of this.PREDEFINED_TEMPLATES) {
-      // Check if all DMNs in template exist (using cached set)
-      const missingDmns = template.dmnIds.filter((dmnId) => !availableDmnIds.has(dmnId));
-
-      if (missingDmns.length > 0) {
-        logger.warn('Template references missing DMNs', {
-          templateId: template.id,
-          missingDmns,
-        });
-        // Skip templates with missing DMNs
-        continue;
-      }
-
-      validatedTemplates.push(template);
-    }
-
-    logger.info('Templates fetched', { count: validatedTemplates.length });
-
-    return validatedTemplates;
+    return this.PREDEFINED_TEMPLATES;
   }
 
   /**
    * Get template by ID
    *
    * @param id - Template identifier
+   * @param endpoint - Optional SPARQL endpoint URL (reserved for future)
    * @returns Template or null if not found
    */
-  async getTemplateById(id: string): Promise<ChainTemplate | null> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getTemplateById(id: string, endpoint?: string): Promise<ChainTemplate | null> {
     logger.info('Fetching template by ID', { id });
 
+    // Get all templates (endpoint ignored for predefined templates)
     const templates = await this.getAllTemplates();
     return templates.find((t) => t.id === id) || null;
   }
 
   /**
    * Get templates by category
+   * NEW: Accepts endpoint parameter
    *
    * @param category - Template category (e.g., 'social', 'financial')
-   * @returns Filtered templates
+   * @param endpoint - Optional SPARQL endpoint URL
+   * @returns Filtered templates valid for the endpoint
    */
-  async getTemplatesByCategory(category: string): Promise<ChainTemplate[]> {
-    logger.info('Fetching templates by category', { category });
+  async getTemplatesByCategory(category: string, endpoint?: string): Promise<ChainTemplate[]> {
+    logger.info('Fetching templates by category', {
+      category,
+      ...(endpoint && { endpoint }),
+    });
 
-    const templates = await this.getAllTemplates();
+    const templates = await this.getAllTemplates(endpoint);
     return templates.filter((t) => t.category === category);
   }
 
   /**
    * Get templates by tag
+   * NEW: Accepts endpoint parameter
    *
    * @param tag - Template tag (e.g., 'benefits', 'municipal')
-   * @returns Filtered templates
+   * @param endpoint - Optional SPARQL endpoint URL
+   * @returns Filtered templates valid for the endpoint
    */
-  async getTemplatesByTag(tag: string): Promise<ChainTemplate[]> {
-    logger.info('Fetching templates by tag', { tag });
+  async getTemplatesByTag(tag: string, endpoint?: string): Promise<ChainTemplate[]> {
+    logger.info('Fetching templates by tag', {
+      tag,
+      ...(endpoint && { endpoint }),
+    });
 
-    const templates = await this.getAllTemplates();
+    const templates = await this.getAllTemplates(endpoint);
     return templates.filter((t) => t.tags.includes(tag));
   }
-
   /**
    * Get all unique categories
    *
@@ -247,14 +209,16 @@ export class TemplateService {
   }
 
   /**
-   * Clear DMN cache (useful for testing or when DMNs are updated)
+   * Clear DMN cache
+   * Delegates to sparqlService which handles per-endpoint caches
+   *
+   * @param endpoint - Optional endpoint to clear, or clear all if not provided
    */
-  clearCache(): void {
-    logger.info('Clearing DMN cache');
-    this.dmnCache = {
-      data: null,
-      timestamp: 0,
-    };
+  clearCache(endpoint?: string): void {
+    logger.info('Clearing DMN cache', {
+      ...(endpoint ? { endpoint } : { scope: 'all' }),
+    });
+    sparqlService.clearCache(endpoint);
   }
 }
 

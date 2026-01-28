@@ -8,6 +8,7 @@ export interface DmnVariable {
   type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double';
   description?: string;
   value?: unknown;
+  testValue?: string | number | boolean;
 }
 
 export interface DmnModel {

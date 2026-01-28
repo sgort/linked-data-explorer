@@ -1,0 +1,356 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix cv: <http://data.europa.eu/m8g/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix eli: <http://data.europa.eu/eli/ontology#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix ronl: <https://regels.overheid.nl/termen/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix cprmv: <https://cprmv.open-regels.nl/0.3.0/> .
+
+
+# ============================================================
+#  Public Service
+# ============================================================
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie> a cpsv:PublicService ;
+    dct:identifier "isde-subsidie-dakisolatie" ;
+    dct:title "Investeringssubsidie duurzame energie en energiebesparing - dakisolatie"@nl ;
+    dct:description "Gebruik de Investeringssubsidie duurzame energie en energiebesparing (ISDE) om uw woning te verduurzamen. Zo vraagt u geld terug nadat u een (hybride) warmtepomp, zonneboiler of elektrische kookvoorziening laat installeren. Of nadat u uw woning isoleert of deze aansluit op een warmtenet. Vanaf 2026 kunt u ook subsidie aanvragen voor ventilatie als u de ventilatiemaatregel combineert met een of meer isolatiemaatregelen."@nl ;
+    cv:sector <https://publications.europa.eu/resource/authority/corporate-body-classification/NATIONAL> ;
+    dcat:keyword "subsidy, sustainability, homeowner"@nl ;
+    dct:language <https://publications.europa.eu/resource/authority/language/NL> ;
+    cv:hasCompetentAuthority <https://organisaties.overheid.nl/28325623/Rijksdienst_voor_Ondernemend_Nederland> ;
+    cv:hasLegalResource <https://wetten.overheid.nl/BWBR0035474/2026-01-01#Hoofdstuk4_Titeldeel4.5> ;
+    cprmv:hasDecisionModel <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn>  .
+
+
+# ============================================================
+#  Organization
+# ============================================================
+
+<https://organisaties.overheid.nl/28325623/Rijksdienst_voor_Ondernemend_Nederland> a cv:PublicOrganisation ;
+    dct:identifier "Rijksdienst_voor_Ondernemend_Nederland" ;
+    skos:prefLabel "Rijksdienst voor Ondernemend Nederland (RVO)"@nl ;
+    foaf:homepage <https://www.rvo.nl/> ;
+    cv:spatial <https://publications.europa.eu/resource/authority/country/NLD> ;
+    foaf:logo <./assets/Rijksdienst_voor_Ondernemend_Nederland_logo.png> ;
+    schema:image <./assets/Rijksdienst_voor_Ondernemend_Nederland_logo.png>  .
+
+
+# ============================================================
+#  Legal Resource
+# ============================================================
+
+<https://wetten.overheid.nl/BWBR0035474/2026-01-01#Hoofdstuk4_Titeldeel4.5> a eli:LegalResource ;
+    dct:identifier "BWBR0035474/2026-01-01#Hoofdstuk4_Titeldeel4.5" ;
+    dct:title "Regeling nationale EZ-, LVVN- en KGG-subsidies"@nl ;
+    dct:description "De informatie in dit onderdeel vormt geen bekendmaking in de zin van de Grondwet. Alleen publicatie in het Tractatenblad, het Staatsblad, de Staatscourant en andere vanwege de overheid verkrijgbaar gestelde publicatiebladen heeft een officieel karakter."@nl ;
+    eli:is_realized_by <https://wetten.overheid.nl/BWBR0035474/2026-01-01#Hoofdstuk4_Titeldeel4.5/2026-01-01>  .
+
+
+# ============================================================
+#  DMN Decision Model
+# ============================================================
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> a cprmv:DecisionModel ;
+    dct:identifier "bereken_isolatie_opties" ;
+    dct:title "dakisolatie-berekening-final.dmn"@nl ;
+    ronl:implements <https://regels.overheid.nl/services/isde-subsidie-dakisolatie> ;
+    dct:source <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/file> ;
+    cprmv:deploymentId "71f2804e-fc26-11f0-a5a4-3a5e81cd33b0" ;
+    cprmv:deployedAt "2026-01-28T08:50:49.951Z"^^xsd:dateTime ;
+    ronl:implementedBy <https://operaton-doc.open-regels.nl/engine-rest/decision-definition/key/bereken_isolatie_opties/evaluate> ;
+    cprmv:lastTested "2026-01-28T08:52:14.587Z"^^xsd:dateTime ;
+    cprmv:testStatus "passed" ;
+    dct:description "DMN decision model for service evaluation"@nl .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/1> a cpsv:Input ;
+    dct:identifier "huidige_r_waarde" ;
+    dct:title "huidige_r_waarde"@nl ;
+    dct:type "Double" ;
+    schema:value 2.8 ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/2> a cpsv:Input ;
+    dct:identifier "dak_oppervlakte_m2" ;
+    dct:title "dak_oppervlakte_m2"@nl ;
+    dct:type "Double" ;
+    schema:value 120 ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/3> a cpsv:Input ;
+    dct:identifier "lambda_w_mk" ;
+    dct:title "lambda_w_mk"@nl ;
+    dct:type "Double" ;
+    schema:value 0.035 ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/4> a cpsv:Input ;
+    dct:identifier "materiaal_cost_per_m3" ;
+    dct:title "materiaal_cost_per_m3"@nl ;
+    dct:type "Integer" ;
+    schema:value 80 ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/5> a cpsv:Input ;
+    dct:identifier "install_cost_per_m2_per_100mm" ;
+    dct:title "install_cost_per_m2_per_100mm"@nl ;
+    dct:type "Integer" ;
+    schema:value 25 ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/6> a cpsv:Input ;
+    dct:identifier "doel_r_waarde" ;
+    dct:title "doel_r_waarde"@nl ;
+    dct:type "Double" ;
+    schema:value 3 ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/1> a cpsv:Output ;
+    dct:identifier "extra_dikte_mm" ;
+    dct:title "extra_dikte_mm"@nl ;
+    dct:type "Integer" ;
+    schema:value 7 ;
+    cpsv:produces <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/2> a cpsv:Output ;
+    dct:identifier "netto_kosten" ;
+    dct:title "netto_kosten"@nl ;
+    dct:type "Integer" ;
+    schema:value 28 ;
+    cpsv:produces <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/3> a cpsv:Output ;
+    dct:identifier "installatie_kosten" ;
+    dct:title "installatie_kosten"@nl ;
+    dct:type "Integer" ;
+    schema:value 210 ;
+    cpsv:produces <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/4> a cpsv:Output ;
+    dct:identifier "totale_kosten" ;
+    dct:title "totale_kosten"@nl ;
+    dct:type "Integer" ;
+    schema:value 277 ;
+    cpsv:produces <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/5> a cpsv:Output ;
+    dct:identifier "subsidie" ;
+    dct:title "subsidie"@nl ;
+    dct:type "Integer" ;
+    schema:value 249 ;
+    cpsv:produces <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/6> a cpsv:Output ;
+    dct:identifier "terugverdientijd" ;
+    dct:title "terugverdientijd"@nl ;
+    dct:type "Double" ;
+    schema:value 0.4 ;
+    cpsv:produces <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/7> a cpsv:Output ;
+    dct:identifier "delta_r" ;
+    dct:title "delta_r"@nl ;
+    dct:type "Double" ;
+    schema:value 0.2 ;
+    cpsv:produces <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/8> a cpsv:Output ;
+    dct:identifier "materiaal_kosten" ;
+    dct:title "materiaal_kosten"@nl ;
+    dct:type "Integer" ;
+    schema:value 67 ;
+    cpsv:produces <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/9> a cpsv:Output ;
+    dct:identifier "besparing_jaar" ;
+    dct:title "besparing_jaar"@nl ;
+    dct:type "Integer" ;
+    schema:value 80 ;
+    cpsv:produces <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/10> a cpsv:Output ;
+    dct:identifier "aanbeveling" ;
+    dct:title "aanbeveling"@nl ;
+    dct:type "String" ;
+    schema:value "" ;
+    cpsv:produces <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn> .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/rules/rule1> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "rule1" ;
+    cpsv:implements <https://regels.overheid.nl/services/isde-subsidie-dakisolatie> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "isolatie_tabel" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/rules/rule2> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "rule2" ;
+    cpsv:implements <https://regels.overheid.nl/services/isde-subsidie-dakisolatie> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "isolatie_tabel" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/rules/rule3> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "rule3" ;
+    cpsv:implements <https://regels.overheid.nl/services/isde-subsidie-dakisolatie> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "isolatie_tabel" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/isde-subsidie-dakisolatie/rules/rule4> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "rule4" ;
+    cpsv:implements <https://regels.overheid.nl/services/isde-subsidie-dakisolatie> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "isolatie_tabel" ;
+    cprmv:rulesetType "decision-table" .
+
+# =====================================
+# NL-SBB Concept Definitions (DMN Variables)
+# =====================================
+
+<https://regels.overheid.nl/schemes/dmn-variables> a skos:ConceptScheme ;
+    dct:title "DMN Variabelen Begrippenkader"@nl ;
+    dct:description "Begrippenkader voor invoer- en uitvoervariabelen van DMN beslisregels in het RONL stelsel."@nl ;
+    dct:creator "RONL" ;
+    dct:created "2026-01-28"^^xsd:date .
+
+# Input Variable Concepts
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/huidige_r_waarde> a skos:Concept ;
+    skos:prefLabel "Huidige_r_waarde"@nl ;
+    skos:definition "Huidige_r_waarde is een waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "HUID" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/1> ;
+    dct:type "dmn:InputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/dak_oppervlakte_m2> a skos:Concept ;
+    skos:prefLabel "Dak_oppervlakte_m2"@nl ;
+    skos:definition "Dak_oppervlakte_m2 is een waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "DAK_" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/2> ;
+    dct:type "dmn:InputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/lambda_w_mk> a skos:Concept ;
+    skos:prefLabel "Lambda_w_mk"@nl ;
+    skos:definition "Lambda_w_mk is een waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "LAMB" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/3> ;
+    dct:type "dmn:InputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/materiaal_cost_per_m3> a skos:Concept ;
+    skos:prefLabel "Materiaal_cost_per_m3"@nl ;
+    skos:definition "Materiaal_cost_per_m3 is een numerieke waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "MATE" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/4> ;
+    dct:type "dmn:InputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/install_cost_per_m2_per_100mm> a skos:Concept ;
+    skos:prefLabel "Install_cost_per_m2_per_100mm"@nl ;
+    skos:definition "Install_cost_per_m2_per_100mm is een numerieke waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "INST" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/5> ;
+    dct:type "dmn:InputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/doel_r_waarde> a skos:Concept ;
+    skos:prefLabel "Doel_r_waarde"@nl ;
+    skos:definition "Doel_r_waarde is een waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "DOEL" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/input/6> ;
+    dct:type "dmn:InputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+# Output Variable Concepts
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/extra_dikte_mm> a skos:Concept ;
+    skos:prefLabel "Extra_dikte_mm"@nl ;
+    skos:definition "Extra_dikte_mm is een numerieke waarde die als uitvoer wordt gegenereerd door de beslisregel."@nl ;
+    skos:notation "EXTR" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/1> ;
+    dct:type "dmn:OutputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/netto_kosten> a skos:Concept ;
+    skos:prefLabel "Netto_kosten"@nl ;
+    skos:definition "Netto_kosten is een numerieke waarde die als uitvoer wordt gegenereerd door de beslisregel."@nl ;
+    skos:notation "NETT" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/2> ;
+    dct:type "dmn:OutputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/installatie_kosten> a skos:Concept ;
+    skos:prefLabel "Installatie_kosten"@nl ;
+    skos:definition "Installatie_kosten is een numerieke waarde die als uitvoer wordt gegenereerd door de beslisregel."@nl ;
+    skos:notation "INST1" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/3> ;
+    dct:type "dmn:OutputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/totale_kosten> a skos:Concept ;
+    skos:prefLabel "Totale_kosten"@nl ;
+    skos:definition "Totale_kosten is een numerieke waarde die als uitvoer wordt gegenereerd door de beslisregel."@nl ;
+    skos:notation "TOTA" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/4> ;
+    dct:type "dmn:OutputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/subsidie> a skos:Concept ;
+    skos:prefLabel "Subsidie"@nl ;
+    skos:definition "Subsidie is een numerieke waarde die als uitvoer wordt gegenereerd door de beslisregel."@nl ;
+    skos:notation "SUBS" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/5> ;
+    dct:type "dmn:OutputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/terugverdientijd> a skos:Concept ;
+    skos:prefLabel "Terugverdientijd"@nl ;
+    skos:definition "Terugverdientijd is een waarde die als uitvoer wordt gegenereerd door de beslisregel."@nl ;
+    skos:notation "TERU" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/6> ;
+    dct:type "dmn:OutputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/delta_r> a skos:Concept ;
+    skos:prefLabel "Delta_r"@nl ;
+    skos:definition "Delta_r is een waarde die als uitvoer wordt gegenereerd door de beslisregel."@nl ;
+    skos:notation "DELT" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/7> ;
+    dct:type "dmn:OutputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/materiaal_kosten> a skos:Concept ;
+    skos:prefLabel "Materiaal_kosten"@nl ;
+    skos:definition "Materiaal_kosten is een numerieke waarde die als uitvoer wordt gegenereerd door de beslisregel."@nl ;
+    skos:notation "MATE1" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/8> ;
+    dct:type "dmn:OutputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/besparing_jaar> a skos:Concept ;
+    skos:prefLabel "Besparing_jaar"@nl ;
+    skos:definition "Besparing_jaar is een numerieke waarde die als uitvoer wordt gegenereerd door de beslisregel."@nl ;
+    skos:notation "BESP" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/9> ;
+    dct:type "dmn:OutputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/berekenisolatieopties/aanbeveling> a skos:Concept ;
+    skos:prefLabel "Aanbeveling"@nl ;
+    skos:definition "Aanbeveling is een tekstuele waarde die als uitvoer wordt gegenereerd door de beslisregel."@nl ;
+    skos:notation "AANB" ;
+    dct:subject <https://regels.overheid.nl/services/isde-subsidie-dakisolatie/dmn/output/10> ;
+    dct:type "dmn:OutputVariable" ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+

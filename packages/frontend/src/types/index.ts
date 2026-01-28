@@ -66,6 +66,7 @@ export interface DmnVariable {
   title: string;
   type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double';
   description?: string;
+  testValue?: string | number | boolean;
 }
 
 export interface DmnModel {

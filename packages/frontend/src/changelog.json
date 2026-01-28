@@ -1,6 +1,50 @@
 {
   "versions": [
     {
+      "version": "0.5.3",
+      "status": "New Features",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "January 27, 2026",
+      "sections": [
+        {
+          "title": "User-Created Templates",
+          "icon": "💾",
+          "iconColor": "purple",
+          "items": [
+            "'Save as Template' button to save current chain configurations as reusable templates",
+            "Templates stored in browser localStorage with automatic endpoint-specific scoping",
+            "Save modal with template name and description fields",
+            "Validation enforcement - only valid chains can be saved as templates",
+            "Templates automatically save chain structure, DMN sequence, and input values"
+          ]
+        },
+        {
+          "title": "Template Management",
+          "icon": "🗂️",
+          "iconColor": "blue",
+          "items": [
+            "User templates displayed in separate 'My Templates' section",
+            "Delete functionality for user-created templates with confirmation dialog",
+            "Templates persist across browser sessions",
+            "Each endpoint maintains its own isolated template collection",
+            "Category filter supports 'Custom' option to show only user templates"
+          ]
+        },
+        {
+          "title": "UX Improvements",
+          "icon": "✨",
+          "iconColor": "emerald",
+          "items": [
+            "Clear visual separation between 'Example Templates' (predefined) and 'My Templates' (user-created)",
+            "Template cards show complexity badges and estimated execution time",
+            "Delete button (trash icon) on user template cards",
+            "Save button disabled state with helpful tooltip when chain is invalid"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.5.2",
       "status": "New Feature",
       "statusColor": "emerald",
