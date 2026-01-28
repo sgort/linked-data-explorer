@@ -106,6 +106,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
         body: JSON.stringify({
           dmnIds: selectedChain,
           inputs,
+          endpoint, // Pass current endpoint to backend
           options: { includeIntermediateSteps: true },
         }),
       });

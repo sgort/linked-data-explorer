@@ -1,6 +1,25 @@
 {
   "versions": [
     {
+      "version": "0.5.4",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "January 28, 2026",
+      "sections": [
+        {
+          "title": "Chain Execution Fixes",
+          "icon": "🐛",
+          "iconColor": "blue",
+          "items": [
+            "Fixed chain execution with non-default endpoints - backend now uses correct endpoint cache when looking up DMNs",
+            "Added endpoint parameter to chain execution API flow (frontend → backend → orchestration service)",
+            "DMNs from any TriplyDB dataset can now be executed successfully, not just the default endpoint"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.5.3",
       "status": "New Features",
       "statusColor": "purple",
