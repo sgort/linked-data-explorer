@@ -263,6 +263,7 @@ ORDER BY ?identifier
   /**
    * Get input variables for a specific DMN
    * NEW: Accepts optional endpoint parameter
+   * NEW: Fetches schema:value for test data
    *
    * @param dmnId - URI of the DMN model
    * @param endpoint - Optional SPARQL endpoint URL
@@ -274,7 +275,7 @@ PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX schema: <http://schema.org/>
 
-SELECT ?identifier ?title ?type ?description
+SELECT ?identifier ?title ?type ?description ?value
 WHERE {
   ?input cpsv:isRequiredBy <${dmnId}> ;
          dct:identifier ?identifier ;
@@ -282,24 +283,45 @@ WHERE {
          dct:type ?type .
   
   OPTIONAL { ?input dct:description ?description }
+  OPTIONAL { ?input schema:value ?value }
 }
 ORDER BY ?identifier
-    `;
+  `;
 
     const data = await this.executeQuery(query, endpoint);
     const bindings = data.results?.bindings || [];
 
-    return bindings.map((b: SparqlResultRow) => ({
-      identifier: b.identifier.value,
-      title: b.title.value,
-      type: b.type.value as 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double',
-      description: b.description?.value,
-    }));
+    return bindings.map((b: SparqlResultRow) => {
+      const result: DmnVariable = {
+        identifier: b.identifier.value,
+        title: b.title.value,
+        type: b.type.value as 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double',
+        description: b.description?.value,
+      };
+
+      // Add testValue if schema:value exists
+      if (b.value) {
+        const rawValue = b.value.value;
+        // Convert to appropriate type based on DMN type
+        if (result.type === 'Integer') {
+          result.testValue = parseInt(rawValue, 10);
+        } else if (result.type === 'Double') {
+          result.testValue = parseFloat(rawValue);
+        } else if (result.type === 'Boolean') {
+          result.testValue = rawValue.toLowerCase() === 'true';
+        } else {
+          result.testValue = rawValue;
+        }
+      }
+
+      return result;
+    });
   }
 
   /**
    * Get output variables for a specific DMN
    * NEW: Accepts optional endpoint parameter
+   * NEW: Fetches schema:value for test data
    *
    * @param dmnId - URI of the DMN model
    * @param endpoint - Optional SPARQL endpoint URL
@@ -309,8 +331,9 @@ ORDER BY ?identifier
     const query = `
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX schema: <http://schema.org/>
 
-SELECT ?identifier ?title ?type ?description
+SELECT ?identifier ?title ?type ?description ?value
 WHERE {
   ?output cpsv:produces <${dmnId}> ;
           dct:identifier ?identifier ;
@@ -318,19 +341,39 @@ WHERE {
           dct:type ?type .
   
   OPTIONAL { ?output dct:description ?description }
+  OPTIONAL { ?output schema:value ?value }
 }
 ORDER BY ?identifier
-    `;
+  `;
 
     const data = await this.executeQuery(query, endpoint);
     const bindings = data.results?.bindings || [];
 
-    return bindings.map((b: SparqlResultRow) => ({
-      identifier: b.identifier.value,
-      title: b.title.value,
-      type: b.type.value as 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double',
-      description: b.description?.value,
-    }));
+    return bindings.map((b: SparqlResultRow) => {
+      const result: DmnVariable = {
+        identifier: b.identifier.value,
+        title: b.title.value,
+        type: b.type.value as 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double',
+        description: b.description?.value,
+      };
+
+      // Add testValue if schema:value exists
+      if (b.value) {
+        const rawValue = b.value.value;
+        // Convert to appropriate type based on DMN type
+        if (result.type === 'Integer') {
+          result.testValue = parseInt(rawValue, 10);
+        } else if (result.type === 'Double') {
+          result.testValue = parseFloat(rawValue);
+        } else if (result.type === 'Boolean') {
+          result.testValue = rawValue.toLowerCase() === 'true';
+        } else {
+          result.testValue = rawValue;
+        }
+      }
+
+      return result;
+    });
   }
 
   /**

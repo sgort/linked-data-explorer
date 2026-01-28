@@ -15,6 +15,7 @@ export interface RequiredInput {
   type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double';
   requiredBy: string;
   description?: string;
+  testValue?: string | number | boolean;
 }
 
 export interface ChainValidation {

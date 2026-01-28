@@ -205,6 +205,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
               type: input.type,
               requiredBy: dmn.identifier,
               description: input.description,
+              testValue: input.testValue,
             };
 
             // Always add to requiredInputs (for form rendering)
