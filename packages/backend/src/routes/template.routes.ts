@@ -14,12 +14,12 @@ const router = Router();
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { category, tag, endpoint } = req.query;  // ← ADD endpoint
+    const { category, tag, endpoint } = req.query; // ← ADD endpoint
 
     logger.info('Chain templates list request', {
       category,
       tag,
-      ...(endpoint && { endpoint }),  // ← LOG endpoint if present
+      ...(endpoint && { endpoint }), // ← LOG endpoint if present
     });
 
     let templates;
@@ -27,16 +27,16 @@ router.get('/', async (req: Request, res: Response) => {
     if (category && typeof category === 'string') {
       templates = await templateService.getTemplatesByCategory(
         category,
-        endpoint as string | undefined  // ← PASS endpoint
+        endpoint as string | undefined // ← PASS endpoint
       );
     } else if (tag && typeof tag === 'string') {
       templates = await templateService.getTemplatesByTag(
         tag,
-        endpoint as string | undefined  // ← PASS endpoint
+        endpoint as string | undefined // ← PASS endpoint
       );
     } else {
       templates = await templateService.getAllTemplates(
-        endpoint as string | undefined  // ← PASS endpoint
+        endpoint as string | undefined // ← PASS endpoint
       );
     }
 
@@ -77,16 +77,16 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { endpoint } = req.query;  // ← ADD endpoint
+    const { endpoint } = req.query; // ← ADD endpoint
 
     logger.info('Chain template details request', {
       id,
-      ...(endpoint && { endpoint }),  // ← LOG endpoint if present
+      ...(endpoint && { endpoint }), // ← LOG endpoint if present
     });
 
     const template = await templateService.getTemplateById(
       id,
-      endpoint as string | undefined  // ← PASS endpoint
+      endpoint as string | undefined // ← PASS endpoint
     );
 
     if (!template) {
