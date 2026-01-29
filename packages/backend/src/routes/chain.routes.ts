@@ -15,8 +15,7 @@ const router = Router();
  */
 router.post('/execute', async (req: Request, res: Response) => {
   try {
-    const { dmnIds, inputs, options }: ChainExecutionRequest = req.body;
-
+    const { dmnIds, inputs, options, endpoint }: ChainExecutionRequest = req.body;
     // Validate dmnIds exists and is not empty
     if (!dmnIds || dmnIds.length === 0) {
       // ✅ Now TypeScript knows dmnIds exists after this
@@ -41,10 +40,14 @@ router.post('/execute', async (req: Request, res: Response) => {
       } as ApiResponse);
     }
 
-    logger.info('Chain execution request', { dmnIds, inputCount: Object.keys(inputs).length });
+    logger.info('Chain execution request', {
+      dmnIds,
+      inputCount: Object.keys(inputs).length,
+      endpoint: endpoint || 'default',
+    });
 
     // ✅ After the check above, TypeScript knows dmnIds is string[]
-    const result = await orchestrationService.executeChain(dmnIds, inputs);
+    const result = await orchestrationService.executeChain(dmnIds, inputs, endpoint);
 
     const responseData = {
       success: result.success,
