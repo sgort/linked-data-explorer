@@ -150,6 +150,52 @@ const App: React.FC = () => {
     return ALL_QUERIES;
   };
 
+  /**
+   * Export SPARQL results to CSV
+   */
+  const handleExportCSV = () => {
+    if (!sparqlResult || !sparqlResult.results.bindings.length) {
+      return;
+    }
+
+    try {
+      // Get all unique variable names from results
+      const variables = sparqlResult.head.vars;
+
+      // Create CSV header
+      const csvRows: string[] = [];
+      csvRows.push(variables.join(','));
+
+      // Add data rows
+      sparqlResult.results.bindings.forEach((binding) => {
+        const row = variables.map((variable) => {
+          const value = binding[variable]?.value || '';
+          // Escape quotes and wrap in quotes if contains comma or newline
+          const escaped = value.replace(/"/g, '""');
+          return /[,\n"]/.test(escaped) ? `"${escaped}"` : escaped;
+        });
+        csvRows.push(row.join(','));
+      });
+
+      // Create blob and download
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `sparql-results-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export CSV:', error);
+      setError(
+        'Failed to export CSV: ' + (error instanceof Error ? error.message : 'Unknown error')
+      );
+    }
+  };
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
       {/* Sidebar Navigation */}
@@ -555,7 +601,10 @@ const App: React.FC = () => {
                         )}
                       </h3>
                       {sparqlResult && (
-                        <button className="text-slate-400 hover:text-blue-600 flex items-center gap-1 text-xs transition-colors">
+                        <button
+                          onClick={handleExportCSV}
+                          className="text-slate-600 hover:text-blue-600 flex items-center gap-1 text-xs transition-colors hover:bg-slate-50 px-2 py-1 rounded"
+                        >
                           <Download size={14} /> Export CSV
                         </button>
                       )}

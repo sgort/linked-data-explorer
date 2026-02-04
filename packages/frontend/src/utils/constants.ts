@@ -125,7 +125,7 @@ ORDER BY ?serviceTitle ?validFrom ?ruleTitle`,
     name: 'Service Rules Metadata',
     category: 'rules',
     sparql: `${COMMON_PREFIXES}
-SELECT ?serviceId ?serviceTitle ?rulesetId ?ruleIdPath ?ruleId ?ruleDefinition ?legalResourceId
+SELECT DISTINCT ?serviceId ?serviceTitle ?rulesetId ?ruleIdPath ?ruleId ?ruleDefinition
 WHERE {
   # Get service
   ?service a cpsv:PublicService ;
@@ -137,13 +137,16 @@ WHERE {
   ?legalResource dct:identifier ?legalResourceId .
   
   # Find rules with matching rulesetId
-  # Extract rulesetId from legal resource identifier (before the "/")
   ?rule a cprmv:Rule ;
         cprmv:rulesetId ?rulesetId ;
         cprmv:ruleIdPath ?ruleIdPath .
   
-  # Match rulesetId to legal resource identifier
-  FILTER(CONTAINS(?legalResourceId, ?rulesetId))
+  # Only match if rulesetId equals the first part before "/" or "-"
+  FILTER(
+    ?rulesetId = ?legalResourceId ||
+    STRSTARTS(?legalResourceId, CONCAT(?rulesetId, "/")) ||
+    STRSTARTS(?legalResourceId, CONCAT(?rulesetId, "-"))
+  )
   
   # Optional: get additional rule details
   OPTIONAL { ?rule cprmv:id ?ruleId }
