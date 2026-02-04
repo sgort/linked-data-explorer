@@ -122,6 +122,38 @@ WHERE {
 ORDER BY ?serviceTitle ?validFrom ?ruleTitle`,
   },
   {
+    name: 'Service Rules Metadata',
+    category: 'rules',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?serviceId ?serviceTitle ?rulesetId ?ruleIdPath ?ruleId ?ruleDefinition ?legalResourceId
+WHERE {
+  # Get service
+  ?service a cpsv:PublicService ;
+           dct:identifier ?serviceId ;
+           dct:title ?serviceTitle .
+  
+  # Get legal resource linked to service
+  ?service cv:hasLegalResource ?legalResource .
+  ?legalResource dct:identifier ?legalResourceId .
+  
+  # Find rules with matching rulesetId
+  # Extract rulesetId from legal resource identifier (before the "/")
+  ?rule a cprmv:Rule ;
+        cprmv:rulesetId ?rulesetId ;
+        cprmv:ruleIdPath ?ruleIdPath .
+  
+  # Match rulesetId to legal resource identifier
+  FILTER(CONTAINS(?legalResourceId, ?rulesetId))
+  
+  # Optional: get additional rule details
+  OPTIONAL { ?rule cprmv:id ?ruleId }
+  OPTIONAL { ?rule cprmv:definition ?ruleDefinition }
+  
+  FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "")
+}
+ORDER BY ?serviceId ?rulesetId ?ruleIdPath`,
+  },
+  {
     name: 'Explore Relations (S-P-O)',
     sparql: `${COMMON_PREFIXES}
 SELECT ?s ?p ?o
