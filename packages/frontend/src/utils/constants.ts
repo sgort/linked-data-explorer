@@ -62,6 +62,19 @@ WHERE {
 } ORDER BY ?title`,
   },
   {
+    name: 'All Rule Paths and Norms by Ruleset',
+    category: 'rules',
+    sparql: `${COMMON_PREFIXES}
+SELECT DISTINCT ?rulesetId ?rule ?ruleIdPath ?norm
+WHERE {
+  ?rule a cprmv:Rule ;
+        cprmv:rulesetId ?rulesetId ;
+        cprmv:ruleIdPath ?ruleIdPath ;
+        cprmv:norm ?norm .
+}
+ORDER BY ?rulesetId ?ruleIdPath`,
+  },
+  {
     name: 'Rules with Their Services',
     sparql: `${COMMON_PREFIXES}
 SELECT ?serviceTitle ?ruleTitle ?validFrom ?confidence ?description

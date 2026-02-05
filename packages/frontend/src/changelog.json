@@ -1,12 +1,50 @@
 {
   "versions": [
     {
+      "version": "0.5.5",
+      "status": "Query & Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 5, 2026",
+      "sections": [
+        {
+          "title": "Query Library",
+          "icon": "📚",
+          "iconColor": "blue",
+          "items": [
+            "Added 'All Rule Paths and Norms by Ruleset' query for retrieving cprmv:Rule metadata organized by legal document (rulesetId)",
+            "Query retrieves ruleIdPath and norm values from policy rules in TriplyDB"
+          ]
+        },
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "red",
+          "items": [
+            "Fixed non-functional Export CSV button in Query Editor Results View",
+            "Added handleExportCSV function with proper CSV formatting and escaping"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.5.4",
       "status": "Bug Fixes",
       "statusColor": "blue",
       "borderColor": "blue",
       "date": "January 28, 2026",
       "sections": [
+        {
+          "title": "Test Data & Multi-Endpoint Improvements",
+          "icon": "✨",
+          "iconColor": "emerald",
+          "items": [
+            "Automatic test data population from RDF schema:value in TTL files - inputs now pre-fill with example values defined in metadata",
+            "Fixed chain execution with dynamic endpoints - DMNs from any TriplyDB dataset can now be executed, not just the default endpoint",
+            "Backend endpoint parameter support throughout execution flow (API → orchestration → SPARQL service)",
+            "Intelligent test data fallback: uses RDF values when available, falls back to testData.json for legacy DMNs"
+          ]
+        },
         {
           "title": "Chain Execution Fixes",
           "icon": "🐛",
