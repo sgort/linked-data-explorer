@@ -2,7 +2,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { AlertCircle, CheckCircle2, GripVertical, Trash2, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ExternalLink, GripVertical, Trash2, X } from 'lucide-react';
 import React from 'react';
 
 import { DmnModel } from '../../types';
@@ -36,10 +36,10 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
     <div ref={setNodeRef} style={style} className="mb-3">
       <div
         className={`
-        bg-white rounded-lg border-2 shadow-sm
-        ${isDragging ? 'border-blue-500 shadow-lg' : 'border-slate-200'}
-        transition-all duration-150
-      `}
+      bg-white rounded-lg border-2 shadow-sm
+      ${isDragging ? 'border-blue-500 shadow-lg' : 'border-slate-200'}
+      transition-all duration-150
+    `}
       >
         <div className="p-4">
           <div className="flex items-start gap-3">
@@ -62,6 +62,28 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
               <h3 className="font-semibold text-slate-900">{dmn.identifier}</h3>
               {dmn.description && <p className="text-xs text-slate-500 mt-1">{dmn.description}</p>}
 
+              {/* NEW: Logo and Organization */}
+              {(dmn.logoUrl || dmn.organizationName) && (
+                <div className="flex items-center gap-2 mt-2 mb-2">
+                  {dmn.logoUrl && (
+                    <img
+                      src={dmn.logoUrl}
+                      alt={dmn.organizationName || 'Organization'}
+                      className="w-6 h-6 object-contain rounded border border-slate-200 bg-white p-0.5"
+                      title={dmn.organizationName}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  )}
+                  {dmn.organizationName && (
+                    <span className="text-xs text-slate-600 font-medium">
+                      {dmn.organizationName}
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* METADATA SECTION */}
               <div className="mt-2 space-y-1">
                 {dmn.identifier && (
@@ -73,7 +95,7 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
                       {dmn.identifier}
                     </span>
                   </div>
-                )}{' '}
+                )}
                 {dmn.deploymentId && (
                   <div className="flex items-start gap-2 text-xs">
                     <span className="font-medium text-slate-600 flex-shrink-0">Deployment ID:</span>
@@ -85,9 +107,20 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
                 {dmn.implementedBy && (
                   <div className="flex items-start gap-2 text-xs">
                     <span className="font-medium text-slate-600 flex-shrink-0">API Endpoint:</span>
-                    <span className="text-slate-500 font-mono text-[10px] break-all">
-                      {dmn.implementedBy}
-                    </span>
+
+                    <a
+                      href={dmn.implementedBy}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 font-mono text-[10px] break-all underline decoration-dotted underline-offset-2 inline-flex items-center gap-1 group"
+                      title="Open API endpoint in new tab"
+                    >
+                      <span>{dmn.implementedBy}</span>
+                      <ExternalLink
+                        size={10}
+                        className="flex-shrink-0 opacity-60 group-hover:opacity-100"
+                      />
+                    </a>
                   </div>
                 )}
               </div>

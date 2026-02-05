@@ -106,6 +106,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
         body: JSON.stringify({
           dmnIds: selectedChain,
           inputs,
+          endpoint, // Pass current endpoint to backend
           options: { includeIntermediateSteps: true },
         }),
       });
@@ -205,6 +206,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
               type: input.type,
               requiredBy: dmn.identifier,
               description: input.description,
+              testValue: input.testValue,
             };
 
             // Always add to requiredInputs (for form rendering)
@@ -398,6 +400,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
           onLoadPreset={handleLoadPreset}
           executionResult={executionResult}
           isExecuting={isExecuting}
+          endpoint={endpoint}
         />
       </div>
 

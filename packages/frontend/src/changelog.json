@@ -1,6 +1,129 @@
 {
   "versions": [
     {
+      "version": "0.5.5",
+      "status": "Query & Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 5, 2026",
+      "sections": [
+        {
+          "title": "Query Library",
+          "icon": "📚",
+          "iconColor": "blue",
+          "items": [
+            "Added 'All Rule Paths and Norms by Ruleset' query for retrieving cprmv:Rule metadata organized by legal document (rulesetId)",
+            "Query retrieves ruleIdPath and norm values from policy rules in TriplyDB"
+          ]
+        },
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "red",
+          "items": [
+            "Fixed non-functional Export CSV button in Query Editor Results View",
+            "Added handleExportCSV function with proper CSV formatting and escaping"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.5.4",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "January 28, 2026",
+      "sections": [
+        {
+          "title": "Test Data & Multi-Endpoint Improvements",
+          "icon": "✨",
+          "iconColor": "emerald",
+          "items": [
+            "Automatic test data population from RDF schema:value in TTL files - inputs now pre-fill with example values defined in metadata",
+            "Fixed chain execution with dynamic endpoints - DMNs from any TriplyDB dataset can now be executed, not just the default endpoint",
+            "Backend endpoint parameter support throughout execution flow (API → orchestration → SPARQL service)",
+            "Intelligent test data fallback: uses RDF values when available, falls back to testData.json for legacy DMNs"
+          ]
+        },
+        {
+          "title": "Chain Execution Fixes",
+          "icon": "🐛",
+          "iconColor": "blue",
+          "items": [
+            "Fixed chain execution with non-default endpoints - backend now uses correct endpoint cache when looking up DMNs",
+            "Added endpoint parameter to chain execution API flow (frontend → backend → orchestration service)",
+            "DMNs from any TriplyDB dataset can now be executed successfully, not just the default endpoint"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.5.3",
+      "status": "New Features",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "January 27, 2026",
+      "sections": [
+        {
+          "title": "User-Created Templates",
+          "icon": "💾",
+          "iconColor": "purple",
+          "items": [
+            "'Save as Template' button to save current chain configurations as reusable templates",
+            "Templates stored in browser localStorage with automatic endpoint-specific scoping",
+            "Save modal with template name and description fields",
+            "Validation enforcement - only valid chains can be saved as templates",
+            "Templates automatically save chain structure, DMN sequence, and input values"
+          ]
+        },
+        {
+          "title": "Template Management",
+          "icon": "🗂️",
+          "iconColor": "blue",
+          "items": [
+            "User templates displayed in separate 'My Templates' section",
+            "Delete functionality for user-created templates with confirmation dialog",
+            "Templates persist across browser sessions",
+            "Each endpoint maintains its own isolated template collection",
+            "Category filter supports 'Custom' option to show only user templates"
+          ]
+        },
+        {
+          "title": "UX Improvements",
+          "icon": "✨",
+          "iconColor": "emerald",
+          "items": [
+            "Clear visual separation between 'Example Templates' (predefined) and 'My Templates' (user-created)",
+            "Template cards show complexity badges and estimated execution time",
+            "Delete button (trash icon) on user template cards",
+            "Save button disabled state with helpful tooltip when chain is invalid"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.5.2",
+      "status": "New Feature",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "January 21, 2026",
+      "sections": [
+        {
+          "title": "UX Improvements",
+          "icon": "✨",
+          "iconColor": "emerald",
+          "items": [
+            "Search input field - Located below the 'Available DMNs' header with search icon",
+            "Real-time filtering - Searches across:",
+            "DMN identifier (e.g., 'heusden-pas')",
+            "Description text",
+            "Input variable names",
+            "Output variable names"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.5.1",
       "status": "Performance & Flexibility",
       "statusColor": "blue",

@@ -119,18 +119,30 @@ const InputForm: React.FC<InputFormProps> = ({ chain, inputs, onInputChange, val
         );
       })}
 
-      {/* ✅ UPDATED: Fill with incremental test data */}
+      {/* Fill with incremental test data */}
       <button
         onClick={() => {
-          // Get test data for current chain DMNs
-          const chainDmnIds = chain.map((dmn) => dmn.identifier);
-          const combinedTestData = getCombinedTestData(chainDmnIds);
+          // NEW: Priority 1 - Use testValue from RDF data if available
+          const testDataFromRdf: Record<string, unknown> = {};
 
-          // Fill inputs that match the combined test data
           allInputs.forEach((input) => {
-            if (input.identifier in combinedTestData) {
-              onInputChange(input.identifier, combinedTestData[input.identifier]);
+            if (input.testValue !== undefined && input.testValue !== null) {
+              testDataFromRdf[input.identifier] = input.testValue;
             }
+          });
+
+          // Priority 2 - Fallback to testData.json for DMNs without schema:value
+          let testData: Record<string, unknown> = testDataFromRdf;
+
+          if (Object.keys(testDataFromRdf).length === 0) {
+            // No RDF test data found, use testData.json
+            const chainDmnIds = chain.map((dmn) => dmn.identifier);
+            testData = getCombinedTestData(chainDmnIds);
+          }
+
+          // Apply the test data to all matching inputs
+          Object.entries(testData).forEach(([key, value]) => {
+            onInputChange(key, value);
           });
         }}
         className="w-full mt-2 px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors border border-slate-200"

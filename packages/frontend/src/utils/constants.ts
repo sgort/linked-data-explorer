@@ -33,6 +33,24 @@ PREFIX schema: <http://schema.org/>
 
 export const SAMPLE_QUERIES = [
   {
+    name: 'Get All Organizations',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?organization ?identifier ?name ?homepage ?spatial ?logo
+WHERE {
+  ?organization a cv:PublicOrganisation ;
+                dct:identifier ?identifier ;
+                skos:prefLabel ?name .
+
+  OPTIONAL { ?organization foaf:homepage ?homepage }
+  OPTIONAL { ?organization cv:spatial ?spatial }
+  OPTIONAL { ?organization foaf:logo ?logo }
+  OPTIONAL { ?organization schema:image ?logo }
+
+  FILTER(LANG(?name) = "nl" || LANG(?name) = "")
+}
+ORDER BY ?name`,
+  },
+  {
     name: 'Get All Public Services',
     sparql: `${COMMON_PREFIXES}
 SELECT ?service ?title ?description
@@ -42,6 +60,19 @@ WHERE {
   OPTIONAL { ?service dct:description ?description }
   FILTER(LANG(?title) = "nl")
 } ORDER BY ?title`,
+  },
+  {
+    name: 'All Rule Paths and Norms by Ruleset',
+    category: 'rules',
+    sparql: `${COMMON_PREFIXES}
+SELECT DISTINCT ?rulesetId ?rule ?ruleIdPath ?norm
+WHERE {
+  ?rule a cprmv:Rule ;
+        cprmv:rulesetId ?rulesetId ;
+        cprmv:ruleIdPath ?ruleIdPath ;
+        cprmv:norm ?norm .
+}
+ORDER BY ?rulesetId ?ruleIdPath`,
   },
   {
     name: 'Rules with Their Services',
@@ -102,6 +133,41 @@ WHERE {
   FILTER(LANG(?serviceTitle) = "nl")
 }
 ORDER BY ?serviceTitle ?validFrom ?ruleTitle`,
+  },
+  {
+    name: 'Service Rules Metadata',
+    category: 'rules',
+    sparql: `${COMMON_PREFIXES}
+SELECT DISTINCT ?serviceId ?serviceTitle ?rulesetId ?ruleIdPath ?ruleId ?ruleDefinition
+WHERE {
+  # Get service
+  ?service a cpsv:PublicService ;
+           dct:identifier ?serviceId ;
+           dct:title ?serviceTitle .
+  
+  # Get legal resource linked to service
+  ?service cv:hasLegalResource ?legalResource .
+  ?legalResource dct:identifier ?legalResourceId .
+  
+  # Find rules with matching rulesetId
+  ?rule a cprmv:Rule ;
+        cprmv:rulesetId ?rulesetId ;
+        cprmv:ruleIdPath ?ruleIdPath .
+  
+  # Only match if rulesetId equals the first part before "/" or "-"
+  FILTER(
+    ?rulesetId = ?legalResourceId ||
+    STRSTARTS(?legalResourceId, CONCAT(?rulesetId, "/")) ||
+    STRSTARTS(?legalResourceId, CONCAT(?rulesetId, "-"))
+  )
+  
+  # Optional: get additional rule details
+  OPTIONAL { ?rule cprmv:id ?ruleId }
+  OPTIONAL { ?rule cprmv:definition ?ruleDefinition }
+  
+  FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "")
+}
+ORDER BY ?serviceId ?rulesetId ?ruleIdPath`,
   },
   {
     name: 'Explore Relations (S-P-O)',
@@ -180,6 +246,35 @@ WHERE {
   FILTER(LANG(?title) = "nl" || LANG(?title) = "")
 }
 ORDER BY ?title ?inputId ?outputId`,
+  },
+  {
+    name: 'DMNs full path traversed',
+    category: 'orchestration',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?dmn ?dmnTitle ?service ?serviceTitle ?organization ?orgName ?logo
+WHERE {
+  # Start with DMN
+  ?dmn a cprmv:DecisionModel ;
+       dct:title ?dmnTitle ;
+       ronl:implements ?service .
+
+  # Service details
+  ?service a cpsv:PublicService ;
+           dct:title ?serviceTitle ;
+           cv:hasCompetentAuthority ?organization .
+
+  # Organization details
+  ?organization a cv:PublicOrganisation ;
+                skos:prefLabel ?orgName .
+  
+  # Logo (optional)
+  OPTIONAL { ?organization foaf:logo ?logo }
+  
+  FILTER(LANG(?dmnTitle) = "nl" || LANG(?dmnTitle) = "")
+  FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "")
+  FILTER(LANG(?orgName) = "nl" || LANG(?orgName) = "")
+}
+ORDER BY ?dmnTtitle`,
   },
   {
     name: 'DMN Input/Output Details',

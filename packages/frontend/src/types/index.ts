@@ -66,6 +66,7 @@ export interface DmnVariable {
   title: string;
   type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double';
   description?: string;
+  testValue?: string | number | boolean;
 }
 
 export interface DmnModel {
@@ -78,6 +79,11 @@ export interface DmnModel {
   implementedBy?: string;
   lastTested?: string;
   testStatus?: 'passed' | 'failed' | 'pending';
+  service?: string; // NEW: Service URI
+  serviceTitle?: string; // NEW: Service display name
+  organization?: string; // NEW: Organization URI
+  organizationName?: string; // NEW: Organization display name
+  logoUrl?: string; // NEW: Full logo URL (resolved with version ID)
   inputs: DmnVariable[];
   outputs: DmnVariable[];
 }
@@ -123,4 +129,36 @@ export interface ChainExecutionResult {
   steps: ExecutionStep[];
   finalOutputs: Record<string, unknown>;
   error?: string;
+}
+
+/**
+ * TriplyDB Asset
+ */
+export interface TriplyDBAsset {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  contentType: string;
+}
+
+/**
+ * TriplyDB Assets API Response
+ */
+export interface TriplyDBAssetsResponse {
+  success: boolean;
+  assets: TriplyDBAsset[];
+  count: number;
+}
+
+/**
+ * Organization with logo support
+ */
+export interface Organization {
+  uri: string;
+  identifier: string;
+  name: string;
+  homepage?: string;
+  logo?: string;
+  spatial?: string;
 }
