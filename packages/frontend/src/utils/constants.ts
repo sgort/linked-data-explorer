@@ -138,36 +138,44 @@ ORDER BY ?serviceTitle ?validFrom ?ruleTitle`,
     name: 'Service Rules Metadata',
     category: 'rules',
     sparql: `${COMMON_PREFIXES}
-SELECT DISTINCT ?serviceId ?serviceTitle ?rulesetId ?ruleIdPath ?ruleId ?ruleDefinition
+SELECT ?serviceId ?serviceTitle ?legalResourceId ?rulesetId ?ruleIdPath ?ruleId ?ruleDefinition ?ruleSituatie ?ruleNorm
 WHERE {
-  # Get service
-  ?service a cpsv:PublicService ;
-           dct:identifier ?serviceId ;
-           dct:title ?serviceTitle .
-  
-  # Get legal resource linked to service
-  ?service cv:hasLegalResource ?legalResource .
-  ?legalResource dct:identifier ?legalResourceId .
-  
-  # Find rules with matching rulesetId
+  # Start with rules that implement legal resources
   ?rule a cprmv:Rule ;
+        cprmv:implements ?implementedResource ;
         cprmv:rulesetId ?rulesetId ;
         cprmv:ruleIdPath ?ruleIdPath .
   
-  # Only match if rulesetId equals the first part before "/" or "-"
-  FILTER(
-    ?rulesetId = ?legalResourceId ||
-    STRSTARTS(?legalResourceId, CONCAT(?rulesetId, "/")) ||
-    STRSTARTS(?legalResourceId, CONCAT(?rulesetId, "-"))
-  )
+  # Find the legal resource (base or versioned)
+  {
+    # Case 1: Rule implements the base legal resource directly
+    ?implementedResource a eli:LegalResource ;
+                        dct:identifier ?legalResourceId .
+    BIND(?implementedResource as ?legalResource)
+  }
+  UNION
+  {
+    # Case 2: Rule implements a versioned legal resource
+    ?legalResource a eli:LegalResource ;
+                   dct:identifier ?legalResourceId ;
+                   eli:is_realized_by ?implementedResource .
+  }
   
-  # Optional: get additional rule details
+  # Find the service that uses this legal resource
+  ?service a cpsv:PublicService ;
+           dct:identifier ?serviceId ;
+           dct:title ?serviceTitle ;
+           cv:hasLegalResource ?legalResource .
+  
+  # Get rule details
   OPTIONAL { ?rule cprmv:id ?ruleId }
   OPTIONAL { ?rule cprmv:definition ?ruleDefinition }
+  OPTIONAL { ?rule cprmv:situatie ?ruleSituatie }
+  OPTIONAL { ?rule cprmv:norm ?ruleNorm }
   
   FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "")
 }
-ORDER BY ?serviceId ?rulesetId ?ruleIdPath`,
+ORDER BY ?serviceId ?ruleIdPath`,
   },
   {
     name: 'Explore Relations (S-P-O)',

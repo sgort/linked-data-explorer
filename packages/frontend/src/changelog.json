@@ -5,24 +5,37 @@
       "status": "Query & Bug Fixes",
       "statusColor": "blue",
       "borderColor": "blue",
-      "date": "February 5, 2026",
+      "date": "February 6, 2026",
       "sections": [
         {
-          "title": "Query Library",
-          "icon": "📚",
+          "title": "Query Library & Data Quality",
+          "icon": "🔍",
           "iconColor": "blue",
           "items": [
-            "Added 'All Rule Paths and Norms by Ruleset' query for retrieving cprmv:Rule metadata organized by legal document (rulesetId)",
-            "Query retrieves ruleIdPath and norm values from policy rules in TriplyDB"
+            "Added 'Service Rules Metadata' query to retrieve cprmv:Rule → eli:LegalResource → cpsv:PublicService relationships",
+            "Query returns ruleIdPath, ruleDefinition, ruleSituatie, and ruleNorm organized by service identifier",
+            "Leverages new cprmv:implements property for direct semantic linking (eliminates fragile string matching)"
           ]
         },
         {
-          "title": "Bug Fixes",
-          "icon": "🐛",
-          "iconColor": "red",
+          "title": "Export & Usability",
+          "icon": "📥",
+          "iconColor": "green",
           "items": [
-            "Fixed non-functional Export CSV button in Query Editor Results View",
-            "Added handleExportCSV function with proper CSV formatting and escaping"
+            "Added working 'Export CSV' button to Query Editor results view",
+            "CSV export includes proper escaping for commas, quotes, and newlines",
+            "Timestamped filenames (e.g., sparql-results-2026-02-06.csv) for easy organization"
+          ]
+        },
+        {
+          "title": "Data Quality Improvements",
+          "icon": "🔧",
+          "iconColor": "orange",
+          "items": [
+            "Identified and resolved RDF URI collision issue causing rule merging in TriplyDB",
+            "CPSV Editor now generates unique URIs for each cprmv:Rule instance",
+            "Coordinated with CPSV Editor project to add explicit cprmv:Rule → eli:LegalResource links",
+            "Eliminated need for string-based rulesetId matching in favor of semantic RDF relationships"
           ]
         }
       ]
