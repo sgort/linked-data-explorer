@@ -13,9 +13,11 @@ import {
   Settings,
   Share2,
   Trash2,
+  Workflow,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+import BpmnModeler from './components/BpmnModeler/BpmnModeler';
 import ChainBuilder from './components/ChainBuilder/ChainBuilder';
 import Changelog from './components/Changelog';
 import GraphView from './components/GraphView';
@@ -222,6 +224,14 @@ const App: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setViewMode(ViewMode.BPMN)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.BPMN ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="BPMN Modeler"
+          >
+            <Workflow size={24} />
+          </button>
+
+          <button
             onClick={() => setViewMode(ViewMode.VISUALIZE)}
             className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.VISUALIZE ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
             title="Graph Visualization"
@@ -348,6 +358,13 @@ const App: React.FC = () => {
           {viewMode === ViewMode.ORCHESTRATION && (
             <div className="flex-1 overflow-hidden">
               <ChainBuilder endpoint={endpoint} />
+            </div>
+          )}
+
+          {/* BPMN Modeler View */}
+          {viewMode === ViewMode.BPMN && (
+            <div className="flex-1 overflow-hidden">
+              <BpmnModeler endpoint={endpoint} />
             </div>
           )}
 
@@ -520,7 +537,8 @@ const App: React.FC = () => {
           {viewMode !== ViewMode.VISUALIZE &&
             viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.ORCHESTRATION &&
-            viewMode !== ViewMode.TUTORIAL && (
+            viewMode !== ViewMode.TUTORIAL &&
+            viewMode !== ViewMode.BPMN && (
               <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
                 <div className="flex-1 flex flex-col min-h-0">
                   <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
@@ -565,10 +583,11 @@ const App: React.FC = () => {
               </div>
             )}
 
-          {/* Right Results Pane */}
+          {/* Right Panel */}
           {viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.ORCHESTRATION &&
-            viewMode !== ViewMode.TUTORIAL && (
+            viewMode !== ViewMode.TUTORIAL &&
+            viewMode !== ViewMode.BPMN && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
                 {/* Error Overlay */}
                 {error && (

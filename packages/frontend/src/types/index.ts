@@ -53,6 +53,7 @@ export enum ViewMode {
   CHANGELOG = 'CHANGELOG',
   ORCHESTRATION = 'ORCHESTRATION',
   TUTORIAL = 'TUTORIAL',
+  BPMN = 'BPMN',
 }
 
 export interface EndpointConfig {
@@ -161,4 +162,30 @@ export interface Organization {
   homepage?: string;
   logo?: string;
   spatial?: string;
+}
+
+// BPMN-specific types
+export interface BpmnProcess {
+  id: string;
+  name: string;
+  description?: string;
+  xml: string;
+  createdAt: string;
+  updatedAt: string;
+  linkedDmnTemplates: string[]; // DMN template IDs
+}
+
+export interface BpmnBusinessRuleTask {
+  id: string;
+  name: string;
+  decisionRef: string; // DMN identifier
+  resultVariable: string;
+  mapDecisionResult: 'singleEntry' | 'singleResult' | 'collectEntries' | 'resultList';
+}
+
+export interface BpmnModelerState {
+  processes: BpmnProcess[];
+  activeProcessId: string | null;
+  isLoading: boolean;
+  error: string | null;
 }
