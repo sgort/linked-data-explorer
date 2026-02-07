@@ -1,3 +1,6 @@
+import './BpmnModeler.css';
+import './bpmn-js.css';
+
 import Modeler from 'bpmn-js/lib/Modeler';
 import camundaModdleDescriptor from 'camunda-bpmn-moddle/resources/camunda.json';
 import { Download, Save } from 'lucide-react';
@@ -7,9 +10,10 @@ interface BpmnCanvasProps {
   xml: string;
   onSave: (xml: string) => void;
   onElementSelect: (element: unknown) => void;
+  onClose: () => void;
 }
 
-const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect }) => {
+const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect, onClose }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const modelerRef = useRef<Modeler | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -28,9 +32,6 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect })
     // Initialize modeler
     const modeler = new Modeler({
       container: containerRef.current,
-      keyboard: {
-        bindTo: document,
-      },
       moddleExtensions: {
         camunda: camundaModdleDescriptor,
       },
@@ -38,16 +39,25 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect })
 
     modelerRef.current = modeler;
 
-    // Import XML
-    modeler
-      .importXML(xml)
-      .then(() => {
+    // Import XML after modeler is ready
+    const importDiagram = async () => {
+      try {
+        await modeler.importXML(xml);
+
+        // Get canvas and enable interactions
         const canvas = modeler.get('canvas');
+
+        // Zoom to fit viewport after successful import
         canvas.zoom('fit-viewport');
-      })
-      .catch((err: Error) => {
+      } catch (err) {
         console.error('Failed to import BPMN:', err);
-      });
+      }
+    };
+
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      importDiagram();
+    }, 100);
 
     // Listen for changes
     const eventBus = modeler.get('eventBus');
@@ -61,9 +71,33 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect })
       handleElementSelect(element || null);
     });
 
+    // Add custom mouse wheel zoom handler
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      const canvas = modelerRef.current?.get('canvas');
+      if (!canvas) return;
+
+      const currentZoom = canvas.zoom();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+
+      canvas.zoom(Math.max(0.2, Math.min(4, currentZoom + delta)));
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
     // Cleanup
     return () => {
-      modeler.destroy();
+      clearTimeout(timer);
+      if (container) {
+        container.removeEventListener('wheel', handleWheel);
+      }
+      if (modelerRef.current) {
+        modelerRef.current.destroy();
+      }
     };
   }, [xml, handleElementSelect]);
 
@@ -108,8 +142,64 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect })
     <>
       {/* Toolbar */}
       <div className="h-14 bg-slate-50 border-b border-slate-200 px-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-700">BPMN Modeler</h2>
         <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-slate-700">BPMN Modeler</h2>
+
+          {/* Zoom Controls */}
+          <div className="flex items-center gap-1 ml-4 border-l border-slate-300 pl-4">
+            <button
+              onClick={() => {
+                const canvas = modelerRef.current?.get('canvas');
+                canvas?.zoom(canvas.zoom() + 0.1);
+              }}
+              className="p-1.5 rounded hover:bg-slate-200 text-slate-600 transition-colors"
+              title="Zoom In"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+                <circle cx="7" cy="7" r="5" strokeWidth="1.5" />
+                <path d="M7 5v4M5 7h4M10.5 10.5l3.5 3.5" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
+                const canvas = modelerRef.current?.get('canvas');
+                canvas?.zoom(canvas.zoom() - 0.1);
+              }}
+              className="p-1.5 rounded hover:bg-slate-200 text-slate-600 transition-colors"
+              title="Zoom Out"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+                <circle cx="7" cy="7" r="5" strokeWidth="1.5" />
+                <path d="M5 7h4M10.5 10.5l3.5 3.5" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
+                const canvas = modelerRef.current?.get('canvas');
+                canvas?.zoom('fit-viewport');
+              }}
+              className="p-1.5 rounded hover:bg-slate-200 text-slate-600 transition-colors"
+              title="Fit to Viewport"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+                <rect x="2" y="2" width="12" height="12" strokeWidth="1.5" rx="1" />
+                <path d="M5 5l6 6M11 5l-6 6" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors"
+            title="Close Process"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+              <path d="M12 4L4 12M4 4l8 8" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            Close
+          </button>
           <button
             onClick={handleSave}
             disabled={!hasChanges}
@@ -133,7 +223,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect })
       </div>
 
       {/* Canvas */}
-      <div ref={containerRef} className="flex-1 bg-white" />
+      <div ref={containerRef} className="flex-1 bg-white bpmn-container" />
     </>
   );
 };

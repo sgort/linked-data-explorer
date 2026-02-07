@@ -173,6 +173,7 @@ export interface BpmnProcess {
   createdAt: string;
   updatedAt: string;
   linkedDmnTemplates: string[]; // DMN template IDs
+  readonly?: boolean;
 }
 
 export interface BpmnBusinessRuleTask {

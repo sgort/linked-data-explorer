@@ -1,9 +1,9 @@
 import { Workflow } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { BpmnService } from '../../services/bpmnService';
 import { BpmnProcess } from '../../types';
-import { DEFAULT_BPMN_XML } from '../../utils/bpmnTemplates';
+import { DEFAULT_BPMN_XML, TREE_FELLING_EXAMPLE_XML } from '../../utils/bpmnTemplates';
 import BpmnCanvas from './BpmnCanvas';
 import BpmnProperties from './BpmnProperties';
 import ProcessList from './ProcessList';
@@ -19,6 +19,32 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   const [selectedElement, setSelectedElement] = useState<unknown>(null);
 
   const activeProcess = processes.find((p) => p.id === activeProcessId) || null;
+
+  /**
+   * Initialize example process on first visit
+   */
+  useEffect(() => {
+    const existingProcesses = BpmnService.getProcesses();
+
+    // If no processes exist, create the tree felling example
+    if (existingProcesses.length === 0) {
+      const exampleProcess: BpmnProcess = {
+        id: 'example_tree_felling',
+        name: 'Tree Felling Permit (Example)',
+        description: 'Example BPMN process demonstrating DMN decision tasks',
+        xml: TREE_FELLING_EXAMPLE_XML,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        linkedDmnTemplates: ['TreeFellingDecision', 'ReplacementTreeDecision'],
+        readonly: true,
+      };
+
+      BpmnService.saveProcess(exampleProcess);
+      setProcesses([exampleProcess]);
+      setActiveProcessId(exampleProcess.id);
+      setCurrentXml(exampleProcess.xml);
+    }
+  }, []);
 
   /**
    * Create new BPMN process
@@ -73,6 +99,14 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
    * Delete process
    */
   const handleDeleteProcess = (processId: string) => {
+    const process = BpmnService.getProcess(processId);
+
+    // Prevent deletion of readonly processes
+    if (process?.readonly) {
+      alert('Cannot delete example processes');
+      return;
+    }
+
     if (confirm('Delete this process?')) {
       BpmnService.deleteProcess(processId);
       setProcesses(BpmnService.getProcesses());
@@ -94,6 +128,19 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     }
   };
 
+  /**
+   * Close current process and return to empty state
+   */
+  const handleCloseProcess = () => {
+    if (onhashchange && !confirm('You have unsaved changes. Close anyway?')) {
+      return;
+    }
+
+    setActiveProcessId(null);
+    setCurrentXml(DEFAULT_BPMN_XML);
+    setSelectedElement(null);
+  };
+
   return (
     <div className="flex h-full bg-slate-50">
       {/* Left Panel: Process List */}
@@ -113,6 +160,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
             xml={currentXml}
             onSave={handleSaveProcess}
             onElementSelect={setSelectedElement}
+            onClose={handleCloseProcess}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center">
@@ -140,7 +188,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         <BpmnProperties
           selectedElement={selectedElement}
           endpoint={endpoint}
-          onUpdateElement={(updates) => {
+          onUpdateElement={() => {
             // Element updates will be handled by bpmn-js internally
           }}
         />

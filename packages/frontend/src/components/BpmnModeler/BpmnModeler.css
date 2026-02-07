@@ -1,0 +1,42 @@
+/* bpmn-js canvas styles */
+.bpmn-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.bpmn-container .djs-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Fix for rendering artifacts */
+.bpmn-container .djs-overlay-container,
+.bpmn-container .djs-hit-container,
+.bpmn-container .djs-outline-container {
+  pointer-events: none;
+}
+
+.bpmn-container .djs-element {
+  pointer-events: all;
+}
+
+/* Hide waypoint handles when not selected */
+.bpmn-container .djs-connection .djs-visual > :not(.djs-connection-outline) {
+  stroke-width: 2px;
+}
+
+.bpmn-container .djs-bendpoint,
+.bpmn-container .djs-segment-dragger {
+  display: none;
+}
+
+.bpmn-container .selected .djs-bendpoint,
+.bpmn-container .selected .djs-segment-dragger {
+  display: block;
+}
+
+/* Ensure proper layering */
+.bpmn-container svg {
+  display: block;
+}

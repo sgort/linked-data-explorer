@@ -84,7 +84,14 @@ const ProcessList: React.FC<ProcessListProps> = ({
                   />
                 ) : (
                   <div className="flex-1" onDoubleClick={() => handleStartEdit(process)}>
-                    <h3 className="font-medium text-slate-800 text-sm">{process.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-slate-800 text-sm">{process.name}</h3>
+                      {process.readonly && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
+                          EXAMPLE
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-slate-500 mt-1">
                       {new Date(process.updatedAt).toLocaleDateString()}
                     </p>
@@ -95,8 +102,13 @@ const ProcessList: React.FC<ProcessListProps> = ({
                     e.stopPropagation();
                     onDeleteProcess(process.id);
                   }}
-                  className="p-1 rounded hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors"
-                  title="Delete Process"
+                  disabled={process.readonly}
+                  className={`p-1 rounded transition-colors ${
+                    process.readonly
+                      ? 'text-slate-300 cursor-not-allowed'
+                      : 'hover:bg-red-100 text-slate-400 hover:text-red-600'
+                  }`}
+                  title={process.readonly ? 'Cannot delete example' : 'Delete Process'}
                 >
                   <Trash2 size={14} />
                 </button>
