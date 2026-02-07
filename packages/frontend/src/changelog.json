@@ -1,6 +1,75 @@
 {
   "versions": [
     {
+      "version": "0.6.0",
+      "status": "BPMN Process Modeler",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "February 7, 2026",
+      "sections": [
+        {
+          "title": "Core BPMN Functionality",
+          "icon": "🎨",
+          "iconColor": "purple",
+          "items": [
+            "Added interactive BPMN 2.0 process editor with drag-and-drop interface powered by bpmn-js v18.12.0",
+            "Full element palette: start/end events, tasks, gateways, subprocesses, data objects, pools, annotations",
+            "Three-panel layout: process list (left), canvas editor (middle), properties panel (right)",
+            "Mouse wheel zoom (scroll to zoom), zoom controls (+/-/fit-to-viewport), and smooth canvas interactions",
+            "Support for BusinessRuleTasks with camunda:decisionRef attributes for DMN integration with Operaton engine"
+          ]
+        },
+        {
+          "title": "Process Management",
+          "icon": "💾",
+          "iconColor": "blue",
+          "items": [
+            "Create unlimited BPMN processes with localStorage persistence (survives browser refresh)",
+            "Double-click process names to rename, delete with confirmation dialog",
+            "Auto-save functionality preserves changes across sessions",
+            "Export processes as .bpmn XML files compatible with Camunda/Operaton engines",
+            "Close button returns to empty state, allowing quick process switching"
+          ]
+        },
+        {
+          "title": "Example & Documentation",
+          "icon": "📚",
+          "iconColor": "green",
+          "items": [
+            "Tree Felling Permit example process auto-loads on first visit",
+            "Demonstrates complete workflow: user tasks, BusinessRuleTasks (DMN), gateways, conditional flows",
+            "Example protected from deletion with 'EXAMPLE' badge and disabled delete button",
+            "References TreeFellingDecision and ReplacementTreeDecision DMN models",
+            "Serves as reference implementation for government service workflows"
+          ]
+        },
+        {
+          "title": "Properties & Configuration",
+          "icon": "⚙️",
+          "iconColor": "orange",
+          "items": [
+            "Properties panel shows element type, ID, and editable name field",
+            "DMN Decision Reference section for BusinessRuleTasks (decisionRef, resultVariable inputs)",
+            "Real-time property updates synchronized with canvas",
+            "Custom CSS fixes for rendering artifacts (eliminated black circles/lines during connection dragging)",
+            "Integrated camunda-bpmn-moddle v7.0.1 for Camunda namespace support (Operaton compatible)"
+          ]
+        },
+        {
+          "title": "Technical Implementation",
+          "icon": "🔧",
+          "iconColor": "slate",
+          "items": [
+            "TypeScript interfaces: BpmnProcess with id, name, xml, timestamps, linkedDmnTemplates, readonly flag",
+            "BpmnService class for localStorage CRUD operations (getProcesses, saveProcess, deleteProcess, getProcess)",
+            "Default BPMN XML templates including empty process and Tree Felling Permit example",
+            "Custom wheel event handler overrides default Ctrl+Scroll requirement for intuitive zooming",
+            "Component structure: BpmnModeler, BpmnCanvas, BpmnProperties, ProcessList, DmnTemplateSelector (placeholder)"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.5.5",
       "status": "Query & Bug Fixes",
       "statusColor": "blue",

@@ -12,6 +12,26 @@
 
 ---
 
+## ✨ NEW ✨
+
+### BPMN Modeler Implementation
+
+The BPMN Modeler is a web-based process editor integrated into the Linked Data Explorer application. It enables users to create, edit, and visualize BPMN 2.0 business processes with support for DMN decision orchestration through the Operaton engine (Camunda 7 CE fork).
+
+
+**v0.6.0 (2026-02-07)**
+- Initial BPMN Modeler implementation
+- Three-panel layout with process management
+- Tree Felling Permit example auto-loading
+- localStorage persistence
+- Export functionality
+- Custom zoom controls and scroll-to-zoom
+- Properties panel basic implementation
+
+See further the [detailed docs](./docs/BPMN-MODELER-IMPLEMENTATION.md)
+
+---
+
 ## 📋 Table of Contents
 
 - [Architecture Overview](#-architecture-overview)
