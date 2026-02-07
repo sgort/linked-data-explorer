@@ -29,7 +29,7 @@ The BPMN Modeler is a web-based process editor integrated into the Linked Data E
 - Properties panel basic implementation
 
 See further the [detailed docs](./docs/BPMN-MODELER-IMPLEMENTATION.md)
-
+Check the [roadmap document](./docs/ROADMAP.md) for development priorities and next steps. 
 ---
 
 ## 📋 Table of Contents
