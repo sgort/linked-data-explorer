@@ -11,9 +11,25 @@ import packageJson from '../package.json';
 
 const app: Express = express();
 
-// Extract CORS options once
-const corsOptions = {
-  origin: config.corsOrigin,
+type CorsCallback = (error: Error | null, allow?: boolean) => void;
+
+const allowedOrigins = config.corsOrigin.map(o => o.trim());
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin: string | undefined, callback: CorsCallback): void => {
+    // Allow non-browser requests (curl, server-to-server)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
