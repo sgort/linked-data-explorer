@@ -24,7 +24,7 @@ app.use(helmet());
 
 // apply CORS to both normal requests and preflight
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions))
+app.options('*', cors(corsOptions));
 
 // Register routes
 app.use('/api/dmns', dmnXmlRoutes);
