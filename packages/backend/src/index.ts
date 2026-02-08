@@ -11,18 +11,20 @@ import packageJson from '../package.json';
 
 const app: Express = express();
 
+// Extract CORS options once
+const corsOptions = {
+  origin: config.corsOrigin,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
-app.use(
-  cors({
-    origin: config.corsOrigin,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+// apply CORS to both normal requests and preflight
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions))
 
 // Register routes
 app.use('/api/dmns', dmnXmlRoutes);
