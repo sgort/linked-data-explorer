@@ -1,6 +1,25 @@
 {
   "versions": [
     {
+      "version": "0.6.1",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 9, 2026",
+      "sections": [
+        {
+          "title": "Resolved intermittent CORS issues",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "Fixed CORS preflight handling to ensure consistent behavior across all supported origins and browsers",
+            "Explicitly applied CORS configuration to OPTIONS requests to prevent cached preflight mismatches",
+            "Hardened CORS origin validation for improved reliability in multi-environment deployments"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.6.0",
       "status": "BPMN Process Modeler",
       "statusColor": "purple",
