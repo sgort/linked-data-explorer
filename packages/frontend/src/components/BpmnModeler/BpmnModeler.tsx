@@ -11,17 +11,20 @@ interface BpmnModelerProps {
   endpoint: string;
 }
 
-const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
+const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint: _endpoint }) => {
   const [processes, setProcesses] = useState<BpmnProcess[]>(BpmnService.getProcesses());
   const [activeProcessId, setActiveProcessId] = useState<string | null>(null);
   const [currentXml, setCurrentXml] = useState<string>(DEFAULT_BPMN_XML);
-  const [selectedElement, setSelectedElement] = useState<unknown>(null);
 
   const activeProcess = processes.find((p) => p.id === activeProcessId) || null;
 
+  /**
+   * Initialize example process on first visit
+   */
   useEffect(() => {
     const existingProcesses = BpmnService.getProcesses();
 
+    // If no processes exist, create the tree felling example
     if (existingProcesses.length === 0) {
       const exampleProcess: BpmnProcess = {
         id: 'example_tree_felling',
@@ -41,6 +44,9 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     }
   }, []);
 
+  /**
+   * Create new BPMN process
+   */
   const handleCreateProcess = () => {
     const newProcess: BpmnProcess = {
       id: `process_${Date.now()}`,
@@ -57,32 +63,51 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     setCurrentXml(newProcess.xml);
   };
 
-  const handleOpenProcess = (processId: string) => {
+  /**
+   * Load existing process
+   */
+  const handleLoadProcess = (processId: string) => {
     const process = BpmnService.getProcess(processId);
     if (process) {
-      setActiveProcessId(processId);
+      setActiveProcessId(process.id);
       setCurrentXml(process.xml);
     }
   };
 
-  const handleRenameProcess = (processId: string, newName: string) => {
-    const process = BpmnService.getProcess(processId);
+  /**
+   * Save current process
+   */
+  const handleSaveProcess = (xml: string) => {
+    if (!activeProcessId) return;
+
+    const process = BpmnService.getProcess(activeProcessId);
     if (process) {
-      const updated = {
+      const updatedProcess: BpmnProcess = {
         ...process,
-        name: newName,
+        xml,
         updatedAt: new Date().toISOString(),
       };
-      BpmnService.saveProcess(updated);
+      BpmnService.saveProcess(updatedProcess);
       setProcesses(BpmnService.getProcesses());
+      setCurrentXml(xml);
     }
   };
 
+  /**
+   * Delete process
+   */
   const handleDeleteProcess = (processId: string) => {
-    if (confirm('Are you sure you want to delete this process?')) {
+    const process = BpmnService.getProcess(processId);
+
+    // Prevent deletion of readonly processes
+    if (process?.readonly) {
+      alert('Cannot delete example processes');
+      return;
+    }
+
+    if (confirm('Delete this process?')) {
       BpmnService.deleteProcess(processId);
       setProcesses(BpmnService.getProcesses());
-
       if (activeProcessId === processId) {
         setActiveProcessId(null);
         setCurrentXml(DEFAULT_BPMN_XML);
@@ -90,47 +115,46 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     }
   };
 
-  const handleSaveProcess = (xml: string) => {
-    if (!activeProcess) return;
-
-    const updated = {
-      ...activeProcess,
-      xml,
-      updatedAt: new Date().toISOString(),
-    };
-
-    BpmnService.saveProcess(updated);
-    setProcesses(BpmnService.getProcesses());
-    setCurrentXml(xml);
+  /**
+   * Update process name
+   */
+  const handleUpdateProcessName = (processId: string, name: string) => {
+    const process = BpmnService.getProcess(processId);
+    if (process) {
+      BpmnService.saveProcess({ ...process, name, updatedAt: new Date().toISOString() });
+      setProcesses(BpmnService.getProcesses());
+    }
   };
 
+  /**
+   * Close current process and return to empty state
+   */
   const handleCloseProcess = () => {
     setActiveProcessId(null);
     setCurrentXml(DEFAULT_BPMN_XML);
-    setSelectedElement(null);
   };
 
-  function handleUpdateProcessName(processId: string, name: string): void {
-    throw new Error('Function not implemented.');
-  }
-
   return (
-    <div className="flex h-full">
+    <div className="flex h-full bg-slate-50">
+      {/* Left Panel: Process List */}
       <ProcessList
         processes={processes}
         activeProcessId={activeProcessId}
         onCreateProcess={handleCreateProcess}
-        onLoadProcess={handleCloseProcess}
+        onLoadProcess={handleLoadProcess}
         onDeleteProcess={handleDeleteProcess}
         onUpdateProcessName={handleUpdateProcessName}
       />
 
-      <div className="flex-1 flex flex-col">
+      {/* Middle Panel: BPMN Canvas */}
+      <div className="flex-1 flex flex-col border-x border-slate-200">
         {activeProcess ? (
           <BpmnCanvas
             xml={currentXml}
             onSave={handleSaveProcess}
-            onElementSelect={setSelectedElement}
+            onElementSelect={() => {
+              // Element selection handled by properties panel
+            }}
             onClose={handleCloseProcess}
           />
         ) : (
