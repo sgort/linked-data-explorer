@@ -25,23 +25,80 @@ export const DEFAULT_BPMN_XML = `<?xml version="1.0" encoding="UTF-8"?>
 
 /**
  * Tree Felling Permit Example Process
- * Demonstrates BPMN process with DMN decision tasks
+ * Demonstrates BPMN process with DMN decision tasks and embedded forms
  * Source: examples/Flevoland/tree-felling-permit.bpmn
+ * Tested in Operaton Cockpit - Working
  */
 export const TREE_FELLING_EXAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_1" targetNamespace="http://example.com/tree-permit" exporter="Camunda Modeler" exporterVersion="5.43.1">
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_1" targetNamespace="http://example.com/tree-permit" exporter="Camunda Modeler" exporterVersion="5.36.0">
   <bpmn:process id="TreeFellingPermitProcess" name="Apply for Tree Felling Permit" isExecutable="true" camunda:historyTimeToLive="180">
-    <bpmn:startEvent id="StartEvent" />
-    <bpmn:userTask id="SubmitApplication" name="Submit Application" />
-    <bpmn:businessRuleTask id="AssessPermit" name="Assess Felling Permit" camunda:resultVariable="permitDecision" camunda:decisionRef="TreeFellingDecision" camunda:mapDecisionResult="singleEntry" />
-    <bpmn:exclusiveGateway id="Gateway_Permit" name="Permit?" />
-    <bpmn:businessRuleTask id="AssessReplacement" name="Assess Replacement Requirement" camunda:resultVariable="replacementDecision" camunda:decisionRef="ReplacementTreeDecision" camunda:mapDecisionResult="singleEntry" />
-    <bpmn:userTask id="PermitGranted" name="Permit Granted" />
-    <bpmn:userTask id="PermitRejected" name="Permit Rejected" />
-    <bpmn:endEvent id="EndGranted" />
-    <bpmn:endEvent id="EndRejected" />
-    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent" targetRef="SubmitApplication" />
-    <bpmn:sequenceFlow id="Flow_2" sourceRef="SubmitApplication" targetRef="AssessPermit" />
+    <bpmn:startEvent id="StartEvent" camunda:formKey="embedded:deployment:start-form.html">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:businessRuleTask id="AssessPermit" name="Assess Felling Permit" camunda:resultVariable="permitDecision" camunda:decisionRef="TreeFellingDecision" camunda:mapDecisionResult="singleEntry">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:exclusiveGateway id="Gateway_Permit" name="Permit?">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:businessRuleTask id="AssessReplacement" name="Assess Replacement Requirement" camunda:resultVariable="replacementDecision" camunda:decisionRef="ReplacementTreeDecision" camunda:mapDecisionResult="singleEntry">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    
+    <bpmn:scriptTask id="PermitGranted" name="Permit Granted" scriptFormat="javascript">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_0lrorup</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        // Set message for applicant
+        execution.setVariable("finalMessage", "Your tree felling permit has been GRANTED.");
+        execution.setVariable("status", "Approved");
+        
+        // Get replacement decision value
+        var replacement = execution.getVariable("replacementDecision");
+        
+        // Handle different possible values
+        var replacementText = "";
+        if (replacement === null || replacement === undefined) {
+          replacementText = "N/A - No replacement assessment performed";
+        } else if (replacement === true || replacement === "true" || replacement === "Required") {
+          replacementText = "Replacement tree REQUIRED";
+        } else if (replacement === false || replacement === "false" || replacement === "Not Required") {
+          replacementText = "No replacement tree required";
+        } else {
+          replacementText = "Replacement requirement: " + replacement;
+        }
+        
+        execution.setVariable("replacementInfo", replacementText);
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+    
+    <bpmn:scriptTask id="PermitRejected" name="Permit Rejected" scriptFormat="javascript">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        // Set message for applicant
+        execution.setVariable("finalMessage", "Your tree felling permit has been REJECTED.");
+        execution.setVariable("status", "Rejected");
+        execution.setVariable("replacementInfo", "N/A - Permit was rejected");
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+    
+    <!-- This is the ONLY UserTask - requires manual interaction -->
+    <bpmn:userTask id="InformApplication" name="Inform Applicant" camunda:formKey="embedded:deployment:inform-applicant-form.html" camunda:assignee="demo">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:incoming>Flow_0lrorup</bpmn:incoming>
+      <bpmn:outgoing>Flow_0noopkb</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:endEvent id="End">
+      <bpmn:incoming>Flow_0noopkb</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent" targetRef="AssessPermit" />
     <bpmn:sequenceFlow id="Flow_3" sourceRef="AssessPermit" targetRef="Gateway_Permit" />
     <bpmn:sequenceFlow id="Flow_4" sourceRef="Gateway_Permit" targetRef="AssessReplacement">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">\${permitDecision == "Permit"}</bpmn:conditionExpression>
@@ -50,77 +107,77 @@ export const TREE_FELLING_EXAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">\${permitDecision == "Reject"}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_6" sourceRef="AssessReplacement" targetRef="PermitGranted" />
-    <bpmn:sequenceFlow id="Flow_7" sourceRef="PermitGranted" targetRef="EndGranted" />
-    <bpmn:sequenceFlow id="Flow_8" sourceRef="PermitRejected" targetRef="EndRejected" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="PermitRejected" targetRef="InformApplication" />
+    <bpmn:sequenceFlow id="Flow_0noopkb" sourceRef="InformApplication" targetRef="End" />
+    <bpmn:sequenceFlow id="Flow_0lrorup" sourceRef="PermitGranted" targetRef="InformApplication" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="TreeFellingPermitProcess">
-      <bpmndi:BPMNShape id="AssessReplacement_di" bpmnElement="AssessReplacement">
-        <dc:Bounds x="740" y="180" width="160" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="PermitGranted_di" bpmnElement="PermitGranted">
-        <dc:Bounds x="940" y="180" width="140" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndGranted_di" bpmnElement="EndGranted">
-        <dc:Bounds x="1120" y="200" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndRejected_di" bpmnElement="EndRejected">
-        <dc:Bounds x="1120" y="422" width="36" height="36" />
+      <bpmndi:BPMNShape id="AssessPermit_di" bpmnElement="AssessPermit">
+        <dc:Bounds x="280" y="96" width="140" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_Permit_di" bpmnElement="Gateway_Permit" isMarkerVisible="true">
-        <dc:Bounds x="605" y="195" width="50" height="50" />
+        <dc:Bounds x="505" y="105" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="611" y="171" width="38" height="14" />
+          <dc:Bounds x="511" y="81" width="38" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="PermitRejected_di" bpmnElement="PermitRejected">
-        <dc:Bounds x="560" y="397" width="140" height="80" />
+      <bpmndi:BPMNShape id="AssessReplacement_di" bpmnElement="AssessReplacement">
+        <dc:Bounds x="640" y="90" width="160" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="AssessPermit_di" bpmnElement="AssessPermit">
-        <dc:Bounds x="380" y="186" width="140" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="SubmitApplication_di" bpmnElement="SubmitApplication">
-        <dc:Bounds x="190" y="186" width="120" height="80" />
+      <bpmndi:BPMNShape id="PermitGranted_di" bpmnElement="PermitGranted">
+        <dc:Bounds x="840" y="90" width="140" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_di" bpmnElement="StartEvent">
-        <dc:Bounds x="232" y="82" width="36" height="36" />
+        <dc:Bounds x="152" y="116" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="193" y="186" width="54" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-        <di:waypoint x="655" y="220" />
-        <di:waypoint x="740" y="220" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
-        <di:waypoint x="900" y="220" />
-        <di:waypoint x="940" y="220" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
-        <di:waypoint x="1080" y="220" />
-        <di:waypoint x="1120" y="218" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
-        <di:waypoint x="700" y="439" />
-        <di:waypoint x="1120" y="439" />
+      <bpmndi:BPMNShape id="PermitRejected_di" bpmnElement="PermitRejected">
+        <dc:Bounds x="460" y="270" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0q3p579" bpmnElement="InformApplication">
+        <dc:Bounds x="850" y="272" width="120" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndRejected_di" bpmnElement="End">
+        <dc:Bounds x="1062" y="295" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1001" y="375" width="76" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="134" />
+        <di:waypoint x="280" y="134" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <di:waypoint x="520" y="221" />
-        <di:waypoint x="606" y="221" />
+        <di:waypoint x="420" y="131" />
+        <di:waypoint x="506" y="131" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="555" y="130" />
+        <di:waypoint x="640" y="130" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
-        <di:waypoint x="630" y="245" />
-        <di:waypoint x="630" y="397" />
+        <di:waypoint x="530" y="155" />
+        <di:waypoint x="530" y="270" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="310" y="224" />
-        <di:waypoint x="380" y="224" />
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="800" y="130" />
+        <di:waypoint x="840" y="130" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <di:waypoint x="232" y="100" />
-        <di:waypoint x="156" y="100" />
-        <di:waypoint x="156" y="224" />
-        <di:waypoint x="190" y="224" />
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
+        <di:waypoint x="600" y="312" />
+        <di:waypoint x="850" y="312" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0noopkb_di" bpmnElement="Flow_0noopkb">
+        <di:waypoint x="970" y="312" />
+        <di:waypoint x="1062" y="312" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0lrorup_di" bpmnElement="Flow_0lrorup">
+        <di:waypoint x="910" y="170" />
+        <di:waypoint x="910" y="272" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
