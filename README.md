@@ -35,6 +35,50 @@ Check the [roadmap document](./docs/ROADMAP.md) for development priorities and n
 
 ---
 
+# ✨ NEW ✨
+
+### Semantic Analysis (v0.6.2)
+
+The **Semantic Analysis** tab in the Chain Builder detects relationships between DMN variables across different government agencies using NL-SBB-compliant `skos:exactMatch` links — even when variables have different names or labels.
+
+This enables cross-agency chain composition that exact identifier matching alone cannot discover.
+
+#### How It Works
+
+The CPSV Editor generates a `skos:Concept` for each DMN input and output variable. When two variables from different agencies mean the same thing, both concepts share the same `skos:exactMatch` URI pointing to a shared vocabulary term (e.g., `https://begrippen.regels.overheid.nl/concept/geboortedatum`).
+
+The Linked Data Explorer queries these relationships and surfaces them in three backend endpoints:
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/dmns/semantic-equivalences` | Variable pairs that share the same `skos:exactMatch` URI |
+| `GET /api/dmns/enhanced-chain-links` | Chain links via both exact identifier and semantic matching |
+| `GET /api/dmns/cycles` | Circular dependencies detected via semantic links (3-hop) |
+
+All endpoints accept the `?endpoint=` query parameter for dynamic TriplyDB dataset selection.
+
+#### Usage
+
+Open the **Chain Builder** view and click the **Semantic Analysis** tab. The view shows:
+
+- **Semantic Equivalences** — variables from different DMNs that map to the same concept, with their labels, notations, and the shared concept URI
+- **Semantic Chain Suggestions** — DMN output → input pairs connectable via a shared concept (not discoverable by identifier matching alone)
+- **Counts** — breakdown of semantic matches vs exact matches found in the current endpoint
+
+Results populate automatically when NL-SBB concepts with `skos:exactMatch` relationships are published to the active TriplyDB dataset from the CPSV Editor.
+
+#### Graph View
+
+In the SPARQL graph visualization, semantic links (`skos:exactMatch`, `dct:subject`) are rendered as **dashed green lines** (2.5px), visually distinct from standard RDF property links (solid grey, 1.5px).
+
+#### Standards
+
+- [NL-SBB](https://geonovum.github.io/NL-SBB/) — Dutch profile for SKOS concept schemes
+- [SKOS](https://www.w3.org/2004/02/skos/) — `skos:exactMatch` for cross-vocabulary alignment
+- [CPSV-AP 3.2.0](https://semiceu.github.io/CPSV-AP/releases/3.2.0/) — `cpsv:Input` / `cpsv:Output` linked via `dct:subject` to concepts
+
+---
+
 ## 📋 Table of Contents
 
 - [Architecture Overview](#-architecture-overview)

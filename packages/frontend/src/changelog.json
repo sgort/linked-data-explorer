@@ -43,6 +43,48 @@
       ]
     },
     {
+      "version": "0.6.2",
+      "status": "New Features",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "February 10, 2026",
+      "sections": [
+        {
+          "title": "Semantic Analysis Tab",
+          "icon": "🔗",
+          "iconColor": "emerald",
+          "items": [
+            "New 'Semantic Analysis' tab in the Chain Builder alongside the existing 'Chain Builder' tab",
+            "Detects semantically equivalent DMN variables across agencies via shared skos:exactMatch URIs",
+            "Suggests cross-agency DMN chain connections where variables differ in name but share the same concept",
+            "Counts and distinguishes semantic matches from exact identifier matches",
+            "Displays matching path: output concept → skos:exactMatch → input concept with variable identifiers and notations"
+          ]
+        },
+        {
+          "title": "Backend Semantic Matching APIs",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "GET /api/dmns/semantic-equivalences — finds all variable pairs sharing a skos:exactMatch URI across DMNs",
+            "GET /api/dmns/enhanced-chain-links — combines exact identifier matching with semantic concept matching",
+            "GET /api/dmns/cycles — detects 3-hop circular dependencies in DMN chains via semantic links",
+            "All new endpoints support the existing ?endpoint= parameter for dynamic TriplyDB dataset selection",
+            "New TypeScript types: SemanticEquivalence, EnhancedChainLink, ConceptInfo, ChainCycle"
+          ]
+        },
+        {
+          "title": "Graph View Enhancement",
+          "icon": "📊",
+          "iconColor": "indigo",
+          "items": [
+            "Semantic links (skos:exactMatch, dct:subject) rendered with dashed green lines in the graph visualization",
+            "Semantic links use thicker stroke (2.5px) vs standard links (1.5px) for visual distinction"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.6.1",
       "status": "Bug Fixes",
       "statusColor": "blue",

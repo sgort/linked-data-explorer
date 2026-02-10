@@ -4,7 +4,14 @@
 import axios, { AxiosInstance } from 'axios';
 import { config } from '../utils/config';
 import logger from '../utils/logger';
-import { DmnModel, DmnVariable, ChainLink } from '../types/dmn.types';
+import {
+  DmnModel,
+  DmnVariable,
+  ChainLink,
+  EnhancedChainLink,
+  SemanticEquivalence,
+  ChainCycle,
+} from '../types/dmn.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 
 /**
@@ -425,6 +432,294 @@ ORDER BY ?dmn1Identifier ?dmn2Identifier ?variableId
       to: b.dmn2Identifier.value,
       variable: b.variableId.value,
       variableType: b.variableType.value,
+    }));
+  }
+
+  /**
+   * Find semantically equivalent variables across DMNs using skos:exactMatch
+   * @param endpoint - Optional SPARQL endpoint URL
+   * @returns Array of semantic equivalences
+   */
+  async findSemanticEquivalences(endpoint?: string): Promise<SemanticEquivalence[]> {
+    logger.info('Finding semantic equivalences via skos:exactMatch');
+
+    const query = `
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX cpsv: <http://purl.org/vocab/cpsv#>
+PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
+
+SELECT ?concept1 ?concept1Label ?concept1Notation ?variable1 ?variable1Id ?variable1Type
+       ?concept2 ?concept2Label ?concept2Notation ?variable2 ?variable2Id ?variable2Type
+       ?sharedConcept ?dmn1 ?dmn1Title ?dmn2 ?dmn2Title
+WHERE {
+  # First concept with exactMatch
+  ?concept1 a skos:Concept ;
+            skos:exactMatch ?sharedConcept ;
+            skos:prefLabel ?concept1Label ;
+            dct:subject ?variable1 .
+  
+  OPTIONAL { ?concept1 skos:notation ?concept1Notation }
+  
+  ?variable1 dct:identifier ?variable1Id ;
+             dct:type ?variable1Type .
+  
+  # Determine variable direction for concept1
+  {
+    ?variable1 a cpsv:Input ;
+               cpsv:isRequiredBy ?dmn1 .
+  } UNION {
+    ?variable1 a cpsv:Output ;
+               cpsv:produces ?dmn1 .
+  }
+  
+  ?dmn1 a cprmv:DecisionModel ;
+        dct:title ?dmn1Title .
+  
+  # Second concept with same exactMatch
+  ?concept2 a skos:Concept ;
+            skos:exactMatch ?sharedConcept ;
+            skos:prefLabel ?concept2Label ;
+            dct:subject ?variable2 .
+  
+  OPTIONAL { ?concept2 skos:notation ?concept2Notation }
+  
+  ?variable2 dct:identifier ?variable2Id ;
+             dct:type ?variable2Type .
+  
+  # Determine variable direction for concept2
+  {
+    ?variable2 a cpsv:Input ;
+               cpsv:isRequiredBy ?dmn2 .
+  } UNION {
+    ?variable2 a cpsv:Output ;
+               cpsv:produces ?dmn2 .
+  }
+  
+  ?dmn2 a cprmv:DecisionModel ;
+        dct:title ?dmn2Title .
+  
+  # Ensure different concepts (but same sharedConcept URI)
+  FILTER(?concept1 != ?concept2)
+  FILTER(?dmn1 != ?dmn2)
+  FILTER(LANG(?dmn1Title) = "nl" || LANG(?dmn1Title) = "")
+  FILTER(LANG(?dmn2Title) = "nl" || LANG(?dmn2Title) = "")
+}
+ORDER BY ?sharedConcept ?dmn1Title ?dmn2Title
+`;
+
+    const data = await this.executeQuery(query, endpoint);
+    const bindings = data.results?.bindings || [];
+
+    const equivalences: SemanticEquivalence[] = bindings.map((b: SparqlResultRow) => ({
+      sharedConcept: b.sharedConcept.value,
+      concept1: {
+        uri: b.concept1.value,
+        label: b.concept1Label.value,
+        notation: b.concept1Notation?.value,
+        variable: {
+          uri: b.variable1.value,
+          identifier: b.variable1Id.value,
+          type: b.variable1Type.value,
+        },
+      },
+      concept2: {
+        uri: b.concept2.value,
+        label: b.concept2Label.value,
+        notation: b.concept2Notation?.value,
+        variable: {
+          uri: b.variable2.value,
+          identifier: b.variable2Id.value,
+          type: b.variable2Type.value,
+        },
+      },
+      dmn1: {
+        uri: b.dmn1.value,
+        title: b.dmn1Title.value,
+      },
+      dmn2: {
+        uri: b.dmn2.value,
+        title: b.dmn2Title.value,
+      },
+    }));
+
+    logger.info(`Found ${equivalences.length} semantic equivalences`);
+    return equivalences;
+  }
+
+  /**
+   * Enhanced chain link discovery using both exact and semantic matching
+   */
+  async findEnhancedChainLinks(endpoint?: string): Promise<EnhancedChainLink[]> {
+    logger.info('Finding enhanced chain links with semantic matching');
+
+    const query = `
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX cpsv: <http://purl.org/vocab/cpsv#>
+PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
+
+SELECT DISTINCT ?dmn1 ?dmn1Identifier ?dmn1Title 
+                ?dmn2 ?dmn2Identifier ?dmn2Title 
+                ?outputVar ?inputVar ?outputVarType ?inputVarType
+                ?matchType ?sharedConcept
+WHERE {
+  # DMN1 produces output
+  ?outputVar a cpsv:Output ;
+             cpsv:produces ?dmn1 ;
+             dct:identifier ?outputVarId ;
+             dct:type ?outputVarType .
+  
+  # DMN2 requires input
+  ?inputVar a cpsv:Input ;
+            cpsv:isRequiredBy ?dmn2 ;
+            dct:identifier ?inputVarId ;
+            dct:type ?inputVarType .
+  
+  # Get DMN metadata
+  ?dmn1 a cprmv:DecisionModel ;
+        dct:identifier ?dmn1Identifier ;
+        dct:title ?dmn1Title .
+  
+  ?dmn2 a cprmv:DecisionModel ;
+        dct:identifier ?dmn2Identifier ;
+        dct:title ?dmn2Title .
+  
+  # Match via exact identifier OR semantic concept
+  {
+    # Exact match (original logic)
+    FILTER(?outputVarId = ?inputVarId)
+    BIND("exact" as ?matchType)
+    BIND(?outputVarId as ?sharedConcept)
+  }
+  UNION
+  {
+    # Semantic match via skos:exactMatch
+    ?outputConcept a skos:Concept ;
+                   skos:exactMatch ?conceptUri ;
+                   dct:subject ?outputVar .
+    
+    ?inputConcept a skos:Concept ;
+                  skos:exactMatch ?conceptUri ;
+                  dct:subject ?inputVar .
+    
+    BIND("semantic" as ?matchType)
+    BIND(?conceptUri as ?sharedConcept)
+  }
+  
+  # Type compatibility check
+  FILTER(?outputVarType = ?inputVarType)
+  FILTER(?dmn1 != ?dmn2)
+  FILTER(LANG(?dmn1Title) = "nl" || LANG(?dmn1Title) = "")
+  FILTER(LANG(?dmn2Title) = "nl" || LANG(?dmn2Title) = "")
+}
+ORDER BY ?matchType ?dmn1Title ?dmn2Title
+`;
+
+    const data = await this.executeQuery(query, endpoint);
+    const bindings = data.results?.bindings || [];
+
+    return bindings.map((b: SparqlResultRow) => ({
+      dmn1: {
+        uri: b.dmn1.value,
+        identifier: b.dmn1Identifier.value,
+        title: b.dmn1Title.value,
+      },
+      dmn2: {
+        uri: b.dmn2.value,
+        identifier: b.dmn2Identifier.value,
+        title: b.dmn2Title.value,
+      },
+      outputVariable: b.outputVar.value,
+      inputVariable: b.inputVar.value,
+      variableType: b.outputVarType.value,
+      matchType: b.matchType.value as 'exact' | 'semantic',
+      sharedConcept: b.sharedConcept.value,
+    }));
+  }
+
+  /**
+   * Detect cycles in DMN chains using semantic links
+   */
+  async detectChainCycles(endpoint?: string): Promise<ChainCycle[]> {
+    logger.info('Detecting cycles in DMN chains');
+
+    const query = `
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX cpsv: <http://purl.org/vocab/cpsv#>
+PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
+
+SELECT DISTINCT ?dmn1 ?dmn1Title ?dmn2 ?dmn2Title ?dmn3 ?dmn3Title
+                ?var1 ?var2 ?concept1 ?concept2
+WHERE {
+  # Path: DMN1 → DMN2
+  ?output1 a cpsv:Output ;
+           cpsv:produces ?dmn1 .
+  ?input2 a cpsv:Input ;
+          cpsv:isRequiredBy ?dmn2 .
+  
+  # Match via concept or identifier
+  {
+    ?output1 dct:identifier ?var1 .
+    ?input2 dct:identifier ?var1 .
+  } UNION {
+    ?concept1 skos:exactMatch ?concept1Uri ;
+              dct:subject ?output1 .
+    ?concept1b skos:exactMatch ?concept1Uri ;
+               dct:subject ?input2 .
+  }
+  
+  # Path: DMN2 → DMN3
+  ?output2 a cpsv:Output ;
+           cpsv:produces ?dmn2 .
+  ?input3 a cpsv:Input ;
+          cpsv:isRequiredBy ?dmn3 .
+  
+  {
+    ?output2 dct:identifier ?var2 .
+    ?input3 dct:identifier ?var2 .
+  } UNION {
+    ?concept2 skos:exactMatch ?concept2Uri ;
+              dct:subject ?output2 .
+    ?concept2b skos:exactMatch ?concept2Uri ;
+               dct:subject ?input3 .
+  }
+  
+  # Path: DMN3 → DMN1 (CYCLE!)
+  ?output3 a cpsv:Output ;
+           cpsv:produces ?dmn3 .
+  ?input1 a cpsv:Input ;
+          cpsv:isRequiredBy ?dmn1 .
+  
+  {
+    ?output3 dct:identifier ?var3 .
+    ?input1 dct:identifier ?var3 .
+  } UNION {
+    ?concept3 skos:exactMatch ?concept3Uri ;
+              dct:subject ?output3 .
+    ?concept3b skos:exactMatch ?concept3Uri ;
+               dct:subject ?input1 .
+  }
+  
+  ?dmn1 a cprmv:DecisionModel ; dct:title ?dmn1Title .
+  ?dmn2 a cprmv:DecisionModel ; dct:title ?dmn2Title .
+  ?dmn3 a cprmv:DecisionModel ; dct:title ?dmn3Title .
+  
+  FILTER(?dmn1 != ?dmn2 && ?dmn2 != ?dmn3 && ?dmn3 != ?dmn1)
+}
+`;
+
+    const data = await this.executeQuery(query, endpoint);
+    const bindings = data.results?.bindings || [];
+
+    return bindings.map((b: SparqlResultRow) => ({
+      path: [
+        { uri: b.dmn1.value, title: b.dmn1Title.value },
+        { uri: b.dmn2.value, title: b.dmn2Title.value },
+        { uri: b.dmn3.value, title: b.dmn3Title.value },
+      ],
+      type: 'three-hop',
     }));
   }
 

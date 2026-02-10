@@ -1,7 +1,3 @@
-// packages/frontend/src/components/ChainBuilder/ChainBuilder.tsx
-// FIXED: Uses /api/dmns?endpoint=... to preserve backend caching (5 min TTL)
-// This replaces 13+ uncached queries with 1 cached request
-
 import {
   closestCenter,
   DndContext,
@@ -17,6 +13,7 @@ import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
 import ChainComposer from './ChainComposer';
 import ChainConfig from './ChainConfig';
 import DmnList from './DmnList';
+import SemanticView from './SemanticView';
 
 /**
  * Main Chain Builder Component
@@ -42,6 +39,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
   const [isLoadingDmns, setIsLoadingDmns] = useState(false);
   const [validation, setValidation] = useState<ChainValidation | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'builder' | 'semantic'>('builder');
 
   // Load DMNs when endpoint changes
   useEffect(() => {
@@ -370,52 +368,82 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
   const activeDmn = activeDragId ? availableDmns.find((d) => d.identifier === activeDragId) : null;
 
   return (
-    <DndContext
-      key={selectedChain.length}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="flex h-full bg-slate-50">
-        {/* Left Panel: DMN List */}
-        <DmnList dmns={availableDmns} usedDmnIds={selectedChain} isLoading={isLoadingDmns} />
-
-        {/* Middle Panel: Chain Composer */}
-        <SortableContext items={selectedChain} strategy={verticalListSortingStrategy}>
-          <ChainComposer
-            chain={chainDmns}
-            onRemoveDmn={handleRemoveDmn}
-            onClearChain={handleClearChain}
-            validation={validation}
-          />
-        </SortableContext>
-
-        {/* Right Panel: Configuration & Execution */}
-        <ChainConfig
-          chain={chainDmns}
-          validation={validation}
-          inputs={inputs}
-          onInputChange={handleInputChange}
-          onExecute={handleExecute}
-          onLoadPreset={handleLoadPreset}
-          executionResult={executionResult}
-          isExecuting={isExecuting}
-          endpoint={endpoint}
-        />
+    <div className="flex flex-col h-full">
+      {/* Tab Bar */}
+      <div className="flex gap-2 px-4 pt-3 pb-0 bg-white border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('builder')}
+          className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+            activeTab === 'builder'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Chain Builder
+        </button>
+        <button
+          onClick={() => setActiveTab('semantic')}
+          className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+            activeTab === 'semantic'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Semantic Analysis
+        </button>
       </div>
 
-      {/* Drag Overlay */}
-      <DragOverlay>
-        {activeDmn ? (
-          <div className="p-3 bg-white rounded-lg border-2 border-blue-500 shadow-lg opacity-90">
-            <div className="font-medium text-sm text-slate-900">{activeDmn.identifier}</div>
-            <div className="text-xs text-slate-500 mt-1">
-              {activeDmn.inputs.length} inputs → {activeDmn.outputs.length} outputs
-            </div>
+      {activeTab === 'semantic' ? (
+        <SemanticView endpoint={endpoint} apiBaseUrl={API_BASE_URL} />
+      ) : (
+        <DndContext
+          key={selectedChain.length}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex h-full bg-slate-50">
+            {/* Left Panel: DMN List */}
+            <DmnList dmns={availableDmns} usedDmnIds={selectedChain} isLoading={isLoadingDmns} />
+
+            {/* Middle Panel: Chain Composer */}
+            <SortableContext items={selectedChain} strategy={verticalListSortingStrategy}>
+              <ChainComposer
+                chain={chainDmns}
+                onRemoveDmn={handleRemoveDmn}
+                onClearChain={handleClearChain}
+                validation={validation}
+              />
+            </SortableContext>
+
+            {/* Right Panel: Configuration & Execution */}
+            <ChainConfig
+              chain={chainDmns}
+              validation={validation}
+              inputs={inputs}
+              onInputChange={handleInputChange}
+              onExecute={handleExecute}
+              onLoadPreset={handleLoadPreset}
+              executionResult={executionResult}
+              isExecuting={isExecuting}
+              endpoint={endpoint}
+            />
           </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+
+          {/* Drag Overlay */}
+          <DragOverlay>
+            {activeDmn ? (
+              <div className="p-3 bg-white rounded-lg border-2 border-blue-500 shadow-lg opacity-90">
+                <div className="font-medium text-sm text-slate-900">{activeDmn.identifier}</div>
+                <div className="text-xs text-slate-500 mt-1">
+                  {activeDmn.inputs.length} inputs → {activeDmn.outputs.length} outputs
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+    </div>
   );
 };
 

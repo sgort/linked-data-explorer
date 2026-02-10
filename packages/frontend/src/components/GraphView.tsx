@@ -28,6 +28,10 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
     return () => resizeObserver.disconnect();
   }, []);
 
+  // Add semantic link detection
+  const isSemanticLink = (predicate: string) =>
+    predicate.includes('exactMatch') || predicate.includes('subject');
+
   useEffect(() => {
     if (!data || !data.results.bindings.length || !svgRef.current) return;
 
@@ -159,9 +163,10 @@ const GraphView: React.FC<GraphViewProps> = ({ data }) => {
 
     const linkPath = linkGroup
       .append('line')
-      .attr('stroke', '#cbd5e1')
+      .attr('stroke', (d) => (isSemanticLink(d.predicate) ? '#10b981' : '#cbd5e1'))
       .attr('stroke-opacity', 0.6)
-      .attr('stroke-width', 1.5)
+      .attr('stroke-width', (d) => (isSemanticLink(d.predicate) ? 2.5 : 1.5))
+      .attr('stroke-dasharray', (d) => (isSemanticLink(d.predicate) ? '5,5' : 'none'))
       .attr('marker-end', 'url(#arrowhead)');
 
     const linkText = linkGroup
