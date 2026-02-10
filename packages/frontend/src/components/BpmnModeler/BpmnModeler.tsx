@@ -11,7 +11,7 @@ interface BpmnModelerProps {
   endpoint: string;
 }
 
-const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint: _endpoint }) => {
+const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   const [processes, setProcesses] = useState<BpmnProcess[]>(BpmnService.getProcesses());
   const [activeProcessId, setActiveProcessId] = useState<string | null>(null);
   const [currentXml, setCurrentXml] = useState<string>(DEFAULT_BPMN_XML);
@@ -151,6 +151,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint: _endpoint }) => {
         {activeProcess ? (
           <BpmnCanvas
             xml={currentXml}
+            endpoint={endpoint}
             onSave={handleSaveProcess}
             onElementSelect={() => {
               // Element selection handled by properties panel

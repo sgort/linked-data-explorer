@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import './BpmnModeler.css';
 import './bpmn-js.css';
 import '@bpmn-io/properties-panel/dist/assets/properties-panel.css';
@@ -11,22 +12,34 @@ import {
 import camundaModdleDescriptor from 'camunda-bpmn-moddle/resources/camunda.json';
 import { Download, Save } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom/client';
+
+import DmnTemplateSelector from './DmnTemplateSelector';
 
 interface BpmnCanvasProps {
   xml: string;
+  endpoint: string;
   onSave: (xml: string) => void;
   onElementSelect: (element: unknown) => void;
   onClose: () => void;
 }
 
-const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect, onClose }) => {
+const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
+  xml,
+  endpoint,
+  onSave,
+  onElementSelect,
+  onClose,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const propertiesPanelRef = useRef<HTMLDivElement>(null);
   const modelerRef = useRef<BpmnModeler | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [selectedElement, setSelectedElement] = useState<any>(null);
 
   const handleElementSelect = useCallback(
     (element: unknown) => {
+      setSelectedElement(element);
       onElementSelect(element);
     },
     [onElementSelect]
@@ -51,14 +64,14 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect, o
     modelerRef.current = modeler;
 
     // Attach properties panel
-    const propertiesPanel = modeler.get('propertiesPanel');
+    const propertiesPanel = modeler.get('propertiesPanel') as any;
     propertiesPanel.attachTo(propertiesPanelRef.current);
 
     // Import XML after modeler is ready
     const importDiagram = async () => {
       try {
         await modeler.importXML(xml);
-        const canvas = modeler.get('canvas');
+        const canvas = modeler.get('canvas') as any;
         canvas.zoom('fit-viewport');
       } catch (err) {
         console.error('Failed to import BPMN:', err);
@@ -70,7 +83,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect, o
     }, 100);
 
     // Listen for changes
-    const eventBus = modeler.get('eventBus');
+    const eventBus = modeler.get('eventBus') as any;
     const handleChange = () => setHasChanges(true);
     eventBus.on('commandStack.changed', handleChange);
 
@@ -83,7 +96,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect, o
     // Add custom mouse wheel zoom handler
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const canvas = modelerRef.current?.get('canvas');
+      const canvas = modelerRef.current?.get('canvas') as any;
       if (!canvas) return;
       const currentZoom = canvas.zoom();
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -103,6 +116,59 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect, o
       modeler.destroy();
     };
   }, [xml, handleElementSelect]);
+
+  // Render DMN Template Selector when BusinessRuleTask is selected
+  useEffect(() => {
+    if (!selectedElement || !modelerRef.current) return;
+
+    const elementType = selectedElement.type;
+
+    // Clean up any existing React roots in the properties panel
+    const cleanupReactRoots = () => {
+      const existingContainers = document.querySelectorAll('[id^="dmn-template-custom-"]');
+      existingContainers.forEach((container) => {
+        if (container.parentElement) {
+          container.parentElement.removeChild(container);
+        }
+      });
+    };
+
+    if (elementType === 'bpmn:BusinessRuleTask') {
+      // Clean up first
+      cleanupReactRoots();
+
+      // Create a container for the DMN selector in the properties panel
+      const propertiesPanel = document.querySelector('.bio-properties-panel-scroll-container');
+
+      if (!propertiesPanel) return;
+
+      const selectorContainer = document.createElement('div');
+      selectorContainer.id = `dmn-template-custom-${selectedElement.id}`;
+      propertiesPanel.appendChild(selectorContainer);
+
+      const modeling = modelerRef.current.get('modeling');
+      const businessObject = selectedElement.businessObject;
+      const currentDecisionRef = businessObject.get('camunda:decisionRef');
+
+      // Render React component into the properties panel
+      const root = ReactDOM.createRoot(selectorContainer);
+      root.render(
+        <DmnTemplateSelector
+          endpoint={endpoint}
+          element={selectedElement}
+          modeling={modeling}
+          selectedDecisionRef={currentDecisionRef}
+        />
+      );
+    } else {
+      cleanupReactRoots();
+    }
+
+    // Cleanup when element changes
+    return () => {
+      cleanupReactRoots();
+    };
+  }, [selectedElement, endpoint]);
 
   const handleSave = async () => {
     if (!modelerRef.current) return;
@@ -134,19 +200,19 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({ xml, onSave, onElementSelect, o
   };
 
   const handleZoomIn = () => {
-    const canvas = modelerRef.current?.get('canvas');
+    const canvas = modelerRef.current?.get('canvas') as any;
     if (!canvas) return;
     canvas.zoom(Math.min(4, canvas.zoom() + 0.1));
   };
 
   const handleZoomOut = () => {
-    const canvas = modelerRef.current?.get('canvas');
+    const canvas = modelerRef.current?.get('canvas') as any;
     if (!canvas) return;
     canvas.zoom(Math.max(0.2, canvas.zoom() - 0.1));
   };
 
   const handleZoomReset = () => {
-    const canvas = modelerRef.current?.get('canvas');
+    const canvas = modelerRef.current?.get('canvas') as any;
     if (!canvas) return;
     canvas.zoom('fit-viewport');
   };

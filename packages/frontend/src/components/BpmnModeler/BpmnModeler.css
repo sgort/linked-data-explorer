@@ -66,3 +66,17 @@
   font-weight: 500;
   color: #475569;
 }
+
+/* DMN Template Selector Styles */
+.bpmn-properties-panel [id^='dmn-template-custom-'] {
+  background: white;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Ensure properties panel allows scrolling */
+.bpmn-properties-panel {
+  width: 350px;
+  border-left: 1px solid #e2e8f0;
+  overflow-y: auto;
+  background-color: white;
+}

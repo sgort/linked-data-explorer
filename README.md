@@ -14,9 +14,11 @@
 
 # ✨ NEW ✨
 
-## BPMN Modeler Implementation
+### BPMN Process Modeler (v0.7.0)
 
-The BPMN Modeler is a web-based process editor integrated into the Linked Data Explorer application. It enables users to create, edit, and visualize BPMN 2.0 business processes with support for DMN decision orchestration through the Operaton engine (Camunda 7 CE fork).
+The BPMN Modeler now features full Camunda/Operaton property editing via the official `bpmn-js-properties-panel`, replacing the previous basic custom panel. Select any element to edit its complete set of technical properties including async continuations, input/output mappings, execution listeners, and extension properties.
+
+**DMN Template Linking**: When selecting a `BusinessRuleTask`, a *Quick Link to DMN Template* dropdown appears at the bottom of the properties panel. Selecting a template automatically populates the `camunda:decisionRef`, `camunda:resultVariable`, and `camunda:mapDecisionResult` attributes — both predefined and locally saved Chain Composer templates are available.
 
 **v0.6.0 (2026-02-07)**
 - Initial BPMN Modeler implementation

@@ -1,6 +1,47 @@
 {
   "versions": [
     {
+      "version": "0.7.0",
+      "status": "BPMN + DMN Integration",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "February 10, 2026",
+      "sections": [
+        {
+          "title": "Official Properties Panel",
+          "icon": "⚙️",
+          "iconColor": "blue",
+          "items": [
+            "Replaced custom properties panel with official bpmn-js-properties-panel v5.50.1",
+            "Full Camunda/Operaton property editing: name, ID, documentation, async continuations, inputs/outputs, listeners, extension properties",
+            "BusinessRuleTask properties: decision reference, result variable, map decision result",
+            "UserTask properties: form key, assignee, candidate users/groups"
+          ]
+        },
+        {
+          "title": "DMN Template Linking",
+          "icon": "🔗",
+          "iconColor": "purple",
+          "items": [
+            "Quick Link to DMN Template selector in properties panel for BusinessRuleTasks",
+            "Dropdown populated with both predefined and locally saved user templates",
+            "Selecting a template auto-populates camunda:decisionRef, camunda:resultVariable and camunda:mapDecisionResult",
+            "Templates filtered by active TriplyDB endpoint"
+          ]
+        },
+        {
+          "title": "Enhanced Tree Felling Permit Example",
+          "icon": "🌳",
+          "iconColor": "green",
+          "items": [
+            "Updated example BPMN with embedded HTML forms (start-form.html, inform-applicant-form.html)",
+            "Added script tasks for setting process variables after permit and rejection decisions",
+            "Tested and verified working in Operaton Cockpit"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.6.1",
       "status": "Bug Fixes",
       "statusColor": "blue",
