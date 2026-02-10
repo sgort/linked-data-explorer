@@ -19,14 +19,15 @@
           ]
         },
         {
-          "title": "DMN Template Linking",
+          "title": "DMN Linking for BusinessRuleTasks",
           "icon": "🔗",
           "iconColor": "purple",
           "items": [
-            "Quick Link to DMN Template selector in properties panel for BusinessRuleTasks",
-            "Dropdown populated with both predefined and locally saved user templates",
-            "Selecting a template auto-populates camunda:decisionRef, camunda:resultVariable and camunda:mapDecisionResult",
-            "Templates filtered by active TriplyDB endpoint"
+            "Link to DMN selector appears in properties panel when a BusinessRuleTask is selected",
+            "Dropdown populated with all individual DMNs available on the active TriplyDB endpoint via /v1/dmns",
+            "Selecting a DMN auto-populates camunda:decisionRef, camunda:resultVariable and camunda:mapDecisionResult",
+            "Visual badge overlays on canvas show the linked DMN identifier on each BusinessRuleTask",
+            "Badges dynamically centered on the element regardless of task width"
           ]
         },
         {
@@ -36,7 +37,7 @@
           "items": [
             "Updated example BPMN with embedded HTML forms (start-form.html, inform-applicant-form.html)",
             "Added script tasks for setting process variables after permit and rejection decisions",
-            "Tested and verified working in Operaton Cockpit"
+            "Pre-linked BusinessRuleTasks with DMN references visible as badges on load"
           ]
         }
       ]

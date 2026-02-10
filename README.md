@@ -16,9 +16,9 @@
 
 ### BPMN Process Modeler (v0.7.0)
 
-The BPMN Modeler now features full Camunda/Operaton property editing via the official `bpmn-js-properties-panel`, replacing the previous basic custom panel. Select any element to edit its complete set of technical properties including async continuations, input/output mappings, execution listeners, and extension properties.
+The BPMN Modeler features full Camunda/Operaton property editing via the official `bpmn-js-properties-panel`, replacing the previous custom panel. Select any element to edit its complete set of technical properties including async continuations, input/output mappings, execution listeners, and extension properties.
 
-**DMN Template Linking**: When selecting a `BusinessRuleTask`, a *Quick Link to DMN Template* dropdown appears at the bottom of the properties panel. Selecting a template automatically populates the `camunda:decisionRef`, `camunda:resultVariable`, and `camunda:mapDecisionResult` attributes — both predefined and locally saved Chain Composer templates are available.
+**DMN Linking**: When selecting a `BusinessRuleTask`, a *Link to DMN* dropdown appears at the bottom of the properties panel. It lists all DMN decision models available on the active TriplyDB endpoint. Selecting a DMN automatically populates `camunda:decisionRef`, `camunda:resultVariable`, and `camunda:mapDecisionResult`. Linked tasks display a blue badge on the canvas showing the decision reference, centered on the element and visible at a glance without clicking.
 
 **v0.6.0 (2026-02-07)**
 - Initial BPMN Modeler implementation

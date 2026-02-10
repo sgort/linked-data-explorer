@@ -73,6 +73,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
         await modeler.importXML(xml);
         const canvas = modeler.get('canvas') as any;
         canvas.zoom('fit-viewport');
+        refreshDmnOverlays();
       } catch (err) {
         console.error('Failed to import BPMN:', err);
       }
@@ -84,7 +85,10 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
     // Listen for changes
     const eventBus = modeler.get('eventBus') as any;
-    const handleChange = () => setHasChanges(true);
+    const handleChange = () => {
+      setHasChanges(true);
+      refreshDmnOverlays();
+    };
     eventBus.on('commandStack.changed', handleChange);
 
     // Listen for element selection
@@ -169,6 +173,35 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       cleanupReactRoots();
     };
   }, [selectedElement, endpoint]);
+
+  /**
+   * Refresh DMN linked badges on all BusinessRuleTasks
+   */
+  const refreshDmnOverlays = () => {
+    if (!modelerRef.current) return;
+
+    const overlays = modelerRef.current.get('overlays') as any;
+    const elementRegistry = modelerRef.current.get('elementRegistry') as any;
+
+    // Remove all existing DMN badges
+    overlays.remove({ type: 'dmn-linked' });
+
+    // Add badge to each BusinessRuleTask that has a decisionRef
+    elementRegistry.forEach((element: any) => {
+      if (element.type !== 'bpmn:BusinessRuleTask') return;
+
+      const decisionRef = element.businessObject.get('camunda:decisionRef');
+      if (!decisionRef) return;
+
+      const badgeWidth = 130;
+      const leftOffset = Math.round((element.width - badgeWidth) / 2);
+
+      overlays.add(element.id, 'dmn-linked', {
+        position: { bottom: 8, left: leftOffset },
+        html: `<div class="dmn-linked-badge" title="${decisionRef}">📋 ${decisionRef}</div>`,
+      });
+    });
+  };
 
   const handleSave = async () => {
     if (!modelerRef.current) return;
