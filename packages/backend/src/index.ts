@@ -13,7 +13,7 @@ const app: Express = express();
 
 type CorsCallback = (error: Error | null, allow?: boolean) => void;
 
-const allowedOrigins = config.corsOrigin.map(o => o.trim());
+const allowedOrigins = config.corsOrigin.map((o) => o.trim());
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin: string | undefined, callback: CorsCallback): void => {
