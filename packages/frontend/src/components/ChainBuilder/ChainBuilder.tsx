@@ -402,7 +402,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex h-full bg-slate-50">
+          <div className="flex flex-1 min-h-0 bg-slate-50">
             {/* Left Panel: DMN List */}
             <DmnList dmns={availableDmns} usedDmnIds={selectedChain} isLoading={isLoadingDmns} />
 
