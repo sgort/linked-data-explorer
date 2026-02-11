@@ -186,6 +186,27 @@ WHERE {
 } LIMIT 500`,
   },
   {
+    name: 'NL-SBB Concepts and Services',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?subject ?prefLabel ?exactMatch ?service ?serviceTitle
+WHERE {
+  ?subject skos:exactMatch ?exactMatch ;
+           dct:subject ?variable .
+
+  OPTIONAL { ?subject skos:prefLabel ?prefLabel . FILTER(LANG(?prefLabel) = "nl" || LANG(?prefLabel) = "") }
+
+  {
+    ?variable cpsv:isRequiredBy ?dmn .
+  } UNION {
+    ?variable cpsv:produces ?dmn .
+  }
+
+  ?dmn ronl:implements ?service .
+  OPTIONAL { ?service dct:title ?serviceTitle . FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "") }
+}
+ORDER BY ?service ?subject`,
+  },
+  {
     name: 'Services and Authorities',
     sparql: `${COMMON_PREFIXES}
 SELECT ?service ?title ?authorityName (STR(?homepage) AS ?website)
@@ -198,19 +219,6 @@ WHERE {
   FILTER(LANG(?title) = "nl")
 }
 ORDER BY ?title`,
-  },
-  {
-    name: 'Services with Legal Resources',
-    sparql: `${COMMON_PREFIXES}
-SELECT ?service ?serviceTitle ?legalTitle ?legalResource
-WHERE {
-  ?service a cpsv:PublicService .
-  ?service dct:title ?serviceTitle .
-  ?service cv:hasLegalResource ?legalResource .
-  ?legalResource dct:title ?legalTitle .
-  FILTER(LANG(?serviceTitle) = "nl")
-}
-ORDER BY ?serviceTitle`,
   },
 ];
 
