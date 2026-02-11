@@ -3,7 +3,11 @@ import React, { useEffect, useState } from 'react';
 
 import { BpmnService } from '../../services/bpmnService';
 import { BpmnProcess } from '../../types';
-import { DEFAULT_BPMN_XML, TREE_FELLING_EXAMPLE_XML } from '../../utils/bpmnTemplates';
+import {
+  AWB_PROCESS_EXAMPLE_XML,
+  DEFAULT_BPMN_XML,
+  TREE_FELLING_EXAMPLE_XML,
+} from '../../utils/bpmnTemplates';
 import BpmnCanvas from './BpmnCanvas';
 import ProcessList from './ProcessList';
 
@@ -23,10 +27,27 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
    */
   useEffect(() => {
     const existingProcesses = BpmnService.getProcesses();
+    const existingIds = new Set(existingProcesses.map((p) => p.id));
+    const added: BpmnProcess[] = [];
 
-    // If no processes exist, create the tree felling example
-    if (existingProcesses.length === 0) {
-      const exampleProcess: BpmnProcess = {
+    if (!existingIds.has('example_awb_process')) {
+      const awbExample: BpmnProcess = {
+        id: 'example_awb_process',
+        name: 'AWB Generic Process (Example)',
+        description:
+          'AWB General Administrative Law Act shell: 8-phase procedural process reusable across all Dutch government public services',
+        xml: AWB_PROCESS_EXAMPLE_XML,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        linkedDmnTemplates: ['AwbCompletenessCheck', 'ArchivesActRetention'],
+        readonly: true,
+      };
+      BpmnService.saveProcess(awbExample);
+      added.push(awbExample);
+    }
+
+    if (!existingIds.has('example_tree_felling')) {
+      const treeFellingExample: BpmnProcess = {
         id: 'example_tree_felling',
         name: 'Tree Felling Permit (Example)',
         description: 'Example BPMN process demonstrating DMN decision tasks with embedded forms',
@@ -36,13 +57,20 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         linkedDmnTemplates: ['TreeFellingDecision', 'ReplacementTreeDecision'],
         readonly: true,
       };
-
-      BpmnService.saveProcess(exampleProcess);
-      setProcesses([exampleProcess]);
-      setActiveProcessId(exampleProcess.id);
-      setCurrentXml(exampleProcess.xml);
+      BpmnService.saveProcess(treeFellingExample);
+      added.push(treeFellingExample);
     }
-  }, []);
+
+    if (added.length > 0) {
+      const allProcesses = BpmnService.getProcesses();
+      setProcesses(allProcesses);
+      // Activate the first newly added example if nothing is active yet
+      if (!activeProcessId) {
+        setActiveProcessId(added[0].id);
+        setCurrentXml(added[0].xml);
+      }
+    }
+  }, [activeProcessId]);
 
   /**
    * Create new BPMN process
