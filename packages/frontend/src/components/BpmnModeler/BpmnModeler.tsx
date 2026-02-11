@@ -49,7 +49,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     if (!existingIds.has('example_tree_felling')) {
       const treeFellingExample: BpmnProcess = {
         id: 'example_tree_felling',
-        name: 'Tree Felling Permit (Example)',
+        name: 'Tree Felling Permit Subprocess (Example)',
         description: 'Example BPMN process demonstrating DMN decision tasks with embedded forms',
         xml: TREE_FELLING_EXAMPLE_XML,
         createdAt: new Date().toISOString(),
