@@ -67,6 +67,66 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/dmns/semantic-equivalences
+ * Find variables that share the same skos:exactMatch URI across DMNs
+ */
+router.get('/semantic-equivalences', async (req: Request, res: Response) => {
+  try {
+    const endpoint = req.query.endpoint as string | undefined;
+    const equivalences = await sparqlService.findSemanticEquivalences(endpoint);
+    res.json(equivalences);
+  } catch (error: unknown) {
+    const errorDetails = getErrorDetails(error);
+    logger.error('Semantic equivalences error', errorDetails);
+    res.status(500).json({
+      success: false,
+      error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * GET /api/dmns/enhanced-chain-links
+ * Find chain links via exact identifier match AND semantic skos:exactMatch
+ */
+router.get('/enhanced-chain-links', async (req: Request, res: Response) => {
+  try {
+    const endpoint = req.query.endpoint as string | undefined;
+    const links = await sparqlService.findEnhancedChainLinks(endpoint);
+    res.json(links);
+  } catch (error: unknown) {
+    const errorDetails = getErrorDetails(error);
+    logger.error('Enhanced chain links error', errorDetails);
+    res.status(500).json({
+      success: false,
+      error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * GET /api/dmns/cycles
+ * Detect circular dependencies in DMN chains
+ */
+router.get('/cycles', async (req: Request, res: Response) => {
+  try {
+    const endpoint = req.query.endpoint as string | undefined;
+    const cycles = await sparqlService.detectChainCycles(endpoint);
+    res.json(cycles);
+  } catch (error: unknown) {
+    const errorDetails = getErrorDetails(error);
+    logger.error('Cycle detection error', errorDetails);
+    res.status(500).json({
+      success: false,
+      error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
  * GET /api/dmns/:identifier
  * Get a specific DMN by identifier
  *

@@ -26,11 +26,17 @@ export interface TemplateListResponse {
  */
 export class TemplateService {
   /**
-   * Fetch all available templates
+   * Fetch all available templates for a specific endpoint
+   * NEW: Accepts endpoint parameter
    */
-  async getAllTemplates(): Promise<ChainTemplate[]> {
+  async getAllTemplates(endpoint?: string): Promise<ChainTemplate[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chains/templates`);
+      // Build URL with optional endpoint parameter
+      const url = endpoint
+        ? `${API_BASE_URL}/api/chains/templates?endpoint=${encodeURIComponent(endpoint)}`
+        : `${API_BASE_URL}/api/chains/templates`;
+
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.success) {
@@ -46,11 +52,18 @@ export class TemplateService {
   }
 
   /**
-   * Fetch templates by category
+   * Fetch templates by category for a specific endpoint
+   * NEW: Accepts endpoint parameter
    */
-  async getTemplatesByCategory(category: string): Promise<ChainTemplate[]> {
+  async getTemplatesByCategory(category: string, endpoint?: string): Promise<ChainTemplate[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chains/templates?category=${category}`);
+      // Build URL with category and optional endpoint
+      const params = new URLSearchParams({ category });
+      if (endpoint) {
+        params.append('endpoint', endpoint);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/chains/templates?${params}`);
       const data = await response.json();
 
       if (data.success) {
@@ -66,11 +79,17 @@ export class TemplateService {
   }
 
   /**
-   * Fetch a specific template by ID
+   * Fetch a specific template by ID for a specific endpoint
+   * NEW: Accepts endpoint parameter
    */
-  async getTemplateById(id: string): Promise<ChainTemplate | null> {
+  async getTemplateById(id: string, endpoint?: string): Promise<ChainTemplate | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chains/templates/${id}`);
+      // Build URL with optional endpoint parameter
+      const url = endpoint
+        ? `${API_BASE_URL}/api/chains/templates/${id}?endpoint=${encodeURIComponent(endpoint)}`
+        : `${API_BASE_URL}/api/chains/templates/${id}`;
+
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.success) {
@@ -82,26 +101,6 @@ export class TemplateService {
     } catch (error) {
       console.error('Error fetching template:', error);
       return null;
-    }
-  }
-
-  /**
-   * Fetch all available categories
-   */
-  async getCategories(): Promise<string[]> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/chains/templates/categories/list`);
-      const data = await response.json();
-
-      if (data.success) {
-        return data.data.categories;
-      }
-
-      console.error('Failed to fetch categories:', data.error);
-      return [];
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      return [];
     }
   }
 }

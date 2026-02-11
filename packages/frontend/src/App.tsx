@@ -13,9 +13,11 @@ import {
   Settings,
   Share2,
   Trash2,
+  Workflow,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+import BpmnModeler from './components/BpmnModeler/BpmnModeler';
 import ChainBuilder from './components/ChainBuilder/ChainBuilder';
 import Changelog from './components/Changelog';
 import GraphView from './components/GraphView';
@@ -150,6 +152,52 @@ const App: React.FC = () => {
     return ALL_QUERIES;
   };
 
+  /**
+   * Export SPARQL results to CSV
+   */
+  const handleExportCSV = () => {
+    if (!sparqlResult || !sparqlResult.results.bindings.length) {
+      return;
+    }
+
+    try {
+      // Get all unique variable names from results
+      const variables = sparqlResult.head.vars;
+
+      // Create CSV header
+      const csvRows: string[] = [];
+      csvRows.push(variables.join(','));
+
+      // Add data rows
+      sparqlResult.results.bindings.forEach((binding) => {
+        const row = variables.map((variable) => {
+          const value = binding[variable]?.value || '';
+          // Escape quotes and wrap in quotes if contains comma or newline
+          const escaped = value.replace(/"/g, '""');
+          return /[,\n"]/.test(escaped) ? `"${escaped}"` : escaped;
+        });
+        csvRows.push(row.join(','));
+      });
+
+      // Create blob and download
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `sparql-results-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export CSV:', error);
+      setError(
+        'Failed to export CSV: ' + (error instanceof Error ? error.message : 'Unknown error')
+      );
+    }
+  };
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
       {/* Sidebar Navigation */}
@@ -173,6 +221,14 @@ const App: React.FC = () => {
             title="DMN Orchestration"
           >
             <GitBranch size={24} />
+          </button>
+
+          <button
+            onClick={() => setViewMode(ViewMode.BPMN)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.BPMN ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="BPMN Modeler"
+          >
+            <Workflow size={24} />
           </button>
 
           <button
@@ -302,6 +358,13 @@ const App: React.FC = () => {
           {viewMode === ViewMode.ORCHESTRATION && (
             <div className="flex-1 overflow-hidden">
               <ChainBuilder endpoint={endpoint} />
+            </div>
+          )}
+
+          {/* BPMN Modeler View */}
+          {viewMode === ViewMode.BPMN && (
+            <div className="flex-1 overflow-hidden">
+              <BpmnModeler endpoint={endpoint} />
             </div>
           )}
 
@@ -474,7 +537,8 @@ const App: React.FC = () => {
           {viewMode !== ViewMode.VISUALIZE &&
             viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.ORCHESTRATION &&
-            viewMode !== ViewMode.TUTORIAL && (
+            viewMode !== ViewMode.TUTORIAL &&
+            viewMode !== ViewMode.BPMN && (
               <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
                 <div className="flex-1 flex flex-col min-h-0">
                   <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
@@ -519,10 +583,11 @@ const App: React.FC = () => {
               </div>
             )}
 
-          {/* Right Results Pane */}
+          {/* Right Panel */}
           {viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.ORCHESTRATION &&
-            viewMode !== ViewMode.TUTORIAL && (
+            viewMode !== ViewMode.TUTORIAL &&
+            viewMode !== ViewMode.BPMN && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
                 {/* Error Overlay */}
                 {error && (
@@ -555,7 +620,10 @@ const App: React.FC = () => {
                         )}
                       </h3>
                       {sparqlResult && (
-                        <button className="text-slate-400 hover:text-blue-600 flex items-center gap-1 text-xs transition-colors">
+                        <button
+                          onClick={handleExportCSV}
+                          className="text-slate-600 hover:text-blue-600 flex items-center gap-1 text-xs transition-colors hover:bg-slate-50 px-2 py-1 rounded"
+                        >
                           <Download size={14} /> Export CSV
                         </button>
                       )}
@@ -567,7 +635,7 @@ const App: React.FC = () => {
                           <p className="text-sm animate-pulse">Running SPARQL query...</p>
                         </div>
                       ) : (
-                        <ResultsTable data={sparqlResult} />
+                        <ResultsTable data={sparqlResult} endpoint={endpoint} />
                       )}
                     </div>
                   </div>

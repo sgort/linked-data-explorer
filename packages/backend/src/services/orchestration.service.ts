@@ -15,11 +15,13 @@ export class OrchestrationService {
    *
    * @param dmnIdentifiers - Array of DMN identifiers to execute in order
    * @param initialInputs - Initial input variables
+   * @param endpoint - Optional TriplyDB endpoint for DMN lookup
    * @returns Chain execution result
    */
   async executeChain(
     dmnIdentifiers: string[],
-    initialInputs: Record<string, unknown> // ✅ Changed from any
+    initialInputs: Record<string, unknown>,
+    endpoint?: string
   ): Promise<ChainExecutionResult> {
     const chainStartTime = Date.now();
     const steps: ExecutionStep[] = [];
@@ -28,13 +30,14 @@ export class OrchestrationService {
     logger.info('Starting chain execution', {
       chain: dmnIdentifiers,
       inputs: Object.keys(initialInputs),
+      endpoint: endpoint || 'default',
     });
 
     try {
       // Get DMN models for validation
       const dmnModels: DmnModel[] = [];
       for (const identifier of dmnIdentifiers) {
-        const dmn = await sparqlService.getDmnByIdentifier(identifier);
+        const dmn = await sparqlService.getDmnByIdentifier(identifier, endpoint);
         if (!dmn) {
           throw new Error(`DMN not found: ${identifier}`);
         }

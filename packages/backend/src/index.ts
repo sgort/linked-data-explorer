@@ -11,18 +11,36 @@ import packageJson from '../package.json';
 
 const app: Express = express();
 
+type CorsCallback = (error: Error | null, allow?: boolean) => void;
+
+const allowedOrigins = config.corsOrigin.map((o) => o.trim());
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin: string | undefined, callback: CorsCallback): void => {
+    // Allow non-browser requests (curl, server-to-server)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
-app.use(
-  cors({
-    origin: config.corsOrigin,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+// apply CORS to both normal requests and preflight
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Register routes
 app.use('/api/dmns', dmnXmlRoutes);

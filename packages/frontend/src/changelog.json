@@ -1,6 +1,314 @@
 {
   "versions": [
     {
+      "version": "0.7.0",
+      "status": "BPMN + DMN Integration",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "February 10, 2026",
+      "sections": [
+        {
+          "title": "Official Properties Panel",
+          "icon": "⚙️",
+          "iconColor": "blue",
+          "items": [
+            "Replaced custom properties panel with official bpmn-js-properties-panel v5.50.1",
+            "Full Camunda/Operaton property editing: name, ID, documentation, async continuations, inputs/outputs, listeners, extension properties",
+            "BusinessRuleTask properties: decision reference, result variable, map decision result",
+            "UserTask properties: form key, assignee, candidate users/groups"
+          ]
+        },
+        {
+          "title": "DMN Linking for BusinessRuleTasks",
+          "icon": "🔗",
+          "iconColor": "purple",
+          "items": [
+            "Link to DMN selector appears in properties panel when a BusinessRuleTask is selected",
+            "Dropdown populated with all individual DMNs available on the active TriplyDB endpoint via /v1/dmns",
+            "Selecting a DMN auto-populates camunda:decisionRef, camunda:resultVariable and camunda:mapDecisionResult",
+            "Visual badge overlays on canvas show the linked DMN identifier on each BusinessRuleTask",
+            "Badges dynamically centered on the element regardless of task width"
+          ]
+        },
+        {
+          "title": "Enhanced Tree Felling Permit Example",
+          "icon": "🌳",
+          "iconColor": "green",
+          "items": [
+            "Updated example BPMN with embedded HTML forms (start-form.html, inform-applicant-form.html)",
+            "Added script tasks for setting process variables after permit and rejection decisions",
+            "Pre-linked BusinessRuleTasks with DMN references visible as badges on load"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.6.2",
+      "status": "New Features",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "February 10, 2026",
+      "sections": [
+        {
+          "title": "Semantic Analysis Tab",
+          "icon": "🔗",
+          "iconColor": "emerald",
+          "items": [
+            "New 'Semantic Analysis' tab in the Chain Builder alongside the existing 'Chain Builder' tab",
+            "Detects semantically equivalent DMN variables across agencies via shared skos:exactMatch URIs",
+            "Suggests cross-agency DMN chain connections where variables differ in name but share the same concept",
+            "Counts and distinguishes semantic matches from exact identifier matches",
+            "Displays matching path: output concept → skos:exactMatch → input concept with variable identifiers and notations"
+          ]
+        },
+        {
+          "title": "Backend Semantic Matching APIs",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "GET /api/dmns/semantic-equivalences — finds all variable pairs sharing a skos:exactMatch URI across DMNs",
+            "GET /api/dmns/enhanced-chain-links — combines exact identifier matching with semantic concept matching",
+            "GET /api/dmns/cycles — detects 3-hop circular dependencies in DMN chains via semantic links",
+            "All new endpoints support the existing ?endpoint= parameter for dynamic TriplyDB dataset selection",
+            "New TypeScript types: SemanticEquivalence, EnhancedChainLink, ConceptInfo, ChainCycle"
+          ]
+        },
+        {
+          "title": "Graph View Enhancement",
+          "icon": "📊",
+          "iconColor": "indigo",
+          "items": [
+            "Semantic links (skos:exactMatch, dct:subject) rendered with dashed green lines in the graph visualization",
+            "Semantic links use thicker stroke (2.5px) vs standard links (1.5px) for visual distinction"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.6.1",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 9, 2026",
+      "sections": [
+        {
+          "title": "Resolved intermittent CORS issues",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "Fixed CORS preflight handling to ensure consistent behavior across all supported origins and browsers",
+            "Explicitly applied CORS configuration to OPTIONS requests to prevent cached preflight mismatches",
+            "Hardened CORS origin validation for improved reliability in multi-environment deployments"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.6.0",
+      "status": "BPMN Process Modeler",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "February 7, 2026",
+      "sections": [
+        {
+          "title": "Core BPMN Functionality",
+          "icon": "🎨",
+          "iconColor": "purple",
+          "items": [
+            "Added interactive BPMN 2.0 process editor with drag-and-drop interface powered by bpmn-js v18.12.0",
+            "Full element palette: start/end events, tasks, gateways, subprocesses, data objects, pools, annotations",
+            "Three-panel layout: process list (left), canvas editor (middle), properties panel (right)",
+            "Mouse wheel zoom (scroll to zoom), zoom controls (+/-/fit-to-viewport), and smooth canvas interactions",
+            "Support for BusinessRuleTasks with camunda:decisionRef attributes for DMN integration with Operaton engine"
+          ]
+        },
+        {
+          "title": "Process Management",
+          "icon": "💾",
+          "iconColor": "blue",
+          "items": [
+            "Create unlimited BPMN processes with localStorage persistence (survives browser refresh)",
+            "Double-click process names to rename, delete with confirmation dialog",
+            "Auto-save functionality preserves changes across sessions",
+            "Export processes as .bpmn XML files compatible with Camunda/Operaton engines",
+            "Close button returns to empty state, allowing quick process switching"
+          ]
+        },
+        {
+          "title": "Example & Documentation",
+          "icon": "📚",
+          "iconColor": "green",
+          "items": [
+            "Tree Felling Permit example process auto-loads on first visit",
+            "Demonstrates complete workflow: user tasks, BusinessRuleTasks (DMN), gateways, conditional flows",
+            "Example protected from deletion with 'EXAMPLE' badge and disabled delete button",
+            "References TreeFellingDecision and ReplacementTreeDecision DMN models",
+            "Serves as reference implementation for government service workflows"
+          ]
+        },
+        {
+          "title": "Properties & Configuration",
+          "icon": "⚙️",
+          "iconColor": "orange",
+          "items": [
+            "Properties panel shows element type, ID, and editable name field",
+            "DMN Decision Reference section for BusinessRuleTasks (decisionRef, resultVariable inputs)",
+            "Real-time property updates synchronized with canvas",
+            "Custom CSS fixes for rendering artifacts (eliminated black circles/lines during connection dragging)",
+            "Integrated camunda-bpmn-moddle v7.0.1 for Camunda namespace support (Operaton compatible)"
+          ]
+        },
+        {
+          "title": "Technical Implementation",
+          "icon": "🔧",
+          "iconColor": "slate",
+          "items": [
+            "TypeScript interfaces: BpmnProcess with id, name, xml, timestamps, linkedDmnTemplates, readonly flag",
+            "BpmnService class for localStorage CRUD operations (getProcesses, saveProcess, deleteProcess, getProcess)",
+            "Default BPMN XML templates including empty process and Tree Felling Permit example",
+            "Custom wheel event handler overrides default Ctrl+Scroll requirement for intuitive zooming",
+            "Component structure: BpmnModeler, BpmnCanvas, BpmnProperties, ProcessList, DmnTemplateSelector (placeholder)"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.5.5",
+      "status": "Query & Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 6, 2026",
+      "sections": [
+        {
+          "title": "Query Library & Data Quality",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "Added 'Service Rules Metadata' query to retrieve cprmv:Rule → eli:LegalResource → cpsv:PublicService relationships",
+            "Query returns ruleIdPath, ruleDefinition, ruleSituatie, and ruleNorm organized by service identifier",
+            "Leverages new cprmv:implements property for direct semantic linking (eliminates fragile string matching)"
+          ]
+        },
+        {
+          "title": "Export & Usability",
+          "icon": "📥",
+          "iconColor": "green",
+          "items": [
+            "Added working 'Export CSV' button to Query Editor results view",
+            "CSV export includes proper escaping for commas, quotes, and newlines",
+            "Timestamped filenames (e.g., sparql-results-2026-02-06.csv) for easy organization"
+          ]
+        },
+        {
+          "title": "Data Quality Improvements",
+          "icon": "🔧",
+          "iconColor": "orange",
+          "items": [
+            "Identified and resolved RDF URI collision issue causing rule merging in TriplyDB",
+            "CPSV Editor now generates unique URIs for each cprmv:Rule instance",
+            "Coordinated with CPSV Editor project to add explicit cprmv:Rule → eli:LegalResource links",
+            "Eliminated need for string-based rulesetId matching in favor of semantic RDF relationships"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.5.4",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "January 28, 2026",
+      "sections": [
+        {
+          "title": "Test Data & Multi-Endpoint Improvements",
+          "icon": "✨",
+          "iconColor": "emerald",
+          "items": [
+            "Automatic test data population from RDF schema:value in TTL files - inputs now pre-fill with example values defined in metadata",
+            "Fixed chain execution with dynamic endpoints - DMNs from any TriplyDB dataset can now be executed, not just the default endpoint",
+            "Backend endpoint parameter support throughout execution flow (API → orchestration → SPARQL service)",
+            "Intelligent test data fallback: uses RDF values when available, falls back to testData.json for legacy DMNs"
+          ]
+        },
+        {
+          "title": "Chain Execution Fixes",
+          "icon": "🐛",
+          "iconColor": "blue",
+          "items": [
+            "Fixed chain execution with non-default endpoints - backend now uses correct endpoint cache when looking up DMNs",
+            "Added endpoint parameter to chain execution API flow (frontend → backend → orchestration service)",
+            "DMNs from any TriplyDB dataset can now be executed successfully, not just the default endpoint"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.5.3",
+      "status": "New Features",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "January 27, 2026",
+      "sections": [
+        {
+          "title": "User-Created Templates",
+          "icon": "💾",
+          "iconColor": "purple",
+          "items": [
+            "'Save as Template' button to save current chain configurations as reusable templates",
+            "Templates stored in browser localStorage with automatic endpoint-specific scoping",
+            "Save modal with template name and description fields",
+            "Validation enforcement - only valid chains can be saved as templates",
+            "Templates automatically save chain structure, DMN sequence, and input values"
+          ]
+        },
+        {
+          "title": "Template Management",
+          "icon": "🗂️",
+          "iconColor": "blue",
+          "items": [
+            "User templates displayed in separate 'My Templates' section",
+            "Delete functionality for user-created templates with confirmation dialog",
+            "Templates persist across browser sessions",
+            "Each endpoint maintains its own isolated template collection",
+            "Category filter supports 'Custom' option to show only user templates"
+          ]
+        },
+        {
+          "title": "UX Improvements",
+          "icon": "✨",
+          "iconColor": "emerald",
+          "items": [
+            "Clear visual separation between 'Example Templates' (predefined) and 'My Templates' (user-created)",
+            "Template cards show complexity badges and estimated execution time",
+            "Delete button (trash icon) on user template cards",
+            "Save button disabled state with helpful tooltip when chain is invalid"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.5.2",
+      "status": "New Feature",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "January 21, 2026",
+      "sections": [
+        {
+          "title": "UX Improvements",
+          "icon": "✨",
+          "iconColor": "emerald",
+          "items": [
+            "Search input field - Located below the 'Available DMNs' header with search icon",
+            "Real-time filtering - Searches across:",
+            "DMN identifier (e.g., 'heusden-pas')",
+            "Description text",
+            "Input variable names",
+            "Output variable names"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.5.1",
       "status": "Performance & Flexibility",
       "statusColor": "blue",

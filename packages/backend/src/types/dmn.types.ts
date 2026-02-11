@@ -8,6 +8,7 @@ export interface DmnVariable {
   type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double';
   description?: string;
   value?: unknown;
+  testValue?: string | number | boolean;
 }
 
 export interface DmnModel {
@@ -20,6 +21,11 @@ export interface DmnModel {
   implementedBy?: string;
   lastTested?: string;
   testStatus?: 'passed' | 'failed' | 'pending';
+  service?: string; // NEW: Service URI
+  serviceTitle?: string; // NEW: Service display name
+  organization?: string; // NEW: Organization URI
+  organizationName?: string; // NEW: Organization display name
+  logoUrl?: string; // NEW: Full logo URL (resolved with version ID)
   inputs: DmnVariable[];
   outputs: DmnVariable[];
 }
@@ -70,4 +76,52 @@ export interface OperatonEvaluationResponse {
     value: unknown;
     type: string;
   };
+}
+
+export interface ConceptInfo {
+  uri: string;
+  label: string;
+  notation?: string;
+  variable: {
+    uri: string;
+    identifier: string;
+    type: string;
+  };
+}
+
+export interface SemanticEquivalence {
+  sharedConcept: string; // The skos:exactMatch URI
+  concept1: ConceptInfo;
+  concept2: ConceptInfo;
+  dmn1: {
+    uri: string;
+    title: string;
+  };
+  dmn2: {
+    uri: string;
+    title: string;
+  };
+}
+
+export interface EnhancedChainLink {
+  dmn1: {
+    uri: string;
+    identifier: string;
+    title: string;
+  };
+  dmn2: {
+    uri: string;
+    identifier: string;
+    title: string;
+  };
+  outputVariable: string;
+  inputVariable: string;
+  variableType: string;
+  matchType: 'exact' | 'semantic';
+  sharedConcept: string;
+}
+
+export interface ChainCycle {
+  path: Array<{ uri: string; title: string }>;
+  type: 'three-hop' | 'four-hop';
 }
