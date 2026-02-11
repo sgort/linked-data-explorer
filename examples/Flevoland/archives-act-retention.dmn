@@ -128,6 +128,14 @@
     </decisionTable>
   </decision>
 
+  <inputData id="InputData_productType" name="productType">
+    <variable id="Variable_productType" name="productType" typeRef="string" />
+  </inputData>
+
+  <inputData id="InputData_decisionType" name="decisionType">
+    <variable id="Variable_decisionType" name="decisionType" typeRef="string" />
+  </inputData>
+
   <dmndi:DMNDI>
     <dmndi:DMNDiagram id="DMNDiagram_Archives">
       <dmndi:DMNShape id="DMNShape_Archives" dmnElementRef="ArchivesActRetention">
