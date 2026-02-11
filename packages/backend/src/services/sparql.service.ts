@@ -547,13 +547,13 @@ ORDER BY ?sharedConcept ?dmn1Title ?dmn2Title
     return equivalences;
   }
 
-  /**
-   * Enhanced chain link discovery using both exact and semantic matching
-   */
-  async findEnhancedChainLinks(endpoint?: string): Promise<EnhancedChainLink[]> {
-    logger.info('Finding enhanced chain links with semantic matching');
+/**
+ * Enhanced chain link discovery using both exact and semantic matching
+ */
+async findEnhancedChainLinks(endpoint?: string): Promise<EnhancedChainLink[]> {
+  logger.info('Finding enhanced chain links with semantic matching');
 
-    const query = `
+  const query = `
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
@@ -561,20 +561,24 @@ PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
 
 SELECT DISTINCT ?dmn1 ?dmn1Identifier ?dmn1Title 
                 ?dmn2 ?dmn2Identifier ?dmn2Title 
-                ?outputVar ?inputVar ?outputVarType ?inputVarType
+                ?outputVar ?inputVar ?variableType
                 ?matchType ?sharedConcept
 WHERE {
   # DMN1 produces output
   ?outputVar a cpsv:Output ;
              cpsv:produces ?dmn1 ;
              dct:identifier ?outputVarId ;
-             dct:type ?outputVarType .
+             dct:type ?variableType .
   
   # DMN2 requires input
   ?inputVar a cpsv:Input ;
             cpsv:isRequiredBy ?dmn2 ;
             dct:identifier ?inputVarId ;
             dct:type ?inputVarType .
+  
+  # Type compatibility
+  FILTER(?variableType = ?inputVarType)
+  FILTER(?dmn1 != ?dmn2)
   
   # Get DMN metadata
   ?dmn1 a cprmv:DecisionModel ;
@@ -585,16 +589,8 @@ WHERE {
         dct:identifier ?dmn2Identifier ;
         dct:title ?dmn2Title .
   
-  # Match via exact identifier OR semantic concept
-  {
-    # Exact match (original logic)
-    FILTER(?outputVarId = ?inputVarId)
-    BIND("exact" as ?matchType)
-    BIND(?outputVarId as ?sharedConcept)
-  }
-  UNION
-  {
-    # Semantic match via skos:exactMatch
+  # Check for matching via identifier or concept
+  OPTIONAL {
     ?outputConcept a skos:Concept ;
                    skos:exactMatch ?conceptUri ;
                    dct:subject ?outputVar .
@@ -602,41 +598,99 @@ WHERE {
     ?inputConcept a skos:Concept ;
                   skos:exactMatch ?conceptUri ;
                   dct:subject ?inputVar .
-    
-    BIND("semantic" as ?matchType)
-    BIND(?conceptUri as ?sharedConcept)
   }
   
-  # Type compatibility check
-  FILTER(?outputVarType = ?inputVarType)
-  FILTER(?dmn1 != ?dmn2)
-  FILTER(LANG(?dmn1Title) = "nl" || LANG(?dmn1Title) = "")
-  FILTER(LANG(?dmn2Title) = "nl" || LANG(?dmn2Title) = "")
+  # Determine match type and shared concept
+  BIND(
+    IF(?outputVarId = ?inputVarId && BOUND(?conceptUri), "both",
+    IF(?outputVarId = ?inputVarId, "exact",
+    IF(BOUND(?conceptUri), "semantic", "none")))
+    AS ?matchType
+  )
+  
+  BIND(
+    IF(BOUND(?conceptUri), ?conceptUri, ?outputVarId)
+    AS ?sharedConcept
+  )
+  
+  # Only return rows where there's a match
+  FILTER(?matchType != "none")
 }
 ORDER BY ?matchType ?dmn1Title ?dmn2Title
 `;
 
-    const data = await this.executeQuery(query, endpoint);
-    const bindings = data.results?.bindings || [];
+  const data = await this.executeQuery(query, endpoint);
+  const bindings = data.results?.bindings || [];
 
-    return bindings.map((b: SparqlResultRow) => ({
-      dmn1: {
-        uri: b.dmn1.value,
-        identifier: b.dmn1Identifier.value,
-        title: b.dmn1Title.value,
-      },
-      dmn2: {
-        uri: b.dmn2.value,
-        identifier: b.dmn2Identifier.value,
-        title: b.dmn2Title.value,
-      },
-      outputVariable: b.outputVar.value,
-      inputVariable: b.inputVar.value,
-      variableType: b.outputVarType.value,
-      matchType: b.matchType.value as 'exact' | 'semantic',
-      sharedConcept: b.sharedConcept.value,
-    }));
+  const results: EnhancedChainLink[] = [];
+  
+  for (const b of bindings) {
+    const matchType = b.matchType.value;
+    
+    // If matchType is "both", create two separate entries
+    if (matchType === 'both') {
+      // Add exact match entry
+      results.push({
+        dmn1: {
+          uri: b.dmn1.value,
+          identifier: b.dmn1Identifier.value,
+          title: b.dmn1Title.value,
+        },
+        dmn2: {
+          uri: b.dmn2.value,
+          identifier: b.dmn2Identifier.value,
+          title: b.dmn2Title.value,
+        },
+        outputVariable: b.outputVar.value,
+        inputVariable: b.inputVar.value,
+        variableType: b.variableType.value,
+        matchType: 'exact',
+        sharedConcept: b.sharedConcept.value,
+      });
+      
+      // Add semantic match entry
+      results.push({
+        dmn1: {
+          uri: b.dmn1.value,
+          identifier: b.dmn1Identifier.value,
+          title: b.dmn1Title.value,
+        },
+        dmn2: {
+          uri: b.dmn2.value,
+          identifier: b.dmn2Identifier.value,
+          title: b.dmn2Title.value,
+        },
+        outputVariable: b.outputVar.value,
+        inputVariable: b.inputVar.value,
+        variableType: b.variableType.value,
+        matchType: 'semantic',
+        sharedConcept: b.sharedConcept.value,
+      });
+    } else {
+      // Single match type
+      results.push({
+        dmn1: {
+          uri: b.dmn1.value,
+          identifier: b.dmn1Identifier.value,
+          title: b.dmn1Title.value,
+        },
+        dmn2: {
+          uri: b.dmn2.value,
+          identifier: b.dmn2Identifier.value,
+          title: b.dmn2Title.value,
+        },
+        outputVariable: b.outputVar.value,
+        inputVariable: b.inputVar.value,
+        variableType: b.variableType.value,
+        matchType: matchType as 'exact' | 'semantic',
+        sharedConcept: b.sharedConcept.value,
+      });
+    }
   }
+
+  logger.info(`Found ${results.length} enhanced chain links (exact + semantic)`);
+  return results;
+}
 
   /**
    * Detect cycles in DMN chains using semantic links

@@ -1,6 +1,26 @@
 {
   "versions": [
     {
+      "version": "0.6.3",
+      "status": "Bug Fix",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 11, 2026",
+      "sections": [
+        {
+          "title": "Semantic Variable Matching Fix",
+          "icon": "🔗",
+          "iconColor": "blue",
+          "items": [
+            "Fixed `findEnhancedChainLinks` SPARQL query to properly detect both exact identifier matches AND semantic concept matches via skos:exactMatch",
+            "Heusdenpas chain now correctly shows all 10 variable relationships between the 3 DMNs (SVB → SZW: 6 links, SVB → RONL: 3 links, SZW → RONL: 1 link)",
+            "Each relationship is now detected via both match types (exact and semantic) for redundancy",
+            "Improved reliability of automatic chain discovery and DRD variable wiring foundation"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.7.0",
       "status": "BPMN + DMN Integration",
       "statusColor": "purple",
