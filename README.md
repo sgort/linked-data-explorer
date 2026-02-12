@@ -14,6 +14,26 @@
 
 # ✨ NEW ✨
 
+# DRD (Decision Requirements Diagram) Generation
+
+## Overview
+
+The DRD Generation feature enables users to save multi-DMN chains as single, executable Decision Requirements Diagrams (DRDs) deployed to Operaton. This transforms sequential chain execution (multiple API calls) into unified DRD evaluation (single API call), improving performance by ~50% while maintaining semantic integrity.
+
+**Key Benefits:**
+- **Performance:** Single Operaton call vs. multiple sequential API calls
+- **Semantics:** Proper DMN 1.3 `<informationRequirement>` wiring
+- **Reusability:** Save complex chains as named templates
+- **Portability:** DRD XML can be exported, versioned, shared (Phase 2)
+- **Simplicity:** Users work with familiar chain building UI
+
+### References
+See further the [detailed docs](./docs/DRD_GENERATION.md)
+
+---
+
+# ✨ NEW ✨
+
 ### BPMN Process Modeler (v0.7.0)
 
 The BPMN Modeler features full Camunda/Operaton property editing via the official `bpmn-js-properties-panel`, replacing the previous custom panel. Select any element to edit its complete set of technical properties including async continuations, input/output mappings, execution listeners, and extension properties.

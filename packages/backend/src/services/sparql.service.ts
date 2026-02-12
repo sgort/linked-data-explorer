@@ -547,13 +547,13 @@ ORDER BY ?sharedConcept ?dmn1Title ?dmn2Title
     return equivalences;
   }
 
-/**
- * Enhanced chain link discovery using both exact and semantic matching
- */
-async findEnhancedChainLinks(endpoint?: string): Promise<EnhancedChainLink[]> {
-  logger.info('Finding enhanced chain links with semantic matching');
+  /**
+   * Enhanced chain link discovery using both exact and semantic matching
+   */
+  async findEnhancedChainLinks(endpoint?: string): Promise<EnhancedChainLink[]> {
+    logger.info('Finding enhanced chain links with semantic matching');
 
-  const query = `
+    const query = `
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
@@ -619,78 +619,78 @@ WHERE {
 ORDER BY ?matchType ?dmn1Title ?dmn2Title
 `;
 
-  const data = await this.executeQuery(query, endpoint);
-  const bindings = data.results?.bindings || [];
+    const data = await this.executeQuery(query, endpoint);
+    const bindings = data.results?.bindings || [];
 
-  const results: EnhancedChainLink[] = [];
-  
-  for (const b of bindings) {
-    const matchType = b.matchType.value;
-    
-    // If matchType is "both", create two separate entries
-    if (matchType === 'both') {
-      // Add exact match entry
-      results.push({
-        dmn1: {
-          uri: b.dmn1.value,
-          identifier: b.dmn1Identifier.value,
-          title: b.dmn1Title.value,
-        },
-        dmn2: {
-          uri: b.dmn2.value,
-          identifier: b.dmn2Identifier.value,
-          title: b.dmn2Title.value,
-        },
-        outputVariable: b.outputVar.value,
-        inputVariable: b.inputVar.value,
-        variableType: b.variableType.value,
-        matchType: 'exact',
-        sharedConcept: b.sharedConcept.value,
-      });
-      
-      // Add semantic match entry
-      results.push({
-        dmn1: {
-          uri: b.dmn1.value,
-          identifier: b.dmn1Identifier.value,
-          title: b.dmn1Title.value,
-        },
-        dmn2: {
-          uri: b.dmn2.value,
-          identifier: b.dmn2Identifier.value,
-          title: b.dmn2Title.value,
-        },
-        outputVariable: b.outputVar.value,
-        inputVariable: b.inputVar.value,
-        variableType: b.variableType.value,
-        matchType: 'semantic',
-        sharedConcept: b.sharedConcept.value,
-      });
-    } else {
-      // Single match type
-      results.push({
-        dmn1: {
-          uri: b.dmn1.value,
-          identifier: b.dmn1Identifier.value,
-          title: b.dmn1Title.value,
-        },
-        dmn2: {
-          uri: b.dmn2.value,
-          identifier: b.dmn2Identifier.value,
-          title: b.dmn2Title.value,
-        },
-        outputVariable: b.outputVar.value,
-        inputVariable: b.inputVar.value,
-        variableType: b.variableType.value,
-        matchType: matchType as 'exact' | 'semantic',
-        sharedConcept: b.sharedConcept.value,
-      });
+    const results: EnhancedChainLink[] = [];
+
+    for (const b of bindings) {
+      const matchType = b.matchType.value;
+
+      // If matchType is "both", create two separate entries
+      if (matchType === 'both') {
+        // Add exact match entry
+        results.push({
+          dmn1: {
+            uri: b.dmn1.value,
+            identifier: b.dmn1Identifier.value,
+            title: b.dmn1Title.value,
+          },
+          dmn2: {
+            uri: b.dmn2.value,
+            identifier: b.dmn2Identifier.value,
+            title: b.dmn2Title.value,
+          },
+          outputVariable: b.outputVar.value,
+          inputVariable: b.inputVar.value,
+          variableType: b.variableType.value,
+          matchType: 'exact',
+          sharedConcept: b.sharedConcept.value,
+        });
+
+        // Add semantic match entry
+        results.push({
+          dmn1: {
+            uri: b.dmn1.value,
+            identifier: b.dmn1Identifier.value,
+            title: b.dmn1Title.value,
+          },
+          dmn2: {
+            uri: b.dmn2.value,
+            identifier: b.dmn2Identifier.value,
+            title: b.dmn2Title.value,
+          },
+          outputVariable: b.outputVar.value,
+          inputVariable: b.inputVar.value,
+          variableType: b.variableType.value,
+          matchType: 'semantic',
+          sharedConcept: b.sharedConcept.value,
+        });
+      } else {
+        // Single match type
+        results.push({
+          dmn1: {
+            uri: b.dmn1.value,
+            identifier: b.dmn1Identifier.value,
+            title: b.dmn1Title.value,
+          },
+          dmn2: {
+            uri: b.dmn2.value,
+            identifier: b.dmn2Identifier.value,
+            title: b.dmn2Title.value,
+          },
+          outputVariable: b.outputVar.value,
+          inputVariable: b.inputVar.value,
+          variableType: b.variableType.value,
+          matchType: matchType as 'exact' | 'semantic',
+          sharedConcept: b.sharedConcept.value,
+        });
+      }
     }
-  }
 
-  logger.info(`Found ${results.length} enhanced chain links (exact + semantic)`);
-  return results;
-}
+    logger.info(`Found ${results.length} enhanced chain links (exact + semantic)`);
+    return results;
+  }
 
   /**
    * Detect cycles in DMN chains using semantic links

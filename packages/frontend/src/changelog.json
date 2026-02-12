@@ -1,6 +1,74 @@
 {
   "versions": [
     {
+      "version": "0.8.0",
+      "status": "Major Feature",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "February 12, 2026",
+      "sections": [
+        {
+          "title": "DRD (Decision Requirements Diagram) Generation & Execution",
+          "icon": "🔗",
+          "iconColor": "emerald",
+          "items": [
+            "Save multi-DMN chains as single executable DRD files deployed to Operaton",
+            "Automatic assembly of all decisions and sub-decisions from source DMN files into unified DRD structure",
+            "Intelligent ID prefixing (dmn0_, dmn1_, dmn2_) ensures no conflicts when combining multiple DMN files",
+            "Proper informationRequirement wiring: main decisions linked in chain order, sub-decisions retain internal dependencies",
+            "Single-call execution via Operaton entry point - DRD evaluates entire chain internally (no sequential API calls)"
+          ]
+        },
+        {
+          "title": "Local DRD Template Storage (Phase 1)",
+          "icon": "💾",
+          "iconColor": "blue",
+          "items": [
+            "DRD metadata stored in localStorage: isDrd flag, deploymentId, prefixed entryPointId, original chain structure",
+            "Templates automatically save to 'My Templates' with DRD badge indicator",
+            "Execution flow intelligently routes: DRDs go directly to Operaton, regular chains use sequential execution",
+            "No TriplyDB lookup required for DRD execution - deployment ID provides direct Operaton access",
+            "DRD templates work immediately after creation, no additional configuration needed"
+          ]
+        },
+        {
+          "title": "Backend DRD Assembly Engine",
+          "icon": "⚙️",
+          "iconColor": "purple",
+          "items": [
+            "XML-based DRD assembly: fetches source DMN XML from Operaton, extracts all <decision> and <inputData> elements",
+            "Two-pass ID transformation: collects all IDs, then updates all href references to maintain referential integrity",
+            "Preserves complete DMN structure: decision tables, business knowledge models, input data definitions",
+            "Correct DMN XML element ordering: <informationRequirement> elements properly positioned before <decisionTable>",
+            "Multipart form-data deployment to Operaton with proper Content-Type headers"
+          ]
+        },
+        {
+          "title": "Developer Experience",
+          "icon": "🛠️",
+          "iconColor": "amber",
+          "items": [
+            "Type-safe DRD metadata: isDrd, drdDeploymentId, drdEntryPointId fields in ChainTemplate interface",
+            "Extended API types: ChainExecutionRequest now includes DRD parameters",
+            "Comprehensive logging: DRD assembly steps, deployment success, execution routing",
+            "Clear separation: local DRD storage (Phase 1) vs. future global templates (Phase 2)"
+          ]
+        },
+        {
+          "title": "User Workflow",
+          "icon": "📋",
+          "iconColor": "cyan",
+          "items": [
+            "Build chain in Chain Composer → Validate → Execute to test",
+            "Click 'Save' → Enter name/description → DRD automatically deployed to Operaton",
+            "Template appears in 'My Templates' with 🔗 DRD badge",
+            "Load DRD template → Execute → Single API call evaluates entire chain",
+            "Future: Promote battle-tested local DRDs to global Example Templates (Phase 2)"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.7.1",
       "status": "Bug Fix & New Feature",
       "statusColor": "blue",

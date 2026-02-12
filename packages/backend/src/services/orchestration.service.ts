@@ -22,8 +22,8 @@ export class OrchestrationService {
     dmnIdentifiers: string[],
     initialInputs: Record<string, unknown>,
     endpoint?: string,
-    isDrd?: boolean,           // NEW parameter
-    drdEntryPointId?: string   // NEW parameter
+    isDrd?: boolean, // NEW parameter
+    drdEntryPointId?: string // NEW parameter
   ): Promise<ChainExecutionResult> {
     // NEW: Handle DRD execution directly via Operaton
     if (isDrd && drdEntryPointId) {
@@ -41,15 +41,17 @@ export class OrchestrationService {
           success: true,
           chainId: `DRD:${drdEntryPointId}`,
           executionTime: duration,
-          steps: [{
-            dmnId: drdEntryPointId,
-            dmnTitle: `DRD (${dmnIdentifiers.length} decisions)`,
-            startTime,
-            endTime: Date.now(),
-            duration,
-            inputs: initialInputs,
-            outputs,
-          }],
+          steps: [
+            {
+              dmnId: drdEntryPointId,
+              dmnTitle: `DRD (${dmnIdentifiers.length} decisions)`,
+              startTime,
+              endTime: Date.now(),
+              duration,
+              inputs: initialInputs,
+              outputs,
+            },
+          ],
           finalOutputs: outputs,
         };
       } catch (error: unknown) {
