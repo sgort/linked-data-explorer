@@ -6,7 +6,8 @@ import logger from '../utils/logger';
 import { OperatonEvaluationRequest, OperatonEvaluationResponse } from '../types/dmn.types';
 import { getErrorMessage, getErrorDetails, isError } from '../utils/errors';
 import FormData from 'form-data';
-import * as fs from 'fs';
+// Required for fs.writeFileSync that's kept for potential future debugging
+// import * as fs from 'fs';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 /**
@@ -306,6 +307,7 @@ export class OperatonService {
       if (!obj || typeof obj !== 'object') return;
 
       if (obj['@_id'] && idMap.has(obj['@_id'])) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         obj['@_id'] = idMap.get(obj['@_id'])!;
       }
 
@@ -511,9 +513,9 @@ export class OperatonService {
 
       logger.info('DRD XML generated', { length: drdXml.length });
 
-      // Save to file for inspection
-      fs.writeFileSync('/tmp/generated-drd.dmn', drdXml, 'utf-8');
-      logger.info('DRD saved to /tmp/generated-drd.dmn');
+      // Save to file for inspection - kept for potential future debugging
+      // fs.writeFileSync('/tmp/generated-drd.dmn', drdXml, 'utf-8');
+      // logger.info('DRD saved to /tmp/generated-drd.dmn');
 
       return drdXml;
     } catch (error) {

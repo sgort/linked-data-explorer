@@ -21,8 +21,51 @@ export class OrchestrationService {
   async executeChain(
     dmnIdentifiers: string[],
     initialInputs: Record<string, unknown>,
-    endpoint?: string
+    endpoint?: string,
+    isDrd?: boolean,           // NEW parameter
+    drdEntryPointId?: string   // NEW parameter
   ): Promise<ChainExecutionResult> {
+    // NEW: Handle DRD execution directly via Operaton
+    if (isDrd && drdEntryPointId) {
+      const startTime = Date.now();
+      logger.info('Executing DRD via Operaton', { drdEntryPointId });
+
+      try {
+        const result = await operatonService.evaluateDecision(drdEntryPointId, initialInputs);
+        const outputs = operatonService.extractValues(result);
+        const duration = Date.now() - startTime;
+
+        logger.info('DRD execution completed', { duration, outputs: Object.keys(outputs) });
+
+        return {
+          success: true,
+          chainId: `DRD:${drdEntryPointId}`,
+          executionTime: duration,
+          steps: [{
+            dmnId: drdEntryPointId,
+            dmnTitle: `DRD (${dmnIdentifiers.length} decisions)`,
+            startTime,
+            endTime: Date.now(),
+            duration,
+            inputs: initialInputs,
+            outputs,
+          }],
+          finalOutputs: outputs,
+        };
+      } catch (error: unknown) {
+        const duration = Date.now() - startTime;
+        logger.error('DRD execution failed', getErrorDetails(error));
+
+        return {
+          success: false,
+          chainId: `DRD:${drdEntryPointId}`,
+          executionTime: duration,
+          steps: [],
+          finalOutputs: {},
+          error: getErrorMessage(error),
+        };
+      }
+    }
     const chainStartTime = Date.now();
     const steps: ExecutionStep[] = [];
     let currentVariables = { ...initialInputs };

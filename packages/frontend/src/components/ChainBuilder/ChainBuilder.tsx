@@ -40,6 +40,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
   const [validation, setValidation] = useState<ChainValidation | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'builder' | 'semantic'>('builder');
+  const [loadedTemplate, setLoadedTemplate] = useState<ChainPreset | null>(null);
 
   // Load DMNs when endpoint changes
   useEffect(() => {
@@ -98,14 +99,20 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     setExecutionResult(null);
 
     try {
+      // Check if this is a DRD template
+      const isDrd = loadedTemplate?.isDrd || false;
+      const drdEntryPointId = loadedTemplate?.drdEntryPointId;
+
       const response = await fetch(`${API_BASE_URL}/api/chains/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           dmnIds: selectedChain,
           inputs,
-          endpoint, // Pass current endpoint to backend
+          endpoint,
           options: { includeIntermediateSteps: true },
+          isDrd, // NEW: Pass DRD flag
+          drdEntryPointId, // NEW: Pass DRD entry point
         }),
       });
 
@@ -328,6 +335,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     setInputs({});
     setExecutionResult(null);
     setValidation(null);
+    setLoadedTemplate(null);
   };
 
   /**
@@ -338,6 +346,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     setInputs({});
     setExecutionResult(null);
     setValidation(null);
+    setLoadedTemplate(null);
   };
 
   /**
@@ -357,6 +366,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     setSelectedChain(preset.dmnIds);
     setInputs(preset.defaultInputs || {});
     setExecutionResult(null);
+    setLoadedTemplate(preset); // NEW: Track the loaded template
   };
 
   // Get chain DMNs in order
@@ -427,6 +437,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
               executionResult={executionResult}
               isExecuting={isExecuting}
               endpoint={endpoint}
+              loadedTemplate={loadedTemplate}
             />
           </div>
 

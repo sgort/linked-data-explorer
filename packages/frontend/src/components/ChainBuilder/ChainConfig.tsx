@@ -39,6 +39,7 @@ interface ChainConfigProps {
   executionResult: ChainExecutionResult | null;
   isExecuting: boolean;
   endpoint: string;
+  loadedTemplate?: ChainPreset | null;
 }
 
 /**
@@ -54,6 +55,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   executionResult,
   isExecuting,
   endpoint,
+  loadedTemplate,
 }) => {
   const [showValidation, setShowValidation] = useState(true);
   const [showInputs, setShowInputs] = useState(true);
@@ -180,6 +182,11 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         author: 'local-user',
         isPublic: false,
         endpoint: '',
+        // NEW: Store DRD metadata
+        isDrd: true,
+        drdDeploymentId: data.data.deploymentId,
+        drdEntryPointId: `dmn${chain.length - 1}_${entryPointId}`, // The prefixed ID in the DRD
+        drdOriginalChain: dmnIds, // Store original chain for reference
       });
 
       setShowSaveModal(false);
@@ -407,6 +414,11 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
           <h2 className="font-semibold text-slate-900">Chain Configuration</h2>
           <p className="text-xs text-slate-500 mt-1">
             {chain.length} DMN{chain.length !== 1 ? 's' : ''} in chain
+            {loadedTemplate?.isDrd && (
+              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                🔗 DRD
+              </span>
+            )}
           </p>
         </div>
 

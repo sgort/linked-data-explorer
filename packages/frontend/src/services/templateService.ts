@@ -12,6 +12,11 @@ export interface ChainTemplate extends ChainPreset {
   updatedAt: string;
   author?: string;
   isPublic: boolean;
+  // NEW: DRD-specific fields
+  isDrd?: boolean;
+  drdDeploymentId?: string;
+  drdEntryPointId?: string;
+  drdOriginalChain?: string[];
 }
 
 export interface TemplateListResponse {

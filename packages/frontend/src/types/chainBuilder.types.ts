@@ -53,6 +53,11 @@ export interface ChainPreset {
   description: string;
   dmnIds: string[];
   defaultInputs?: Record<string, unknown>;
+  // NEW: DRD-specific fields
+  isDrd?: boolean;
+  drdDeploymentId?: string;
+  drdEntryPointId?: string;
+  drdOriginalChain?: string[];
 }
 
 export interface SavedChain {
