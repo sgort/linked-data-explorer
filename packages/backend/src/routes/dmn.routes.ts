@@ -6,6 +6,7 @@ import { sparqlService } from '../services/sparql.service';
 import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
+import { operatonService } from '../services/operaton.service';
 
 const router = Router();
 
@@ -121,6 +122,63 @@ router.get('/cycles', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * POST /api/dmns/drd/deploy
+ * Assemble and deploy a DRD from an ordered chain of DMN identifiers.
+ * Body: { dmnIds: string[], deploymentName: string }
+ */
+router.post('/drd/deploy', async (req: Request, res: Response) => {
+  try {
+    const { dmnIds, deploymentName } = req.body as {
+      dmnIds: string[];
+      deploymentName: string;
+    };
+
+    if (!Array.isArray(dmnIds) || dmnIds.length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'dmnIds must be an array with at least 2 entries',
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!deploymentName?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'deploymentName is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const entryPointId = dmnIds[dmnIds.length - 1];
+    const filename = `${entryPointId}.dmn`;
+
+    const drdXml = await operatonService.assembleDrd(dmnIds, deploymentName);
+    const result = await operatonService.deployDrd(drdXml, deploymentName, filename);
+
+    res.json({
+      success: true,
+      data: {
+        deploymentId: result.deploymentId,
+        entryPointId,
+        filename,
+        dmnCount: dmnIds.length,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    logger.error('DRD deploy error', getErrorDetails(error));
+    res.status(500).json({
+      success: false,
+      error: { code: 'DRD_DEPLOY_FAILED', message: getErrorMessage(error) },
       timestamp: new Date().toISOString(),
     });
   }

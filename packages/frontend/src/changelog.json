@@ -2,10 +2,10 @@
   "versions": [
     {
       "version": "0.7.1",
-      "status": "Bug Fix",
+      "status": "Bug Fix & New Feature",
       "statusColor": "blue",
       "borderColor": "blue",
-      "date": "February 11, 2026",
+      "date": "February 12, 2026",
       "sections": [
         {
           "title": "Semantic Variable Matching Fix",
@@ -16,6 +16,18 @@
             "Heusdenpas chain now correctly shows all 10 variable relationships between the 3 DMNs (SVB → SZW: 6 links, SVB → RONL: 3 links, SZW → RONL: 1 link)",
             "Each relationship is now detected via both match types (exact and semantic) for redundancy",
             "Improved reliability of automatic chain discovery and DRD variable wiring foundation"
+          ]
+        },
+        {
+          "title": "DRD (Decision Requirements Diagram) Generation",
+          "icon": "🔗",
+          "iconColor": "emerald",
+          "items": [
+            "Save chain as DRD - assembles multi-DMN chains into single executable DRD files deployed to Operaton",
+            "Automatic <informationRequirement> wiring based on chain order - proper decision dependency graph generation",
+            "Entry point detection - last DMN in chain becomes the single callable entry point",
+            "Saved templates store only the entry point dmnId - execution happens via Operaton's internal DRD evaluation",
+            "Ready for future promotion to global templates - user DRD templates can be elevated to predefined templates"
           ]
         }
       ]

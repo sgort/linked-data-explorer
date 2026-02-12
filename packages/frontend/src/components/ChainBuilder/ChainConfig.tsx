@@ -27,6 +27,8 @@ import ExecutionProgress from './ExecutionProgress';
 import ExportChain from './ExportChain';
 import InputForm from './InputForm';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
 interface ChainConfigProps {
   chain: DmnModel[];
   validation: ChainValidation | null;
@@ -64,6 +66,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
 
   // Add refs for scrollable container and execution area
   const scrollableContainerRef = useRef<HTMLDivElement>(null);
@@ -128,29 +131,52 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   /**
    * Handle save template
    */
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     if (!validation?.isValid) {
       setSaveError('Cannot save invalid chain as template');
       return;
     }
-
     if (!templateName.trim()) {
       setSaveError('Template name is required');
       return;
     }
 
+    setIsSavingTemplate(true);
+    setSaveError(null);
+
     try {
+      const dmnIds = chain.map((dmn) => dmn.identifier);
+      const entryPointId = dmnIds[dmnIds.length - 1];
+
+      // Assemble + deploy DRD to Operaton
+      const response = await fetch(`${API_BASE_URL}/api/dmns/drd/deploy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dmnIds,
+          deploymentName: `drd-${entryPointId}-${new Date().toISOString().split('T')[0]}`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        setSaveError(`DRD deployment failed: ${data.error?.message || 'Unknown error'}`);
+        return;
+      }
+
+      // Save template with only the entry point as the single dmnId
       saveUserTemplate(endpoint, {
         name: templateName.trim(),
         description:
           templateDescription.trim() ||
-          `Custom template with ${chain.length} DMN${chain.length !== 1 ? 's' : ''}`,
+          `DRD with ${chain.length} decisions, entry point: ${entryPointId}`,
         category: 'custom',
-        dmnIds: chain.map((dmn) => dmn.identifier),
+        dmnIds: [entryPointId],
         defaultInputs: inputs,
-        tags: ['custom', 'user-created'],
-        complexity: chain.length <= 1 ? 'simple' : chain.length <= 2 ? 'medium' : 'complex',
-        estimatedTime: chain.length * 300,
+        tags: ['custom', 'drd', 'user-created'],
+        complexity: chain.length <= 2 ? 'simple' : chain.length <= 3 ? 'medium' : 'complex',
+        estimatedTime: 300,
         author: 'local-user',
         isPublic: false,
         endpoint: '',
@@ -159,12 +185,11 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
       setShowSaveModal(false);
       setTemplateName('');
       setTemplateDescription('');
-      setSaveError(null);
       loadTemplates();
-      alert('Template saved successfully!');
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      setSaveError('Failed to save template');
+      setSaveError(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSavingTemplate(false);
     }
   };
 
@@ -553,7 +578,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
       {showSaveModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-96 max-w-[90vw]">
-            <h3 className="text-lg font-semibold mb-4">Save as Template</h3>
+            <h3 className="text-lg font-semibold mb-4">Save as DRD</h3>
 
             {saveError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
@@ -593,18 +618,28 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
               </div>
 
               <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded">
-                This template will be saved with {chain.length} DMN{chain.length !== 1 ? 's' : ''}{' '}
-                and current input values for this endpoint.
+                The {chain.length} DMNs will be assembled into a single DRD and deployed to
+                Operaton. The saved template uses{' '}
+                <strong>{chain[chain.length - 1]?.identifier}</strong> as its entry point.
               </div>
             </div>
 
             <div className="flex gap-2 mt-6">
               <button
-                onClick={handleSaveTemplate}
-                disabled={!templateName.trim()}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                onClick={() => {
+                  void handleSaveTemplate();
+                }}
+                disabled={!templateName.trim() || isSavingTemplate}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                Save Template
+                {isSavingTemplate ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Deploying DRD…</span>
+                  </>
+                ) : (
+                  <span>Save as DRD</span>
+                )}
               </button>
               <button
                 onClick={() => {
