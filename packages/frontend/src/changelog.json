@@ -2,7 +2,7 @@
   "versions": [
     {
       "version": "0.8.1",
-      "status": "Bug Fix",
+      "status": "Bug Fix & Enhancement",
       "statusColor": "blue",
       "borderColor": "blue",
       "date": "February 12, 2026",
@@ -20,6 +20,29 @@
             "Fixed output count display - DRD cards now correctly show all outputs instead of 0",
             "Stored output schema when saving DRD templates for accurate metadata display",
             "Added direct link to Operaton Cockpit from DRD card deployment ID"
+          ]
+        },
+        {
+          "title": "BPMN Modeler: DRD Integration",
+          "icon": "🔗",
+          "iconColor": "purple",
+          "items": [
+            "DMN selector now includes local DRD templates alongside regular DMNs",
+            "Grouped dropdown with 🔗 DRDs and 📋 Single DMNs sections for clear organization",
+            "Purple-themed visual indicators distinguish DRD selections from regular DMNs",
+            "DRD info card shows original chain composition (e.g., 'Combines: SVB → SZW → Heusden')",
+            "Automatic population of camunda:decisionRef with correct prefixed DRD identifiers",
+            "BusinessRuleTasks can now reference unified DRD chains for multi-step decision orchestration"
+          ]
+        },
+        {
+          "title": "Developer Experience",
+          "icon": "🛠️",
+          "iconColor": "slate",
+          "items": [
+            "DmnTemplateSelector loads both API DMNs and localStorage DRD templates in single component",
+            "DmnOption interface unifies regular DMNs and DRDs for consistent handling",
+            "Enhanced info display shows DRD badge, description, and chain composition details"
           ]
         }
       ]
