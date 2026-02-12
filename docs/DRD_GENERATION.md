@@ -102,6 +102,70 @@ Total: 1 API call, 101-110ms (~50% faster)
    - `ChainExecutionRequest`: added DRD execution parameters
    - `ChainPreset`: added DRD fields for template loading
 
+
+6. **DRD Card UX & Synthetic Model** (v0.7.2)
+   - Synthetic DRD model creation to avoid confusion with original DMN cards
+   - Purple-themed visual styling to distinguish DRD cards
+   - Output schema storage and display
+   - Direct Operaton Cockpit links
+
+### UX Improvements: Synthetic DRD Model (v0.7.2)
+
+**Problem Identified:**
+When loading a DRD template, the system was displaying the original DMN card from TriplyDB, which showed:
+- Wrong deployment ID (original single-decision DMN instead of unified DRD)
+- Misleading "In Chain" badge on left panel
+- Zero outputs displayed (outputs array not populated)
+- No visual indication that this was a DRD, not a regular DMN
+
+**Solution: Synthetic DRD Model**
+
+When a DRD template is loaded, the system now creates a synthetic `DmnModel` object that represents the unified DRD:
+
+```typescript
+const drdModel: DmnModel = {
+  id: `drd-${preset.id}`,
+  identifier: preset.drdEntryPointId,        // e.g., "dmn1_SZW_BijstandsnormInformatie"
+  title: preset.name,                        // e.g., "Social Benefits DRD"
+  description: `Unified DRD combining ${preset.drdOriginalChain.length} decisions`,
+  deploymentId: preset.drdDeploymentId,      // Correct DRD deployment ID
+  isDrd: true,                               // Flag for special styling
+  inputs: extractedInputs,                   // From defaultInputs
+  outputs: preset.drdOutputs || [],          // Stored during save
+};
+```
+
+**Visual Styling:**
+- **Purple border** (`border-purple-500`) instead of slate
+- **Light purple background** (`bg-purple-50`)
+- **Purple step number badge** instead of blue
+- **🔗 DRD badge** in top-right corner with `z-10` stacking
+- **Purple-themed deployment ID** badge
+- **Operaton Cockpit link** for direct DRD inspection
+
+**Output Schema Storage:**
+
+During DRD save, the system now captures output schema from the final DMN:
+
+```typescript
+const lastDmn = chain[chain.length - 1];
+const drdOutputs = lastDmn.outputs.map(output => ({
+  identifier: output.identifier,
+  title: output.title || output.identifier,
+  type: output.type,
+}));
+
+// Stored in template metadata
+template.drdOutputs = drdOutputs;
+```
+
+**Result:**
+- ✅ DRD card shows correct deployment ID
+- ✅ Correct output count (3 outputs, not 0)
+- ✅ Clear visual distinction from regular DMN cards
+- ✅ No confusion with original DMN from TriplyDB
+- ✅ Direct link to Operaton Cockpit for verification
+
 ### Storage Approach (Phase 1)
 
 **localStorage Structure:**
@@ -541,6 +605,12 @@ async getAllTemplates(endpoint?: string): Promise<ChainTemplate[]> {
 
 ---
 
+
+**Issue: DRD Card Shows Wrong Deployment ID or Zero Outputs**
+- **Cause:** DRD template loaded but showing original DMN card data instead of synthetic DRD model
+- **Solution:** Verify `handleLoadPreset` creates synthetic model when `preset.isDrd === true`
+- **Check:** DRD card should show purple border, DRD badge, and correct `drdDeploymentId`
+- **Fixed in:** v0.7.2 with synthetic DRD model implementation
 ## API Reference
 
 ### POST `/api/dmns/drd/deploy`
@@ -641,5 +711,5 @@ async getAllTemplates(endpoint?: string): Promise<ChainTemplate[]> {
 ---
 
 *Last Updated: February 12, 2026*  
-*Version: 0.7.1*  
+*Version: 0.7.2 (UX improvements)**  
 *Status: Phase 1 Complete, Phase 2 Planned*

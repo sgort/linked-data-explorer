@@ -36,11 +36,22 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
     <div ref={setNodeRef} style={style} className="mb-3">
       <div
         className={`
+      relative
       bg-white rounded-lg border-2 shadow-sm
-      ${isDragging ? 'border-blue-500 shadow-lg' : 'border-slate-200'}
+      ${isDragging ? 'border-blue-500 shadow-lg' : dmn.isDrd ? 'border-purple-500' : 'border-slate-200'}
+      ${dmn.isDrd ? 'bg-purple-50' : ''}
       transition-all duration-150
     `}
       >
+        {/* DRD Badge - positioned absolutely relative to this card */}
+        {dmn.isDrd && (
+          <div className="absolute top-3 right-3 z-10">
+            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-purple-600 text-white rounded shadow-sm">
+              🔗 DRD
+            </span>
+          </div>
+        )}
+
         <div className="p-4">
           <div className="flex items-start gap-3">
             {/* Drag Handle */}
@@ -53,16 +64,48 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
             </div>
 
             {/* Step Number */}
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+            <div
+              className={`
+              flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm
+              ${dmn.isDrd ? 'bg-purple-600 text-white' : 'bg-blue-500 text-white'}
+            `}
+            >
               {index + 1}
             </div>
 
             {/* DMN Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-slate-900">{dmn.identifier}</h3>
+              <h3 className="font-semibold text-slate-900">
+                {dmn.isDrd ? dmn.title : dmn.identifier}
+              </h3>
               {dmn.description && <p className="text-xs text-slate-500 mt-1">{dmn.description}</p>}
 
-              {/* NEW: Logo and Organization */}
+              {/* Deployment ID */}
+              {dmn.deploymentId && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-slate-500">Deployment:</span>
+                  <code
+                    className={`text-xs px-2 py-0.5 rounded font-mono ${
+                      dmn.isDrd ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    {dmn.deploymentId.substring(0, 8)}...
+                  </code>
+                  {dmn.isDrd && (
+                    <a
+                      href={`https://operaton.open-regels.nl/operaton/app/cockpit/default/#/decision-definition/${dmn.identifier}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-600 hover:text-purple-700"
+                      title="View in Operaton Cockpit"
+                    >
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Logo and Organization */}
               {(dmn.logoUrl || dmn.organizationName) && (
                 <div className="flex items-center gap-2 mt-2 mb-2">
                   {dmn.logoUrl && (

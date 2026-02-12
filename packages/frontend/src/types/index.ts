@@ -87,6 +87,7 @@ export interface DmnModel {
   logoUrl?: string; // NEW: Full logo URL (resolved with version ID)
   inputs: DmnVariable[];
   outputs: DmnVariable[];
+  isDrd?: boolean;
 }
 
 export interface DmnChainLink {

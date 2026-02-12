@@ -8,7 +8,7 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import React, { useEffect, useState } from 'react';
 
-import { ChainExecutionResult, DmnModel } from '../../types';
+import { ChainExecutionResult, DmnModel, DmnVariable } from '../../types';
 import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
 import ChainComposer from './ChainComposer';
 import ChainConfig from './ChainConfig';
@@ -347,6 +347,9 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     setExecutionResult(null);
     setValidation(null);
     setLoadedTemplate(null);
+
+    // Remove synthetic DRD models
+    setAvailableDmns((prev) => prev.filter((dmn) => !dmn.isDrd));
   };
 
   /**
@@ -363,10 +366,48 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
    * Load a preset chain
    */
   const handleLoadPreset = (preset: ChainPreset) => {
-    setSelectedChain(preset.dmnIds);
-    setInputs(preset.defaultInputs || {});
-    setExecutionResult(null);
-    setLoadedTemplate(preset); // NEW: Track the loaded template
+    if (preset.isDrd && preset.drdEntryPointId && preset.drdOriginalChain) {
+      // Create synthetic DRD model
+      const drdModel: DmnModel = {
+        id: `drd-${preset.id}`,
+        identifier: preset.drdEntryPointId,
+        title: preset.name,
+        description: `Unified DRD combining ${preset.drdOriginalChain.length} decisions`,
+        deploymentId: preset.drdDeploymentId,
+        isDrd: true,
+        inputs: [],
+        outputs: (preset.drdOutputs || []) as DmnVariable[], // Cast to DmnVariable[]
+      };
+
+      // Extract inputs from defaultInputs
+      if (preset.defaultInputs) {
+        drdModel.inputs = Object.keys(preset.defaultInputs).map((key) => ({
+          identifier: key,
+          title: key,
+          type:
+            typeof preset.defaultInputs![key] === 'boolean'
+              ? 'Boolean'
+              : typeof preset.defaultInputs![key] === 'number'
+                ? 'Integer'
+                : 'String',
+        })) as DmnVariable[];
+      }
+
+      // Add synthetic model to available DMNs temporarily
+      setAvailableDmns((prev) => [...prev, drdModel]);
+
+      // Set chain with synthetic identifier
+      setSelectedChain([preset.drdEntryPointId]);
+      setInputs(preset.defaultInputs || {});
+      setExecutionResult(null);
+      setLoadedTemplate(preset);
+    } else {
+      // Regular chain template
+      setSelectedChain(preset.dmnIds);
+      setInputs(preset.defaultInputs || {});
+      setExecutionResult(null);
+      setLoadedTemplate(preset);
+    }
   };
 
   // Get chain DMNs in order

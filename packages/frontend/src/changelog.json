@@ -1,6 +1,30 @@
 {
   "versions": [
     {
+      "version": "0.8.1",
+      "status": "Bug Fix",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 12, 2026",
+      "sections": [
+        {
+          "title": "DRD Card Display & UX Improvements",
+          "icon": "🎨",
+          "iconColor": "purple",
+          "items": [
+            "Fixed DRD card showing wrong deployment ID - now displays correct DRD deployment metadata",
+            "Created synthetic DRD model instead of original DMN card to avoid confusion",
+            "Added purple border and background to visually distinguish DRD cards from regular DMN cards",
+            "Added 🔗 DRD badge in top-right corner of DRD cards for clear identification",
+            "DRD cards now show template name as title instead of technical identifier",
+            "Fixed output count display - DRD cards now correctly show all outputs instead of 0",
+            "Stored output schema when saving DRD templates for accurate metadata display",
+            "Added direct link to Operaton Cockpit from DRD card deployment ID"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.8.0",
       "status": "Major Feature",
       "statusColor": "emerald",

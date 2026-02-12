@@ -130,9 +130,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
     }
   }, [isExecuting]);
 
-  /**
-   * Handle save template
-   */
   const handleSaveTemplate = async () => {
     if (!validation?.isValid) {
       setSaveError('Cannot save invalid chain as template');
@@ -149,6 +146,14 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
     try {
       const dmnIds = chain.map((dmn) => dmn.identifier);
       const entryPointId = dmnIds[dmnIds.length - 1];
+
+      // Get output schema from the last DMN in the chain
+      const lastDmn = chain[chain.length - 1];
+      const drdOutputs = lastDmn.outputs.map((output) => ({
+        identifier: output.identifier,
+        title: output.title || output.identifier,
+        type: output.type,
+      }));
 
       // Assemble + deploy DRD to Operaton
       const response = await fetch(`${API_BASE_URL}/api/dmns/drd/deploy`, {
@@ -167,7 +172,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         return;
       }
 
-      // Save template with only the entry point as the single dmnId
+      // Save template with DRD metadata including outputs
       saveUserTemplate(endpoint, {
         name: templateName.trim(),
         description:
@@ -182,11 +187,12 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         author: 'local-user',
         isPublic: false,
         endpoint: '',
-        // NEW: Store DRD metadata
+        // DRD metadata
         isDrd: true,
         drdDeploymentId: data.data.deploymentId,
-        drdEntryPointId: `dmn${chain.length - 1}_${entryPointId}`, // The prefixed ID in the DRD
-        drdOriginalChain: dmnIds, // Store original chain for reference
+        drdEntryPointId: `dmn${chain.length - 1}_${entryPointId}`,
+        drdOriginalChain: dmnIds,
+        drdOutputs: drdOutputs, // NEW: Store output schema
       });
 
       setShowSaveModal(false);

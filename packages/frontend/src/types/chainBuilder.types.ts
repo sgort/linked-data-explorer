@@ -58,6 +58,11 @@ export interface ChainPreset {
   drdDeploymentId?: string;
   drdEntryPointId?: string;
   drdOriginalChain?: string[];
+  drdOutputs?: Array<{
+    identifier: string;
+    title: string;
+    type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double'; // Use union type
+  }>;
 }
 
 export interface SavedChain {
