@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { Link2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
@@ -30,7 +31,7 @@ const SemanticView: React.FC<SemanticViewProps> = ({ endpoint, apiBaseUrl }) => 
         ).then((r) => r.json()),
       ]);
 
-      // ✅ FIXED: Extract data from response objects
+      // Extract data from response objects
       setEquivalences(equivData.success && Array.isArray(equivData.data) ? equivData.data : []);
       setEnhancedLinks(linksData.success && Array.isArray(linksData.data) ? linksData.data : []);
 
