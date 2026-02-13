@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   closestCenter,
   DndContext,
@@ -42,7 +43,6 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
   const [activeTab, setActiveTab] = useState<'builder' | 'semantic'>('builder');
   const [loadedTemplate, setLoadedTemplate] = useState<ChainPreset | null>(null);
   const [semanticLinks, setSemanticLinks] = useState<EnhancedChainLink[]>([]);
-  const [isLoadingSemanticLinks, setIsLoadingSemanticLinks] = useState(false);
 
   // Load DMNs when endpoint changes
   useEffect(() => {
@@ -77,13 +77,15 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
 
       if (data.success && Array.isArray(data.data)) {
         setSemanticLinks(data.data);
-        console.log('[SemanticLinks] Loaded:', data.data.length, 'links');
+        console.log(
+          `[SemanticLinks] ✓ Loaded ${data.data.length} links (${data.data.filter((l: EnhancedChainLink) => l.matchType === 'semantic').length} semantic)`
+        );
       } else {
-        console.error('Failed to load semantic links:', data.error);
+        console.error('[SemanticLinks] Failed to load:', data.error);
         setSemanticLinks([]);
       }
     } catch (error) {
-      console.error('Error loading semantic links:', error);
+      console.error('[SemanticLinks] Error:', error);
       setSemanticLinks([]);
     }
   };
@@ -214,26 +216,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       return;
     }
 
-    // Don't validate if semantic links are still loading
-    if (isLoadingSemanticLinks) {
-      setValidation({
-        isValid: false,
-        isDrdCompatible: false,
-        errors: [],
-        warnings: [
-          {
-            type: 'performance',
-            message: 'Loading semantic analysis...',
-          },
-        ],
-        semanticMatches: [],
-        drdIssues: [],
-        requiredInputs: [],
-        missingInputs: [],
-        estimatedTime: 0,
-      });
-      return;
-    }
+    console.log('[Validation] Chain:', chainDmns.map((d) => d.identifier).join(' → '));
 
     const errors: ChainValidation['errors'] = [];
     const warnings: ChainValidation['warnings'] = [];
@@ -250,7 +233,6 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
 
       // Check each required input
       for (const input of dmn.inputs) {
-        // Check if input is provided by exact match from previous DMN
         const exactMatch = availableOutputs.has(input.identifier);
 
         if (!exactMatch && i > 0) {
@@ -276,9 +258,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
             });
 
             drdIssues.push(
-              `Variable '${input.identifier}' in ${dmn.title} ` +
-                `requires semantic match to '${semanticLink.outputVariable}' ` +
-                `from ${prevDmn.title}. DRD requires exact identifier match.`
+              `Variable '${input.identifier}' in ${dmn.title} requires semantic match to '${semanticLink.outputVariable}' from ${prevDmn.title}. DRD requires exact identifier match.`
             );
 
             // Don't require user input for semantically matched variables
@@ -305,12 +285,12 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
               testValue: input.testValue,
             };
 
-            // Always add to requiredInputs (for form rendering)
             requiredInputs.push(inputData);
 
-            // Also add to missingInputs if not filled yet
             const hasValue = input.identifier in inputs;
-            if (!hasValue) {
+            const isBooleanWithDefaultFalse = input.type === 'Boolean' && !hasValue;
+
+            if (!hasValue && !isBooleanWithDefaultFalse) {
               missingInputs.push(inputData);
             }
           }
@@ -353,8 +333,11 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       });
     }
 
-    // Estimate execution time (rough estimate: 150ms per DMN + 50ms base)
     const estimatedTime = chainDmns.length * 150 + 50;
+
+    console.log(
+      `[Validation] ${semanticMatches.length > 0 ? '⚠️ Sequential' : '✓ DRD'} | ${missingInputs.length} missing | ${semanticMatches.length} semantic`
+    );
 
     setValidation({
       isValid: errors.length === 0,
@@ -396,7 +379,6 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     if (overId === 'chain-droppable') {
       // Check if DMN already in chain
       if (selectedChain.includes(activeId)) {
-        // eslint-disable-next-line no-console
         console.log('DMN already in chain');
         return;
       }

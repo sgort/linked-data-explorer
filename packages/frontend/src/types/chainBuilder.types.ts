@@ -56,7 +56,7 @@ export interface ChainPreset {
   description: string;
   dmnIds: string[];
   defaultInputs?: Record<string, unknown>;
-  // NEW: DRD-specific fields
+  type?: 'sequential' | 'drd';
   isDrd?: boolean;
   drdDeploymentId?: string;
   drdEntryPointId?: string;

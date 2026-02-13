@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   AlertCircle,
   CheckCircle2,
@@ -6,7 +7,6 @@ import {
   Clock,
   FileInput,
   Layers,
-  Link2,
   Save,
   Tag,
   Trash2,
@@ -42,7 +42,7 @@ interface ChainConfigProps {
   executionResult: ChainExecutionResult | null;
   isExecuting: boolean;
   endpoint: string;
-  loadedTemplate?: ChainPreset | null;
+  _loadedTemplate?: ChainPreset | null;
 }
 
 /**
@@ -58,7 +58,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   executionResult,
   isExecuting,
   endpoint,
-  loadedTemplate,
+  _loadedTemplate,
 }) => {
   const [showValidation, setShowValidation] = useState(true);
   const [showInputs, setShowInputs] = useState(true);
@@ -72,7 +72,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   const [templateDescription, setTemplateDescription] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
-  const [saveMode, setSaveMode] = useState<'drd' | 'sequential'>('drd');
 
   // Add refs for scrollable container and execution area
   const scrollableContainerRef = useRef<HTMLDivElement>(null);
@@ -142,10 +141,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   };
 
   const handleSaveTemplate = async () => {
-    if (!validation?.isValid) {
-      setSaveError('Cannot save invalid chain as template');
-      return;
-    }
     if (!templateName.trim()) {
       setSaveError('Template name is required');
       return;
@@ -155,63 +150,92 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
     setSaveError(null);
 
     try {
-      const dmnIds = chain.map((dmn) => dmn.identifier);
-      const entryPointId = dmnIds[dmnIds.length - 1];
+      // Auto-detect template type based on DRD compatibility
+      const templateType: 'sequential' | 'drd' = validation?.isDrdCompatible ? 'drd' : 'sequential';
 
-      // Get output schema from the last DMN in the chain
-      const lastDmn = chain[chain.length - 1];
-      const drdOutputs = lastDmn.outputs.map((output) => ({
-        identifier: output.identifier,
-        title: output.title || output.identifier,
-        type: output.type,
-      }));
+      console.log('[SaveTemplate] Saving as:', templateType);
+      console.log(
+        '[SaveTemplate] Chain:',
+        chain.map((d) => d.identifier)
+      );
 
-      // Assemble + deploy DRD to Operaton
-      const response = await fetch(`${API_BASE_URL}/api/dmns/drd/deploy`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dmnIds,
-          deploymentName: `drd-${entryPointId}-${new Date().toISOString().split('T')[0]}`,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        setSaveError(`DRD deployment failed: ${data.error?.message || 'Unknown error'}`);
-        return;
-      }
-
-      // Save template with DRD metadata including outputs
-      saveUserTemplate(endpoint, {
-        name: templateName.trim(),
+      // Create base template object with proper typing
+      const baseTemplateData = {
+        name: templateName,
         description:
-          templateDescription.trim() ||
-          `DRD with ${chain.length} decisions, entry point: ${entryPointId}`,
-        category: 'custom',
-        dmnIds: [entryPointId],
+          templateDescription ||
+          `${templateType === 'drd' ? 'DRD' : 'Sequential'} chain with ${chain.length} DMN${chain.length > 1 ? 's' : ''}`,
+        type: templateType,
+        category: 'custom' as const,
+        dmnIds: chain.map((d) => d.identifier),
         defaultInputs: inputs,
-        tags: ['custom', 'drd', 'user-created'],
-        complexity: chain.length <= 2 ? 'simple' : chain.length <= 3 ? 'medium' : 'complex',
-        estimatedTime: 300,
-        author: 'local-user',
+        tags: [`${chain.length}-dmn`, templateType],
+        complexity: (chain.length === 1 ? 'simple' : chain.length <= 3 ? 'medium' : 'complex') as
+          | 'simple'
+          | 'medium'
+          | 'complex',
+        estimatedTime: validation?.estimatedTime || chain.length * 150 + 50,
         isPublic: false,
-        endpoint: '',
-        // DRD metadata
-        isDrd: true,
-        drdDeploymentId: data.data.deploymentId,
-        drdEntryPointId: `dmn${chain.length - 1}_${entryPointId}`,
-        drdOriginalChain: dmnIds,
-        drdOutputs: drdOutputs, // NEW: Store output schema
-      });
+        endpoint,
+      };
 
-      setShowSaveModal(false);
-      setTemplateName('');
-      setTemplateDescription('');
-      loadTemplates();
+      // If DRD-compatible, deploy it and add DRD fields
+      if (templateType === 'drd') {
+        console.log('[SaveTemplate] Deploying DRD...');
+
+        const deployResponse = await fetch(`${API_BASE_URL}/api/dmns/drd/deploy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dmnIds: chain.map((d) => d.identifier),
+            deploymentName: templateName, // ✅ CHANGED: was templateName, now deploymentName
+          }),
+        });
+
+        const deployData = await deployResponse.json();
+        console.log('[SaveTemplate] Deploy response:', deployData);
+
+        if (!deployData.success) {
+          // Better error handling
+          const errorMsg =
+            typeof deployData.error === 'string'
+              ? deployData.error
+              : deployData.error?.message ||
+                JSON.stringify(deployData.error) ||
+                'DRD deployment failed';
+          throw new Error(errorMsg);
+        }
+
+        // Create template with DRD fields
+        const drdTemplateData = {
+          ...baseTemplateData,
+          drdId: deployData.data.entryPointId,
+          drdDeploymentId: deployData.data.deploymentId,
+        };
+
+        console.log('[SaveTemplate] Saving DRD template:', drdTemplateData);
+        const savedTemplate = saveUserTemplate(endpoint, drdTemplateData);
+
+        await loadTemplates();
+        setShowSaveModal(false);
+        setTemplateName('');
+        setTemplateDescription('');
+        alert(`✅ DRD Template "${savedTemplate.name}" deployed and saved!`);
+      } else {
+        // Save as sequential template
+        console.log('[SaveTemplate] Saving sequential template:', baseTemplateData);
+        const savedTemplate = saveUserTemplate(endpoint, baseTemplateData);
+
+        await loadTemplates();
+        setShowSaveModal(false);
+        setTemplateName('');
+        setTemplateDescription('');
+        alert(`✅ Sequential Template "${savedTemplate.name}" saved!`);
+      }
     } catch (error) {
-      setSaveError(`Failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('[SaveTemplate] Error:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setSaveError(`Failed to save template: ${errorMessage}`);
     } finally {
       setIsSavingTemplate(false);
     }
@@ -334,13 +358,33 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
                               onClick={() => onLoadPreset(template)}
                               className="w-full px-3 py-2.5 text-left hover:bg-blue-50 rounded-lg transition-colors border border-slate-200 hover:border-blue-300"
                             >
-                              <div className="font-medium text-sm text-slate-900 mb-1">
-                                {template.name}
+                              {/* Add icon before name */}
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-base">
+                                  {template.type === 'drd' ? '🎯' : '⛓️'}
+                                </span>
+                                <div className="font-medium text-sm text-slate-900">
+                                  {template.name}
+                                </div>
                               </div>
+
                               <div className="text-xs text-slate-500 mb-2">
                                 {template.description}
                               </div>
+
                               <div className="flex items-center gap-2 flex-wrap">
+                                {/* NEW: Type badge */}
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                                    template.type === 'drd'
+                                      ? 'bg-purple-100 text-purple-700'
+                                      : 'bg-amber-100 text-amber-700'
+                                  }`}
+                                >
+                                  {template.type === 'drd' ? 'DRD' : 'Sequential'}
+                                </span>
+
+                                {/* Existing badges */}
                                 <span
                                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(template.category)}`}
                                 >
@@ -383,8 +427,14 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
                                 onClick={() => onLoadPreset(template)}
                                 className="w-full px-3 py-2.5 text-left hover:bg-blue-50 rounded-lg transition-colors border border-slate-200 hover:border-blue-300"
                               >
-                                <div className="font-medium text-sm text-slate-900 mb-1 pr-6">
-                                  {template.name}
+                                {/* Add icon before name */}
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-base">
+                                    {template.type === 'drd' ? '🎯' : '⛓️'}
+                                  </span>
+                                  <div className="font-medium text-sm text-slate-900">
+                                    {template.name}
+                                  </div>
                                 </div>
                                 <div className="text-xs text-slate-500 mb-2">
                                   {template.description}
@@ -426,29 +476,11 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   return (
     <div className="w-96 bg-white border-l border-slate-200 flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 flex justify-between items-center">
-        <div>
-          <h2 className="font-semibold text-slate-900">Chain Configuration</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            {chain.length} DMN{chain.length !== 1 ? 's' : ''} in chain
-            {loadedTemplate?.isDrd && (
-              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
-                🔗 DRD
-              </span>
-            )}
-          </p>
-        </div>
-
-        {/* Save as Template Button */}
-        <button
-          onClick={() => setShowSaveModal(true)}
-          disabled={!validation?.isValid}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          title={validation?.isValid ? 'Save chain as template' : 'Fix validation errors first'}
-        >
-          <Save size={14} />
-          Save
-        </button>
+      <div className="p-4 border-b border-slate-200">
+        <h2 className="font-semibold text-slate-900">Chain Configuration</h2>
+        <p className="text-xs text-slate-500 mt-1">
+          {chain.length} DMN{chain.length !== 1 ? 's' : ''} in chain
+        </p>
       </div>
 
       {/* Scrollable Content */}
@@ -564,82 +596,59 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons (Footer) */}
+      {/* Action Buttons */}
       <div className="p-4 border-t border-slate-200 bg-slate-50">
         <div className="space-y-2">
-          {/* Execution Mode Info */}
-          {chain.length > 0 && validation && (
-            <div className="text-xs text-center">
-              {validation.isDrdCompatible ? (
-                <span className="text-purple-600">✓ DRD-compatible chain (unified execution)</span>
-              ) : (
-                <span className="text-blue-600">
-                  ⚠️ Sequential execution required (semantic links)
-                </span>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            {/* Execute Button (Left) */}
+          {/* Three equal buttons in a row */}
+          <div className="grid grid-cols-3 gap-2">
             <button
               onClick={onExecute}
               disabled={!validation?.isValid || isExecuting}
-              className={`
-          flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
-          transition-all duration-150
-          ${
-            validation?.isValid && !isExecuting
-              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md'
-              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-          }
-        `}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+              title="Execute chain"
             >
               {isExecuting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Executing...</span>
-                </>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <>
-                  <Zap size={16} />
-                  <span>Execute Chain</span>
-                </>
+                <Zap size={16} />
               )}
+              <span>{isExecuting ? 'Running' : 'Execute'}</span>
             </button>
 
-            {/* Save/Export Button (Right) - Conditional based on DRD compatibility */}
-            {validation?.isDrdCompatible ? (
-              <button
-                onClick={() => setShowSaveModal(true)}
-                disabled={!validation?.isValid}
-                className={`
-            flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
-            transition-all duration-150
-            ${
-              validation?.isValid
-                ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            }
-          `}
-                title="Save as unified DRD"
-              >
-                <Link2 size={16} />
-                <span>Save</span>
-              </button>
-            ) : (
-              <ExportChain
-                dmnIds={chain.map((dmn) => dmn.identifier)}
-                inputs={inputs}
-                chainDmns={chain}
-                chainName={`chain-${chain.length}-dmns`}
-                validation={validation}
-              />
-            )}
+            <button
+              onClick={() => setShowSaveModal(true)}
+              disabled={!validation?.isValid}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                validation?.isDrdCompatible
+                  ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+              title={validation?.isDrdCompatible ? 'Save as DRD' : 'Save template'}
+            >
+              <Save size={16} />
+              <span>Save</span>
+            </button>
+
+            <ExportChain
+              dmnIds={chain.map((dmn) => dmn.identifier)}
+              inputs={inputs}
+              chainDmns={chain}
+              chainName={`chain-${chain.length}-dmns`}
+              validation={validation}
+            />
           </div>
 
-          {!validation?.isValid && chain.length > 0 && (
-            <p className="text-xs text-center text-amber-600">Fix validation errors to execute</p>
+          {/* Warning message for semantic chains */}
+          {validation?.semanticMatches && validation.semanticMatches.length > 0 && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+              <AlertCircle size={14} />
+              <span>Sequential execution required (semantic links)</span>
+            </div>
+          )}
+
+          {/* Validation error message */}
+          {!validation?.isValid && validation?.errors && validation.errors.length > 0 && (
+            <div className="text-xs text-red-600 text-center">{validation.errors[0].message}</div>
           )}
         </div>
       </div>
@@ -647,8 +656,43 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
       {/* Save Template Modal */}
       {showSaveModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-96 max-w-[90vw]">
-            <h3 className="text-lg font-semibold mb-4">Save as DRD</h3>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold mb-4">
+              {validation?.isDrdCompatible ? 'Save as DRD Template' : 'Save as Sequential Template'}
+            </h3>
+
+            {/* Template Type Detection */}
+            <div
+              className={`mb-4 p-3 rounded-lg border-2 ${
+                validation?.isDrdCompatible
+                  ? 'bg-purple-50 border-purple-200'
+                  : 'bg-amber-50 border-amber-200'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">{validation?.isDrdCompatible ? '🎯' : '⛓️'}</span>
+                <div>
+                  <div className="font-semibold text-sm">
+                    {validation?.isDrdCompatible ? 'DRD Template' : 'Sequential Chain Template'}
+                  </div>
+                  <div className="text-xs text-slate-600">
+                    {validation?.isDrdCompatible
+                      ? 'Will be deployed as unified Decision Requirements Diagram'
+                      : 'Will execute as sequential chain with semantic variable matching'}
+                  </div>
+                </div>
+              </div>
+
+              {validation?.isDrdCompatible ? (
+                <div className="text-xs text-green-700 mt-2">
+                  ✓ All {chain.length} DMNs use exact identifier matching
+                </div>
+              ) : (
+                <div className="text-xs text-amber-700 mt-2">
+                  ⚠️ Contains {validation?.semanticMatches?.length || 0} semantic variable link(s)
+                </div>
+              )}
+            </div>
 
             {saveError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
@@ -716,19 +760,20 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
 
             <div className="flex gap-2 mt-6">
               <button
-                onClick={() => {
-                  void handleSaveTemplate();
-                }}
+                onClick={handleSaveTemplate}
                 disabled={!templateName.trim() || isSavingTemplate}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isSavingTemplate ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Deploying DRD…</span>
+                    <span>{validation?.isDrdCompatible ? 'Deploying...' : 'Saving...'}</span>
                   </>
                 ) : (
-                  <span>Save as DRD</span>
+                  <>
+                    <Save size={16} />
+                    <span>{validation?.isDrdCompatible ? 'Save as DRD' : 'Save Template'}</span>
+                  </>
                 )}
               </button>
               <button
@@ -738,7 +783,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
                   setTemplateDescription('');
                   setSaveError(null);
                 }}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors"
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>

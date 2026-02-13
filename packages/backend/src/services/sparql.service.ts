@@ -561,7 +561,7 @@ PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
 
 SELECT DISTINCT ?dmn1 ?dmn1Identifier ?dmn1Title 
                 ?dmn2 ?dmn2Identifier ?dmn2Title 
-                ?outputVar ?inputVar ?variableType
+                ?outputVar ?outputVarId ?inputVar ?inputVarId ?variableType
                 ?matchType ?sharedConcept
 WHERE {
   # DMN1 produces output
@@ -641,8 +641,8 @@ ORDER BY ?matchType ?dmn1Title ?dmn2Title
             identifier: b.dmn2Identifier.value,
             title: b.dmn2Title.value,
           },
-          outputVariable: b.outputVar.value,
-          inputVariable: b.inputVar.value,
+          outputVariable: b.outputVarId.value,
+          inputVariable: b.inputVarId.value,
           variableType: b.variableType.value,
           matchType: 'exact',
           sharedConcept: b.sharedConcept.value,
@@ -660,8 +660,8 @@ ORDER BY ?matchType ?dmn1Title ?dmn2Title
             identifier: b.dmn2Identifier.value,
             title: b.dmn2Title.value,
           },
-          outputVariable: b.outputVar.value,
-          inputVariable: b.inputVar.value,
+          outputVariable: b.outputVarId.value,
+          inputVariable: b.inputVarId.value,
           variableType: b.variableType.value,
           matchType: 'semantic',
           sharedConcept: b.sharedConcept.value,
@@ -679,8 +679,8 @@ ORDER BY ?matchType ?dmn1Title ?dmn2Title
             identifier: b.dmn2Identifier.value,
             title: b.dmn2Title.value,
           },
-          outputVariable: b.outputVar.value,
-          inputVariable: b.inputVar.value,
+          outputVariable: b.outputVarId.value,
+          inputVariable: b.inputVarId.value,
           variableType: b.variableType.value,
           matchType: matchType as 'exact' | 'semantic',
           sharedConcept: b.sharedConcept.value,

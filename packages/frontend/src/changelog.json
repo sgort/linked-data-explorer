@@ -1,6 +1,65 @@
 {
   "versions": [
     {
+      "version": "0.8.2",
+      "status": "Feature & Bug Fix",
+      "statusColor": "green",
+      "borderColor": "green",
+      "date": "February 13, 2026",
+      "sections": [
+        {
+          "title": "Template System Enhancement",
+          "icon": "📋",
+          "iconColor": "blue",
+          "items": [
+            "Enhanced template system to support both DRD and sequential chain templates with distinct 'type' field",
+            "Added visual indicators: 🎯 purple badge for DRD templates, ⛓️ amber badge for sequential templates",
+            "Save button automatically detects chain type (DRD vs sequential) and adjusts behavior accordingly",
+            "DRD templates deploy to Operaton and store deployment ID, sequential templates save directly to localStorage",
+            "Template list clearly shows type badges enabling users to distinguish execution modes at a glance",
+            "Modal titles dynamically update: 'Save as DRD Template' vs 'Save as Sequential Template'",
+            "Auto-detection uses validation state to determine if chain is DRD-compatible or requires sequential execution"
+          ]
+        },
+        {
+          "title": "Semantic Chain Validation",
+          "icon": "🔗",
+          "iconColor": "amber",
+          "items": [
+            "Improved semantic link detection with proper React dependency management for reliable validation",
+            "Added semanticLinks to validation useEffect dependency array ensuring re-validation when links load",
+            "Validation now correctly distinguishes between exact identifier matches (DRD-compatible) and semantic matches (sequential-only)",
+            "Real-time detection of semantic variable links with clear warning messages: '⚠️ Sequential execution required (semantic links)'",
+            "Console logging shows clear validation status: '✓ DRD' or '⚠️ Sequential' with semantic match counts"
+          ]
+        },
+        {
+          "title": "UX Improvements",
+          "icon": "🎨",
+          "iconColor": "purple",
+          "items": [
+            "Unified button layout with three equal-width actions: Execute | Save | Export for consistent interface",
+            "Button text dynamically updates based on chain type: 'Save as DRD' vs 'Save Template'",
+            "Loading states show appropriate messages: 'Deploying...' for DRDs, 'Saving...' for sequential chains",
+            "Export button integrated seamlessly into three-button layout replacing previous inconsistent positioning",
+            "Semantic chain warning badges appear below action buttons with amber color scheme for clear visibility"
+          ]
+        },
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "red",
+          "items": [
+            "Fixed validation crash when dragging DMNs into chain composer due to null reference errors",
+            "Added optional chaining (validation?.isValid) throughout component preventing crashes during initial composition",
+            "Fixed boolean input validation incorrectly treating unchecked checkboxes as missing inputs",
+            "Updated validation logic to recognize unchecked boolean inputs as valid with default false value",
+            "Fixed DRD deployment API parameter: changed 'templateName' to 'deploymentName' matching backend expectations"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.8.1",
       "status": "Bug Fix & Enhancement",
       "statusColor": "blue",

@@ -12,7 +12,27 @@
 
 ---
 
-# ✨ NEW ✨
+# Enhanced Validation & Semantic Chain Detection ✨ NEW ✨
+
+## Overview
+
+The Linked Data Explorer implements a sophisticated validation system that distinguishes between two types of DMN chains:
+
+1. **DRD-Compatible Chains**: All variables match by exact identifier, enabling deployment as unified Decision Requirements Diagrams in Operaton
+2. **Sequential Chains**: Variables match semantically via `skos:exactMatch` relationships, requiring sequential API execution with runtime variable mapping
+
+### Features
+
+The enhanced validation system successfully distinguishes between DRD-compatible and semantic chains through:
+
+- **Robust SPARQL querying** with type checking and shared concept detection
+- **React state management** with proper dependency tracking
+- **Comprehensive test data** validating semantic-only chains
+- **Detailed debugging** revealing critical RDF data integrity requirements
+
+### References
+See further the [detailed docs](./docs/ENHANCED_VALIDATION.md)
+---
 
 # DRD (Decision Requirements Diagram) Generation
 
@@ -31,8 +51,6 @@ The DRD Generation feature enables users to save multi-DMN chains as single, exe
 See further the [detailed docs](./docs/DRD_GENERATION.md)
 
 ---
-
-# ✨ NEW ✨
 
 ### BPMN Process Modeler (v0.7.0)
 
@@ -54,8 +72,6 @@ See further the [detailed docs](./docs/BPMN-MODELER-IMPLEMENTATION.md)
 Check the [roadmap document](./docs/ROADMAP.md) for development priorities and next steps.
 
 ---
-
-# ✨ NEW ✨
 
 ### Semantic Analysis (v0.6.2)
 

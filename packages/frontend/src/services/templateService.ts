@@ -3,6 +3,7 @@ import { ChainPreset } from '../types/chainBuilder.types';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 export interface ChainTemplate extends ChainPreset {
+  type: 'sequential' | 'drd'; // NEW: Distinguish between semantic chains and DRDs
   category: 'social' | 'financial' | 'legal' | 'custom';
   tags: string[];
   complexity: 'simple' | 'medium' | 'complex';
