@@ -57,7 +57,7 @@ const DmnTemplateSelector: React.FC<DmnTemplateSelectorProps> = ({
       // Load local DRD templates
       const userTemplates = getUserTemplates(endpoint);
       const drdTemplates = userTemplates
-        .filter((template) => template.isDrd && template.drdEntryPointId)
+        .filter((template) => template.type === 'drd' && template.drdEntryPointId) // Changed from template.isDrd
         .map((template) => ({
           identifier: template.drdEntryPointId!,
           title: `${template.name} (DRD)`,

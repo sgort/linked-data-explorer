@@ -188,7 +188,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             dmnIds: chain.map((d) => d.identifier),
-            deploymentName: templateName, // ✅ CHANGED: was templateName, now deploymentName
+            deploymentName: templateName,
           }),
         });
 
@@ -196,7 +196,6 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         console.log('[SaveTemplate] Deploy response:', deployData);
 
         if (!deployData.success) {
-          // Better error handling
           const errorMsg =
             typeof deployData.error === 'string'
               ? deployData.error
@@ -209,8 +208,9 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         // Create template with DRD fields
         const drdTemplateData = {
           ...baseTemplateData,
-          drdId: deployData.data.entryPointId,
+          drdEntryPointId: deployData.data.entryPointId, // Changed from drdId
           drdDeploymentId: deployData.data.deploymentId,
+          drdOriginalChain: chain.map((d) => d.identifier), // Add this for BPMN display
         };
 
         console.log('[SaveTemplate] Saving DRD template:', drdTemplateData);
