@@ -208,9 +208,10 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         // Create template with DRD fields
         const drdTemplateData = {
           ...baseTemplateData,
-          drdEntryPointId: deployData.data.entryPointId, // Changed from drdId
+          // FIX: Construct prefixed identifier manually
+          drdEntryPointId: `dmn${chain.length - 1}_${deployData.data.entryPointId}`, // Changed!
           drdDeploymentId: deployData.data.deploymentId,
-          drdOriginalChain: chain.map((d) => d.identifier), // Add this for BPMN display
+          drdOriginalChain: chain.map((d) => d.identifier),
         };
 
         console.log('[SaveTemplate] Saving DRD template:', drdTemplateData);

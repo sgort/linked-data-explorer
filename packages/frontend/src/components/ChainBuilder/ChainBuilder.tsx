@@ -9,6 +9,7 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import React, { useEffect, useState } from 'react';
 
+import { initializeDefaultTestCases } from '../../services/defaultTestCases';
 import { ChainExecutionResult, DmnModel, DmnVariable, EnhancedChainLink } from '../../types';
 import { ChainPreset, ChainValidation, VariableMatch } from '../../types/chainBuilder.types';
 import ChainComposer from './ChainComposer';
@@ -65,6 +66,11 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChain, availableDmns, inputs, semanticLinks]); // Added semanticLinks
+
+  // Initialize default test cases on first mount
+  useEffect(() => {
+    initializeDefaultTestCases(endpoint);
+  }, [endpoint]);
 
   /**
    * Load semantic chain links from backend
@@ -132,8 +138,12 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
 
     try {
       // Check if this is a DRD template
-      const isDrd = loadedTemplate?.isDrd || false;
+      const isDrd = loadedTemplate?.type === 'drd' || false; // ✅ Check type field
       const drdEntryPointId = loadedTemplate?.drdEntryPointId;
+
+      console.log('[Execute] isDrd:', isDrd);
+      console.log('[Execute] drdEntryPointId:', drdEntryPointId);
+      console.log('[Execute] Chain:', selectedChain);
 
       const response = await fetch(`${API_BASE_URL}/api/chains/execute`, {
         method: 'POST',
@@ -142,9 +152,8 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
           dmnIds: selectedChain,
           inputs,
           endpoint,
-          options: { includeIntermediateSteps: true },
-          isDrd, // NEW: Pass DRD flag
-          drdEntryPointId, // NEW: Pass DRD entry point
+          isDrd,
+          drdEntryPointId,
         }),
       });
 
@@ -153,51 +162,11 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       if (data.success) {
         setExecutionResult(data.data);
       } else {
-        const errorMessage =
-          data.error?.message || data.data?.error || data.error || 'Unknown error occurred';
-
-        const errorCode = data.error?.code || 'EXECUTION_ERROR';
-
-        alert(
-          `❌ Execution Failed\n\n` +
-            `${errorMessage}\n\n` +
-            `Error Code: ${errorCode}\n\n` +
-            `Common causes:\n` +
-            `• Missing deployment keys in Operaton\n` +
-            `  (Check if DMN is deployed with correct key)\n` +
-            `• DMN model not found in Operaton\n` +
-            `• Invalid input values or types\n` +
-            `• Network connectivity issues\n\n` +
-            `Backend: ${API_BASE_URL}\n` +
-            `Check browser console for technical details.`
-        );
-
-        console.error('Chain execution error:', {
-          code: errorCode,
-          message: errorMessage,
-          apiError: data.error,
-          executionError: data.data?.error,
-          fullResponse: data,
-          chain: selectedChain,
-          inputs: inputs,
-        });
+        alert(`Execution failed: ${data.error?.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Network/fetch error:', error);
-
-      const errorMessage = error instanceof Error ? error.message : 'Unknown network error';
-
-      alert(
-        `❌ Connection Failed\n\n` +
-          `${errorMessage}\n\n` +
-          `Possible causes:\n` +
-          `• Backend server is not running\n` +
-          `  (Expected at: ${API_BASE_URL})\n` +
-          `• Network connectivity issues\n` +
-          `• CORS configuration problems\n` +
-          `• Firewall blocking the connection\n\n` +
-          `Check browser console for details.`
-      );
+      console.error('Execution error:', error);
+      alert(`Execution error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsExecuting(false);
     }
@@ -442,7 +411,14 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
    * Load a preset chain
    */
   const handleLoadPreset = (preset: ChainPreset) => {
-    if (preset.isDrd && preset.drdEntryPointId && preset.drdOriginalChain) {
+    console.log('[LoadPreset] Loading template:', preset.name, 'Type:', preset.type);
+
+    if (preset.type === 'drd' && preset.drdEntryPointId && preset.drdOriginalChain) {
+      // ✅ Changed from preset.isDrd
+      console.log('[LoadPreset] Loading DRD template');
+      console.log('[LoadPreset] Entry Point:', preset.drdEntryPointId);
+      console.log('[LoadPreset] Original Chain:', preset.drdOriginalChain);
+
       // Create synthetic DRD model
       const drdModel: DmnModel = {
         id: `drd-${preset.id}`,
@@ -452,7 +428,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
         deploymentId: preset.drdDeploymentId,
         isDrd: true,
         inputs: [],
-        outputs: (preset.drdOutputs || []) as DmnVariable[], // Cast to DmnVariable[]
+        outputs: (preset.drdOutputs || []) as DmnVariable[],
       };
 
       // Extract inputs from defaultInputs
@@ -477,7 +453,10 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       setInputs(preset.defaultInputs || {});
       setExecutionResult(null);
       setLoadedTemplate(preset);
+
+      console.log('[LoadPreset] DRD loaded, chain set to:', [preset.drdEntryPointId]);
     } else {
+      console.log('[LoadPreset] Loading sequential template');
       // Regular chain template
       setSelectedChain(preset.dmnIds);
       setInputs(preset.defaultInputs || {});
