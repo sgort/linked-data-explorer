@@ -554,7 +554,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
               executionResult={executionResult}
               isExecuting={isExecuting}
               endpoint={endpoint}
-              loadedTemplate={loadedTemplate}
+              _loadedTemplate={loadedTemplate}
             />
           </div>
 
