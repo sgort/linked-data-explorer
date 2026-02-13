@@ -6,6 +6,7 @@ import {
   Clock,
   FileInput,
   Layers,
+  Link2,
   Save,
   Tag,
   Trash2,
@@ -22,10 +23,12 @@ import {
 } from '../../services/userTemplateStorage';
 import { ChainExecutionResult, DmnModel } from '../../types';
 import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
+import { TestCase } from '../../types/testCase.types';
 import ChainResults from './ChainResults';
 import ExecutionProgress from './ExecutionProgress';
 import ExportChain from './ExportChain';
 import InputForm from './InputForm';
+import TestCasePanel from './TestCasePanel';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -69,6 +72,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   const [templateDescription, setTemplateDescription] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [saveMode, setSaveMode] = useState<'drd' | 'sequential'>('drd');
 
   // Add refs for scrollable container and execution area
   const scrollableContainerRef = useRef<HTMLDivElement>(null);
@@ -129,6 +133,13 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
       });
     }
   }, [isExecuting]);
+
+  const handleLoadTestCase = (testCase: TestCase) => {
+    // Load test case inputs
+    Object.entries(testCase.inputs).forEach(([key, value]) => {
+      onInputChange(key, value);
+    });
+  };
 
   const handleSaveTemplate = async () => {
     if (!validation?.isValid) {
@@ -502,6 +513,14 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
           </div>
         )}
 
+        {/* Test Cases Section */}
+        <TestCasePanel
+          chain={chain}
+          endpoint={endpoint}
+          currentInputs={inputs}
+          onLoadTestCase={handleLoadTestCase}
+        />
+
         {/* Inputs Section */}
         <div className="border-b border-slate-200">
           <button
@@ -547,49 +566,82 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
 
       {/* Action Buttons (Footer) */}
       <div className="p-4 border-t border-slate-200 bg-slate-50">
-        <div className="flex items-center gap-2">
-          {/* Execute Button (Left) */}
-          <button
-            onClick={onExecute}
-            disabled={!validation?.isValid || isExecuting}
-            className={`
-              flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
-              transition-all duration-150
-              ${
-                validation?.isValid && !isExecuting
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-              }
-            `}
-          >
-            {isExecuting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Executing...</span>
-              </>
+        <div className="space-y-2">
+          {/* Execution Mode Info */}
+          {chain.length > 0 && validation && (
+            <div className="text-xs text-center">
+              {validation.isDrdCompatible ? (
+                <span className="text-purple-600">✓ DRD-compatible chain (unified execution)</span>
+              ) : (
+                <span className="text-blue-600">
+                  ⚠️ Sequential execution required (semantic links)
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            {/* Execute Button (Left) */}
+            <button
+              onClick={onExecute}
+              disabled={!validation?.isValid || isExecuting}
+              className={`
+          flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
+          transition-all duration-150
+          ${
+            validation?.isValid && !isExecuting
+              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md'
+              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+          }
+        `}
+            >
+              {isExecuting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Executing...</span>
+                </>
+              ) : (
+                <>
+                  <Zap size={16} />
+                  <span>Execute Chain</span>
+                </>
+              )}
+            </button>
+
+            {/* Save/Export Button (Right) - Conditional based on DRD compatibility */}
+            {validation?.isDrdCompatible ? (
+              <button
+                onClick={() => setShowSaveModal(true)}
+                disabled={!validation?.isValid}
+                className={`
+            flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
+            transition-all duration-150
+            ${
+              validation?.isValid
+                ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            }
+          `}
+                title="Save as unified DRD"
+              >
+                <Link2 size={16} />
+                <span>Save</span>
+              </button>
             ) : (
-              <>
-                <Zap size={16} />
-                <span>Execute Chain</span>
-              </>
+              <ExportChain
+                dmnIds={chain.map((dmn) => dmn.identifier)}
+                inputs={inputs}
+                chainDmns={chain}
+                chainName={`chain-${chain.length}-dmns`}
+                validation={validation}
+              />
             )}
-          </button>
+          </div>
 
-          {/* Export Button (Right) */}
-          <ExportChain
-            dmnIds={chain.map((dmn) => dmn.identifier)}
-            inputs={inputs}
-            chainDmns={chain}
-            chainName={`chain-${chain.length}-dmns`}
-            validation={validation}
-          />
+          {!validation?.isValid && chain.length > 0 && (
+            <p className="text-xs text-center text-amber-600">Fix validation errors to execute</p>
+          )}
         </div>
-
-        {!validation?.isValid && chain.length > 0 && (
-          <p className="text-xs text-center text-amber-600 mt-2">
-            Fix validation errors to execute
-          </p>
-        )}
       </div>
 
       {/* Save Template Modal */}
@@ -635,10 +687,30 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
                 />
               </div>
 
-              <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded">
-                The {chain.length} DMNs will be assembled into a single DRD and deployed to
-                Operaton. The saved template uses{' '}
-                <strong>{chain[chain.length - 1]?.identifier}</strong> as its entry point.
+              <div className="text-xs bg-slate-50 p-3 rounded">
+                {validation?.isDrdCompatible ? (
+                  <>
+                    <div className="text-slate-700 mb-2">
+                      The {chain.length} DMNs will be assembled into a single DRD and deployed to
+                      Operaton. The saved template uses{' '}
+                      <strong>{chain[chain.length - 1]?.identifier}</strong> as its entry point.
+                    </div>
+                    <div className="text-green-600 font-medium">
+                      ✓ All variables use exact identifier matching
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-amber-700 font-medium mb-2">
+                      ⚠️ This chain cannot be saved as a DRD
+                    </div>
+                    <div className="text-slate-600">
+                      Chain contains {validation?.semanticMatches?.length || 0} semantic variable
+                      link(s). DRD requires exact identifier matches. This template will use
+                      sequential execution.
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

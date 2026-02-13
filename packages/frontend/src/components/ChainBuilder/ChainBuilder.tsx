@@ -8,8 +8,8 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import React, { useEffect, useState } from 'react';
 
-import { ChainExecutionResult, DmnModel, DmnVariable } from '../../types';
-import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
+import { ChainExecutionResult, DmnModel, DmnVariable, EnhancedChainLink } from '../../types';
+import { ChainPreset, ChainValidation, VariableMatch } from '../../types/chainBuilder.types';
 import ChainComposer from './ChainComposer';
 import ChainConfig from './ChainConfig';
 import DmnList from './DmnList';
@@ -41,10 +41,17 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'builder' | 'semantic'>('builder');
   const [loadedTemplate, setLoadedTemplate] = useState<ChainPreset | null>(null);
+  const [semanticLinks, setSemanticLinks] = useState<EnhancedChainLink[]>([]);
 
   // Load DMNs when endpoint changes
   useEffect(() => {
     loadDmns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint]);
+
+  // Add effect to load semantic links when endpoint changes
+  useEffect(() => {
+    loadSemanticLinks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
 
@@ -57,6 +64,27 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChain, availableDmns, inputs]);
+
+  /**
+   * Load semantic chain links from backend
+   */
+  const loadSemanticLinks = async () => {
+    try {
+      const url = `${API_BASE_URL}/api/dmns/enhanced-chain-links?endpoint=${encodeURIComponent(endpoint)}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.success) {
+        setSemanticLinks(data.data || []);
+      } else {
+        console.error('Failed to load semantic links:', data.error);
+        setSemanticLinks([]);
+      }
+    } catch (error) {
+      console.error('Error loading semantic links:', error);
+      setSemanticLinks([]);
+    }
+  };
 
   /**
    * Load available DMNs from backend
@@ -172,7 +200,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
   };
 
   /**
-   * Validate the current chain
+   * Validate the current chain with DRD compatibility checking
    */
   const validateChain = () => {
     const chainDmns = selectedChain
@@ -188,6 +216,8 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     const warnings: ChainValidation['warnings'] = [];
     const requiredInputs: ChainValidation['requiredInputs'] = [];
     const missingInputs: ChainValidation['missingInputs'] = [];
+    const semanticMatches: VariableMatch[] = [];
+    const drdIssues: string[] = [];
 
     // Track outputs available at each step
     const availableOutputs = new Set<string>();
@@ -197,12 +227,50 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
 
       // Check each required input
       for (const input of dmn.inputs) {
-        // Check if input is provided by previous DMN
-        const providedByPreviousDmn = availableOutputs.has(input.identifier);
+        // Check if input is provided by exact match from previous DMN
+        const exactMatch = availableOutputs.has(input.identifier);
 
-        if (!providedByPreviousDmn) {
-          // Deduplicate by identifier only (not identifier+requiredBy)
-          // This ensures each unique input appears once in the form
+        if (!exactMatch && i > 0) {
+          // Check for semantic match with previous DMN
+          const prevDmn = chainDmns[i - 1];
+          const semanticLink = semanticLinks.find(
+            (link) =>
+              link.dmn2.identifier === dmn.identifier &&
+              link.dmn1.identifier === prevDmn.identifier &&
+              link.inputVariable === input.identifier &&
+              link.matchType === 'semantic'
+          );
+
+          if (semanticLink) {
+            // Semantic match found
+            semanticMatches.push({
+              outputDmn: prevDmn.identifier,
+              outputVar: semanticLink.outputVariable,
+              inputDmn: dmn.identifier,
+              inputVar: input.identifier,
+              matchType: 'semantic',
+              semanticConcept: semanticLink.sharedConcept,
+            });
+
+            drdIssues.push(
+              `Variable '${input.identifier}' in ${dmn.title} ` +
+                `requires semantic match to '${semanticLink.outputVariable}' ` +
+                `from ${prevDmn.title}. DRD requires exact identifier match.`
+            );
+
+            // Don't require user input for semantically matched variables
+            continue;
+          }
+        }
+
+        // If not provided by previous DMN (exact or semantic), user must provide it
+        if (
+          !exactMatch &&
+          !semanticMatches.some(
+            (m) => m.inputVar === input.identifier && m.inputDmn === dmn.identifier
+          )
+        ) {
+          // Deduplicate by identifier only
           const alreadyAdded = requiredInputs.some((ri) => ri.identifier === input.identifier);
           if (!alreadyAdded) {
             const inputData = {
@@ -267,8 +335,11 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
 
     setValidation({
       isValid: errors.length === 0,
+      isDrdCompatible: drdIssues.length === 0,
       errors,
       warnings,
+      semanticMatches,
+      drdIssues,
       requiredInputs,
       missingInputs,
       estimatedTime,

@@ -273,7 +273,8 @@ const ChainComposer: React.FC<ChainComposerProps> = ({
 
         {/* Validation Summary */}
         {validation && chain.length > 0 && (
-          <div className="mt-3">
+          <div className="mt-3 space-y-2">
+            {/* Execution Validation */}
             {validation.isValid ? (
               <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
                 <CheckCircle2 size={16} />
@@ -287,6 +288,43 @@ const ChainComposer: React.FC<ChainComposerProps> = ({
                   {validation.missingInputs.length !== 1 ? 's' : ''} required
                 </span>
               </div>
+            )}
+
+            {/* DRD Compatibility */}
+            {validation.isValid && !validation.isDrdCompatible && (
+              <div className="text-sm text-purple-700 bg-purple-50 px-3 py-2 rounded-lg">
+                <div className="flex items-center gap-2 font-medium mb-1">
+                  <AlertCircle size={16} />
+                  <span>Cannot save as DRD</span>
+                </div>
+                <div className="text-xs text-purple-600">
+                  This chain uses semantic variable matching. Use sequential execution only.
+                </div>
+              </div>
+            )}
+
+            {/* Semantic Matches Details */}
+            {validation.semanticMatches.length > 0 && (
+              <details className="text-xs bg-slate-50 rounded-lg">
+                <summary className="cursor-pointer px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">
+                  🔗 {validation.semanticMatches.length} semantic link
+                  {validation.semanticMatches.length !== 1 ? 's' : ''} detected
+                </summary>
+                <div className="px-3 pb-3 pt-1 space-y-2">
+                  {validation.semanticMatches.map((match, idx) => (
+                    <div key={idx} className="bg-white p-2 rounded border border-slate-200">
+                      <div className="font-mono text-[10px] text-slate-600">{match.outputDmn}</div>
+                      <div className="text-blue-600 font-medium">
+                        {match.outputVar} → {match.inputVar}
+                      </div>
+                      <div className="font-mono text-[10px] text-slate-600">{match.inputDmn}</div>
+                      <div className="text-emerald-600 font-mono text-[10px] mt-1">
+                        via {match.semanticConcept?.split('/').pop()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
             )}
           </div>
         )}
