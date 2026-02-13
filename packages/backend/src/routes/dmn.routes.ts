@@ -75,7 +75,12 @@ router.get('/semantic-equivalences', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
     const equivalences = await sparqlService.findSemanticEquivalences(endpoint);
-    res.json(equivalences);
+
+    res.json({
+      success: true,
+      data: equivalences,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
   } catch (error: unknown) {
     const errorDetails = getErrorDetails(error);
     logger.error('Semantic equivalences error', errorDetails);
@@ -95,7 +100,13 @@ router.get('/enhanced-chain-links', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
     const links = await sparqlService.findEnhancedChainLinks(endpoint);
-    res.json(links);
+
+    // Standardize response format to match other endpoints
+    res.json({
+      success: true,
+      data: links,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
   } catch (error: unknown) {
     const errorDetails = getErrorDetails(error);
     logger.error('Enhanced chain links error', errorDetails);
@@ -115,7 +126,12 @@ router.get('/cycles', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
     const cycles = await sparqlService.detectChainCycles(endpoint);
-    res.json(cycles);
+
+    res.json({
+      success: true,
+      data: cycles,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
   } catch (error: unknown) {
     const errorDetails = getErrorDetails(error);
     logger.error('Cycle detection error', errorDetails);
@@ -123,7 +139,7 @@ router.get('/cycles', async (req: Request, res: Response) => {
       success: false,
       error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
       timestamp: new Date().toISOString(),
-    });
+    } as ApiResponse);
   }
 });
 

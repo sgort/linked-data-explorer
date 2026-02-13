@@ -42,6 +42,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
   const [activeTab, setActiveTab] = useState<'builder' | 'semantic'>('builder');
   const [loadedTemplate, setLoadedTemplate] = useState<ChainPreset | null>(null);
   const [semanticLinks, setSemanticLinks] = useState<EnhancedChainLink[]>([]);
+  const [isLoadingSemanticLinks, setIsLoadingSemanticLinks] = useState(false);
 
   // Load DMNs when endpoint changes
   useEffect(() => {
@@ -55,7 +56,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
 
-  // Validate chain whenever it changes
+  // Validate chain whenever it changes (including semantic links)
   useEffect(() => {
     if (selectedChain.length > 0) {
       validateChain();
@@ -63,7 +64,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       setValidation(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChain, availableDmns, inputs]);
+  }, [selectedChain, availableDmns, inputs, semanticLinks]); // Added semanticLinks
 
   /**
    * Load semantic chain links from backend
@@ -74,8 +75,9 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       const response = await fetch(url);
       const data = await response.json();
 
-      if (data.success) {
-        setSemanticLinks(data.data || []);
+      if (data.success && Array.isArray(data.data)) {
+        setSemanticLinks(data.data);
+        console.log('[SemanticLinks] Loaded:', data.data.length, 'links');
       } else {
         console.error('Failed to load semantic links:', data.error);
         setSemanticLinks([]);
@@ -209,6 +211,27 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
 
     if (chainDmns.length === 0) {
       setValidation(null);
+      return;
+    }
+
+    // Don't validate if semantic links are still loading
+    if (isLoadingSemanticLinks) {
+      setValidation({
+        isValid: false,
+        isDrdCompatible: false,
+        errors: [],
+        warnings: [
+          {
+            type: 'performance',
+            message: 'Loading semantic analysis...',
+          },
+        ],
+        semanticMatches: [],
+        drdIssues: [],
+        requiredInputs: [],
+        missingInputs: [],
+        estimatedTime: 0,
+      });
       return;
     }
 

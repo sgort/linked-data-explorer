@@ -195,8 +195,11 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
             <div>
               <div className="font-medium text-slate-700 mb-1">Inputs:</div>
               <div className="space-y-0.5">
-                {dmn.inputs.slice(0, 3).map((input) => (
-                  <div key={input.identifier} className="text-slate-500">
+                {dmn.inputs.slice(0, 3).map((input, inputIdx) => (
+                  <div
+                    key={`${dmn.identifier}-input-${input.identifier}-${inputIdx}`}
+                    className="text-slate-500"
+                  >
                     • {input.identifier}
                     <span className="text-slate-400 ml-1">({input.type})</span>
                   </div>
@@ -211,8 +214,11 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
             <div>
               <div className="font-medium text-slate-700 mb-1">Outputs:</div>
               <div className="space-y-0.5">
-                {dmn.outputs.slice(0, 3).map((output) => (
-                  <div key={output.identifier} className="text-slate-500">
+                {dmn.outputs.slice(0, 3).map((output, outputIdx) => (
+                  <div
+                    key={`${dmn.identifier}-output-${output.identifier}-${outputIdx}`}
+                    className="text-slate-500"
+                  >
                     • {output.identifier}
                     <span className="text-slate-400 ml-1">({output.type})</span>
                   </div>
