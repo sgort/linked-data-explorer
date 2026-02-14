@@ -1,6 +1,68 @@
 {
   "versions": [
     {
+      "version": "0.8.3",
+      "status": "Governance Feature",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "February 14, 2026",
+      "sections": [
+        {
+          "title": "DMN Validation & Governance System",
+          "icon": "🛡️",
+          "iconColor": "emerald",
+          "items": [
+            "Integrated RONL Ontology v1.0 governance vocabulary for DMN validation metadata",
+            "Visual badge system distinguishing validated, in-review, and non-validated decision models",
+            "Emerald green 'Gevalideerd' badge for officially validated DMNs by competent authorities",
+            "Amber 'In Review' badge for DMNs currently under validation process",
+            "Badges display validating organization name (e.g., Sociale Verzekeringsbank, SZW)",
+            "Validation dates shown in Dutch format (14 feb 2026) with full details on hover",
+            "Badges appear in both Available DMNs list and Chain Composer dropped cards",
+            "Non-validated DMNs show no badge, maintaining clean, uncluttered interface by default"
+          ]
+        },
+        {
+          "title": "Backend SPARQL Integration",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "Enhanced SPARQL query with UNION support for backward compatibility with legacy namespaces",
+            "Queries both old (ronl: <.../termen/>) and new (ronl-gov: <.../ontology#>) vocabularies",
+            "Automatic resolution of validating organization names via skos:prefLabel lookup",
+            "Fetches ronl:validationStatus, ronl:validatedBy, ronl:validatedAt, ronl:validationNote from TriplyDB",
+            "Graceful handling of missing validation metadata using OPTIONAL SPARQL blocks",
+            "5-minute caching per endpoint for optimal performance with validation data"
+          ]
+        },
+        {
+          "title": "User Experience & Accessibility",
+          "icon": "♿",
+          "iconColor": "purple",
+          "items": [
+            "WCAG AA compliant color contrast for validation badges (emerald 600, amber 500)",
+            "Icon + text badges (not color-only) for accessibility and visual clarity",
+            "Hover tooltips display full validation details: organization, date, and notes",
+            "Compact badge mode in DMN list (icon + short label), expanded mode in cards",
+            "Screen reader friendly with semantic HTML and proper ARIA labels",
+            "Responsive design: badges adapt to small screens by hiding text, showing icon only",
+            "Dutch language labels: 'Gevalideerd' and 'In Review' for localized user experience"
+          ]
+        },
+        {
+          "title": "Data Model Extensions",
+          "icon": "🏗️",
+          "iconColor": "slate",
+          "items": [
+            "Extended DmnModel interface with validationStatus, validatedBy, validatedByName, validatedAt, validationNote fields",
+            "TypeScript type safety for validation status: 'validated' | 'in-review' | 'not-validated'",
+            "Frontend and backend type definitions synchronized for end-to-end type safety",
+            "Validation metadata flows through: TriplyDB → Backend SPARQL → Frontend State → UI Components"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.8.2",
       "status": "Feature & Bug Fix",
       "statusColor": "green",

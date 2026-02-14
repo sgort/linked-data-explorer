@@ -12,6 +12,29 @@
 
 ---
 
+# DMN Governance & Validation System ✨ NEW ✨
+
+**Version:** 0.8.3  
+**Release Date:** February 14, 2026  
+**Status:** Production  
+**Ontology:** RONL Ontology v1.0
+
+## Overview
+
+The Linked Data Explorer implements a visual governance system that distinguishes between validated, in-review, and non-validated Decision Model and Notation (DMN) models published to TriplyDB. This transparency enables users to quickly identify which decision models have been officially approved by competent Dutch government authorities.
+
+### Purpose
+
+- **Trust & Transparency:** Clearly indicate which DMNs have undergone official validation
+- **Quality Assurance:** Track validation status, validating organization, and validation dates
+- **Compliance:** Support audit trails for government rule implementations
+- **Multi-Authority Support:** Enable validation by different competent authorities (SVB, SZW, UWV, etc.)
+
+### References
+See further the [detailed docs](./docs/GOVERNANCE.md)
+
+---
+
 # Enhanced Validation & Semantic Chain Detection ✨ NEW ✨
 
 ## Overview
@@ -32,6 +55,7 @@ The enhanced validation system successfully distinguishes between DRD-compatible
 
 ### References
 See further the [detailed docs](./docs/ENHANCED_VALIDATION.md)
+
 ---
 
 # DRD (Decision Requirements Diagram) Generation

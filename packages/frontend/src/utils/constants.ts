@@ -8,8 +8,8 @@ export const PRESET_ENDPOINTS = [
     url: 'https://api.open-regels.triply.cc/datasets/stevengort/DMN-discovery/services/DMN-discovery/sparql',
   },
   {
-    name: 'Facts',
-    url: 'https://api.open-regels.triply.cc/datasets/stevengort/facts/services/facts/sparql',
+    name: 'RONL',
+    url: 'https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql',
   },
 ];
 

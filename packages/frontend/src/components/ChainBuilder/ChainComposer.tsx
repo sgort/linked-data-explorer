@@ -7,6 +7,7 @@ import React from 'react';
 
 import { DmnModel } from '../../types';
 import { ChainValidation } from '../../types/chainBuilder.types';
+import ValidationBadge from './ValidationBadge';
 
 interface ChainComposerProps {
   chain: DmnModel[];
@@ -43,14 +44,23 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({ dmn, index, onRem
       transition-all duration-150
     `}
       >
-        {/* DRD Badge - positioned absolutely relative to this card */}
-        {dmn.isDrd && (
-          <div className="absolute top-3 right-3 z-10">
+        {/* Badge Row - positioned absolutely at top-right */}
+        <div className="absolute top-3 right-3 z-10 flex items-start gap-2">
+          {/* Validation Badge - FIRST (most important) */}
+          <ValidationBadge
+            status={dmn.validationStatus}
+            validatedByName={dmn.validatedByName}
+            validatedAt={dmn.validatedAt}
+            compact={true}
+          />
+
+          {/* DRD Badge - SECOND */}
+          {dmn.isDrd && (
             <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-purple-600 text-white rounded shadow-sm">
               🔗 DRD
             </span>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="p-4">
           <div className="flex items-start gap-3">

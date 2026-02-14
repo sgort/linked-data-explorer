@@ -163,6 +163,7 @@ PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX ronl: <https://regels.overheid.nl/termen/>
+PREFIX ronl-gov: <https://regels.overheid.nl/ontology#>
 PREFIX cv: <http://data.europa.eu/m8g/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
@@ -170,6 +171,7 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 SELECT ?dmn ?identifier ?title ?description ?deploymentId ?deployedAt 
        ?implementedBy ?lastTested ?testStatus 
        ?service ?serviceTitle ?organization ?orgName ?logo
+       ?validationStatus ?validatedBy ?validatedByName ?validatedAt ?validationNote
 WHERE {
   ?dmn a cprmv:DecisionModel ;
        dct:identifier ?identifier ;
@@ -178,13 +180,25 @@ WHERE {
   OPTIONAL { ?dmn dct:description ?description }
   OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
   OPTIONAL { ?dmn cprmv:deployedAt ?deployedAt }
+  
+  # implementedBy: Support both old (ronl:) and new (cprmv:)
   OPTIONAL { ?dmn ronl:implementedBy ?implementedBy }
+  OPTIONAL { ?dmn cprmv:implementedBy ?implementedBy }
+  
   OPTIONAL { ?dmn cprmv:lastTested ?lastTested }
   OPTIONAL { ?dmn cprmv:testStatus ?testStatus }
   
-  # NEW: Traverse DMN → Service → Organization → Logo
+  # Traverse DMN → Service → Organization → Logo
+  # Support BOTH old (ronl:implements) and new (cprmv:implements)
   OPTIONAL {
-    ?dmn ronl:implements ?service .
+    {
+      # NEW namespace (facts endpoint uses this)
+      ?dmn cprmv:implements ?service .
+    } UNION {
+      # OLD namespace (RONL/DMN-discovery endpoints use this)
+      ?dmn ronl:implements ?service .
+    }
+    
     ?service dct:title ?serviceTitle .
     
     OPTIONAL {
@@ -196,6 +210,19 @@ WHERE {
       }
     }
   }
+  
+  # NEW: Validation metadata (RONL Ontology v1.0)
+  # Only in new governance namespace (no backward compatibility needed - these are new properties)
+  OPTIONAL { ?dmn ronl-gov:validationStatus ?validationStatus }
+  OPTIONAL { 
+    ?dmn ronl-gov:validatedBy ?validatedBy .
+    # Get organization name for validated by
+    OPTIONAL {
+      ?validatedBy skos:prefLabel ?validatedByName .
+    }
+  }
+  OPTIONAL { ?dmn ronl-gov:validatedAt ?validatedAt }
+  OPTIONAL { ?dmn ronl-gov:validationNote ?validationNote }
 }
 ORDER BY ?identifier
 `;
@@ -236,6 +263,18 @@ ORDER BY ?identifier
           organization: binding.organization?.value,
           organizationName: binding.orgName?.value,
           logoUrl, // NEW: Resolved logo URL
+
+          // NEW: Validation metadata from RONL Ontology v1.0
+          validationStatus: binding.validationStatus?.value as
+            | 'validated'
+            | 'in-review'
+            | 'not-validated'
+            | undefined,
+          validatedBy: binding.validatedBy?.value,
+          validatedByName: binding.validatedByName?.value, // Already fetched by SPARQL query
+          validatedAt: binding.validatedAt?.value,
+          validationNote: binding.validationNote?.value,
+
           inputs: [],
           outputs: [],
         });

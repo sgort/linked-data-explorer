@@ -3,6 +3,7 @@ import { CheckCircle, Database, Loader2, Search, X } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
 import { DmnModel } from '../../types';
+import ValidationBadge from './ValidationBadge';
 
 interface DmnListProps {
   dmns: DmnModel[];
@@ -75,6 +76,19 @@ const DraggableDmnCard: React.FC<DraggableDmnCardProps> = ({ dmn, isUsed }) => {
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="font-medium text-sm text-slate-900 truncate">{dmn.identifier}</div>
+
+            {/* NEW: Validation Badge */}
+            {dmn.validationStatus && dmn.validationStatus !== 'not-validated' && (
+              <div className="mt-1">
+                <ValidationBadge
+                  status={dmn.validationStatus}
+                  validatedByName={dmn.validatedByName}
+                  validatedAt={dmn.validatedAt}
+                  compact={true}
+                />
+              </div>
+            )}
+
             <div className="text-xs text-slate-500 mt-0.5">
               {dmn.inputs.length} input{dmn.inputs.length !== 1 ? 's' : ''} → {dmn.outputs.length}{' '}
               output{dmn.outputs.length !== 1 ? 's' : ''}
