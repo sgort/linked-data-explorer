@@ -1,6 +1,93 @@
 {
   "versions": [
     {
+      "version": "0.8.4",
+      "status": "Vendor Integration",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 15, 2026",
+      "sections": [
+        {
+          "title": "Vendor Service Integration",
+          "icon": "🏢",
+          "iconColor": "blue",
+          "items": [
+            "Integrated RONL Ontology v1.0 vendor vocabulary (ronl:VendorService, ronl:basedOn, ronl:implementedBy)",
+            "Visual vendor badge system showing count of commercial implementations available for each DMN",
+            "Blue vendor badges with implementation count displayed on DMN cards in both Available DMNs list and Chain Composer",
+            "Click vendor badges to open detailed modal with provider information, contact details, and service URLs",
+            "Vendor count automatically fetched and cached alongside DMN metadata from TriplyDB",
+            "Defensive rendering: vendor badges only show when count > 0, no '0' badges displayed",
+            "Support for multiple vendor implementations per reference DMN with proper deduplication"
+          ]
+        },
+        {
+          "title": "Backend Vendor Service",
+          "icon": "⚙️",
+          "iconColor": "slate",
+          "items": [
+            "New vendor service with SPARQL queries supporting RONL vendor vocabulary schema",
+            "Deduplication using SAMPLE() aggregation with GROUP BY to handle multiple language tags and blank nodes",
+            "API endpoints: GET /v1/vendors (all vendors) and GET /v1/vendors/dmn/:identifier (vendors for specific DMN)",
+            "Automatic vendor logo resolution from TriplyDB assets with fallback handling",
+            "Vendor count aggregation integrated into DMN queries for efficient single-request data fetching",
+            "Support for schema:provider, schema:contactPoint, ronl:implementedBy, and full vendor metadata"
+          ]
+        },
+        {
+          "title": "Vendor Details Modal",
+          "icon": "📋",
+          "iconColor": "indigo",
+          "items": [
+            "Comprehensive vendor modal displaying provider name, logo, homepage, and platform (e.g., Blueriq)",
+            "License type badges: Commercial, Open Source, Free with color-coded styling",
+            "Access type indicators: IAM Required, Public Access, API Key Required",
+            "Contact information: name, email (mailto: link), telephone (tel: link) with icons",
+            "Direct service URL links to access vendor implementations with external link indicators",
+            "Description field showing vendor-specific implementation details in Dutch",
+            "Responsive modal design with smooth animations and proper z-index stacking"
+          ]
+        },
+        {
+          "title": "Badge System Enhancements",
+          "icon": "🎨",
+          "iconColor": "purple",
+          "items": [
+            "Standardized badge ordering across interface: 1) Validation 2) Vendor 3) DRD 4) Close button",
+            "Close button styling improved with white background, border, and red hover state for better visibility",
+            "Trash icon properly inherits red color on hover using Tailwind group modifier pattern",
+            "Vendor badges use blue color scheme (bg-blue-600) to distinguish from validation badges",
+            "Compact badge mode for list views, expanded mode for detailed cards",
+            "Event propagation handling: clicking vendor badge doesn't trigger drag operations"
+          ]
+        },
+        {
+          "title": "Type Safety & Data Model",
+          "icon": "🔒",
+          "iconColor": "green",
+          "items": [
+            "New TypeScript interfaces: VendorService, VendorOrganization, VendorContact in vendor.types.ts",
+            "Extended DmnModel with optional vendorCount field for seamless integration",
+            "Type-safe vendor modal props with proper TypeScript inference throughout component tree",
+            "Endpoint parameter properly threaded through component hierarchy (App → ChainBuilder → ChainComposer/DmnList)",
+            "Eliminated hardcoded endpoints in favor of prop-based endpoint management"
+          ]
+        },
+        {
+          "title": "User Experience Improvements",
+          "icon": "✨",
+          "iconColor": "yellow",
+          "items": [
+            "Vendor badges appear in Available DMNs list enabling discovery before adding to chain",
+            "Hover tooltips on vendor badges show implementation count ('1 vendor implementation available')",
+            "Loading states in vendor modal with spinner and 'Loading vendor services...' message",
+            "Empty state handling: 'No vendor implementations found' with building icon when no vendors exist",
+            "Error handling with clear error messages when vendor service fetch fails"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.8.3",
       "status": "Governance Feature",
       "statusColor": "emerald",

@@ -4,19 +4,23 @@ import React, { useMemo, useState } from 'react';
 
 import { DmnModel } from '../../types';
 import ValidationBadge from './ValidationBadge';
+import VendorBadge from './VendorBadge';
+import VendorModal from './VendorModal';
 
 interface DmnListProps {
   dmns: DmnModel[];
   usedDmnIds: string[];
   isLoading: boolean;
+  endpoint: string;
 }
 
 interface DraggableDmnCardProps {
   dmn: DmnModel;
   isUsed: boolean;
+  onVendorClick: (dmn: DmnModel) => void;
 }
 
-const DraggableDmnCard: React.FC<DraggableDmnCardProps> = ({ dmn, isUsed }) => {
+const DraggableDmnCard: React.FC<DraggableDmnCardProps> = ({ dmn, isUsed, onVendorClick }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: dmn.identifier,
     disabled: isUsed,
@@ -77,7 +81,7 @@ const DraggableDmnCard: React.FC<DraggableDmnCardProps> = ({ dmn, isUsed }) => {
           <div className="flex-1 min-w-0">
             <div className="font-medium text-sm text-slate-900 truncate">{dmn.identifier}</div>
 
-            {/* NEW: Validation Badge */}
+            {/* Validation Badge */}
             {dmn.validationStatus && dmn.validationStatus !== 'not-validated' && (
               <div className="mt-1">
                 <ValidationBadge
@@ -88,6 +92,20 @@ const DraggableDmnCard: React.FC<DraggableDmnCardProps> = ({ dmn, isUsed }) => {
                 />
               </div>
             )}
+
+            {/* Vendor Badge */}
+            {typeof dmn.vendorCount === 'number' && dmn.vendorCount > 0 ? (
+              <div className="mt-1">
+                <VendorBadge
+                  count={dmn.vendorCount}
+                  onClick={(e) => {
+                    e?.stopPropagation(); // Prevent drag when clicking badge
+                    onVendorClick(dmn); // Use the prop handler
+                  }}
+                  compact={true}
+                />
+              </div>
+            ) : null}
 
             <div className="text-xs text-slate-500 mt-0.5">
               {dmn.inputs.length} input{dmn.inputs.length !== 1 ? 's' : ''} → {dmn.outputs.length}{' '}
@@ -142,8 +160,9 @@ const SkeletonCard: React.FC = () => {
 /**
  * Left panel: List of draggable DMNs
  */
-const DmnList: React.FC<DmnListProps> = ({ dmns, usedDmnIds, isLoading }) => {
+const DmnList: React.FC<DmnListProps> = ({ dmns, usedDmnIds, isLoading, endpoint }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [vendorModalDmn, setVendorModalDmn] = useState<DmnModel | null>(null);
 
   // Filter DMNs based on search term
   const filteredDmns = useMemo(() => {
@@ -277,7 +296,14 @@ const DmnList: React.FC<DmnListProps> = ({ dmns, usedDmnIds, isLoading }) => {
         ) : (
           filteredDmns.map((dmn) => {
             const isUsed = usedDmnIds.includes(dmn.identifier);
-            return <DraggableDmnCard key={dmn.identifier} dmn={dmn} isUsed={isUsed} />;
+            return (
+              <DraggableDmnCard
+                key={dmn.identifier}
+                dmn={dmn}
+                isUsed={isUsed}
+                onVendorClick={setVendorModalDmn}
+              />
+            );
           })
         )}
       </div>
@@ -298,6 +324,16 @@ const DmnList: React.FC<DmnListProps> = ({ dmns, usedDmnIds, isLoading }) => {
           )}
         </div>
       </div>
+
+      {/* Vendor Modal */}
+      {vendorModalDmn && (
+        <VendorModal
+          dmnIdentifier={vendorModalDmn.identifier}
+          dmnTitle={vendorModalDmn.title}
+          endpoint={endpoint}
+          onClose={() => setVendorModalDmn(null)}
+        />
+      )}
     </div>
   );
 };

@@ -154,6 +154,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
           endpoint,
           isDrd,
           drdEntryPointId,
+          options: { includeIntermediateSteps: true },
         }),
       });
 
@@ -510,7 +511,12 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
         >
           <div className="flex flex-1 min-h-0 bg-slate-50">
             {/* Left Panel: DMN List */}
-            <DmnList dmns={availableDmns} usedDmnIds={selectedChain} isLoading={isLoadingDmns} />
+            <DmnList
+              dmns={availableDmns}
+              usedDmnIds={selectedChain}
+              isLoading={isLoadingDmns}
+              endpoint={endpoint}
+            />
 
             {/* Middle Panel: Chain Composer */}
             <SortableContext items={selectedChain} strategy={verticalListSortingStrategy}>
@@ -519,6 +525,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
                 onRemoveDmn={handleRemoveDmn}
                 onClearChain={handleClearChain}
                 validation={validation}
+                endpoint={endpoint}
               />
             </SortableContext>
 

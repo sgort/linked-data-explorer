@@ -12,7 +12,34 @@
 
 ---
 
-# DMN Governance & Validation System ✨ NEW ✨
+# Vendor Service Integration ✨ NEW ✨
+
+## Overview
+
+The Vendor Services feature enables discovery and management of commercial implementations of government decision models. While government agencies publish reference DMN implementations through RONL, vendors (like Blueriq, Oracle Policy Automation, etc.) may provide certified commercial implementations with additional features, support, and integration capabilities.
+
+### Purpose
+
+- **Discoverability:** Users can see which DMNs have commercial implementations available
+- **Transparency:** Clear information about vendor implementations, licensing, and access requirements
+- **Choice:** Enable organizations to choose between reference implementations and vendor services
+- **Ecosystem Growth:** Support multi-vendor implementations of government services
+
+### Key Features
+
+✅ Visual badges showing vendor implementation count per DMN  
+✅ Detailed vendor information modal with provider details  
+✅ Contact information and service URLs  
+✅ License type and access requirement indicators  
+✅ Logo display for vendor branding  
+✅ Integration with CPSV Editor for publishing vendor services
+
+### References
+See further the [detailed docs](./docs/VENDOR_SERVICES.md)
+
+---
+
+# DMN Governance & Validation System 
 
 **Version:** 0.8.3  
 **Release Date:** February 14, 2026  
@@ -35,7 +62,7 @@ See further the [detailed docs](./docs/GOVERNANCE.md)
 
 ---
 
-# Enhanced Validation & Semantic Chain Detection ✨ NEW ✨
+# Enhanced Validation & Semantic Chain Detection
 
 ## Overview
 
