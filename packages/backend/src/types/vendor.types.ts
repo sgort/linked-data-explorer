@@ -3,7 +3,7 @@
  * Based on RONL Ontology v1.0 vendor integration vocabulary
  */
 
-import { DmnModel } from "./dmn.types";
+import { DmnModel } from './dmn.types';
 
 export interface VendorContact {
   name?: string;

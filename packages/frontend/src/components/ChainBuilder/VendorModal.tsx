@@ -138,7 +138,7 @@ const VendorModal: React.FC<VendorModalProps> = ({
                       <img
                         src={vendor.provider.logoUrl}
                         alt={vendor.provider.name}
-                        className="w-16 h-16 object-contain rounded border border-slate-200 bg-white p-2"
+                        className="w-24 h-20 object-contain rounded border border-slate-200 bg-white p-2"
                       />
                     )}
                     <div className="flex-1">

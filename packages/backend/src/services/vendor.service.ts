@@ -106,12 +106,27 @@ ORDER BY ?basedOnIdentifier ?providerName
           // Resolve logo URL if present
           let logoUrl: string | undefined;
           if (binding.providerLogo?.value) {
-            // Handle relative paths (e.g., ./assets/logo.png)
-            if (binding.providerLogo.value.startsWith('./assets/')) {
-              // Use logoResolver to get full URL from TriplyDB
-              logoUrl = await this.resolveVendorLogo(binding.providerLogo.value, endpoint);
-            } else if (binding.providerLogo.value.startsWith('http')) {
-              logoUrl = binding.providerLogo.value;
+            const logoValue = binding.providerLogo.value.trim();
+
+            logger.debug('Processing vendor logo', {
+              vendorService: id,
+              logoValue,
+            });
+
+            // ALWAYS try to resolve - handles relative paths, incomplete URLs, and complete URLs
+            logoUrl = await this.resolveVendorLogo(logoValue, endpoint);
+
+            if (!logoUrl) {
+              logger.warn('Failed to resolve vendor logo', {
+                vendorService: id,
+                logoValue,
+              });
+            } else {
+              logger.debug('Successfully resolved vendor logo', {
+                vendorService: id,
+                input: logoValue,
+                output: logoUrl,
+              });
             }
           }
 
@@ -184,32 +199,66 @@ ORDER BY ?basedOnIdentifier ?providerName
   }
 
   /**
-   * Resolve vendor logo URL from relative path
-   * Uses similar approach to DMN logo resolution
+   * Resolve vendor logo URL from relative path or incomplete TriplyDB URL
+   * Uses same approach as DMN logo resolution
    *
-   * @param logoPath - Relative path from TTL (e.g., "./assets/logo.png")
+   * @param logoPath - Path from RDF (relative path or incomplete URL)
    * @param endpoint - SPARQL endpoint URL
-   * @returns Full logo URL or undefined
+   * @returns Full logo URL with version ID or undefined
    */
   private async resolveVendorLogo(
     logoPath: string,
     endpoint?: string
   ): Promise<string | undefined> {
     try {
-      // Extract filename from path
+      // Check if it's already a complete TriplyDB URL with version ID
+      // Pattern: https://api.open-regels.triply.cc/datasets/{account}/{dataset}/assets/{id}/{versionId}
+      const completeUrlPattern =
+        /^https?:\/\/api\..*\.triply\.cc\/datasets\/[^/]+\/[^/]+\/assets\/[^/]+\/[^/]+$/;
+      if (completeUrlPattern.test(logoPath)) {
+        logger.debug('Vendor logo is already complete URL', { logoPath });
+        return logoPath;
+      }
+
+      // Check if it's an incomplete TriplyDB URL (needs resolution)
+      // Pattern: https://open-regels.triply.cc/{account}/{dataset}/assets/{filename}
+      const incompleteUrlPattern = /^https?:\/\/.*\.triply\.cc\/[^/]+\/[^/]+\/assets\/[^/]+$/;
+      const isIncompleteUrl = incompleteUrlPattern.test(logoPath);
+
+      // Extract filename from either relative path or incomplete URL
       const filename = logoPath.split('/').pop();
-      if (!filename) return undefined;
+      if (!filename) {
+        logger.debug('Could not extract filename from logo path', { logoPath });
+        return undefined;
+      }
+
+      // If it's some other complete URL (not TriplyDB), return as-is
+      if (!isIncompleteUrl && (logoPath.startsWith('http://') || logoPath.startsWith('https://'))) {
+        logger.debug('Vendor logo is external URL, returning as-is', { logoPath });
+        return logoPath;
+      }
 
       // Extract account and dataset from endpoint
       const match = endpoint?.match(/datasets\/([^/]+)\/([^/]+)/);
-      if (!match) return undefined;
+      if (!match) {
+        logger.debug('Could not extract account/dataset from endpoint', { endpoint });
+        return undefined;
+      }
 
       const [, account, dataset] = match;
 
       // Fetch assets from TriplyDB
       const assetsUrl = `https://api.open-regels.triply.cc/datasets/${account}/${dataset}/assets`;
 
-      const response = await axios.get(assetsUrl);
+      logger.debug('Fetching assets to resolve vendor logo', {
+        assetsUrl,
+        filename,
+        logoPath,
+      });
+
+      const response = await axios.get(assetsUrl, {
+        timeout: 5000, // 5 second timeout
+      });
 
       // Type the assets response
       interface TriplyAsset {
@@ -224,13 +273,23 @@ ORDER BY ?basedOnIdentifier ?providerName
 
       const assets = response.data as TriplyAsset[];
 
-      // Find matching asset
+      // Find matching asset by filename
       const matchingAsset = assets.find((a) => a.assetName === filename);
 
       if (matchingAsset && matchingAsset.versions?.length > 0) {
-        return matchingAsset.versions[0].url;
+        const resolvedUrl = matchingAsset.versions[0].url;
+        logger.debug('Resolved vendor logo URL', {
+          filename,
+          input: logoPath,
+          output: resolvedUrl,
+        });
+        return resolvedUrl;
       }
 
+      logger.debug('Vendor logo asset not found', {
+        filename,
+        availableAssets: assets.map((a) => a.assetName),
+      });
       return undefined;
     } catch (error) {
       logger.warn('Failed to resolve vendor logo URL', {
