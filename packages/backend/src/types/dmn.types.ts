@@ -28,12 +28,16 @@ export interface DmnModel {
   logoUrl?: string; // NEW: Full logo URL (resolved with version ID)
   inputs: DmnVariable[];
   outputs: DmnVariable[];
+
   // NEW: Validation metadata (RONL Ontology v1.0)
   validationStatus?: 'validated' | 'in-review' | 'not-validated';
   validatedBy?: string; // Organization URI
   validatedByName?: string; // Organization display name
   validatedAt?: string; // ISO 8601 date
   validationNote?: string; // Optional notes
+
+  // NEW: Vendor implementation count
+  vendorCount?: number; // Number of vendor implementations available
 }
 
 export interface ChainLink {

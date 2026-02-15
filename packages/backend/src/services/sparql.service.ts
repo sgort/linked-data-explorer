@@ -229,6 +229,8 @@ ORDER BY ?identifier
 
     const data = await this.executeQuery(query, endpoint);
     const bindings = data.results?.bindings || [];
+    // NEW: Get vendor counts
+    const vendorCounts = await this.getVendorCounts(targetEndpoint);
 
     logger.info(`Found ${bindings.length} DMN records`);
 
@@ -288,6 +290,10 @@ ORDER BY ?identifier
     for (const dmn of dmns) {
       dmn.inputs = await this.getDmnInputs(dmn.id, endpoint);
       dmn.outputs = await this.getDmnOutputs(dmn.id, endpoint);
+
+      // NEW: Add vendor count
+      dmn.vendorCount = vendorCounts.get(dmn.id) || 0;
+
       logger.debug(
         `DMN ${dmn.identifier}: ${dmn.inputs.length} inputs, ${dmn.outputs.length} outputs`
       );
@@ -420,6 +426,18 @@ ORDER BY ?identifier
 
       return result;
     });
+  }
+
+  /**
+   * Public wrapper for executing SPARQL queries
+   *
+   * @param endpoint - SPARQL endpoint URL
+   * @param query - SPARQL query string
+   * @returns SPARQL query results
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async executeSparqlQuery(endpoint: string, query: string): Promise<any> {
+    return this.executeQuery(query, endpoint);
   }
 
   /**
@@ -814,6 +832,47 @@ WHERE {
       ],
       type: 'three-hop',
     }));
+  }
+
+  /**
+   * Get vendor implementation count for DMNs
+   * Returns a map of DMN URI → vendor count
+   *
+   * @param endpoint - SPARQL endpoint URL
+   * @returns Map of DMN URI to vendor count
+   */
+  async getVendorCounts(endpoint?: string): Promise<Map<string, number>> {
+    try {
+      const query = `
+PREFIX ronl: <https://regels.overheid.nl/ontology#>
+
+SELECT ?basedOn (COUNT(?vendorService) AS ?vendorCount)
+WHERE {
+  ?vendorService a ronl:VendorService ;
+                 ronl:basedOn ?basedOn .
+}
+GROUP BY ?basedOn
+`;
+
+      const data = await this.executeQuery(query, endpoint);
+      const bindings = data.results?.bindings || [];
+
+      const vendorCounts = new Map<string, number>();
+
+      for (const binding of bindings) {
+        const dmnUri = binding.basedOn.value;
+        const count = parseInt(binding.vendorCount.value, 10);
+        vendorCounts.set(dmnUri, count);
+      }
+
+      logger.debug(`Fetched vendor counts for ${vendorCounts.size} DMNs`);
+      return vendorCounts;
+    } catch (error) {
+      logger.warn('Failed to fetch vendor counts', {
+        error: getErrorMessage(error),
+      });
+      return new Map();
+    }
   }
 
   /**

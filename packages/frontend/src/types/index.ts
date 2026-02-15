@@ -88,12 +88,16 @@ export interface DmnModel {
   inputs: DmnVariable[];
   outputs: DmnVariable[];
   isDrd?: boolean;
+
   // NEW: Validation metadata (RONL Ontology v1.0)
   validationStatus?: 'validated' | 'in-review' | 'not-validated';
   validatedBy?: string;
   validatedByName?: string;
   validatedAt?: string;
   validationNote?: string;
+
+  // NEW: Vendor implementation count
+  vendorCount?: number;
 }
 
 export interface DmnChainLink {
