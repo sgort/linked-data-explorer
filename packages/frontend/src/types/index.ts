@@ -185,6 +185,7 @@ export interface BpmnProcess {
   updatedAt: string;
   linkedDmnTemplates: string[]; // DMN template IDs
   readonly?: boolean;
+  status?: 'example' | 'wip';
 }
 
 export interface BpmnBusinessRuleTask {

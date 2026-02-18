@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { BpmnService } from '../../services/bpmnService';
 import { BpmnProcess } from '../../types';
 import {
+  ASYLUM_MIGRATION_EXAMPLE_XML,
   AWB_PROCESS_EXAMPLE_XML,
   DEFAULT_BPMN_XML,
   TREE_FELLING_EXAMPLE_XML,
@@ -30,6 +31,22 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     const existingIds = new Set(existingProcesses.map((p) => p.id));
     const added: BpmnProcess[] = [];
 
+    if (!existingIds.has('example_tree_felling')) {
+      const treeFellingExample: BpmnProcess = {
+        id: 'example_tree_felling',
+        name: 'Tree Felling Permit (Example)',
+        description: 'Example BPMN process demonstrating DMN decision tasks with embedded forms',
+        xml: TREE_FELLING_EXAMPLE_XML,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        linkedDmnTemplates: ['TreeFellingDecision', 'ReplacementTreeDecision'],
+        readonly: true,
+        status: 'example', // ADD THIS
+      };
+      BpmnService.saveProcess(treeFellingExample);
+      added.push(treeFellingExample);
+    }
+
     if (!existingIds.has('example_awb_process')) {
       const awbExample: BpmnProcess = {
         id: 'example_awb_process',
@@ -41,24 +58,27 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         updatedAt: new Date().toISOString(),
         linkedDmnTemplates: ['AwbCompletenessCheck', 'ArchivesActRetention'],
         readonly: true,
+        status: 'example', // ADD THIS
       };
       BpmnService.saveProcess(awbExample);
       added.push(awbExample);
     }
 
-    if (!existingIds.has('example_tree_felling')) {
-      const treeFellingExample: BpmnProcess = {
-        id: 'example_tree_felling',
-        name: 'Tree Felling Permit Subprocess (Example)',
-        description: 'Example BPMN process demonstrating DMN decision tasks with embedded forms',
-        xml: TREE_FELLING_EXAMPLE_XML,
+    if (!existingIds.has('wip_asylum_migration')) {
+      // Changed ID
+      const asylumMigration: BpmnProcess = {
+        id: 'wip_asylum_migration', // Changed ID
+        name: 'Migration & Asylum Procedure',
+        description: 'Complex migration and asylum procedure - work in progress',
+        xml: ASYLUM_MIGRATION_EXAMPLE_XML,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        linkedDmnTemplates: ['TreeFellingDecision', 'ReplacementTreeDecision'],
-        readonly: true,
+        linkedDmnTemplates: [],
+        readonly: false, // Changed to false - it's editable
+        status: 'wip', // ADD THIS - shows WIP badge
       };
-      BpmnService.saveProcess(treeFellingExample);
-      added.push(treeFellingExample);
+      BpmnService.saveProcess(asylumMigration);
+      added.push(asylumMigration);
     }
 
     if (added.length > 0) {
