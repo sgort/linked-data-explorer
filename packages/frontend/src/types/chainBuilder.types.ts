@@ -20,10 +20,13 @@ export interface RequiredInput {
 
 export interface ChainValidation {
   isValid: boolean;
+  isDrdCompatible: boolean; // NEW
   errors: ValidationError[];
   warnings: ValidationWarning[];
-  requiredInputs: RequiredInput[]; // Always show these in form
-  missingInputs: RequiredInput[]; // For validation only
+  semanticMatches: VariableMatch[]; // NEW
+  drdIssues: string[]; // NEW
+  requiredInputs: RequiredInput[];
+  missingInputs: RequiredInput[];
   estimatedTime: number;
 }
 
@@ -53,6 +56,16 @@ export interface ChainPreset {
   description: string;
   dmnIds: string[];
   defaultInputs?: Record<string, unknown>;
+  type?: 'sequential' | 'drd';
+  isDrd?: boolean;
+  drdDeploymentId?: string;
+  drdEntryPointId?: string;
+  drdOriginalChain?: string[];
+  drdOutputs?: Array<{
+    identifier: string;
+    title: string;
+    type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double'; // Use union type
+  }>;
 }
 
 export interface SavedChain {
@@ -62,4 +75,13 @@ export interface SavedChain {
   dmnIds: string[];
   createdAt: string;
   lastUsed?: string;
+}
+
+export interface VariableMatch {
+  outputDmn: string;
+  outputVar: string;
+  inputDmn: string;
+  inputVar: string;
+  matchType: 'exact' | 'semantic';
+  semanticConcept?: string;
 }

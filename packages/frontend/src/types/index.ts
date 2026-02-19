@@ -53,6 +53,7 @@ export enum ViewMode {
   CHANGELOG = 'CHANGELOG',
   ORCHESTRATION = 'ORCHESTRATION',
   TUTORIAL = 'TUTORIAL',
+  BPMN = 'BPMN',
 }
 
 export interface EndpointConfig {
@@ -86,6 +87,17 @@ export interface DmnModel {
   logoUrl?: string; // NEW: Full logo URL (resolved with version ID)
   inputs: DmnVariable[];
   outputs: DmnVariable[];
+  isDrd?: boolean;
+
+  // NEW: Validation metadata (RONL Ontology v1.0)
+  validationStatus?: 'validated' | 'in-review' | 'not-validated';
+  validatedBy?: string;
+  validatedByName?: string;
+  validatedAt?: string;
+  validationNote?: string;
+
+  // NEW: Vendor implementation count
+  vendorCount?: number;
 }
 
 export interface DmnChainLink {
@@ -161,4 +173,75 @@ export interface Organization {
   homepage?: string;
   logo?: string;
   spatial?: string;
+}
+
+// BPMN-specific types
+export interface BpmnProcess {
+  id: string;
+  name: string;
+  description?: string;
+  xml: string;
+  createdAt: string;
+  updatedAt: string;
+  linkedDmnTemplates: string[]; // DMN template IDs
+  readonly?: boolean;
+  status?: 'example' | 'wip';
+}
+
+export interface BpmnBusinessRuleTask {
+  id: string;
+  name: string;
+  decisionRef: string; // DMN identifier
+  resultVariable: string;
+  mapDecisionResult: 'singleEntry' | 'singleResult' | 'collectEntries' | 'resultList';
+}
+
+export interface BpmnModelerState {
+  processes: BpmnProcess[];
+  activeProcessId: string | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export interface ConceptInfo {
+  uri: string;
+  label: string;
+  notation?: string;
+  variable: {
+    uri: string;
+    identifier: string;
+    type: string;
+  };
+}
+
+export interface SemanticEquivalence {
+  sharedConcept: string;
+  concept1: ConceptInfo;
+  concept2: ConceptInfo;
+  dmn1: {
+    uri: string;
+    title: string;
+  };
+  dmn2: {
+    uri: string;
+    title: string;
+  };
+}
+
+export interface EnhancedChainLink {
+  dmn1: {
+    uri: string;
+    identifier: string;
+    title: string;
+  };
+  dmn2: {
+    uri: string;
+    identifier: string;
+    title: string;
+  };
+  outputVariable: string;
+  inputVariable: string;
+  variableType: string;
+  matchType: 'exact' | 'semantic';
+  sharedConcept: string;
 }

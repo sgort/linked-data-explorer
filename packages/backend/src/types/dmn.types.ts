@@ -28,6 +28,16 @@ export interface DmnModel {
   logoUrl?: string; // NEW: Full logo URL (resolved with version ID)
   inputs: DmnVariable[];
   outputs: DmnVariable[];
+
+  // NEW: Validation metadata (RONL Ontology v1.0)
+  validationStatus?: 'validated' | 'in-review' | 'not-validated';
+  validatedBy?: string; // Organization URI
+  validatedByName?: string; // Organization display name
+  validatedAt?: string; // ISO 8601 date
+  validationNote?: string; // Optional notes
+
+  // NEW: Vendor implementation count
+  vendorCount?: number; // Number of vendor implementations available
 }
 
 export interface ChainLink {
@@ -76,4 +86,52 @@ export interface OperatonEvaluationResponse {
     value: unknown;
     type: string;
   };
+}
+
+export interface ConceptInfo {
+  uri: string;
+  label: string;
+  notation?: string;
+  variable: {
+    uri: string;
+    identifier: string;
+    type: string;
+  };
+}
+
+export interface SemanticEquivalence {
+  sharedConcept: string; // The skos:exactMatch URI
+  concept1: ConceptInfo;
+  concept2: ConceptInfo;
+  dmn1: {
+    uri: string;
+    title: string;
+  };
+  dmn2: {
+    uri: string;
+    title: string;
+  };
+}
+
+export interface EnhancedChainLink {
+  dmn1: {
+    uri: string;
+    identifier: string;
+    title: string;
+  };
+  dmn2: {
+    uri: string;
+    identifier: string;
+    title: string;
+  };
+  outputVariable: string;
+  inputVariable: string;
+  variableType: string;
+  matchType: 'exact' | 'semantic';
+  sharedConcept: string;
+}
+
+export interface ChainCycle {
+  path: Array<{ uri: string; title: string }>;
+  type: 'three-hop' | 'four-hop';
 }

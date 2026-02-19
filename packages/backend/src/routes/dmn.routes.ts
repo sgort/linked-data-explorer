@@ -6,6 +6,7 @@ import { sparqlService } from '../services/sparql.service';
 import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
+import { operatonService } from '../services/operaton.service';
 
 const router = Router();
 
@@ -63,6 +64,139 @@ router.get('/', async (req: Request, res: Response) => {
       },
       timestamp: new Date().toISOString(),
     } as ApiResponse);
+  }
+});
+
+/**
+ * GET /api/dmns/semantic-equivalences
+ * Find variables that share the same skos:exactMatch URI across DMNs
+ */
+router.get('/semantic-equivalences', async (req: Request, res: Response) => {
+  try {
+    const endpoint = req.query.endpoint as string | undefined;
+    const equivalences = await sparqlService.findSemanticEquivalences(endpoint);
+
+    res.json({
+      success: true,
+      data: equivalences,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  } catch (error: unknown) {
+    const errorDetails = getErrorDetails(error);
+    logger.error('Semantic equivalences error', errorDetails);
+    res.status(500).json({
+      success: false,
+      error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * GET /api/dmns/enhanced-chain-links
+ * Find chain links via exact identifier match AND semantic skos:exactMatch
+ */
+router.get('/enhanced-chain-links', async (req: Request, res: Response) => {
+  try {
+    const endpoint = req.query.endpoint as string | undefined;
+    const links = await sparqlService.findEnhancedChainLinks(endpoint);
+
+    // Standardize response format to match other endpoints
+    res.json({
+      success: true,
+      data: links,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  } catch (error: unknown) {
+    const errorDetails = getErrorDetails(error);
+    logger.error('Enhanced chain links error', errorDetails);
+    res.status(500).json({
+      success: false,
+      error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * GET /api/dmns/cycles
+ * Detect circular dependencies in DMN chains
+ */
+router.get('/cycles', async (req: Request, res: Response) => {
+  try {
+    const endpoint = req.query.endpoint as string | undefined;
+    const cycles = await sparqlService.detectChainCycles(endpoint);
+
+    res.json({
+      success: true,
+      data: cycles,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  } catch (error: unknown) {
+    const errorDetails = getErrorDetails(error);
+    logger.error('Cycle detection error', errorDetails);
+    res.status(500).json({
+      success: false,
+      error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  }
+});
+
+/**
+ * POST /api/dmns/drd/deploy
+ * Assemble and deploy a DRD from an ordered chain of DMN identifiers.
+ * Body: { dmnIds: string[], deploymentName: string }
+ */
+router.post('/drd/deploy', async (req: Request, res: Response) => {
+  try {
+    const { dmnIds, deploymentName } = req.body as {
+      dmnIds: string[];
+      deploymentName: string;
+    };
+
+    if (!Array.isArray(dmnIds) || dmnIds.length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'dmnIds must be an array with at least 2 entries',
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!deploymentName?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'deploymentName is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const entryPointId = dmnIds[dmnIds.length - 1];
+    const filename = `${entryPointId}.dmn`;
+
+    const drdXml = await operatonService.assembleDrd(dmnIds, deploymentName);
+    const result = await operatonService.deployDrd(drdXml, deploymentName, filename);
+
+    res.json({
+      success: true,
+      data: {
+        deploymentId: result.deploymentId,
+        entryPointId,
+        filename,
+        dmnCount: dmnIds.length,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    logger.error('DRD deploy error', getErrorDetails(error));
+    res.status(500).json({
+      success: false,
+      error: { code: 'DRD_DEPLOY_FAILED', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    });
   }
 });
 

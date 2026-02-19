@@ -1,9 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosInstance } from 'axios';
 import { config } from '../utils/config';
 import logger from '../utils/logger';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { OperatonEvaluationRequest, OperatonEvaluationResponse } from '../types/dmn.types';
 import { getErrorMessage, getErrorDetails, isError } from '../utils/errors';
+import FormData from 'form-data';
+// Required for fs.writeFileSync that's kept for potential future debugging
+// import * as fs from 'fs';
+import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 /**
  * Service for interacting with Operaton REST API
@@ -267,6 +272,301 @@ export class OperatonService {
 
       throw new Error(
         `Failed to fetch DMN XML: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Make all IDs in a decision/inputData unique by prefixing with dmnId prefix.
+   * Uses two-pass approach: first collect all IDs, then update all references.
+   */
+  private makeIdsUnique(element: any, prefix: string): Map<string, string> {
+    const idMap = new Map<string, string>();
+
+    // First pass: collect all IDs and build mapping
+    const collectIds = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return;
+
+      if (obj['@_id']) {
+        const oldId = obj['@_id'];
+        const newId = `${prefix}_${oldId}`;
+        idMap.set(oldId, newId);
+      }
+
+      for (const key in obj) {
+        if (Array.isArray(obj[key])) {
+          obj[key].forEach((item: any) => collectIds(item));
+        } else if (typeof obj[key] === 'object') {
+          collectIds(obj[key]);
+        }
+      }
+    };
+
+    // Second pass: update all IDs and hrefs
+    const updateReferences = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return;
+
+      if (obj['@_id'] && idMap.has(obj['@_id'])) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        obj['@_id'] = idMap.get(obj['@_id'])!;
+      }
+
+      if (obj['@_href']) {
+        const href = obj['@_href'];
+        if (href.startsWith('#')) {
+          const refId = href.substring(1);
+          if (idMap.has(refId)) {
+            obj['@_href'] = `#${idMap.get(refId)}`;
+          }
+        }
+      }
+
+      for (const key in obj) {
+        if (Array.isArray(obj[key])) {
+          obj[key].forEach((item: any) => updateReferences(item));
+        } else if (typeof obj[key] === 'object') {
+          updateReferences(obj[key]);
+        }
+      }
+    };
+
+    collectIds(element);
+    updateReferences(element);
+
+    return idMap;
+  }
+  /**
+   * Assemble a DRD from an ordered chain of DMN identifiers.
+   * dmnIds[0] has no dependencies; dmnIds[last] is the entry point.
+   */
+  async assembleDrd(dmnIds: string[], drdName: string): Promise<string> {
+    if (dmnIds.length < 2) {
+      throw new Error('DRD requires at least 2 DMNs');
+    }
+
+    try {
+      logger.info('Starting DRD assembly', { dmnCount: dmnIds.length });
+
+      const parser = new XMLParser({
+        ignoreAttributes: false,
+        attributeNamePrefix: '@_',
+        textNodeName: '#text',
+        preserveOrder: false,
+      });
+
+      const builder = new XMLBuilder({
+        ignoreAttributes: false,
+        attributeNamePrefix: '@_',
+        format: true,
+        indentBy: '  ',
+        suppressEmptyNode: true,
+      });
+
+      // Collect ALL decisions and inputData from all DMN files
+      const allDecisions: any[] = [];
+      const allInputData: any[] = [];
+      const inputDataIds = new Set<string>();
+      const mainDecisionIds: string[] = [];
+
+      for (let i = 0; i < dmnIds.length; i++) {
+        const dmnId = dmnIds[i];
+        logger.info(`Processing DMN ${i + 1}/${dmnIds.length}`, { dmnId });
+
+        const xml = await this.fetchDmnXml(dmnId);
+        if (!xml) {
+          throw new Error(`DMN not found in Operaton: ${dmnId}`);
+        }
+
+        const parsed = parser.parse(xml);
+        const definitions = parsed.definitions;
+
+        if (!definitions || !definitions.decision) {
+          throw new Error(`No decision element found in ${dmnId}`);
+        }
+
+        // Create a prefix for this DMN's IDs (use index to ensure uniqueness)
+        const idPrefix = `dmn${i}`;
+
+        // Clone the entire definitions object
+        const clonedDefinitions = JSON.parse(JSON.stringify(definitions));
+
+        // Make ALL IDs unique for this entire DMN (decisions + inputData) in one pass
+        // This ensures cross-references within the same DMN are correctly updated
+        this.makeIdsUnique(clonedDefinitions, idPrefix);
+
+        // Extract decisions
+        const decisions = Array.isArray(clonedDefinitions.decision)
+          ? clonedDefinitions.decision
+          : [clonedDefinitions.decision];
+
+        logger.info('Found decisions', {
+          dmnId,
+          count: decisions.length,
+          decisionIds: decisions.map((d: any) => d['@_id']),
+        });
+
+        // Extract inputData elements (deduplicated by id)
+        if (clonedDefinitions.inputData) {
+          const inputDataElements = Array.isArray(clonedDefinitions.inputData)
+            ? clonedDefinitions.inputData
+            : [clonedDefinitions.inputData];
+
+          inputDataElements.forEach((inputData: any) => {
+            const id = inputData['@_id'];
+            if (!inputDataIds.has(id)) {
+              inputDataIds.add(id);
+              allInputData.push(inputData);
+            }
+          });
+
+          logger.info('Found inputData', {
+            dmnId,
+            count: inputDataElements.length,
+            inputDataIds: inputDataElements.map((id: any) => id['@_id']),
+          });
+        }
+
+        // The main decision is the one with prefixed id matching dmnId
+        const mainDecision = decisions.find((d: any) => {
+          return d['@_id'] === `${idPrefix}_${dmnId}`;
+        });
+
+        if (!mainDecision) {
+          logger.warn('Main decision not found by ID, using first decision', { dmnId });
+        }
+
+        const mainId = mainDecision ? mainDecision['@_id'] : decisions[0]['@_id'];
+        mainDecisionIds.push(mainId);
+
+        // For the main decision, add chain-based informationRequirement at the START
+        decisions.forEach((decision: any) => {
+          if (decision['@_id'] === mainId) {
+            // This is the main decision
+            // Add chain requirement if not first DMN (PREPEND to existing requirements)
+            if (i > 0) {
+              const requiredId = mainDecisionIds[i - 1];
+              logger.info('Adding chain requirement', {
+                from: decision['@_id'],
+                requires: requiredId,
+              });
+
+              const chainRequirement = {
+                requiredDecision: {
+                  '@_href': `#${requiredId}`,
+                },
+              };
+
+              // Prepend to existing informationRequirement array
+              if (!decision.informationRequirement) {
+                decision.informationRequirement = [chainRequirement];
+              } else if (Array.isArray(decision.informationRequirement)) {
+                decision.informationRequirement.unshift(chainRequirement);
+              } else {
+                decision.informationRequirement = [
+                  chainRequirement,
+                  decision.informationRequirement,
+                ];
+              }
+            }
+          }
+          // Sub-decisions keep their original informationRequirement unchanged
+        });
+
+        // Add all decisions from this DMN to the combined list
+        allDecisions.push(...decisions);
+      }
+
+      const entryPointId = mainDecisionIds[mainDecisionIds.length - 1];
+      const sanitizedId = entryPointId.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+      logger.info('Building DRD XML', {
+        entryPointId,
+        totalDecisions: allDecisions.length,
+        totalInputData: allInputData.length,
+        mainDecisions: mainDecisionIds,
+      });
+
+      // Build the DRD structure
+      const drd: any = {
+        '?xml': {
+          '@_version': '1.0',
+          '@_encoding': 'UTF-8',
+        },
+        definitions: {
+          '@_xmlns': 'https://www.omg.org/spec/DMN/20191111/MODEL/',
+          '@_xmlns:camunda': 'http://camunda.org/schema/1.0/dmn',
+          '@_id': `drd_${sanitizedId}`,
+          '@_name': drdName,
+          '@_namespace': 'http://camunda.org/schema/1.0/dmn',
+          '@_exporter': 'Linked Data Explorer',
+          '@_exporterVersion': '1.0',
+          decision: allDecisions,
+        },
+      };
+
+      // Add inputData if any exist
+      if (allInputData.length > 0) {
+        drd.definitions.inputData = allInputData;
+      }
+
+      const drdXml = builder.build(drd);
+
+      logger.info('DRD XML generated', { length: drdXml.length });
+
+      // Save to file for inspection - kept for potential future debugging
+      // fs.writeFileSync('/tmp/generated-drd.dmn', drdXml, 'utf-8');
+      // logger.info('DRD saved to /tmp/generated-drd.dmn');
+
+      return drdXml;
+    } catch (error) {
+      logger.error('DRD assembly failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Deploy a DRD XML to Operaton.
+   */
+  /**
+   * Deploy a DRD XML to Operaton.
+   */
+  async deployDrd(
+    drdXml: string,
+    deploymentName: string,
+    filename: string
+  ): Promise<{ deploymentId: string }> {
+    try {
+      logger.info('Deploying DRD to Operaton', { deploymentName, filename });
+
+      // Use form-data package for Node.js multipart/form-data
+      // const FormData = require('form-data');
+      const formData = new FormData();
+
+      formData.append('deployment-name', deploymentName);
+      formData.append('enable-duplicate-filtering', 'false');
+      formData.append('data', Buffer.from(drdXml, 'utf-8'), {
+        filename: filename,
+        contentType: 'application/xml',
+      });
+
+      const response = await this.client.post('/deployment/create', formData, {
+        headers: formData.getHeaders(),
+      });
+
+      const deploymentId: string = response.data.id;
+
+      logger.info('DRD deployed successfully', { deploymentId });
+      return { deploymentId };
+    } catch (error) {
+      logger.error('DRD deployment failed', {
+        deploymentName,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw new Error(
+        `DRD deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }

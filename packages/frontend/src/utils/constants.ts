@@ -8,8 +8,8 @@ export const PRESET_ENDPOINTS = [
     url: 'https://api.open-regels.triply.cc/datasets/stevengort/DMN-discovery/services/DMN-discovery/sparql',
   },
   {
-    name: 'Facts',
-    url: 'https://api.open-regels.triply.cc/datasets/stevengort/facts/services/facts/sparql',
+    name: 'RONL',
+    url: 'https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql',
   },
 ];
 
@@ -138,36 +138,44 @@ ORDER BY ?serviceTitle ?validFrom ?ruleTitle`,
     name: 'Service Rules Metadata',
     category: 'rules',
     sparql: `${COMMON_PREFIXES}
-SELECT DISTINCT ?serviceId ?serviceTitle ?rulesetId ?ruleIdPath ?ruleId ?ruleDefinition
+SELECT ?serviceId ?serviceTitle ?legalResourceId ?rulesetId ?ruleIdPath ?ruleId ?ruleDefinition ?ruleSituatie ?ruleNorm
 WHERE {
-  # Get service
-  ?service a cpsv:PublicService ;
-           dct:identifier ?serviceId ;
-           dct:title ?serviceTitle .
-  
-  # Get legal resource linked to service
-  ?service cv:hasLegalResource ?legalResource .
-  ?legalResource dct:identifier ?legalResourceId .
-  
-  # Find rules with matching rulesetId
+  # Start with rules that implement legal resources
   ?rule a cprmv:Rule ;
+        cprmv:implements ?implementedResource ;
         cprmv:rulesetId ?rulesetId ;
         cprmv:ruleIdPath ?ruleIdPath .
   
-  # Only match if rulesetId equals the first part before "/" or "-"
-  FILTER(
-    ?rulesetId = ?legalResourceId ||
-    STRSTARTS(?legalResourceId, CONCAT(?rulesetId, "/")) ||
-    STRSTARTS(?legalResourceId, CONCAT(?rulesetId, "-"))
-  )
+  # Find the legal resource (base or versioned)
+  {
+    # Case 1: Rule implements the base legal resource directly
+    ?implementedResource a eli:LegalResource ;
+                        dct:identifier ?legalResourceId .
+    BIND(?implementedResource as ?legalResource)
+  }
+  UNION
+  {
+    # Case 2: Rule implements a versioned legal resource
+    ?legalResource a eli:LegalResource ;
+                   dct:identifier ?legalResourceId ;
+                   eli:is_realized_by ?implementedResource .
+  }
   
-  # Optional: get additional rule details
+  # Find the service that uses this legal resource
+  ?service a cpsv:PublicService ;
+           dct:identifier ?serviceId ;
+           dct:title ?serviceTitle ;
+           cv:hasLegalResource ?legalResource .
+  
+  # Get rule details
   OPTIONAL { ?rule cprmv:id ?ruleId }
   OPTIONAL { ?rule cprmv:definition ?ruleDefinition }
+  OPTIONAL { ?rule cprmv:situatie ?ruleSituatie }
+  OPTIONAL { ?rule cprmv:norm ?ruleNorm }
   
   FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "")
 }
-ORDER BY ?serviceId ?rulesetId ?ruleIdPath`,
+ORDER BY ?serviceId ?ruleIdPath`,
   },
   {
     name: 'Explore Relations (S-P-O)',
@@ -176,6 +184,27 @@ SELECT ?s ?p ?o
 WHERE {
   ?s ?p ?o
 } LIMIT 500`,
+  },
+  {
+    name: 'NL-SBB Concepts and Services',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?subject ?prefLabel ?exactMatch ?service ?serviceTitle
+WHERE {
+  ?subject skos:exactMatch ?exactMatch ;
+           dct:subject ?variable .
+
+  OPTIONAL { ?subject skos:prefLabel ?prefLabel . FILTER(LANG(?prefLabel) = "nl" || LANG(?prefLabel) = "") }
+
+  {
+    ?variable cpsv:isRequiredBy ?dmn .
+  } UNION {
+    ?variable cpsv:produces ?dmn .
+  }
+
+  ?dmn ronl:implements ?service .
+  OPTIONAL { ?service dct:title ?serviceTitle . FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "") }
+}
+ORDER BY ?service ?subject`,
   },
   {
     name: 'Services and Authorities',
@@ -190,19 +219,6 @@ WHERE {
   FILTER(LANG(?title) = "nl")
 }
 ORDER BY ?title`,
-  },
-  {
-    name: 'Services with Legal Resources',
-    sparql: `${COMMON_PREFIXES}
-SELECT ?service ?serviceTitle ?legalTitle ?legalResource
-WHERE {
-  ?service a cpsv:PublicService .
-  ?service dct:title ?serviceTitle .
-  ?service cv:hasLegalResource ?legalResource .
-  ?legalResource dct:title ?legalTitle .
-  FILTER(LANG(?serviceTitle) = "nl")
-}
-ORDER BY ?serviceTitle`,
   },
 ];
 

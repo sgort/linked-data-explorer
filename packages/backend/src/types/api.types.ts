@@ -37,6 +37,9 @@ export interface ChainExecutionRequest {
     includeIntermediateSteps?: boolean;
     timeout?: number;
   };
+  // NEW: DRD execution parameters
+  isDrd?: boolean;
+  drdEntryPointId?: string;
 }
 
 export interface ChainDiscoveryRequest {

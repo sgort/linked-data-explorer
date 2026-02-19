@@ -3,6 +3,7 @@ import { ChainPreset } from '../types/chainBuilder.types';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 export interface ChainTemplate extends ChainPreset {
+  type: 'sequential' | 'drd'; // NEW: Distinguish between semantic chains and DRDs
   category: 'social' | 'financial' | 'legal' | 'custom';
   tags: string[];
   complexity: 'simple' | 'medium' | 'complex';
@@ -12,6 +13,16 @@ export interface ChainTemplate extends ChainPreset {
   updatedAt: string;
   author?: string;
   isPublic: boolean;
+  // NEW: DRD-specific fields
+  isDrd?: boolean;
+  drdDeploymentId?: string;
+  drdEntryPointId?: string;
+  drdOriginalChain?: string[];
+  drdOutputs?: Array<{
+    identifier: string;
+    title: string;
+    type: 'String' | 'Integer' | 'Boolean' | 'Date' | 'Double'; // Use union type
+  }>;
 }
 
 export interface TemplateListResponse {

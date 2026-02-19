@@ -1,19 +1,197 @@
 {
   "versions": [
     {
-      "version": "0.5.5",
-      "status": "Query & Bug Fixes",
+      "version": "0.8.4",
+      "status": "Vendor Integration",
       "statusColor": "blue",
       "borderColor": "blue",
-      "date": "February 5, 2026",
+      "date": "February 15, 2026",
       "sections": [
         {
-          "title": "Query Library",
-          "icon": "📚",
+          "title": "Vendor Service Integration",
+          "icon": "🏢",
           "iconColor": "blue",
           "items": [
-            "Added 'All Rule Paths and Norms by Ruleset' query for retrieving cprmv:Rule metadata organized by legal document (rulesetId)",
-            "Query retrieves ruleIdPath and norm values from policy rules in TriplyDB"
+            "Integrated RONL Ontology v1.0 vendor vocabulary (ronl:VendorService, ronl:basedOn, ronl:implementedBy)",
+            "Visual vendor badge system showing count of commercial implementations available for each DMN",
+            "Blue vendor badges with implementation count displayed on DMN cards in both Available DMNs list and Chain Composer",
+            "Click vendor badges to open detailed modal with provider information, contact details, and service URLs",
+            "Vendor count automatically fetched and cached alongside DMN metadata from TriplyDB",
+            "Defensive rendering: vendor badges only show when count > 0, no '0' badges displayed",
+            "Support for multiple vendor implementations per reference DMN with proper deduplication"
+          ]
+        },
+        {
+          "title": "Backend Vendor Service",
+          "icon": "⚙️",
+          "iconColor": "slate",
+          "items": [
+            "New vendor service with SPARQL queries supporting RONL vendor vocabulary schema",
+            "Deduplication using SAMPLE() aggregation with GROUP BY to handle multiple language tags and blank nodes",
+            "API endpoints: GET /v1/vendors (all vendors) and GET /v1/vendors/dmn/:identifier (vendors for specific DMN)",
+            "Automatic vendor logo resolution from TriplyDB assets with fallback handling",
+            "Vendor count aggregation integrated into DMN queries for efficient single-request data fetching",
+            "Support for schema:provider, schema:contactPoint, ronl:implementedBy, and full vendor metadata"
+          ]
+        },
+        {
+          "title": "Vendor Details Modal",
+          "icon": "📋",
+          "iconColor": "indigo",
+          "items": [
+            "Comprehensive vendor modal displaying provider name, logo, homepage, and platform (e.g., Blueriq)",
+            "License type badges: Commercial, Open Source, Free with color-coded styling",
+            "Access type indicators: IAM Required, Public Access, API Key Required",
+            "Contact information: name, email (mailto: link), telephone (tel: link) with icons",
+            "Direct service URL links to access vendor implementations with external link indicators",
+            "Description field showing vendor-specific implementation details in Dutch",
+            "Responsive modal design with smooth animations and proper z-index stacking"
+          ]
+        },
+        {
+          "title": "Badge System Enhancements",
+          "icon": "🎨",
+          "iconColor": "purple",
+          "items": [
+            "Standardized badge ordering across interface: 1) Validation 2) Vendor 3) DRD 4) Close button",
+            "Close button styling improved with white background, border, and red hover state for better visibility",
+            "Trash icon properly inherits red color on hover using Tailwind group modifier pattern",
+            "Vendor badges use blue color scheme (bg-blue-600) to distinguish from validation badges",
+            "Compact badge mode for list views, expanded mode for detailed cards",
+            "Event propagation handling: clicking vendor badge doesn't trigger drag operations"
+          ]
+        },
+        {
+          "title": "Type Safety & Data Model",
+          "icon": "🔒",
+          "iconColor": "green",
+          "items": [
+            "New TypeScript interfaces: VendorService, VendorOrganization, VendorContact in vendor.types.ts",
+            "Extended DmnModel with optional vendorCount field for seamless integration",
+            "Type-safe vendor modal props with proper TypeScript inference throughout component tree",
+            "Endpoint parameter properly threaded through component hierarchy (App → ChainBuilder → ChainComposer/DmnList)",
+            "Eliminated hardcoded endpoints in favor of prop-based endpoint management"
+          ]
+        },
+        {
+          "title": "User Experience Improvements",
+          "icon": "✨",
+          "iconColor": "yellow",
+          "items": [
+            "Vendor badges appear in Available DMNs list enabling discovery before adding to chain",
+            "Hover tooltips on vendor badges show implementation count ('1 vendor implementation available')",
+            "Loading states in vendor modal with spinner and 'Loading vendor services...' message",
+            "Empty state handling: 'No vendor implementations found' with building icon when no vendors exist",
+            "Error handling with clear error messages when vendor service fetch fails"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.8.3",
+      "status": "Governance Feature",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "February 14, 2026",
+      "sections": [
+        {
+          "title": "DMN Validation & Governance System",
+          "icon": "🛡️",
+          "iconColor": "emerald",
+          "items": [
+            "Integrated RONL Ontology v1.0 governance vocabulary for DMN validation metadata",
+            "Visual badge system distinguishing validated, in-review, and non-validated decision models",
+            "Emerald green 'Gevalideerd' badge for officially validated DMNs by competent authorities",
+            "Amber 'In Review' badge for DMNs currently under validation process",
+            "Badges display validating organization name (e.g., Sociale Verzekeringsbank, SZW)",
+            "Validation dates shown in Dutch format (14 feb 2026) with full details on hover",
+            "Badges appear in both Available DMNs list and Chain Composer dropped cards",
+            "Non-validated DMNs show no badge, maintaining clean, uncluttered interface by default"
+          ]
+        },
+        {
+          "title": "Backend SPARQL Integration",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "Enhanced SPARQL query with UNION support for backward compatibility with legacy namespaces",
+            "Queries both old (ronl: <.../termen/>) and new (ronl-gov: <.../ontology#>) vocabularies",
+            "Automatic resolution of validating organization names via skos:prefLabel lookup",
+            "Fetches ronl:validationStatus, ronl:validatedBy, ronl:validatedAt, ronl:validationNote from TriplyDB",
+            "Graceful handling of missing validation metadata using OPTIONAL SPARQL blocks",
+            "5-minute caching per endpoint for optimal performance with validation data"
+          ]
+        },
+        {
+          "title": "User Experience & Accessibility",
+          "icon": "♿",
+          "iconColor": "purple",
+          "items": [
+            "WCAG AA compliant color contrast for validation badges (emerald 600, amber 500)",
+            "Icon + text badges (not color-only) for accessibility and visual clarity",
+            "Hover tooltips display full validation details: organization, date, and notes",
+            "Compact badge mode in DMN list (icon + short label), expanded mode in cards",
+            "Screen reader friendly with semantic HTML and proper ARIA labels",
+            "Responsive design: badges adapt to small screens by hiding text, showing icon only",
+            "Dutch language labels: 'Gevalideerd' and 'In Review' for localized user experience"
+          ]
+        },
+        {
+          "title": "Data Model Extensions",
+          "icon": "🏗️",
+          "iconColor": "slate",
+          "items": [
+            "Extended DmnModel interface with validationStatus, validatedBy, validatedByName, validatedAt, validationNote fields",
+            "TypeScript type safety for validation status: 'validated' | 'in-review' | 'not-validated'",
+            "Frontend and backend type definitions synchronized for end-to-end type safety",
+            "Validation metadata flows through: TriplyDB → Backend SPARQL → Frontend State → UI Components"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.8.2",
+      "status": "Feature & Bug Fix",
+      "statusColor": "green",
+      "borderColor": "green",
+      "date": "February 13, 2026",
+      "sections": [
+        {
+          "title": "Template System Enhancement",
+          "icon": "📋",
+          "iconColor": "blue",
+          "items": [
+            "Enhanced template system to support both DRD and sequential chain templates with distinct 'type' field",
+            "Added visual indicators: 🎯 purple badge for DRD templates, ⛓️ amber badge for sequential templates",
+            "Save button automatically detects chain type (DRD vs sequential) and adjusts behavior accordingly",
+            "DRD templates deploy to Operaton and store deployment ID, sequential templates save directly to localStorage",
+            "Template list clearly shows type badges enabling users to distinguish execution modes at a glance",
+            "Modal titles dynamically update: 'Save as DRD Template' vs 'Save as Sequential Template'",
+            "Auto-detection uses validation state to determine if chain is DRD-compatible or requires sequential execution"
+          ]
+        },
+        {
+          "title": "Semantic Chain Validation",
+          "icon": "🔗",
+          "iconColor": "amber",
+          "items": [
+            "Improved semantic link detection with proper React dependency management for reliable validation",
+            "Added semanticLinks to validation useEffect dependency array ensuring re-validation when links load",
+            "Validation now correctly distinguishes between exact identifier matches (DRD-compatible) and semantic matches (sequential-only)",
+            "Real-time detection of semantic variable links with clear warning messages: '⚠️ Sequential execution required (semantic links)'",
+            "Console logging shows clear validation status: '✓ DRD' or '⚠️ Sequential' with semantic match counts"
+          ]
+        },
+        {
+          "title": "UX Improvements",
+          "icon": "🎨",
+          "iconColor": "purple",
+          "items": [
+            "Unified button layout with three equal-width actions: Execute | Save | Export for consistent interface",
+            "Button text dynamically updates based on chain type: 'Save as DRD' vs 'Save Template'",
+            "Loading states show appropriate messages: 'Deploying...' for DRDs, 'Saving...' for sequential chains",
+            "Export button integrated seamlessly into three-button layout replacing previous inconsistent positioning",
+            "Semantic chain warning badges appear below action buttons with amber color scheme for clear visibility"
           ]
         },
         {
@@ -21,8 +199,373 @@
           "icon": "🐛",
           "iconColor": "red",
           "items": [
-            "Fixed non-functional Export CSV button in Query Editor Results View",
-            "Added handleExportCSV function with proper CSV formatting and escaping"
+            "Fixed validation crash when dragging DMNs into chain composer due to null reference errors",
+            "Added optional chaining (validation?.isValid) throughout component preventing crashes during initial composition",
+            "Fixed boolean input validation incorrectly treating unchecked checkboxes as missing inputs",
+            "Updated validation logic to recognize unchecked boolean inputs as valid with default false value",
+            "Fixed DRD deployment API parameter: changed 'templateName' to 'deploymentName' matching backend expectations"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.8.1",
+      "status": "Bug Fix & Enhancement",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 12, 2026",
+      "sections": [
+        {
+          "title": "DRD Card Display & UX Improvements",
+          "icon": "🎨",
+          "iconColor": "purple",
+          "items": [
+            "Fixed DRD card showing wrong deployment ID - now displays correct DRD deployment metadata",
+            "Created synthetic DRD model instead of original DMN card to avoid confusion",
+            "Added purple border and background to visually distinguish DRD cards from regular DMN cards",
+            "Added 🔗 DRD badge in top-right corner of DRD cards for clear identification",
+            "DRD cards now show template name as title instead of technical identifier",
+            "Fixed output count display - DRD cards now correctly show all outputs instead of 0",
+            "Stored output schema when saving DRD templates for accurate metadata display",
+            "Added direct link to Operaton Cockpit from DRD card deployment ID"
+          ]
+        },
+        {
+          "title": "BPMN Modeler: DRD Integration",
+          "icon": "🔗",
+          "iconColor": "purple",
+          "items": [
+            "DMN selector now includes local DRD templates alongside regular DMNs",
+            "Grouped dropdown with 🔗 DRDs and 📋 Single DMNs sections for clear organization",
+            "Purple-themed visual indicators distinguish DRD selections from regular DMNs",
+            "DRD info card shows original chain composition (e.g., 'Combines: SVB → SZW → Heusden')",
+            "Automatic population of camunda:decisionRef with correct prefixed DRD identifiers",
+            "BusinessRuleTasks can now reference unified DRD chains for multi-step decision orchestration"
+          ]
+        },
+        {
+          "title": "Developer Experience",
+          "icon": "🛠️",
+          "iconColor": "slate",
+          "items": [
+            "DmnTemplateSelector loads both API DMNs and localStorage DRD templates in single component",
+            "DmnOption interface unifies regular DMNs and DRDs for consistent handling",
+            "Enhanced info display shows DRD badge, description, and chain composition details"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.8.0",
+      "status": "Major Feature",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "February 12, 2026",
+      "sections": [
+        {
+          "title": "DRD (Decision Requirements Diagram) Generation & Execution",
+          "icon": "🔗",
+          "iconColor": "emerald",
+          "items": [
+            "Save multi-DMN chains as single executable DRD files deployed to Operaton",
+            "Automatic assembly of all decisions and sub-decisions from source DMN files into unified DRD structure",
+            "Intelligent ID prefixing (dmn0_, dmn1_, dmn2_) ensures no conflicts when combining multiple DMN files",
+            "Proper informationRequirement wiring: main decisions linked in chain order, sub-decisions retain internal dependencies",
+            "Single-call execution via Operaton entry point - DRD evaluates entire chain internally (no sequential API calls)"
+          ]
+        },
+        {
+          "title": "Local DRD Template Storage (Phase 1)",
+          "icon": "💾",
+          "iconColor": "blue",
+          "items": [
+            "DRD metadata stored in localStorage: isDrd flag, deploymentId, prefixed entryPointId, original chain structure",
+            "Templates automatically save to 'My Templates' with DRD badge indicator",
+            "Execution flow intelligently routes: DRDs go directly to Operaton, regular chains use sequential execution",
+            "No TriplyDB lookup required for DRD execution - deployment ID provides direct Operaton access",
+            "DRD templates work immediately after creation, no additional configuration needed"
+          ]
+        },
+        {
+          "title": "Backend DRD Assembly Engine",
+          "icon": "⚙️",
+          "iconColor": "purple",
+          "items": [
+            "XML-based DRD assembly: fetches source DMN XML from Operaton, extracts all <decision> and <inputData> elements",
+            "Two-pass ID transformation: collects all IDs, then updates all href references to maintain referential integrity",
+            "Preserves complete DMN structure: decision tables, business knowledge models, input data definitions",
+            "Correct DMN XML element ordering: <informationRequirement> elements properly positioned before <decisionTable>",
+            "Multipart form-data deployment to Operaton with proper Content-Type headers"
+          ]
+        },
+        {
+          "title": "Developer Experience",
+          "icon": "🛠️",
+          "iconColor": "amber",
+          "items": [
+            "Type-safe DRD metadata: isDrd, drdDeploymentId, drdEntryPointId fields in ChainTemplate interface",
+            "Extended API types: ChainExecutionRequest now includes DRD parameters",
+            "Comprehensive logging: DRD assembly steps, deployment success, execution routing",
+            "Clear separation: local DRD storage (Phase 1) vs. future global templates (Phase 2)"
+          ]
+        },
+        {
+          "title": "User Workflow",
+          "icon": "📋",
+          "iconColor": "cyan",
+          "items": [
+            "Build chain in Chain Composer → Validate → Execute to test",
+            "Click 'Save' → Enter name/description → DRD automatically deployed to Operaton",
+            "Template appears in 'My Templates' with 🔗 DRD badge",
+            "Load DRD template → Execute → Single API call evaluates entire chain",
+            "Future: Promote battle-tested local DRDs to global Example Templates (Phase 2)"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.7.1",
+      "status": "Bug Fix & New Feature",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 12, 2026",
+      "sections": [
+        {
+          "title": "Semantic Variable Matching Fix",
+          "icon": "🔗",
+          "iconColor": "blue",
+          "items": [
+            "Fixed `findEnhancedChainLinks` SPARQL query to properly detect both exact identifier matches AND semantic concept matches via skos:exactMatch",
+            "Heusdenpas chain now correctly shows all 10 variable relationships between the 3 DMNs (SVB → SZW: 6 links, SVB → RONL: 3 links, SZW → RONL: 1 link)",
+            "Each relationship is now detected via both match types (exact and semantic) for redundancy",
+            "Improved reliability of automatic chain discovery and DRD variable wiring foundation"
+          ]
+        },
+        {
+          "title": "DRD (Decision Requirements Diagram) Generation",
+          "icon": "🔗",
+          "iconColor": "emerald",
+          "items": [
+            "Save chain as DRD - assembles multi-DMN chains into single executable DRD files deployed to Operaton",
+            "Automatic <informationRequirement> wiring based on chain order - proper decision dependency graph generation",
+            "Entry point detection - last DMN in chain becomes the single callable entry point",
+            "Saved templates store only the entry point dmnId - execution happens via Operaton's internal DRD evaluation",
+            "Ready for future promotion to global templates - user DRD templates can be elevated to predefined templates"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.7.0",
+      "status": "BPMN + DMN Integration",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "February 10, 2026",
+      "sections": [
+        {
+          "title": "Official Properties Panel",
+          "icon": "⚙️",
+          "iconColor": "blue",
+          "items": [
+            "Replaced custom properties panel with official bpmn-js-properties-panel v5.50.1",
+            "Full Camunda/Operaton property editing: name, ID, documentation, async continuations, inputs/outputs, listeners, extension properties",
+            "BusinessRuleTask properties: decision reference, result variable, map decision result",
+            "UserTask properties: form key, assignee, candidate users/groups"
+          ]
+        },
+        {
+          "title": "DMN Linking for BusinessRuleTasks",
+          "icon": "🔗",
+          "iconColor": "purple",
+          "items": [
+            "Link to DMN selector appears in properties panel when a BusinessRuleTask is selected",
+            "Dropdown populated with all individual DMNs available on the active TriplyDB endpoint via /v1/dmns",
+            "Selecting a DMN auto-populates camunda:decisionRef, camunda:resultVariable and camunda:mapDecisionResult",
+            "Visual badge overlays on canvas show the linked DMN identifier on each BusinessRuleTask",
+            "Badges dynamically centered on the element regardless of task width"
+          ]
+        },
+        {
+          "title": "Enhanced Tree Felling Permit Example",
+          "icon": "🌳",
+          "iconColor": "green",
+          "items": [
+            "Updated example BPMN with embedded HTML forms (start-form.html, inform-applicant-form.html)",
+            "Added script tasks for setting process variables after permit and rejection decisions",
+            "Pre-linked BusinessRuleTasks with DMN references visible as badges on load"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.6.2",
+      "status": "New Features",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "February 10, 2026",
+      "sections": [
+        {
+          "title": "Semantic Analysis Tab",
+          "icon": "🔗",
+          "iconColor": "emerald",
+          "items": [
+            "New 'Semantic Analysis' tab in the Chain Builder for discovering cross-agency DMN connections",
+            "Detects semantically equivalent DMN variables across agencies via shared skos:exactMatch URIs",
+            "Suggests DMN chain connections where variables differ in name but share the same concept",
+            "Dashboard with three metrics: Semantic Equivalences, Semantic Chain Links, and Exact Match Links",
+            "Displays matching path: output concept → skos:exactMatch URI → input concept with variable identifiers and notations",
+            "Scrollable equivalence list showing bidirectional concept pairs between different government agencies"
+          ]
+        },
+        {
+          "title": "Backend Semantic Matching APIs",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "GET /api/dmns/semantic-equivalences — finds all variable pairs sharing a skos:exactMatch URI across DMNs",
+            "GET /api/dmns/enhanced-chain-links — combines exact identifier matching with semantic concept matching",
+            "GET /api/dmns/cycles — detects 3-hop circular dependencies in DMN chains via semantic links",
+            "All new endpoints support the existing ?endpoint= parameter for dynamic TriplyDB dataset selection",
+            "Dual match detection: variables that match on both identifier AND concept appear as separate entries",
+            "New TypeScript types: SemanticEquivalence, EnhancedChainLink, ConceptInfo, ChainCycle for type-safe API responses"
+          ]
+        },
+        {
+          "title": "Graph View Enhancement",
+          "icon": "📊",
+          "iconColor": "indigo",
+          "items": [
+            "Semantic links (skos:exactMatch, dct:subject) rendered with dashed green lines (2.5px) in graph view",
+            "Visual distinction between semantic relationships and standard RDF property links",
+            "Enhanced predicate detection for concept-based variable relationships"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.6.1",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 9, 2026",
+      "sections": [
+        {
+          "title": "Resolved intermittent CORS issues",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "Fixed CORS preflight handling to ensure consistent behavior across all supported origins and browsers",
+            "Explicitly applied CORS configuration to OPTIONS requests to prevent cached preflight mismatches",
+            "Hardened CORS origin validation for improved reliability in multi-environment deployments"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.6.0",
+      "status": "BPMN Process Modeler",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "February 7, 2026",
+      "sections": [
+        {
+          "title": "Core BPMN Functionality",
+          "icon": "🎨",
+          "iconColor": "purple",
+          "items": [
+            "Added interactive BPMN 2.0 process editor with drag-and-drop interface powered by bpmn-js v18.12.0",
+            "Full element palette: start/end events, tasks, gateways, subprocesses, data objects, pools, annotations",
+            "Three-panel layout: process list (left), canvas editor (middle), properties panel (right)",
+            "Mouse wheel zoom (scroll to zoom), zoom controls (+/-/fit-to-viewport), and smooth canvas interactions",
+            "Support for BusinessRuleTasks with camunda:decisionRef attributes for DMN integration with Operaton engine"
+          ]
+        },
+        {
+          "title": "Process Management",
+          "icon": "💾",
+          "iconColor": "blue",
+          "items": [
+            "Create unlimited BPMN processes with localStorage persistence (survives browser refresh)",
+            "Double-click process names to rename, delete with confirmation dialog",
+            "Auto-save functionality preserves changes across sessions",
+            "Export processes as .bpmn XML files compatible with Camunda/Operaton engines",
+            "Close button returns to empty state, allowing quick process switching"
+          ]
+        },
+        {
+          "title": "Example & Documentation",
+          "icon": "📚",
+          "iconColor": "green",
+          "items": [
+            "Tree Felling Permit example process auto-loads on first visit",
+            "Demonstrates complete workflow: user tasks, BusinessRuleTasks (DMN), gateways, conditional flows",
+            "Example protected from deletion with 'EXAMPLE' badge and disabled delete button",
+            "References TreeFellingDecision and ReplacementTreeDecision DMN models",
+            "Serves as reference implementation for government service workflows"
+          ]
+        },
+        {
+          "title": "Properties & Configuration",
+          "icon": "⚙️",
+          "iconColor": "orange",
+          "items": [
+            "Properties panel shows element type, ID, and editable name field",
+            "DMN Decision Reference section for BusinessRuleTasks (decisionRef, resultVariable inputs)",
+            "Real-time property updates synchronized with canvas",
+            "Custom CSS fixes for rendering artifacts (eliminated black circles/lines during connection dragging)",
+            "Integrated camunda-bpmn-moddle v7.0.1 for Camunda namespace support (Operaton compatible)"
+          ]
+        },
+        {
+          "title": "Technical Implementation",
+          "icon": "🔧",
+          "iconColor": "slate",
+          "items": [
+            "TypeScript interfaces: BpmnProcess with id, name, xml, timestamps, linkedDmnTemplates, readonly flag",
+            "BpmnService class for localStorage CRUD operations (getProcesses, saveProcess, deleteProcess, getProcess)",
+            "Default BPMN XML templates including empty process and Tree Felling Permit example",
+            "Custom wheel event handler overrides default Ctrl+Scroll requirement for intuitive zooming",
+            "Component structure: BpmnModeler, BpmnCanvas, BpmnProperties, ProcessList, DmnTemplateSelector (placeholder)"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.5.5",
+      "status": "Query & Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 6, 2026",
+      "sections": [
+        {
+          "title": "Query Library & Data Quality",
+          "icon": "🔍",
+          "iconColor": "blue",
+          "items": [
+            "Added 'Service Rules Metadata' query to retrieve cprmv:Rule → eli:LegalResource → cpsv:PublicService relationships",
+            "Query returns ruleIdPath, ruleDefinition, ruleSituatie, and ruleNorm organized by service identifier",
+            "Leverages new cprmv:implements property for direct semantic linking (eliminates fragile string matching)"
+          ]
+        },
+        {
+          "title": "Export & Usability",
+          "icon": "📥",
+          "iconColor": "green",
+          "items": [
+            "Added working 'Export CSV' button to Query Editor results view",
+            "CSV export includes proper escaping for commas, quotes, and newlines",
+            "Timestamped filenames (e.g., sparql-results-2026-02-06.csv) for easy organization"
+          ]
+        },
+        {
+          "title": "Data Quality Improvements",
+          "icon": "🔧",
+          "iconColor": "orange",
+          "items": [
+            "Identified and resolved RDF URI collision issue causing rule merging in TriplyDB",
+            "CPSV Editor now generates unique URIs for each cprmv:Rule instance",
+            "Coordinated with CPSV Editor project to add explicit cprmv:Rule → eli:LegalResource links",
+            "Eliminated need for string-based rulesetId matching in favor of semantic RDF relationships"
           ]
         }
       ]

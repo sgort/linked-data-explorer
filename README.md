@@ -12,6 +12,160 @@
 
 ---
 
+# Vendor Service Integration ✨ NEW ✨
+
+## Overview
+
+The Vendor Services feature enables discovery and management of commercial implementations of government decision models. While government agencies publish reference DMN implementations through RONL, vendors (like Blueriq, Oracle Policy Automation, etc.) may provide certified commercial implementations with additional features, support, and integration capabilities.
+
+### Purpose
+
+- **Discoverability:** Users can see which DMNs have commercial implementations available
+- **Transparency:** Clear information about vendor implementations, licensing, and access requirements
+- **Choice:** Enable organizations to choose between reference implementations and vendor services
+- **Ecosystem Growth:** Support multi-vendor implementations of government services
+
+### Key Features
+
+✅ Visual badges showing vendor implementation count per DMN  
+✅ Detailed vendor information modal with provider details  
+✅ Contact information and service URLs  
+✅ License type and access requirement indicators  
+✅ Logo display for vendor branding  
+✅ Integration with CPSV Editor for publishing vendor services
+
+### References
+See further the [detailed docs](./docs/VENDOR_SERVICES.md)
+
+---
+
+# DMN Governance & Validation System 
+
+**Version:** 0.8.3  
+**Release Date:** February 14, 2026  
+**Status:** Production  
+**Ontology:** RONL Ontology v1.0
+
+## Overview
+
+The Linked Data Explorer implements a visual governance system that distinguishes between validated, in-review, and non-validated Decision Model and Notation (DMN) models published to TriplyDB. This transparency enables users to quickly identify which decision models have been officially approved by competent Dutch government authorities.
+
+### Purpose
+
+- **Trust & Transparency:** Clearly indicate which DMNs have undergone official validation
+- **Quality Assurance:** Track validation status, validating organization, and validation dates
+- **Compliance:** Support audit trails for government rule implementations
+- **Multi-Authority Support:** Enable validation by different competent authorities (SVB, SZW, UWV, etc.)
+
+### References
+See further the [detailed docs](./docs/GOVERNANCE.md)
+
+---
+
+# Enhanced Validation & Semantic Chain Detection
+
+## Overview
+
+The Linked Data Explorer implements a sophisticated validation system that distinguishes between two types of DMN chains:
+
+1. **DRD-Compatible Chains**: All variables match by exact identifier, enabling deployment as unified Decision Requirements Diagrams in Operaton
+2. **Sequential Chains**: Variables match semantically via `skos:exactMatch` relationships, requiring sequential API execution with runtime variable mapping
+
+### Features
+
+The enhanced validation system successfully distinguishes between DRD-compatible and semantic chains through:
+
+- **Robust SPARQL querying** with type checking and shared concept detection
+- **React state management** with proper dependency tracking
+- **Comprehensive test data** validating semantic-only chains
+- **Detailed debugging** revealing critical RDF data integrity requirements
+
+### References
+See further the [detailed docs](./docs/ENHANCED_VALIDATION.md)
+
+---
+
+# DRD (Decision Requirements Diagram) Generation
+
+## Overview
+
+The DRD Generation feature enables users to save multi-DMN chains as single, executable Decision Requirements Diagrams (DRDs) deployed to Operaton. This transforms sequential chain execution (multiple API calls) into unified DRD evaluation (single API call), improving performance by ~50% while maintaining semantic integrity.
+
+**Key Benefits:**
+- **Performance:** Single Operaton call vs. multiple sequential API calls
+- **Semantics:** Proper DMN 1.3 `<informationRequirement>` wiring
+- **Reusability:** Save complex chains as named templates
+- **Portability:** DRD XML can be exported, versioned, shared (Phase 2)
+- **Simplicity:** Users work with familiar chain building UI
+
+### References
+See further the [detailed docs](./docs/DRD_GENERATION.md)
+
+---
+
+### BPMN Process Modeler (v0.7.0)
+
+The BPMN Modeler features full Camunda/Operaton property editing via the official `bpmn-js-properties-panel`, replacing the previous custom panel. Select any element to edit its complete set of technical properties including async continuations, input/output mappings, execution listeners, and extension properties.
+
+**DMN Linking**: When selecting a `BusinessRuleTask`, a *Link to DMN* dropdown appears at the bottom of the properties panel. It lists all DMN decision models available on the active TriplyDB endpoint. Selecting a DMN automatically populates `camunda:decisionRef`, `camunda:resultVariable`, and `camunda:mapDecisionResult`. Linked tasks display a blue badge on the canvas showing the decision reference, centered on the element and visible at a glance without clicking.
+
+**v0.6.0 (2026-02-07)**
+- Initial BPMN Modeler implementation
+- Three-panel layout with process management
+- Tree Felling Permit example auto-loading
+- localStorage persistence
+- Export functionality
+- Custom zoom controls and scroll-to-zoom
+- Properties panel basic implementation
+
+### References
+See further the [detailed docs](./docs/BPMN-MODELER-IMPLEMENTATION.md)  
+Check the [roadmap document](./docs/ROADMAP.md) for development priorities and next steps.
+
+---
+
+### Semantic Analysis (v0.6.2)
+
+The **Semantic Analysis** tab in the Chain Builder detects relationships between DMN variables across different government agencies using NL-SBB-compliant `skos:exactMatch` links — even when variables have different names or labels.
+
+This enables cross-agency chain composition that exact identifier matching alone cannot discover.
+
+#### How It Works
+
+The CPSV Editor generates a `skos:Concept` for each DMN input and output variable. When two variables from different agencies mean the same thing, both concepts share the same `skos:exactMatch` URI pointing to a shared vocabulary term (e.g., `https://begrippen.regels.overheid.nl/concept/geboortedatum`).
+
+The Linked Data Explorer queries these relationships and surfaces them in three backend endpoints:
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/dmns/semantic-equivalences` | Variable pairs that share the same `skos:exactMatch` URI |
+| `GET /api/dmns/enhanced-chain-links` | Chain links via both exact identifier and semantic matching |
+| `GET /api/dmns/cycles` | Circular dependencies detected via semantic links (3-hop) |
+
+All endpoints accept the `?endpoint=` query parameter for dynamic TriplyDB dataset selection.
+
+#### Usage
+
+Open the **Chain Builder** view and click the **Semantic Analysis** tab. The view shows:
+
+- **Semantic Equivalences** — variables from different DMNs that map to the same concept, with their labels, notations, and the shared concept URI
+- **Semantic Chain Suggestions** — DMN output → input pairs connectable via a shared concept (not discoverable by identifier matching alone)
+- **Counts** — breakdown of semantic matches vs exact matches found in the current endpoint
+
+Results populate automatically when NL-SBB concepts with `skos:exactMatch` relationships are published to the active TriplyDB dataset from the CPSV Editor.
+
+#### Graph View
+
+In the SPARQL graph visualization, semantic links (`skos:exactMatch`, `dct:subject`) are rendered as **dashed green lines** (2.5px), visually distinct from standard RDF property links (solid grey, 1.5px).
+
+#### Standards
+
+- [NL-SBB](https://geonovum.github.io/NL-SBB/) — Dutch profile for SKOS concept schemes
+- [SKOS](https://www.w3.org/2004/02/skos/) — `skos:exactMatch` for cross-vocabulary alignment
+- [CPSV-AP 3.2.0](https://semiceu.github.io/CPSV-AP/releases/3.2.0/) — `cpsv:Input` / `cpsv:Output` linked via `dct:subject` to concepts
+
+---
+
 ## 📋 Table of Contents
 
 - [Architecture Overview](#-architecture-overview)
