@@ -1,5 +1,5 @@
 export const DEFAULT_ENDPOINT =
-  'https://api.open-regels.triply.cc/datasets/stevengort/DMN-discovery/services/DMN-discovery/sparql';
+  'https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql';
 
 export const PRESET_ENDPOINTS = [
   { name: 'Local Jena', url: 'http://localhost:3030/ds/query' },
@@ -26,7 +26,7 @@ PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX m8g: <http://data.europa.eu/m8g/>
 PREFIX eli: <http://data.europa.eu/eli/ontology#>
-PREFIX ronl: <https://regels.overheid.nl/termen/>
+PREFIX ronl: <https://regels.overheid.nl/ontology#>
 PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
 PREFIX schema: <http://schema.org/>
 `;
@@ -201,7 +201,7 @@ WHERE {
     ?variable cpsv:produces ?dmn .
   }
 
-  ?dmn ronl:implements ?service .
+  ?dmn cprmv:implements ?service .
   OPTIONAL { ?service dct:title ?serviceTitle . FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "") }
 }
 ORDER BY ?service ?subject`,
@@ -236,7 +236,7 @@ WHERE {
   ?dmn a cprmv:DecisionModel ;
        dct:identifier ?identifier ;
        dct:title ?title ;
-       ronl:implementedBy ?apiEndpoint .
+       cprmv:implementedBy ?apiEndpoint .
   
   OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
   OPTIONAL { ?dmn cpsv:implements ?service }
@@ -272,7 +272,7 @@ WHERE {
   # Start with DMN
   ?dmn a cprmv:DecisionModel ;
        dct:title ?dmnTitle ;
-       ronl:implements ?service .
+       cprmv:implements ?service .
 
   # Service details
   ?service a cpsv:PublicService ;
@@ -407,7 +407,7 @@ WHERE {
   ?dmn a cprmv:DecisionModel ;
        dct:identifier ?identifier ;
        dct:title ?title ;
-       ronl:implementedBy ?apiEndpoint .
+       cprmv:implementedBy ?apiEndpoint .
   
   OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
   
