@@ -49,6 +49,7 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
+  const [selectedLibraryQuery, setSelectedLibraryQuery] = useState<string | null>(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -90,8 +91,14 @@ const App: React.FC = () => {
 
     if (queryObj) {
       setQuery(queryObj.sparql);
+      setSelectedLibraryQuery(queryObj.name); // NEW: Track selected query by name
       // ✅ Don't auto-switch views - let user stay where they are
     }
+  };
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setQuery(e.target.value);
+    setSelectedLibraryQuery(null); // Clear selection when manually editing
   };
 
   const handleAddEndpoint = () => {
@@ -557,7 +564,7 @@ const App: React.FC = () => {
                   </div>
                   <textarea
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={handleQueryChange} // Changed from inline handler
                     className="flex-1 w-full p-4 font-mono text-sm text-slate-800 bg-white focus:outline-none resize-none leading-relaxed overflow-auto code-scroll"
                     spellCheck={false}
                     aria-label="SPARQL Query"
@@ -573,7 +580,13 @@ const App: React.FC = () => {
                       <button
                         key={idx}
                         onClick={() => handleSampleClick(q.name)}
-                        className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-white hover:text-blue-600 rounded-md border border-transparent hover:border-slate-200 transition-all truncate shadow-sm hover:shadow"
+                        className={`w-full text-left px-3 py-2 text-sm rounded-md border transition-all truncate shadow-sm
+                          ${
+                            selectedLibraryQuery === q.name
+                              ? 'bg-blue-100 text-blue-700 border-blue-200 font-medium shadow'
+                              : 'text-slate-600 hover:bg-white hover:text-blue-600 border-transparent hover:border-slate-200 hover:shadow'
+                          }
+                        `}
                       >
                         {q.name}
                       </button>
