@@ -54,6 +54,7 @@ export enum ViewMode {
   ORCHESTRATION = 'ORCHESTRATION',
   TUTORIAL = 'TUTORIAL',
   BPMN = 'BPMN',
+  VALIDATE = 'VALIDATE',
 }
 
 export interface EndpointConfig {
