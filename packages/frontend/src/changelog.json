@@ -1,6 +1,52 @@
 {
   "versions": [
     {
+      "version": "0.9.0",
+      "status": "New Feature",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "February 25, 2026",
+      "sections": [
+        {
+          "title": "DMN Validator",
+          "icon": "🛡️",
+          "iconColor": "blue",
+          "items": [
+            "New dedicated DMN Validator view accessible via the shield icon in the sidebar",
+            "Validates DMN files against five syntactic layers: Base DMN, Business Rules, Execution Rules, Interaction Rules, and Content",
+            "Multi-file support — drop any number of .dmn or .xml files to validate and compare side-by-side",
+            "Drop zone stays permanently visible to add more files without clearing existing results",
+            "Each file gets its own independently scrollable card with its own Validate button",
+            "'Validate all' button in the header validates all loaded files in one click",
+            "Collapsible layer sections per file show issue counts (E/W/I badges) at a glance",
+            "Validation state is preserved when navigating to other views and returning"
+          ]
+        },
+        {
+          "title": "Validation Layers",
+          "icon": "🔍",
+          "iconColor": "indigo",
+          "items": [
+            "Base DMN: XML well-formedness, root element check, DMN namespace detection (1.1/1.2/1.3), required <definitions> attributes, presence of at least one <decision>",
+            "Business Rules: hitPolicy enum validation, inputExpression and output typeRef presence and known FEEL types, rule entry count consistency",
+            "Execution Rules: CPRMV extension attribute validation — rulesetType, ruleType, confidence enums, ISO date format (YYYY-MM-DD), BWB ID format, temporal-period completeness",
+            "Interaction Rules: informationRequirement href resolution, orphaned inputData detection, variable name consistency across DRD wiring",
+            "Content: non-empty CPRMV descriptive attributes, variable typeRef presence, non-empty textAnnotation content"
+          ]
+        },
+        {
+          "title": "Backend",
+          "icon": "⚙️",
+          "iconColor": "gray",
+          "items": [
+            "New POST /v1/dmns/validate endpoint — unauthenticated, accepts DMN XML as a string, returns structured layer results",
+            "Validation powered by libxmljs2 for XML parsing and XPath-based DOM traversal across all five layers",
+            "Each issue carries a severity (error/warning/info), a typed code (BASE-*, BIZ-*, EXEC-*, INT-*, CON-*), a message, and an optional element location"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.8.4",
       "status": "Vendor Integration",
       "statusColor": "blue",

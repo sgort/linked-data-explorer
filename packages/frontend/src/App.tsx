@@ -387,12 +387,12 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* DMN Validator View */}
-          {viewMode === ViewMode.VALIDATE && (
-            <div className="flex-1 overflow-hidden flex flex-col">
-              <DmnValidator apiBaseUrl={API_BASE_URL} />
-            </div>
-          )}
+          {/* DMN Validator View — always mounted to preserve dropped files across navigation */}
+          <div
+            className={`flex-1 overflow-hidden flex flex-col ${viewMode === ViewMode.VALIDATE ? '' : 'hidden'}`}
+          >
+            <DmnValidator apiBaseUrl={API_BASE_URL} />
+          </div>
 
           {/* Settings Panel Overlay */}
           {showSettings &&
@@ -623,7 +623,8 @@ const App: React.FC = () => {
           {viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.ORCHESTRATION &&
             viewMode !== ViewMode.TUTORIAL &&
-            viewMode !== ViewMode.BPMN && (
+            viewMode !== ViewMode.BPMN &&
+            viewMode !== ViewMode.VALIDATE && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
                 {/* Error Overlay */}
                 {error && (
