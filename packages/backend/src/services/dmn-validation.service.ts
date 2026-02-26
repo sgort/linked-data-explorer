@@ -410,6 +410,83 @@ function validateBusinessLayer(doc: XmlElement): LayerResult {
     }
   }
 
+    // BIZ-008 / BIZ-009: hit-policy overlap checks (UNIQUE and ANY tables only)
+  const OVERLAP_POLICIES = new Set(['UNIQUE', 'ANY']);
+  const isMatchAny = (text: string): boolean =>
+    !text || text.trim() === '' || text.trim() === '-';
+
+  for (const dt of find(doc, '//d:decisionTable')) {
+    const hp = dt.attr('hitPolicy')?.value() ?? 'UNIQUE'; // DMN default is UNIQUE
+    if (!OVERLAP_POLICIES.has(hp)) continue;
+
+    const decision = get(dt, 'parent::d:decision') ?? get(dt, '..');
+    const decisionLoc = decision ? elLoc(decision) : undefined;
+    const rules = find(dt, 'd:rule');
+
+    // Build a per-rule input signature: tuple of trimmed inputEntry text values
+    const signatures: string[][] = rules.map((rule) =>
+      find(rule, 'd:inputEntry').map((entry) => {
+        const text = get(entry, 'd:text')?.text()?.trim() ?? '';
+        return text;
+      })
+    );
+
+    // BIZ-008 — duplicate rule rows
+    // Fires when two rules have byte-identical text in every input column.
+    // Operaton throws DmnHitPolicyException at runtime when this occurs in a UNIQUE table.
+    const seen = new Map<string, number>(); // signature key → first occurrence index
+    signatures.forEach((sig, idx) => {
+      const key = sig.join('\x00');
+      if (seen.has(key)) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const firstIdx = seen.get(key)!;
+        const ruleId = rules[idx].attr('id')?.value() ?? `rule[${idx + 1}]`;
+        const firstRuleId = rules[firstIdx].attr('id')?.value() ?? `rule[${firstIdx + 1}]`;
+        issues.push(
+          iss(
+            'error',
+            'BIZ-008',
+            `Duplicate rule rows in ${hp} table: rule "${ruleId}" has identical input entries ` +
+              `to rule "${firstRuleId}". Both will fire for the same input, ` +
+              `causing a DmnHitPolicyException at runtime.`,
+            decisionLoc
+          )
+        );
+      } else {
+        seen.set(key, idx);
+      }
+    });
+
+    // BIZ-009 — catch-all rule alongside specific rules
+    // A catch-all has every input entry empty or "-" (match-anything token).
+    // In a UNIQUE or ANY table this creates an overlap with every specific rule.
+    const catchAllIndices = signatures
+      .map((sig, idx) => ({ sig, idx }))
+      .filter(({ sig }) => sig.length > 0 && sig.every((entry) => isMatchAny(entry)))
+      .map(({ idx }) => idx);
+
+    const hasSpecificRules = signatures.some((sig) =>
+      sig.some((entry) => !isMatchAny(entry))
+    );
+
+    if (catchAllIndices.length > 0 && hasSpecificRules) {
+      catchAllIndices.forEach((catchIdx) => {
+        const ruleId = rules[catchIdx].attr('id')?.value() ?? `rule[${catchIdx + 1}]`;
+        issues.push(
+          iss(
+            'warning',
+            'BIZ-009',
+            `Catch-all rule "${ruleId}" (all input entries are empty or "-") exists alongside ` +
+              `specific rules in a ${hp} table. For any input that matches a specific rule, ` +
+              `both the specific rule and the catch-all fire — violating the ${hp} hit policy. ` +
+              `Consider hitPolicy="FIRST", or move default logic to an else-branch.`,
+            decisionLoc
+          )
+        );
+      });
+    }
+  }
+  
   return { label: 'Business Rules', issues };
 }
 
