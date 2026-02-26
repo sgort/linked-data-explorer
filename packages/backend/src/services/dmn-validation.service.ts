@@ -410,10 +410,9 @@ function validateBusinessLayer(doc: XmlElement): LayerResult {
     }
   }
 
-    // BIZ-008 / BIZ-009: hit-policy overlap checks (UNIQUE and ANY tables only)
+  // BIZ-008 / BIZ-009: hit-policy overlap checks (UNIQUE and ANY tables only)
   const OVERLAP_POLICIES = new Set(['UNIQUE', 'ANY']);
-  const isMatchAny = (text: string): boolean =>
-    !text || text.trim() === '' || text.trim() === '-';
+  const isMatchAny = (text: string): boolean => !text || text.trim() === '' || text.trim() === '-';
 
   for (const dt of find(doc, '//d:decisionTable')) {
     const hp = dt.attr('hitPolicy')?.value() ?? 'UNIQUE'; // DMN default is UNIQUE
@@ -465,9 +464,7 @@ function validateBusinessLayer(doc: XmlElement): LayerResult {
       .filter(({ sig }) => sig.length > 0 && sig.every((entry) => isMatchAny(entry)))
       .map(({ idx }) => idx);
 
-    const hasSpecificRules = signatures.some((sig) =>
-      sig.some((entry) => !isMatchAny(entry))
-    );
+    const hasSpecificRules = signatures.some((sig) => sig.some((entry) => !isMatchAny(entry)));
 
     if (catchAllIndices.length > 0 && hasSpecificRules) {
       catchAllIndices.forEach((catchIdx) => {
@@ -486,7 +483,7 @@ function validateBusinessLayer(doc: XmlElement): LayerResult {
       });
     }
   }
-  
+
   return { label: 'Business Rules', issues };
 }
 
