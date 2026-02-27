@@ -124,7 +124,7 @@ const ExportChain: React.FC<ExportChainProps> = ({
         }
       >
         <Download size={16} />
-        Export Chain
+        Export
       </button>
 
       {/* Export Error (shown outside modal) */}

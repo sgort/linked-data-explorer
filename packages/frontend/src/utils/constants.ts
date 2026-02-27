@@ -1,5 +1,5 @@
 export const DEFAULT_ENDPOINT =
-  'https://api.open-regels.triply.cc/datasets/stevengort/DMN-discovery/services/DMN-discovery/sparql';
+  'https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql';
 
 export const PRESET_ENDPOINTS = [
   { name: 'Local Jena', url: 'http://localhost:3030/ds/query' },
@@ -8,8 +8,8 @@ export const PRESET_ENDPOINTS = [
     url: 'https://api.open-regels.triply.cc/datasets/stevengort/DMN-discovery/services/DMN-discovery/sparql',
   },
   {
-    name: 'Facts',
-    url: 'https://api.open-regels.triply.cc/datasets/stevengort/facts/services/facts/sparql',
+    name: 'RONL',
+    url: 'https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql',
   },
 ];
 
@@ -26,12 +26,30 @@ PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX m8g: <http://data.europa.eu/m8g/>
 PREFIX eli: <http://data.europa.eu/eli/ontology#>
-PREFIX ronl: <https://regels.overheid.nl/termen/>
+PREFIX ronl: <https://regels.overheid.nl/ontology#>
 PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
 PREFIX schema: <http://schema.org/>
 `;
 
 export const SAMPLE_QUERIES = [
+  {
+    name: 'Get All Organizations',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?organization ?identifier ?name ?homepage ?spatial ?logo
+WHERE {
+  ?organization a cv:PublicOrganisation ;
+                dct:identifier ?identifier ;
+                skos:prefLabel ?name .
+
+  OPTIONAL { ?organization foaf:homepage ?homepage }
+  OPTIONAL { ?organization cv:spatial ?spatial }
+  OPTIONAL { ?organization foaf:logo ?logo }
+  OPTIONAL { ?organization schema:image ?logo }
+
+  FILTER(LANG(?name) = "nl" || LANG(?name) = "")
+}
+ORDER BY ?name`,
+  },
   {
     name: 'Get All Public Services',
     sparql: `${COMMON_PREFIXES}
@@ -42,6 +60,19 @@ WHERE {
   OPTIONAL { ?service dct:description ?description }
   FILTER(LANG(?title) = "nl")
 } ORDER BY ?title`,
+  },
+  {
+    name: 'All Rule Paths and Norms by Ruleset',
+    category: 'rules',
+    sparql: `${COMMON_PREFIXES}
+SELECT DISTINCT ?rulesetId ?rule ?ruleIdPath ?norm
+WHERE {
+  ?rule a cprmv:Rule ;
+        cprmv:rulesetId ?rulesetId ;
+        cprmv:ruleIdPath ?ruleIdPath ;
+        cprmv:norm ?norm .
+}
+ORDER BY ?rulesetId ?ruleIdPath`,
   },
   {
     name: 'Rules with Their Services',
@@ -104,12 +135,76 @@ WHERE {
 ORDER BY ?serviceTitle ?validFrom ?ruleTitle`,
   },
   {
+    name: 'Service Rules Metadata',
+    category: 'rules',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?serviceId ?serviceTitle ?legalResourceId ?rulesetId ?ruleIdPath ?ruleId ?ruleDefinition ?ruleSituatie ?ruleNorm
+WHERE {
+  # Start with rules that implement legal resources
+  ?rule a cprmv:Rule ;
+        cprmv:implements ?implementedResource ;
+        cprmv:rulesetId ?rulesetId ;
+        cprmv:ruleIdPath ?ruleIdPath .
+  
+  # Find the legal resource (base or versioned)
+  {
+    # Case 1: Rule implements the base legal resource directly
+    ?implementedResource a eli:LegalResource ;
+                        dct:identifier ?legalResourceId .
+    BIND(?implementedResource as ?legalResource)
+  }
+  UNION
+  {
+    # Case 2: Rule implements a versioned legal resource
+    ?legalResource a eli:LegalResource ;
+                   dct:identifier ?legalResourceId ;
+                   eli:is_realized_by ?implementedResource .
+  }
+  
+  # Find the service that uses this legal resource
+  ?service a cpsv:PublicService ;
+           dct:identifier ?serviceId ;
+           dct:title ?serviceTitle ;
+           cv:hasLegalResource ?legalResource .
+  
+  # Get rule details
+  OPTIONAL { ?rule cprmv:id ?ruleId }
+  OPTIONAL { ?rule cprmv:definition ?ruleDefinition }
+  OPTIONAL { ?rule cprmv:situatie ?ruleSituatie }
+  OPTIONAL { ?rule cprmv:norm ?ruleNorm }
+  
+  FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "")
+}
+ORDER BY ?serviceId ?ruleIdPath`,
+  },
+  {
     name: 'Explore Relations (S-P-O)',
     sparql: `${COMMON_PREFIXES}
 SELECT ?s ?p ?o
 WHERE {
   ?s ?p ?o
 } LIMIT 500`,
+  },
+  {
+    name: 'NL-SBB Concepts and Services',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?subject ?prefLabel ?exactMatch ?service ?serviceTitle
+WHERE {
+  ?subject skos:exactMatch ?exactMatch ;
+           dct:subject ?variable .
+
+  OPTIONAL { ?subject skos:prefLabel ?prefLabel . FILTER(LANG(?prefLabel) = "nl" || LANG(?prefLabel) = "") }
+
+  {
+    ?variable cpsv:isRequiredBy ?dmn .
+  } UNION {
+    ?variable cpsv:produces ?dmn .
+  }
+
+  ?dmn cprmv:implements ?service .
+  OPTIONAL { ?service dct:title ?serviceTitle . FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "") }
+}
+ORDER BY ?service ?subject`,
   },
   {
     name: 'Services and Authorities',
@@ -124,19 +219,6 @@ WHERE {
   FILTER(LANG(?title) = "nl")
 }
 ORDER BY ?title`,
-  },
-  {
-    name: 'Services with Legal Resources',
-    sparql: `${COMMON_PREFIXES}
-SELECT ?service ?serviceTitle ?legalTitle ?legalResource
-WHERE {
-  ?service a cpsv:PublicService .
-  ?service dct:title ?serviceTitle .
-  ?service cv:hasLegalResource ?legalResource .
-  ?legalResource dct:title ?legalTitle .
-  FILTER(LANG(?serviceTitle) = "nl")
-}
-ORDER BY ?serviceTitle`,
   },
 ];
 
@@ -154,7 +236,7 @@ WHERE {
   ?dmn a cprmv:DecisionModel ;
        dct:identifier ?identifier ;
        dct:title ?title ;
-       ronl:implementedBy ?apiEndpoint .
+       cprmv:implementedBy ?apiEndpoint .
   
   OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
   OPTIONAL { ?dmn cpsv:implements ?service }
@@ -180,6 +262,35 @@ WHERE {
   FILTER(LANG(?title) = "nl" || LANG(?title) = "")
 }
 ORDER BY ?title ?inputId ?outputId`,
+  },
+  {
+    name: 'DMNs full path traversed',
+    category: 'orchestration',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?dmn ?dmnTitle ?service ?serviceTitle ?organization ?orgName ?logo
+WHERE {
+  # Start with DMN
+  ?dmn a cprmv:DecisionModel ;
+       dct:title ?dmnTitle ;
+       cprmv:implements ?service .
+
+  # Service details
+  ?service a cpsv:PublicService ;
+           dct:title ?serviceTitle ;
+           cv:hasCompetentAuthority ?organization .
+
+  # Organization details
+  ?organization a cv:PublicOrganisation ;
+                skos:prefLabel ?orgName .
+  
+  # Logo (optional)
+  OPTIONAL { ?organization foaf:logo ?logo }
+  
+  FILTER(LANG(?dmnTitle) = "nl" || LANG(?dmnTitle) = "")
+  FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "")
+  FILTER(LANG(?orgName) = "nl" || LANG(?orgName) = "")
+}
+ORDER BY ?dmnTtitle`,
   },
   {
     name: 'DMN Input/Output Details',
@@ -296,7 +407,7 @@ WHERE {
   ?dmn a cprmv:DecisionModel ;
        dct:identifier ?identifier ;
        dct:title ?title ;
-       ronl:implementedBy ?apiEndpoint .
+       cprmv:implementedBy ?apiEndpoint .
   
   OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
   

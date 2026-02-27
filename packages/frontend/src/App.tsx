@@ -12,12 +12,16 @@ import {
   RefreshCw,
   Settings,
   Share2,
+  ShieldCheck,
   Trash2,
+  Workflow,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+import BpmnModeler from './components/BpmnModeler/BpmnModeler';
 import ChainBuilder from './components/ChainBuilder/ChainBuilder';
 import Changelog from './components/Changelog';
+import DmnValidator from './components/DmnValidator';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
 import Tutorial from './components/Tutorial/Tutorial';
@@ -47,6 +51,7 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
+  const [selectedLibraryQuery, setSelectedLibraryQuery] = useState<string | null>(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -88,8 +93,14 @@ const App: React.FC = () => {
 
     if (queryObj) {
       setQuery(queryObj.sparql);
+      setSelectedLibraryQuery(queryObj.name); // NEW: Track selected query by name
       // ✅ Don't auto-switch views - let user stay where they are
     }
+  };
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setQuery(e.target.value);
+    setSelectedLibraryQuery(null); // Clear selection when manually editing
   };
 
   const handleAddEndpoint = () => {
@@ -150,6 +161,52 @@ const App: React.FC = () => {
     return ALL_QUERIES;
   };
 
+  /**
+   * Export SPARQL results to CSV
+   */
+  const handleExportCSV = () => {
+    if (!sparqlResult || !sparqlResult.results.bindings.length) {
+      return;
+    }
+
+    try {
+      // Get all unique variable names from results
+      const variables = sparqlResult.head.vars;
+
+      // Create CSV header
+      const csvRows: string[] = [];
+      csvRows.push(variables.join(','));
+
+      // Add data rows
+      sparqlResult.results.bindings.forEach((binding) => {
+        const row = variables.map((variable) => {
+          const value = binding[variable]?.value || '';
+          // Escape quotes and wrap in quotes if contains comma or newline
+          const escaped = value.replace(/"/g, '""');
+          return /[,\n"]/.test(escaped) ? `"${escaped}"` : escaped;
+        });
+        csvRows.push(row.join(','));
+      });
+
+      // Create blob and download
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `sparql-results-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export CSV:', error);
+      setError(
+        'Failed to export CSV: ' + (error instanceof Error ? error.message : 'Unknown error')
+      );
+    }
+  };
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
       {/* Sidebar Navigation */}
@@ -173,6 +230,22 @@ const App: React.FC = () => {
             title="DMN Orchestration"
           >
             <GitBranch size={24} />
+          </button>
+
+          <button
+            onClick={() => setViewMode(ViewMode.BPMN)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.BPMN ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="BPMN Modeler"
+          >
+            <Workflow size={24} />
+          </button>
+
+          <button
+            onClick={() => setViewMode(ViewMode.VALIDATE)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.VALIDATE ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="DMN Validator"
+          >
+            <ShieldCheck size={24} />
           </button>
 
           <button
@@ -222,64 +295,66 @@ const App: React.FC = () => {
             </span>
           </div>
 
-          {viewMode !== ViewMode.CHANGELOG && viewMode !== ViewMode.TUTORIAL && (
-            <div className="flex items-center gap-3">
-              <div className="hidden lg:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
-                <span className="text-xs text-slate-500 mr-2 font-semibold uppercase tracking-tight">
-                  Endpoint
-                </span>
-                <input
-                  type="text"
-                  list="endpoint-options"
-                  value={endpoint}
-                  onChange={(e) => setEndpoint(e.target.value)}
-                  placeholder="Select or type endpoint URL"
-                  className="bg-transparent text-sm text-slate-700 focus:outline-none w-80 font-mono truncate"
-                />
-                <datalist id="endpoint-options">
-                  {savedEndpoints.map((ep, idx) => (
-                    <option key={idx} value={ep.url}>
-                      {ep.name}
-                    </option>
-                  ))}
-                </datalist>
-              </div>
+          {viewMode !== ViewMode.CHANGELOG &&
+            viewMode !== ViewMode.TUTORIAL &&
+            viewMode !== ViewMode.VALIDATE && (
+              <div className="flex items-center gap-3">
+                <div className="hidden lg:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
+                  <span className="text-xs text-slate-500 mr-2 font-semibold uppercase tracking-tight">
+                    Endpoint
+                  </span>
+                  <input
+                    type="text"
+                    list="endpoint-options"
+                    value={endpoint}
+                    onChange={(e) => setEndpoint(e.target.value)}
+                    placeholder="Select or type endpoint URL"
+                    className="bg-transparent text-sm text-slate-700 focus:outline-none w-80 font-mono truncate"
+                  />
+                  <datalist id="endpoint-options">
+                    {savedEndpoints.map((ep, idx) => (
+                      <option key={idx} value={ep.url}>
+                        {ep.name}
+                      </option>
+                    ))}
+                  </datalist>
+                </div>
 
-              {/* Refresh Cache Button (Orchestration View Only) */}
-              {viewMode === ViewMode.ORCHESTRATION && (
-                <button
-                  onClick={handleRefreshCache}
-                  disabled={isRefreshing}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm border transition-all
+                {/* Refresh Cache Button (Orchestration View Only) */}
+                {viewMode === ViewMode.ORCHESTRATION && (
+                  <button
+                    onClick={handleRefreshCache}
+                    disabled={isRefreshing}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm border transition-all
                     ${
                       isRefreshing
                         ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed'
                         : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 shadow-sm hover:shadow'
                     }
                   `}
-                  title="Refresh DMN cache (clears 5-minute cache)"
-                >
-                  <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-                  {isRefreshing ? 'Refreshing...' : 'Refresh Cache'}
-                </button>
-              )}
+                    title="Refresh DMN cache (clears 5-minute cache)"
+                  >
+                    <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                    {isRefreshing ? 'Refreshing...' : 'Refresh Cache'}
+                  </button>
+                )}
 
-              <button
-                onClick={handleRunQuery}
-                disabled={isLoading}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-white shadow-sm transition-all
+                <button
+                  onClick={handleRunQuery}
+                  disabled={isLoading}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-white shadow-sm transition-all
                   ${isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-md active:transform active:scale-95'}
                 `}
-              >
-                {isLoading ? (
-                  <Loader2 className="animate-spin" size={16} />
-                ) : (
-                  <Play size={16} fill="currentColor" />
-                )}
-                Run Query
-              </button>
-            </div>
-          )}
+                >
+                  {isLoading ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Play size={16} fill="currentColor" />
+                  )}
+                  Run Query
+                </button>
+              </div>
+            )}
         </header>
 
         {/* Workspace Panels */}
@@ -305,176 +380,195 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* Settings Panel Overlay */}
-          {showSettings && viewMode !== ViewMode.CHANGELOG && viewMode !== ViewMode.TUTORIAL && (
-            <div className="absolute top-0 left-0 z-30 w-[450px] h-full bg-white border-r border-slate-200 shadow-2xl p-5 animate-in slide-in-from-left fade-in duration-200 flex flex-col">
-              <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
-                <h3 className="font-semibold text-slate-700 flex items-center gap-2">
-                  <Settings size={18} /> Configuration
-                </h3>
-                <button
-                  onClick={() => setShowSettings(false)}
-                  className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
-                  aria-label="Close settings"
-                >
-                  &times;
-                </button>
-              </div>
-
-              <div className="space-y-4 overflow-y-auto pr-1">
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
-                    Active Endpoint URL
-                  </label>
-                  <input
-                    type="text"
-                    value={endpoint}
-                    onChange={(e) => setEndpoint(e.target.value)}
-                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-slate-600"
-                  />
-
-                  {/* Connection type indicator */}
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-[10px] text-slate-400">
-                      Changes are reset on browser refresh.
-                    </p>
-                    <div
-                      className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium ${
-                        getConnectionType() === 'direct'
-                          ? 'bg-green-50 text-green-700 border border-green-200'
-                          : 'bg-blue-50 text-blue-700 border border-blue-200'
-                      }`}
-                    >
-                      {getConnectionType() === 'direct' ? (
-                        <>
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                            />
-                          </svg>
-                          <span>Direct Connection</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                          </svg>
-                          <span>Proxied via Backend</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <hr className="border-slate-100" />
-
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Session Endpoints
-                    </label>
-                    <button
-                      onClick={handleResetDefaults}
-                      className="text-[10px] text-blue-500 hover:underline"
-                    >
-                      Reset Defaults
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 mb-3 max-h-[300px] overflow-y-auto pr-1">
-                    {savedEndpoints.map((ep, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between group p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all"
-                      >
-                        <div
-                          className="flex-1 min-w-0 cursor-pointer"
-                          onClick={() => {
-                            setEndpoint(ep.url);
-                          }}
-                        >
-                          <div className="text-sm font-medium text-slate-700 truncate">
-                            {ep.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400 truncate font-mono">
-                            {ep.url}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {endpoint === ep.url && (
-                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                              Active
-                            </span>
-                          )}
-                          <button
-                            onClick={() => handleDeleteEndpoint(idx)}
-                            className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Remove Endpoint"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Add New Endpoint Form */}
-                  <div className="bg-slate-50 p-3 rounded border border-slate-200 shadow-inner">
-                    <div className="text-xs font-medium text-slate-500 mb-2">
-                      Add New TripleDB/Jena Endpoint
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Display Name (e.g. Local TripleDB)"
-                      value={newEndpointName}
-                      onChange={(e) => setNewEndpointName(e.target.value)}
-                      className="w-full mb-2 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                    />
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="SPARQL Endpoint URL"
-                        value={newEndpointUrl}
-                        onChange={(e) => setNewEndpointUrl(e.target.value)}
-                        className="flex-1 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
-                      />
-                      <button
-                        onClick={handleAddEndpoint}
-                        disabled={!newEndpointName || !newEndpointUrl}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium disabled:opacity-50 transition-colors shadow-sm"
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* BPMN Modeler View */}
+          {viewMode === ViewMode.BPMN && (
+            <div className="flex-1 overflow-hidden">
+              <BpmnModeler endpoint={endpoint} />
             </div>
           )}
+
+          {/* DMN Validator View — always mounted to preserve dropped files across navigation */}
+          <div
+            className={`flex-1 overflow-hidden flex flex-col ${viewMode === ViewMode.VALIDATE ? '' : 'hidden'}`}
+          >
+            <DmnValidator apiBaseUrl={API_BASE_URL} />
+          </div>
+
+          {/* Settings Panel Overlay */}
+          {showSettings &&
+            viewMode !== ViewMode.CHANGELOG &&
+            viewMode !== ViewMode.TUTORIAL &&
+            viewMode !== ViewMode.VALIDATE && (
+              <div className="absolute top-0 left-0 z-30 w-[450px] h-full bg-white border-r border-slate-200 shadow-2xl p-5 animate-in slide-in-from-left fade-in duration-200 flex flex-col">
+                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                  <h3 className="font-semibold text-slate-700 flex items-center gap-2">
+                    <Settings size={18} /> Configuration
+                  </h3>
+                  <button
+                    onClick={() => setShowSettings(false)}
+                    className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+                    aria-label="Close settings"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                <div className="space-y-4 overflow-y-auto pr-1">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                      Active Endpoint URL
+                    </label>
+                    <input
+                      type="text"
+                      value={endpoint}
+                      onChange={(e) => setEndpoint(e.target.value)}
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-slate-600"
+                    />
+
+                    {/* Connection type indicator */}
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-[10px] text-slate-400">
+                        Changes are reset on browser refresh.
+                      </p>
+                      <div
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium ${
+                          getConnectionType() === 'direct'
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+                        }`}
+                      >
+                        {getConnectionType() === 'direct' ? (
+                          <>
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                              />
+                            </svg>
+                            <span>Direct Connection</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                              />
+                            </svg>
+                            <span>Proxied via Backend</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr className="border-slate-100" />
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Session Endpoints
+                      </label>
+                      <button
+                        onClick={handleResetDefaults}
+                        className="text-[10px] text-blue-500 hover:underline"
+                      >
+                        Reset Defaults
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 mb-3 max-h-[300px] overflow-y-auto pr-1">
+                      {savedEndpoints.map((ep, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between group p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all"
+                        >
+                          <div
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => {
+                              setEndpoint(ep.url);
+                            }}
+                          >
+                            <div className="text-sm font-medium text-slate-700 truncate">
+                              {ep.name}
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate font-mono">
+                              {ep.url}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {endpoint === ep.url && (
+                              <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                                Active
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handleDeleteEndpoint(idx)}
+                              className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Remove Endpoint"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add New Endpoint Form */}
+                    <div className="bg-slate-50 p-3 rounded border border-slate-200 shadow-inner">
+                      <div className="text-xs font-medium text-slate-500 mb-2">
+                        Add New TripleDB/Jena Endpoint
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Display Name (e.g. Local TripleDB)"
+                        value={newEndpointName}
+                        onChange={(e) => setNewEndpointName(e.target.value)}
+                        className="w-full mb-2 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="SPARQL Endpoint URL"
+                          value={newEndpointUrl}
+                          onChange={(e) => setNewEndpointUrl(e.target.value)}
+                          className="flex-1 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
+                        />
+                        <button
+                          onClick={handleAddEndpoint}
+                          disabled={!newEndpointName || !newEndpointUrl}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium disabled:opacity-50 transition-colors shadow-sm"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
           {/* Left Editor Pane */}
           {viewMode !== ViewMode.VISUALIZE &&
             viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.ORCHESTRATION &&
-            viewMode !== ViewMode.TUTORIAL && (
+            viewMode !== ViewMode.TUTORIAL &&
+            viewMode !== ViewMode.BPMN &&
+            viewMode !== ViewMode.VALIDATE && (
               <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
                 <div className="flex-1 flex flex-col min-h-0">
                   <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
@@ -493,7 +587,7 @@ const App: React.FC = () => {
                   </div>
                   <textarea
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={handleQueryChange} // Changed from inline handler
                     className="flex-1 w-full p-4 font-mono text-sm text-slate-800 bg-white focus:outline-none resize-none leading-relaxed overflow-auto code-scroll"
                     spellCheck={false}
                     aria-label="SPARQL Query"
@@ -509,7 +603,13 @@ const App: React.FC = () => {
                       <button
                         key={idx}
                         onClick={() => handleSampleClick(q.name)}
-                        className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-white hover:text-blue-600 rounded-md border border-transparent hover:border-slate-200 transition-all truncate shadow-sm hover:shadow"
+                        className={`w-full text-left px-3 py-2 text-sm rounded-md border transition-all truncate shadow-sm
+                          ${
+                            selectedLibraryQuery === q.name
+                              ? 'bg-blue-100 text-blue-700 border-blue-200 font-medium shadow'
+                              : 'text-slate-600 hover:bg-white hover:text-blue-600 border-transparent hover:border-slate-200 hover:shadow'
+                          }
+                        `}
                       >
                         {q.name}
                       </button>
@@ -519,10 +619,12 @@ const App: React.FC = () => {
               </div>
             )}
 
-          {/* Right Results Pane */}
+          {/* Right Panel */}
           {viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.ORCHESTRATION &&
-            viewMode !== ViewMode.TUTORIAL && (
+            viewMode !== ViewMode.TUTORIAL &&
+            viewMode !== ViewMode.BPMN &&
+            viewMode !== ViewMode.VALIDATE && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
                 {/* Error Overlay */}
                 {error && (
@@ -555,7 +657,10 @@ const App: React.FC = () => {
                         )}
                       </h3>
                       {sparqlResult && (
-                        <button className="text-slate-400 hover:text-blue-600 flex items-center gap-1 text-xs transition-colors">
+                        <button
+                          onClick={handleExportCSV}
+                          className="text-slate-600 hover:text-blue-600 flex items-center gap-1 text-xs transition-colors hover:bg-slate-50 px-2 py-1 rounded"
+                        >
                           <Download size={14} /> Export CSV
                         </button>
                       )}
@@ -567,7 +672,7 @@ const App: React.FC = () => {
                           <p className="text-sm animate-pulse">Running SPARQL query...</p>
                         </div>
                       ) : (
-                        <ResultsTable data={sparqlResult} />
+                        <ResultsTable data={sparqlResult} endpoint={endpoint} />
                       )}
                     </div>
                   </div>

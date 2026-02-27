@@ -32,10 +32,14 @@ export interface ChainExecutionRequest {
   chainId?: string;
   dmnIds?: string[]; // Manual chain specification
   inputs: Record<string, unknown>;
+  endpoint?: string; // Optional TriplyDB endpoint for DMN lookup
   options?: {
     includeIntermediateSteps?: boolean;
     timeout?: number;
   };
+  // NEW: DRD execution parameters
+  isDrd?: boolean;
+  drdEntryPointId?: string;
 }
 
 export interface ChainDiscoveryRequest {

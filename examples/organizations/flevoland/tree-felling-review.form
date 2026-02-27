@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "tree-felling-review",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.43.1"
+  },
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Tree felling permit – case worker review"
+    },
+    {
+      "id": "Field_ReviewError",
+      "type": "textfield",
+      "label": "Validation message",
+      "key": "reviewError",
+      "disabled": true,
+      "readonly": true,
+      "description": "If this is filled, fix the issue below and submit again."
+    },
+    {
+      "id": "Text_Current",
+      "type": "text",
+      "text": "## Current (DMN) decisions"
+    },
+    {
+      "id": "Field_PermitDecision",
+      "type": "textfield",
+      "label": "permitDecision (current)",
+      "key": "permitDecision",
+      "disabled": true,
+      "readonly": true
+    },
+    {
+      "id": "Field_ReplacementDecision",
+      "type": "textfield",
+      "label": "replacementDecision (current)",
+      "key": "replacementDecision",
+      "disabled": true,
+      "readonly": true,
+      "description": "May be empty/null if permit was rejected (replacement not assessed)."
+    },
+    {
+      "id": "Text_Action",
+      "type": "text",
+      "text": "## Review action\n- **Confirm**: keep DMN decisions as-is\n- **Reject**: force permitDecision = `Reject`\n- **Change**: override decisions below\n\n**Policy:** If you change permitDecision to **Permit**, you must explicitly choose whether replacement is required.\n"
+    },
+    {
+      "id": "Field_ReviewAction",
+      "type": "select",
+      "label": "What do you want to do?",
+      "key": "reviewAction",
+      "validate": { "required": true },
+      "values": [
+        { "label": "Confirm (keep DMN decisions)", "value": "confirm" },
+        { "label": "Reject (force rejection)", "value": "reject" },
+        { "label": "Change (override decisions)", "value": "change" }
+      ]
+    },
+    {
+      "id": "Field_ReviewPermitDecision",
+      "type": "select",
+      "label": "New permitDecision (required when action = Change)",
+      "key": "reviewPermitDecision",
+      "values": [
+        { "label": "Permit", "value": "Permit" },
+        { "label": "Reject", "value": "Reject" }
+      ]
+    },
+    {
+      "id": "Text_Replacement",
+      "type": "text",
+      "text": "### Replacement requirement (required when action = Change AND new permitDecision = Permit)"
+    },
+    {
+      "id": "Field_ReviewReplacementDecision",
+      "type": "radio",
+      "label": "Is a replacement tree required?",
+      "key": "reviewReplacementDecision",
+      "validate": { "required": true },
+      "values": [
+        { "label": "Yes (True) – replacement required", "value": true },
+        { "label": "No (False) – replacement not required", "value": false }
+      ]
+    }
+  ]
+}

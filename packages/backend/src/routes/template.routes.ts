@@ -10,24 +10,37 @@ const router = Router();
 /**
  * GET /v1/chains/templates
  * List all available chain templates
+ * Supports ?endpoint= parameter for filtering
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { category, tag } = req.query;
+    const { category, tag, endpoint } = req.query; // ← ADD endpoint
 
-    logger.info('Chain templates list request', { category, tag });
+    logger.info('Chain templates list request', {
+      category,
+      tag,
+      ...(endpoint && { endpoint }), // ← LOG endpoint if present
+    });
 
     let templates;
 
     if (category && typeof category === 'string') {
-      templates = await templateService.getTemplatesByCategory(category);
+      templates = await templateService.getTemplatesByCategory(
+        category,
+        endpoint as string | undefined // ← PASS endpoint
+      );
     } else if (tag && typeof tag === 'string') {
-      templates = await templateService.getTemplatesByTag(tag);
+      templates = await templateService.getTemplatesByTag(
+        tag,
+        endpoint as string | undefined // ← PASS endpoint
+      );
     } else {
-      templates = await templateService.getAllTemplates();
+      templates = await templateService.getAllTemplates(
+        endpoint as string | undefined // ← PASS endpoint
+      );
     }
 
-    // Extract categories from already-fetched templates (no duplicate call!)
+    // Extract categories from already-fetched templates
     const categories = Array.from(new Set(templates.map((t) => t.category))).sort();
 
     const response: ChainTemplateListResponse = {
@@ -59,21 +72,29 @@ router.get('/', async (req: Request, res: Response) => {
 /**
  * GET /v1/chains/templates/:id
  * Get a specific template by ID
+ * Supports ?endpoint= parameter for validation
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const { endpoint } = req.query; // ← ADD endpoint
 
-    logger.info('Chain template details request', { id });
+    logger.info('Chain template details request', {
+      id,
+      ...(endpoint && { endpoint }), // ← LOG endpoint if present
+    });
 
-    const template = await templateService.getTemplateById(id);
+    const template = await templateService.getTemplateById(
+      id,
+      endpoint as string | undefined // ← PASS endpoint
+    );
 
     if (!template) {
       return res.status(404).json({
         success: false,
         error: {
           code: 'NOT_FOUND',
-          message: `Template not found: ${id}`,
+          message: `Template not found or not valid for endpoint: ${id}`,
         },
         timestamp: new Date().toISOString(),
       } as ApiResponse);

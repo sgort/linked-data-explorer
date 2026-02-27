@@ -15,11 +15,11 @@ const router = Router();
  */
 router.post('/execute', async (req: Request, res: Response) => {
   try {
-    const { dmnIds, inputs, options }: ChainExecutionRequest = req.body;
+    const body = req.body as ChainExecutionRequest;
+    const { dmnIds, inputs, options, endpoint, isDrd, drdEntryPointId } = body;
 
     // Validate dmnIds exists and is not empty
     if (!dmnIds || dmnIds.length === 0) {
-      // ✅ Now TypeScript knows dmnIds exists after this
       return res.status(400).json({
         success: false,
         error: {
@@ -41,10 +41,21 @@ router.post('/execute', async (req: Request, res: Response) => {
       } as ApiResponse);
     }
 
-    logger.info('Chain execution request', { dmnIds, inputCount: Object.keys(inputs).length });
+    logger.info('Chain execution request', {
+      dmnIds,
+      inputCount: Object.keys(inputs).length,
+      endpoint: endpoint || 'default',
+      isDrd: isDrd || false,
+    });
 
-    // ✅ After the check above, TypeScript knows dmnIds is string[]
-    const result = await orchestrationService.executeChain(dmnIds, inputs);
+    // Pass DRD parameters to orchestration service
+    const result = await orchestrationService.executeChain(
+      dmnIds,
+      inputs,
+      endpoint,
+      isDrd,
+      drdEntryPointId
+    );
 
     const responseData = {
       success: result.success,
