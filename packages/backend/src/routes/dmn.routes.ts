@@ -6,6 +6,8 @@ import { sparqlService } from '../services/sparql.service';
 import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
+import { operatonService } from '../services/operaton.service';
+import { dmnValidationService } from '../services/dmn-validation.service';
 
 const router = Router();
 
@@ -74,7 +76,12 @@ router.get('/semantic-equivalences', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
     const equivalences = await sparqlService.findSemanticEquivalences(endpoint);
-    res.json(equivalences);
+
+    res.json({
+      success: true,
+      data: equivalences,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
   } catch (error: unknown) {
     const errorDetails = getErrorDetails(error);
     logger.error('Semantic equivalences error', errorDetails);
@@ -94,7 +101,13 @@ router.get('/enhanced-chain-links', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
     const links = await sparqlService.findEnhancedChainLinks(endpoint);
-    res.json(links);
+
+    // Standardize response format to match other endpoints
+    res.json({
+      success: true,
+      data: links,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
   } catch (error: unknown) {
     const errorDetails = getErrorDetails(error);
     logger.error('Enhanced chain links error', errorDetails);
@@ -114,13 +127,75 @@ router.get('/cycles', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
     const cycles = await sparqlService.detectChainCycles(endpoint);
-    res.json(cycles);
+
+    res.json({
+      success: true,
+      data: cycles,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
   } catch (error: unknown) {
     const errorDetails = getErrorDetails(error);
     logger.error('Cycle detection error', errorDetails);
     res.status(500).json({
       success: false,
       error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  }
+});
+
+/**
+ * POST /api/dmns/drd/deploy
+ * Assemble and deploy a DRD from an ordered chain of DMN identifiers.
+ * Body: { dmnIds: string[], deploymentName: string }
+ */
+router.post('/drd/deploy', async (req: Request, res: Response) => {
+  try {
+    const { dmnIds, deploymentName } = req.body as {
+      dmnIds: string[];
+      deploymentName: string;
+    };
+
+    if (!Array.isArray(dmnIds) || dmnIds.length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'dmnIds must be an array with at least 2 entries',
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!deploymentName?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'deploymentName is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const entryPointId = dmnIds[dmnIds.length - 1];
+    const filename = `${entryPointId}.dmn`;
+
+    const drdXml = await operatonService.assembleDrd(dmnIds, deploymentName);
+    const result = await operatonService.deployDrd(drdXml, deploymentName, filename);
+
+    res.json({
+      success: true,
+      data: {
+        deploymentId: result.deploymentId,
+        entryPointId,
+        filename,
+        dmnCount: dmnIds.length,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    logger.error('DRD deploy error', getErrorDetails(error));
+    res.status(500).json({
+      success: false,
+      error: { code: 'DRD_DEPLOY_FAILED', message: getErrorMessage(error) },
       timestamp: new Date().toISOString(),
     });
   }
@@ -170,6 +245,84 @@ router.get('/:identifier', async (req: Request, res: Response) => {
         code: 'QUERY_ERROR',
         message: getErrorMessage(error),
       },
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  }
+});
+
+/**
+ * POST /v1/dmns/validate
+ * Validate a DMN file against the RONL DMN+ syntactic layers.
+ *
+ * Request body (JSON):
+ *   { "content": "<DMN XML as a string>" }
+ *
+ * Response (JSON):
+ *   {
+ *     "success": true,
+ *     "data": {
+ *       "valid": boolean,
+ *       "parseError": string | null,
+ *       "layers": {
+ *         "base":        { "label": "Base DMN",         "issues": Issue[] },
+ *         "business":    { "label": "Business Rules",   "issues": Issue[] },
+ *         "execution":   { "label": "Execution Rules",  "issues": Issue[] },
+ *         "interaction": { "label": "Interaction Rules","issues": Issue[] },
+ *         "content":     { "label": "Content",          "issues": Issue[] }
+ *       },
+ *       "summary": { "errors": number, "warnings": number, "infos": number }
+ *     },
+ *     "timestamp": string
+ *   }
+ *
+ * Issue shape:
+ *   {
+ *     "severity": "error" | "warning" | "info",
+ *     "code":     string,    // e.g. "BASE-XSD", "BIZ-006", "EXEC-004"
+ *     "message":  string,
+ *     "location": string?,   // element description, e.g. "<decision id="d1">"
+ *     "line":     number?,   // only for BASE-XSD errors from libxmljs2
+ *     "column":   number?
+ *   }
+ *
+ * This endpoint is unauthenticated. It performs no TriplyDB or Operaton calls.
+ * The 10 MB body limit is enforced by express.json() in index.ts.
+ */
+router.post('/validate', async (req: Request, res: Response) => {
+  try {
+    const { content } = req.body as { content?: string };
+
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_REQUEST',
+          message: 'Request body must contain a "content" field with the DMN XML as a string.',
+        },
+        timestamp: new Date().toISOString(),
+      } as ApiResponse);
+    }
+
+    logger.info('[DMN Validate] Validation requested', { contentLength: content.length });
+
+    const result = await dmnValidationService.validateDmnContent(content);
+
+    logger.info('[DMN Validate] Complete', {
+      valid: result.valid,
+      errors: result.summary.errors,
+      warnings: result.summary.warnings,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  } catch (error: unknown) {
+    logger.error('[DMN Validate] Unexpected error', getErrorDetails(error));
+    res.status(500).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: getErrorMessage(error) },
       timestamp: new Date().toISOString(),
     } as ApiResponse);
   }

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   closestCenter,
   DndContext,
@@ -8,8 +9,9 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import React, { useEffect, useState } from 'react';
 
-import { ChainExecutionResult, DmnModel } from '../../types';
-import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
+import { initializeDefaultTestCases } from '../../services/defaultTestCases';
+import { ChainExecutionResult, DmnModel, DmnVariable, EnhancedChainLink } from '../../types';
+import { ChainPreset, ChainValidation, VariableMatch } from '../../types/chainBuilder.types';
 import ChainComposer from './ChainComposer';
 import ChainConfig from './ChainConfig';
 import DmnList from './DmnList';
@@ -40,6 +42,8 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
   const [validation, setValidation] = useState<ChainValidation | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'builder' | 'semantic'>('builder');
+  const [loadedTemplate, setLoadedTemplate] = useState<ChainPreset | null>(null);
+  const [semanticLinks, setSemanticLinks] = useState<EnhancedChainLink[]>([]);
 
   // Load DMNs when endpoint changes
   useEffect(() => {
@@ -47,7 +51,13 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
 
-  // Validate chain whenever it changes
+  // Add effect to load semantic links when endpoint changes
+  useEffect(() => {
+    loadSemanticLinks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint]);
+
+  // Validate chain whenever it changes (including semantic links)
   useEffect(() => {
     if (selectedChain.length > 0) {
       validateChain();
@@ -55,7 +65,36 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       setValidation(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChain, availableDmns, inputs]);
+  }, [selectedChain, availableDmns, inputs, semanticLinks]); // Added semanticLinks
+
+  // Initialize default test cases on first mount
+  useEffect(() => {
+    initializeDefaultTestCases(endpoint);
+  }, [endpoint]);
+
+  /**
+   * Load semantic chain links from backend
+   */
+  const loadSemanticLinks = async () => {
+    try {
+      const url = `${API_BASE_URL}/api/dmns/enhanced-chain-links?endpoint=${encodeURIComponent(endpoint)}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        setSemanticLinks(data.data);
+        console.log(
+          `[SemanticLinks] ✓ Loaded ${data.data.length} links (${data.data.filter((l: EnhancedChainLink) => l.matchType === 'semantic').length} semantic)`
+        );
+      } else {
+        console.error('[SemanticLinks] Failed to load:', data.error);
+        setSemanticLinks([]);
+      }
+    } catch (error) {
+      console.error('[SemanticLinks] Error:', error);
+      setSemanticLinks([]);
+    }
+  };
 
   /**
    * Load available DMNs from backend
@@ -98,13 +137,23 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     setExecutionResult(null);
 
     try {
+      // Check if this is a DRD template
+      const isDrd = loadedTemplate?.type === 'drd' || false; // ✅ Check type field
+      const drdEntryPointId = loadedTemplate?.drdEntryPointId;
+
+      console.log('[Execute] isDrd:', isDrd);
+      console.log('[Execute] drdEntryPointId:', drdEntryPointId);
+      console.log('[Execute] Chain:', selectedChain);
+
       const response = await fetch(`${API_BASE_URL}/api/chains/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           dmnIds: selectedChain,
           inputs,
-          endpoint, // Pass current endpoint to backend
+          endpoint,
+          isDrd,
+          drdEntryPointId,
           options: { includeIntermediateSteps: true },
         }),
       });
@@ -114,58 +163,18 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       if (data.success) {
         setExecutionResult(data.data);
       } else {
-        const errorMessage =
-          data.error?.message || data.data?.error || data.error || 'Unknown error occurred';
-
-        const errorCode = data.error?.code || 'EXECUTION_ERROR';
-
-        alert(
-          `❌ Execution Failed\n\n` +
-            `${errorMessage}\n\n` +
-            `Error Code: ${errorCode}\n\n` +
-            `Common causes:\n` +
-            `• Missing deployment keys in Operaton\n` +
-            `  (Check if DMN is deployed with correct key)\n` +
-            `• DMN model not found in Operaton\n` +
-            `• Invalid input values or types\n` +
-            `• Network connectivity issues\n\n` +
-            `Backend: ${API_BASE_URL}\n` +
-            `Check browser console for technical details.`
-        );
-
-        console.error('Chain execution error:', {
-          code: errorCode,
-          message: errorMessage,
-          apiError: data.error,
-          executionError: data.data?.error,
-          fullResponse: data,
-          chain: selectedChain,
-          inputs: inputs,
-        });
+        alert(`Execution failed: ${data.error?.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Network/fetch error:', error);
-
-      const errorMessage = error instanceof Error ? error.message : 'Unknown network error';
-
-      alert(
-        `❌ Connection Failed\n\n` +
-          `${errorMessage}\n\n` +
-          `Possible causes:\n` +
-          `• Backend server is not running\n` +
-          `  (Expected at: ${API_BASE_URL})\n` +
-          `• Network connectivity issues\n` +
-          `• CORS configuration problems\n` +
-          `• Firewall blocking the connection\n\n` +
-          `Check browser console for details.`
-      );
+      console.error('Execution error:', error);
+      alert(`Execution error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsExecuting(false);
     }
   };
 
   /**
-   * Validate the current chain
+   * Validate the current chain with DRD compatibility checking
    */
   const validateChain = () => {
     const chainDmns = selectedChain
@@ -177,10 +186,14 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       return;
     }
 
+    console.log('[Validation] Chain:', chainDmns.map((d) => d.identifier).join(' → '));
+
     const errors: ChainValidation['errors'] = [];
     const warnings: ChainValidation['warnings'] = [];
     const requiredInputs: ChainValidation['requiredInputs'] = [];
     const missingInputs: ChainValidation['missingInputs'] = [];
+    const semanticMatches: VariableMatch[] = [];
+    const drdIssues: string[] = [];
 
     // Track outputs available at each step
     const availableOutputs = new Set<string>();
@@ -190,12 +203,47 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
 
       // Check each required input
       for (const input of dmn.inputs) {
-        // Check if input is provided by previous DMN
-        const providedByPreviousDmn = availableOutputs.has(input.identifier);
+        const exactMatch = availableOutputs.has(input.identifier);
 
-        if (!providedByPreviousDmn) {
-          // Deduplicate by identifier only (not identifier+requiredBy)
-          // This ensures each unique input appears once in the form
+        if (!exactMatch && i > 0) {
+          // Check for semantic match with previous DMN
+          const prevDmn = chainDmns[i - 1];
+          const semanticLink = semanticLinks.find(
+            (link) =>
+              link.dmn2.identifier === dmn.identifier &&
+              link.dmn1.identifier === prevDmn.identifier &&
+              link.inputVariable === input.identifier &&
+              link.matchType === 'semantic'
+          );
+
+          if (semanticLink) {
+            // Semantic match found
+            semanticMatches.push({
+              outputDmn: prevDmn.identifier,
+              outputVar: semanticLink.outputVariable,
+              inputDmn: dmn.identifier,
+              inputVar: input.identifier,
+              matchType: 'semantic',
+              semanticConcept: semanticLink.sharedConcept,
+            });
+
+            drdIssues.push(
+              `Variable '${input.identifier}' in ${dmn.title} requires semantic match to '${semanticLink.outputVariable}' from ${prevDmn.title}. DRD requires exact identifier match.`
+            );
+
+            // Don't require user input for semantically matched variables
+            continue;
+          }
+        }
+
+        // If not provided by previous DMN (exact or semantic), user must provide it
+        if (
+          !exactMatch &&
+          !semanticMatches.some(
+            (m) => m.inputVar === input.identifier && m.inputDmn === dmn.identifier
+          )
+        ) {
+          // Deduplicate by identifier only
           const alreadyAdded = requiredInputs.some((ri) => ri.identifier === input.identifier);
           if (!alreadyAdded) {
             const inputData = {
@@ -207,12 +255,13 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
               testValue: input.testValue,
             };
 
-            // Always add to requiredInputs (for form rendering)
             requiredInputs.push(inputData);
 
-            // Also add to missingInputs if not filled yet
             const hasValue = input.identifier in inputs;
-            if (!hasValue) {
+            const isBooleanWithDefaultFalse = input.type === 'Boolean' && !hasValue;
+            const isDateWithNullDefault = input.type === 'Date' && !hasValue;
+
+            if (!hasValue && !isBooleanWithDefaultFalse && !isDateWithNullDefault) {
               missingInputs.push(inputData);
             }
           }
@@ -255,13 +304,19 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       });
     }
 
-    // Estimate execution time (rough estimate: 150ms per DMN + 50ms base)
     const estimatedTime = chainDmns.length * 150 + 50;
+
+    console.log(
+      `[Validation] ${semanticMatches.length > 0 ? '⚠️ Sequential' : '✓ DRD'} | ${missingInputs.length} missing | ${semanticMatches.length} semantic`
+    );
 
     setValidation({
       isValid: errors.length === 0,
+      isDrdCompatible: drdIssues.length === 0,
       errors,
       warnings,
+      semanticMatches,
+      drdIssues,
       requiredInputs,
       missingInputs,
       estimatedTime,
@@ -295,7 +350,6 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     if (overId === 'chain-droppable') {
       // Check if DMN already in chain
       if (selectedChain.includes(activeId)) {
-        // eslint-disable-next-line no-console
         console.log('DMN already in chain');
         return;
       }
@@ -328,6 +382,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     setInputs({});
     setExecutionResult(null);
     setValidation(null);
+    setLoadedTemplate(null);
   };
 
   /**
@@ -338,6 +393,10 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
     setInputs({});
     setExecutionResult(null);
     setValidation(null);
+    setLoadedTemplate(null);
+
+    // Remove synthetic DRD models
+    setAvailableDmns((prev) => prev.filter((dmn) => !dmn.isDrd));
   };
 
   /**
@@ -354,9 +413,58 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
    * Load a preset chain
    */
   const handleLoadPreset = (preset: ChainPreset) => {
-    setSelectedChain(preset.dmnIds);
-    setInputs(preset.defaultInputs || {});
-    setExecutionResult(null);
+    console.log('[LoadPreset] Loading template:', preset.name, 'Type:', preset.type);
+
+    if (preset.type === 'drd' && preset.drdEntryPointId && preset.drdOriginalChain) {
+      // ✅ Changed from preset.isDrd
+      console.log('[LoadPreset] Loading DRD template');
+      console.log('[LoadPreset] Entry Point:', preset.drdEntryPointId);
+      console.log('[LoadPreset] Original Chain:', preset.drdOriginalChain);
+
+      // Create synthetic DRD model
+      const drdModel: DmnModel = {
+        id: `drd-${preset.id}`,
+        identifier: preset.drdEntryPointId,
+        title: preset.name,
+        description: `Unified DRD combining ${preset.drdOriginalChain.length} decisions`,
+        deploymentId: preset.drdDeploymentId,
+        isDrd: true,
+        inputs: [],
+        outputs: (preset.drdOutputs || []) as DmnVariable[],
+      };
+
+      // Extract inputs from defaultInputs
+      if (preset.defaultInputs) {
+        drdModel.inputs = Object.keys(preset.defaultInputs).map((key) => ({
+          identifier: key,
+          title: key,
+          type:
+            typeof preset.defaultInputs![key] === 'boolean'
+              ? 'Boolean'
+              : typeof preset.defaultInputs![key] === 'number'
+                ? 'Integer'
+                : 'String',
+        })) as DmnVariable[];
+      }
+
+      // Add synthetic model to available DMNs temporarily
+      setAvailableDmns((prev) => [...prev, drdModel]);
+
+      // Set chain with synthetic identifier
+      setSelectedChain([preset.drdEntryPointId]);
+      setInputs(preset.defaultInputs || {});
+      setExecutionResult(null);
+      setLoadedTemplate(preset);
+
+      console.log('[LoadPreset] DRD loaded, chain set to:', [preset.drdEntryPointId]);
+    } else {
+      console.log('[LoadPreset] Loading sequential template');
+      // Regular chain template
+      setSelectedChain(preset.dmnIds);
+      setInputs(preset.defaultInputs || {});
+      setExecutionResult(null);
+      setLoadedTemplate(preset);
+    }
   };
 
   // Get chain DMNs in order
@@ -404,7 +512,12 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
         >
           <div className="flex flex-1 min-h-0 bg-slate-50">
             {/* Left Panel: DMN List */}
-            <DmnList dmns={availableDmns} usedDmnIds={selectedChain} isLoading={isLoadingDmns} />
+            <DmnList
+              dmns={availableDmns}
+              usedDmnIds={selectedChain}
+              isLoading={isLoadingDmns}
+              endpoint={endpoint}
+            />
 
             {/* Middle Panel: Chain Composer */}
             <SortableContext items={selectedChain} strategy={verticalListSortingStrategy}>
@@ -413,6 +526,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
                 onRemoveDmn={handleRemoveDmn}
                 onClearChain={handleClearChain}
                 validation={validation}
+                endpoint={endpoint}
               />
             </SortableContext>
 
@@ -427,6 +541,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
               executionResult={executionResult}
               isExecuting={isExecuting}
               endpoint={endpoint}
+              _loadedTemplate={loadedTemplate}
             />
           </div>
 

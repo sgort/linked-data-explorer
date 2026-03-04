@@ -47,6 +47,7 @@ export class TemplateService {
       id: 'heusdenpas-full',
       name: typedTestData.chainTemplates['heusdenpas-full'].name,
       description: typedTestData.chainTemplates['heusdenpas-full'].description,
+      type: 'sequential',
       category: 'social',
       dmnIds: typedTestData.chainTemplates['heusdenpas-full'].dmnIds,
       defaultInputs: {
@@ -66,6 +67,7 @@ export class TemplateService {
       id: 'age-verification',
       name: typedTestData.chainTemplates['age-verification'].name,
       description: typedTestData.chainTemplates['age-verification'].description,
+      type: 'sequential',
       category: 'social',
       dmnIds: typedTestData.chainTemplates['age-verification'].dmnIds,
       defaultInputs: {
@@ -85,6 +87,7 @@ export class TemplateService {
       id: 'benefits-calculation',
       name: typedTestData.chainTemplates['benefits-calculation'].name,
       description: typedTestData.chainTemplates['benefits-calculation'].description,
+      type: 'sequential',
       category: 'financial',
       dmnIds: typedTestData.chainTemplates['benefits-calculation'].dmnIds,
       defaultInputs: {

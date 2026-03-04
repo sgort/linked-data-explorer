@@ -1,5 +1,5 @@
 export const DEFAULT_ENDPOINT =
-  'https://api.open-regels.triply.cc/datasets/stevengort/DMN-discovery/services/DMN-discovery/sparql';
+  'https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql';
 
 export const PRESET_ENDPOINTS = [
   { name: 'Local Jena', url: 'http://localhost:3030/ds/query' },
@@ -8,8 +8,8 @@ export const PRESET_ENDPOINTS = [
     url: 'https://api.open-regels.triply.cc/datasets/stevengort/DMN-discovery/services/DMN-discovery/sparql',
   },
   {
-    name: 'Facts',
-    url: 'https://api.open-regels.triply.cc/datasets/stevengort/facts/services/facts/sparql',
+    name: 'RONL',
+    url: 'https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql',
   },
 ];
 
@@ -26,7 +26,7 @@ PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX m8g: <http://data.europa.eu/m8g/>
 PREFIX eli: <http://data.europa.eu/eli/ontology#>
-PREFIX ronl: <https://regels.overheid.nl/termen/>
+PREFIX ronl: <https://regels.overheid.nl/ontology#>
 PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
 PREFIX schema: <http://schema.org/>
 `;
@@ -186,6 +186,27 @@ WHERE {
 } LIMIT 500`,
   },
   {
+    name: 'NL-SBB Concepts and Services',
+    sparql: `${COMMON_PREFIXES}
+SELECT ?subject ?prefLabel ?exactMatch ?service ?serviceTitle
+WHERE {
+  ?subject skos:exactMatch ?exactMatch ;
+           dct:subject ?variable .
+
+  OPTIONAL { ?subject skos:prefLabel ?prefLabel . FILTER(LANG(?prefLabel) = "nl" || LANG(?prefLabel) = "") }
+
+  {
+    ?variable cpsv:isRequiredBy ?dmn .
+  } UNION {
+    ?variable cpsv:produces ?dmn .
+  }
+
+  ?dmn cprmv:implements ?service .
+  OPTIONAL { ?service dct:title ?serviceTitle . FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "") }
+}
+ORDER BY ?service ?subject`,
+  },
+  {
     name: 'Services and Authorities',
     sparql: `${COMMON_PREFIXES}
 SELECT ?service ?title ?authorityName (STR(?homepage) AS ?website)
@@ -198,19 +219,6 @@ WHERE {
   FILTER(LANG(?title) = "nl")
 }
 ORDER BY ?title`,
-  },
-  {
-    name: 'Services with Legal Resources',
-    sparql: `${COMMON_PREFIXES}
-SELECT ?service ?serviceTitle ?legalTitle ?legalResource
-WHERE {
-  ?service a cpsv:PublicService .
-  ?service dct:title ?serviceTitle .
-  ?service cv:hasLegalResource ?legalResource .
-  ?legalResource dct:title ?legalTitle .
-  FILTER(LANG(?serviceTitle) = "nl")
-}
-ORDER BY ?serviceTitle`,
   },
 ];
 
@@ -228,7 +236,7 @@ WHERE {
   ?dmn a cprmv:DecisionModel ;
        dct:identifier ?identifier ;
        dct:title ?title ;
-       ronl:implementedBy ?apiEndpoint .
+       cprmv:implementedBy ?apiEndpoint .
   
   OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
   OPTIONAL { ?dmn cpsv:implements ?service }
@@ -264,7 +272,7 @@ WHERE {
   # Start with DMN
   ?dmn a cprmv:DecisionModel ;
        dct:title ?dmnTitle ;
-       ronl:implements ?service .
+       cprmv:implements ?service .
 
   # Service details
   ?service a cpsv:PublicService ;
@@ -399,7 +407,7 @@ WHERE {
   ?dmn a cprmv:DecisionModel ;
        dct:identifier ?identifier ;
        dct:title ?title ;
-       ronl:implementedBy ?apiEndpoint .
+       cprmv:implementedBy ?apiEndpoint .
   
   OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
   

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { Link2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
@@ -29,8 +30,15 @@ const SemanticView: React.FC<SemanticViewProps> = ({ endpoint, apiBaseUrl }) => 
           `${apiBaseUrl}/api/dmns/enhanced-chain-links?endpoint=${encodeURIComponent(endpoint)}`
         ).then((r) => r.json()),
       ]);
-      setEquivalences(Array.isArray(equivData) ? equivData : []);
-      setEnhancedLinks(Array.isArray(linksData) ? linksData : []);
+
+      // Extract data from response objects
+      setEquivalences(equivData.success && Array.isArray(equivData.data) ? equivData.data : []);
+      setEnhancedLinks(linksData.success && Array.isArray(linksData.data) ? linksData.data : []);
+
+      console.log('[SemanticView] Loaded:', {
+        equivalences: equivData.data?.length || 0,
+        enhancedLinks: linksData.data?.length || 0,
+      });
     } catch (error) {
       console.error('Failed to load semantic data:', error);
       setEquivalences([]);

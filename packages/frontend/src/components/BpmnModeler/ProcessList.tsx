@@ -86,9 +86,14 @@ const ProcessList: React.FC<ProcessListProps> = ({
                   <div className="flex-1" onDoubleClick={() => handleStartEdit(process)}>
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-slate-800 text-sm">{process.name}</h3>
-                      {process.readonly && (
+                      {process.status === 'example' && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
                           EXAMPLE
+                        </span>
+                      )}
+                      {process.status === 'wip' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
+                          WIP
                         </span>
                       )}
                     </div>

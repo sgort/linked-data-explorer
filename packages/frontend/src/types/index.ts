@@ -54,6 +54,7 @@ export enum ViewMode {
   ORCHESTRATION = 'ORCHESTRATION',
   TUTORIAL = 'TUTORIAL',
   BPMN = 'BPMN',
+  VALIDATE = 'VALIDATE',
 }
 
 export interface EndpointConfig {
@@ -87,6 +88,17 @@ export interface DmnModel {
   logoUrl?: string; // NEW: Full logo URL (resolved with version ID)
   inputs: DmnVariable[];
   outputs: DmnVariable[];
+  isDrd?: boolean;
+
+  // NEW: Validation metadata (RONL Ontology v1.0)
+  validationStatus?: 'validated' | 'in-review' | 'not-validated';
+  validatedBy?: string;
+  validatedByName?: string;
+  validatedAt?: string;
+  validationNote?: string;
+
+  // NEW: Vendor implementation count
+  vendorCount?: number;
 }
 
 export interface DmnChainLink {
@@ -174,6 +186,7 @@ export interface BpmnProcess {
   updatedAt: string;
   linkedDmnTemplates: string[]; // DMN template IDs
   readonly?: boolean;
+  status?: 'example' | 'wip';
 }
 
 export interface BpmnBusinessRuleTask {

@@ -78,14 +78,17 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/v1/health',
       dmns: '/v1/dmns',
+      validate: '/v1/dmns/validate',
       chains: '/v1/chains',
       triplydb: '/v1/triplydb',
+      vendors: '/v1/vendors',
     },
     legacy: {
       health: '/api/health (deprecated)',
       dmns: '/api/dmns (deprecated)',
       chains: '/api/chains (deprecated)',
       triplydb: '/api/triplydb (deprecated)',
+      vendors: '/api/vendors (deprecated)',
     },
   });
 });

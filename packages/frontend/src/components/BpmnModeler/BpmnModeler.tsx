@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { BpmnService } from '../../services/bpmnService';
 import { BpmnProcess } from '../../types';
 import {
+  ASYLUM_MIGRATION_EXAMPLE_XML,
   AWB_PROCESS_EXAMPLE_XML,
   DEFAULT_BPMN_XML,
   TREE_FELLING_EXAMPLE_XML,
@@ -37,10 +38,11 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         description:
           'AWB General Administrative Law Act shell: 8-phase procedural process reusable across all Dutch government public services',
         xml: AWB_PROCESS_EXAMPLE_XML,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: '2026-02-10T14:30:00.000Z',
+        updatedAt: '2026-02-10T14:30:00.000Z',
         linkedDmnTemplates: ['AwbCompletenessCheck', 'ArchivesActRetention'],
         readonly: true,
+        status: 'example',
       };
       BpmnService.saveProcess(awbExample);
       added.push(awbExample);
@@ -49,16 +51,34 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     if (!existingIds.has('example_tree_felling')) {
       const treeFellingExample: BpmnProcess = {
         id: 'example_tree_felling',
-        name: 'Tree Felling Permit Subprocess (Example)',
+        name: 'Tree Felling Permit (Example)',
         description: 'Example BPMN process demonstrating DMN decision tasks with embedded forms',
         xml: TREE_FELLING_EXAMPLE_XML,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: '2026-01-15T10:00:00.000Z',
+        updatedAt: '2026-01-15T10:00:00.000Z',
         linkedDmnTemplates: ['TreeFellingDecision', 'ReplacementTreeDecision'],
         readonly: true,
+        status: 'example',
       };
       BpmnService.saveProcess(treeFellingExample);
       added.push(treeFellingExample);
+    }
+
+    if (!existingIds.has('wip_asylum_migration')) {
+      // Changed ID
+      const asylumMigration: BpmnProcess = {
+        id: 'wip_asylum_migration', // Changed ID
+        name: 'Migration & Asylum Procedure',
+        description: 'Complex migration and asylum procedure - work in progress',
+        xml: ASYLUM_MIGRATION_EXAMPLE_XML,
+        createdAt: '2026-02-18T09:15:00.000Z',
+        updatedAt: '2026-02-18T09:15:00.000Z',
+        linkedDmnTemplates: [],
+        readonly: false, // Changed to false - it's editable
+        status: 'wip', // shows WIP badge
+      };
+      BpmnService.saveProcess(asylumMigration);
+      added.push(asylumMigration);
     }
 
     if (added.length > 0) {
