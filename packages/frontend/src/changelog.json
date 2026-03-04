@@ -1,6 +1,25 @@
 {
   "versions": [
     {
+      "version": "0.9.1",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "March 4, 2026",
+      "sections": [
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "blue",
+          "items": [
+            "Fixed 'Missing 1 required input(s)' error for optional Date inputs (e.g. overlijdensdatum) with a null test value",
+            "Fill with test data now explicitly sets Date inputs to null when no schema:value triple exists in RDF, registering the key in state so validation no longer flags it as absent",
+            "Validator now treats Date inputs without a value the same as Boolean — a null/empty date is semantically valid and no longer blocks chain execution"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.9.0",
       "status": "New Feature",
       "statusColor": "blue",
