@@ -259,8 +259,9 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
 
             const hasValue = input.identifier in inputs;
             const isBooleanWithDefaultFalse = input.type === 'Boolean' && !hasValue;
+            const isDateWithNullDefault = input.type === 'Date' && !hasValue;
 
-            if (!hasValue && !isBooleanWithDefaultFalse) {
+            if (!hasValue && !isBooleanWithDefaultFalse && !isDateWithNullDefault) {
               missingInputs.push(inputData);
             }
           }
