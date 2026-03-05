@@ -43,13 +43,13 @@
           ]
         },
         {
-          "title": "Backend — Form Schema Endpoints",
+          "title": "Backend — Process Deploy Endpoint",
           "icon": "⚙️",
           "iconColor": "orange",
           "items": [
-            "GET /v1/process/:key/start-form — fetches deployed start form schema; returns 415 UNSUPPORTED_FORM_TYPE for legacy HTML formKey deployments",
-            "GET /v1/task/:id/form-schema — fetches deployed task form schema with tenant isolation; treats Operaton 400 (no formRef set) as 404 FORM_NOT_FOUND",
-            "POST /api/dmns/process/deploy — deploys BPMN + subprocess BPMNs + Camunda Forms in one multipart request; supports custom Operaton URL and credentials"
+            "POST /api/dmns/process/deploy — deploys BPMN + subprocess BPMNs + Camunda Forms in one multipart request to Operaton",
+            "Each resource appended with its filename as the multipart field name, matching Camunda Modeler behaviour",
+            "Supports custom Operaton URL and HTTP Basic Auth credentials per request"
           ]
         }
       ]
