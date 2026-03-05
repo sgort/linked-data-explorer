@@ -10,12 +10,15 @@ import {
   CamundaPlatformPropertiesProviderModule,
 } from 'bpmn-js-properties-panel';
 import camundaModdleDescriptor from 'camunda-bpmn-moddle/resources/camunda.json';
-import { Download, Save } from 'lucide-react';
+import { Download, Rocket, Save } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 
+import { FormService } from '../../services/formService';
 import DmnTemplateSelector from './DmnTemplateSelector';
 import FormTemplateSelector from './FormTemplateSelector';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 interface BpmnCanvasProps {
   xml: string;
@@ -36,6 +39,10 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   const propertiesPanelRef = useRef<HTMLDivElement>(null);
   const modelerRef = useRef<BpmnModeler | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deployResult, setDeployResult] = useState<{ success: boolean; message: string } | null>(
+    null
+  );
   const [selectedElement, setSelectedElement] = useState<any>(null);
 
   const handleElementSelect = useCallback(
@@ -276,6 +283,61 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     }
   };
 
+  const handleDeploy = async () => {
+    if (!modelerRef.current) return;
+    setIsDeploying(true);
+    setDeployResult(null);
+
+    try {
+      const { xml } = await modelerRef.current.saveXML({ format: true });
+
+      // Extract all camunda:formRef values from the XML
+      const formRefMatches = [...xml.matchAll(/camunda:formRef="([^"]+)"/g)];
+      const formRefs = [...new Set(formRefMatches.map((m) => m[1]))];
+
+      // Resolve each formRef to its schema from localStorage
+      const forms: { id: string; schema: Record<string, unknown> }[] = [];
+      for (const ref of formRefs) {
+        const allForms = FormService.getForms();
+        const match = allForms.find((f) => (f.schema as Record<string, unknown>).id === ref);
+        if (match) {
+          forms.push({ id: ref, schema: match.schema });
+        }
+      }
+
+      // Derive deployment name from BPMN process id attribute
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xml, 'text/xml');
+      const processEl = doc.querySelector('process');
+      const processKey = processEl?.getAttribute('id') ?? `process-${Date.now()}`;
+      const deploymentName = processKey;
+
+      const response = await fetch(`${API_BASE_URL}/api/dmns/process/deploy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bpmnXml: xml, deploymentName, forms }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setDeployResult({
+          success: true,
+          message: `Deployed ${processKey} — deployment ${data.data.deploymentId}${forms.length ? ` · ${forms.length} form(s) bundled` : ''}`,
+        });
+      } else {
+        setDeployResult({ success: false, message: data.error?.message ?? 'Deployment failed' });
+      }
+    } catch (err) {
+      setDeployResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Deployment failed',
+      });
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
   const handleZoomIn = () => {
     const canvas = modelerRef.current?.get('canvas') as any;
     if (!canvas) return;
@@ -321,6 +383,24 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
             <Download size={16} />
             Export
           </button>
+          <button
+            onClick={handleDeploy}
+            disabled={isDeploying}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 transition-colors"
+          >
+            <Rocket size={16} />
+            {isDeploying ? 'Deploying…' : 'Deploy'}
+          </button>
+
+          {deployResult && (
+            <span
+              className={`text-xs px-3 py-1.5 rounded-lg ${
+                deployResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+              }`}
+            >
+              {deployResult.success ? '✓' : '✗'} {deployResult.message}
+            </span>
+          )}
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"

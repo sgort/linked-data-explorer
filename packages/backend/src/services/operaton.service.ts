@@ -530,9 +530,6 @@ export class OperatonService {
   /**
    * Deploy a DRD XML to Operaton.
    */
-  /**
-   * Deploy a DRD XML to Operaton.
-   */
   async deployDrd(
     drdXml: string,
     deploymentName: string,
@@ -567,6 +564,58 @@ export class OperatonService {
       });
       throw new Error(
         `DRD deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+ * Deploy a BPMN process together with its Camunda Form files in a single
+ * multipart request. Operaton resolves camunda:formRef at runtime from the
+ * same deployment, so all resources must land in one call.
+ */
+  async deployProcess(
+    bpmnXml: string,
+    deploymentName: string,
+    forms: { id: string; schema: Record<string, unknown> }[]
+  ): Promise<{ deploymentId: string }> {
+    try {
+      logger.info('Deploying BPMN process to Operaton', {
+        deploymentName,
+        formCount: forms.length,
+      });
+
+      const formData = new FormData();
+      formData.append('deployment-name', deploymentName);
+      formData.append('enable-duplicate-filtering', 'false');
+
+      // BPMN file
+      formData.append('data', Buffer.from(bpmnXml, 'utf-8'), {
+        filename: `${deploymentName}.bpmn`,
+        contentType: 'application/xml',
+      });
+
+      // One .form file per linked form schema
+      for (const form of forms) {
+        formData.append('data', Buffer.from(JSON.stringify(form.schema), 'utf-8'), {
+          filename: `${form.id}.form`,
+          contentType: 'application/json',
+        });
+      }
+
+      const response = await this.client.post('/deployment/create', formData, {
+        headers: formData.getHeaders(),
+      });
+
+      const deploymentId: string = response.data.id;
+      logger.info('BPMN process deployed successfully', { deploymentId });
+      return { deploymentId };
+    } catch (error) {
+      logger.error('BPMN process deployment failed', {
+        deploymentName,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw new Error(
+        `Process deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
