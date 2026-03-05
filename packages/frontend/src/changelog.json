@@ -1,6 +1,60 @@
 {
   "versions": [
     {
+      "version": "1.0.0",
+      "status": "Major Release",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "March 5, 2026",
+      "sections": [
+        {
+          "title": "Form Editor",
+          "icon": "📝",
+          "iconColor": "green",
+          "items": [
+            "New Form Editor view using @bpmn-io/form-js — create and edit Camunda Forms (schemaVersion 16) directly in the application",
+            "Form list panel with create, rename, delete and status badges (EXAMPLE / WIP)",
+            "Three built-in example forms: Kapvergunning Start (citizen-facing), Tree Felling Review (caseworker), AWB Notify Applicant (caseworker)",
+            "Export individual forms as .form JSON files compatible with Camunda Modeler and Operaton",
+            "Forms stored in localStorage and available immediately to the BPMN Modeler"
+          ]
+        },
+        {
+          "title": "BPMN Modeler — Form Integration",
+          "icon": "🔗",
+          "iconColor": "blue",
+          "items": [
+            "Link to Form selector in the properties panel for UserTask and StartEvent elements",
+            "Selecting a form writes camunda:formRef and camunda:formRefBinding=\"latest\" to the BPMN XML",
+            "Green badges on UserTask and StartEvent elements when a form is linked (camunda:formRef present)",
+            "DmnTemplateSelector now pre-selects the linked DMN when a BusinessRuleTask is selected (was always empty)"
+          ]
+        },
+        {
+          "title": "BPMN Modeler — One-Click Deploy",
+          "icon": "🚀",
+          "iconColor": "purple",
+          "items": [
+            "Deploy button opens a modal listing all resources to be bundled: main BPMN, subprocess BPMNs (calledElement resolution), and linked .form files",
+            "All resources deployed in a single multipart POST to Operaton — camunda:formRef resolves at runtime because BPMN and forms share the same deployment ID",
+            "Configurable REST endpoint field pre-filled with VITE_OPERATON_BASE_URL so deployments can target any Operaton instance",
+            "Optional username and password fields for instances requiring HTTP Basic Auth",
+            "Deploy button disabled after a successful deployment to prevent accidental re-deploy"
+          ]
+        },
+        {
+          "title": "Backend — Form Schema Endpoints",
+          "icon": "⚙️",
+          "iconColor": "orange",
+          "items": [
+            "GET /v1/process/:key/start-form — fetches deployed start form schema; returns 415 UNSUPPORTED_FORM_TYPE for legacy HTML formKey deployments",
+            "GET /v1/task/:id/form-schema — fetches deployed task form schema with tenant isolation; treats Operaton 400 (no formRef set) as 404 FORM_NOT_FOUND",
+            "POST /api/dmns/process/deploy — deploys BPMN + subprocess BPMNs + Camunda Forms in one multipart request; supports custom Operaton URL and credentials"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.9.1",
       "status": "Bug Fixes",
       "statusColor": "blue",
