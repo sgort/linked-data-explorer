@@ -10,7 +10,7 @@ import {
   CamundaPlatformPropertiesProviderModule,
 } from 'bpmn-js-properties-panel';
 import camundaModdleDescriptor from 'camunda-bpmn-moddle/resources/camunda.json';
-import { Download, Rocket, Save } from 'lucide-react';
+import { Download, Rocket, Save, X } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -41,10 +41,27 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   const propertiesPanelRef = useRef<HTMLDivElement>(null);
   const modelerRef = useRef<BpmnModeler | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showDeployModal, setShowDeployModal] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<{ success: boolean; message: string } | null>(
     null
   );
+
+  // Resources preview — populated when modal opens
+  const [deployResources, setDeployResources] = useState<{
+    processKey: string;
+    bpmnFiles: string[];
+    formFiles: string[];
+  }>({ processKey: '', bpmnFiles: [], formFiles: [] });
+
+  // To make the endpoint user-configurable we need to thread it through the
+  // full chain: modal state → request body → backend route → service method
+  const [operatonUrl, setOperatonUrl] = useState<string>(
+    import.meta.env.VITE_OPERATON_BASE_URL ?? ''
+  );
+  const [operatonUsername, setOperatonUsername] = useState<string>('');
+  const [operatonPassword, setOperatonPassword] = useState<string>('');
+
   const [selectedElement, setSelectedElement] = useState<any>(null);
 
   const handleElementSelect = useCallback(
@@ -285,46 +302,85 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     }
   };
 
+  const handleOpenDeployModal = async () => {
+    if (!modelerRef.current) return;
+    const { xml } = await modelerRef.current.saveXML({ format: true });
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xml, 'text/xml');
+    const processKey = doc.querySelector('process')?.getAttribute('id') ?? 'process';
+
+    const extractFormRefs = (bpmnXml: string) => [
+      ...new Set([...bpmnXml.matchAll(/camunda:formRef="([^"]+)"/g)].map((m) => m[1])),
+    ];
+
+    const extractCalledElements = (bpmnXml: string) => [
+      ...new Set([...bpmnXml.matchAll(/calledElement="([^"]+)"/g)].map((m) => m[1])),
+    ];
+
+    const allProcesses = BpmnService.getProcesses();
+    const calledElements = extractCalledElements(xml);
+    const subProcessXmls: { filename: string; xml: string }[] = [];
+
+    for (const calledElement of calledElements) {
+      const match = allProcesses.find((p) => {
+        const d = new DOMParser().parseFromString(p.xml, 'text/xml');
+        return d.querySelector('process')?.getAttribute('id') === calledElement;
+      });
+      if (match) subProcessXmls.push({ filename: `${calledElement}.bpmn`, xml: match.xml });
+    }
+
+    const allFormRefs = new Set([
+      ...extractFormRefs(xml),
+      ...subProcessXmls.flatMap((sp) => extractFormRefs(sp.xml)),
+    ]);
+
+    const allForms = FormService.getForms();
+    const matchedForms = [...allFormRefs].filter((ref) =>
+      allForms.some((f) => (f.schema as Record<string, unknown>).id === ref)
+    );
+    const unmatchedForms = [...allFormRefs].filter(
+      (ref) => !allForms.some((f) => (f.schema as Record<string, unknown>).id === ref)
+    );
+
+    setDeployResources({
+      processKey,
+      bpmnFiles: [`${processKey}.bpmn`, ...subProcessXmls.map((sp) => sp.filename)],
+      formFiles: matchedForms.map((ref) => `${ref}.form`),
+      ...(unmatchedForms.length ? { unmatchedForms } : {}),
+    } as typeof deployResources & { unmatchedForms?: string[] });
+
+    setDeployResult(null);
+    setShowDeployModal(true);
+  };
+
   const handleDeploy = async () => {
     if (!modelerRef.current) return;
     setIsDeploying(true);
-    setDeployResult(null);
 
     try {
       const { xml } = await modelerRef.current.saveXML({ format: true });
 
-      // --- Helper: extract all camunda:formRef values from a BPMN string ---
-      const extractFormRefs = (bpmnXml: string): string[] => {
-        const matches = [...bpmnXml.matchAll(/camunda:formRef="([^"]+)"/g)];
-        return [...new Set(matches.map((m) => m[1]))];
-      };
+      const extractFormRefs = (bpmnXml: string) => [
+        ...new Set([...bpmnXml.matchAll(/camunda:formRef="([^"]+)"/g)].map((m) => m[1])),
+      ];
 
-      // --- Helper: extract all calledElement values from a BPMN string ---
-      const extractCalledElements = (bpmnXml: string): string[] => {
-        const matches = [...bpmnXml.matchAll(/calledElement="([^"]+)"/g)];
-        return [...new Set(matches.map((m) => m[1]))];
-      };
+      const extractCalledElements = (bpmnXml: string) => [
+        ...new Set([...bpmnXml.matchAll(/calledElement="([^"]+)"/g)].map((m) => m[1])),
+      ];
 
-      // --- Collect subprocess BPMNs by matching process id in BpmnService ---
       const allProcesses = BpmnService.getProcesses();
       const subProcessXmls: { filename: string; xml: string }[] = [];
-      const calledElements = extractCalledElements(xml);
 
-      for (const calledElement of calledElements) {
+      for (const calledElement of extractCalledElements(xml)) {
         const match = allProcesses.find((p) => {
-          const doc = new DOMParser().parseFromString(p.xml, 'text/xml');
-          return doc.querySelector('process')?.getAttribute('id') === calledElement;
+          const d = new DOMParser().parseFromString(p.xml, 'text/xml');
+          return d.querySelector('process')?.getAttribute('id') === calledElement;
         });
-        if (match) {
-          subProcessXmls.push({
-            filename: `${calledElement}.bpmn`,
-            xml: match.xml,
-          });
-        }
+        if (match) subProcessXmls.push({ filename: `${calledElement}.bpmn`, xml: match.xml });
       }
 
-      // --- Collect all form schemas: from main BPMN + all subprocesses ---
-      const allFormRefs = new Set<string>([
+      const allFormRefs = new Set([
         ...extractFormRefs(xml),
         ...subProcessXmls.flatMap((sp) => extractFormRefs(sp.xml)),
       ]);
@@ -333,12 +389,9 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       const forms: { id: string; schema: Record<string, unknown> }[] = [];
       for (const ref of allFormRefs) {
         const match = allForms.find((f) => (f.schema as Record<string, unknown>).id === ref);
-        if (match) {
-          forms.push({ id: ref, schema: match.schema });
-        }
+        if (match) forms.push({ id: ref, schema: match.schema });
       }
 
-      // --- Derive deployment name from the main process element ---
       const parser = new DOMParser();
       const doc = parser.parseFromString(xml, 'text/xml');
       const processKey =
@@ -352,21 +405,17 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           deploymentName: processKey,
           forms,
           subProcesses: subProcessXmls,
+          operatonUrl: operatonUrl.trim() || undefined,
         }),
       });
 
       const data = await response.json();
 
-      if (data.success) {
-        setDeployResult({
-          success: true,
-          message: `Deployed ${processKey} — deployment ${data.data.deploymentId}${
-            data.data.resourceCount ? ` · ${data.data.resourceCount} resources` : ''
-          }`,
-        });
-      } else {
-        setDeployResult({ success: false, message: data.error?.message ?? 'Deployment failed' });
-      }
+      setDeployResult(
+        data.success
+          ? { success: true, message: `Deployment ID: ${data.data.deploymentId}` }
+          : { success: false, message: data.error?.message ?? 'Deployment failed' }
+      );
     } catch (err) {
       setDeployResult({
         success: false,
@@ -423,12 +472,11 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
             Export
           </button>
           <button
-            onClick={handleDeploy}
-            disabled={isDeploying}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 transition-colors"
+            onClick={handleOpenDeployModal}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
           >
             <Rocket size={16} />
-            {isDeploying ? 'Deploying…' : 'Deploy'}
+            Deploy
           </button>
 
           {deployResult && (
@@ -482,6 +530,138 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
         {/* Properties Panel */}
         <div ref={propertiesPanelRef} className="bpmn-properties-panel" />
       </div>
+
+      {showDeployModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Deploy to Operaton</h3>
+              <button
+                onClick={() => {
+                  setShowDeployModal(false);
+                  setDeployResult(null);
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Resources preview */}
+            <div className="mb-4 p-3 rounded-lg border-2 bg-blue-50 border-blue-200">
+              <div className="font-semibold text-sm text-blue-800 mb-2">🚀 Resources to deploy</div>
+              <ul className="space-y-1">
+                {deployResources.bpmnFiles.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
+                    <span className="text-blue-500">📄</span> {f}
+                  </li>
+                ))}
+                {deployResources.formFiles.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
+                    <span className="text-green-500">📝</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-2 text-xs text-slate-500">
+                {deployResources.bpmnFiles.length + deployResources.formFiles.length} resource(s) ·
+                process key: <span className="font-mono">{deployResources.processKey}</span>
+              </div>
+            </div>
+
+            {/* Operaton REST endpoint */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Operaton REST endpoint
+              </label>
+              <input
+                type="text"
+                value={operatonUrl}
+                onChange={(e) => setOperatonUrl(e.target.value)}
+                disabled={isDeploying || deployResult?.success === true}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
+                placeholder="https://operaton.open-regels.nl/engine-rest"
+              />
+            </div>
+
+            {/* Operaton REST endpoint - Username & Password */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Username <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={operatonUsername}
+                  onChange={(e) => setOperatonUsername(e.target.value)}
+                  disabled={isDeploying || deployResult?.success === true}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
+                  placeholder="demo"
+                  autoComplete="username"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Password <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="password"
+                  value={operatonPassword}
+                  onChange={(e) => setOperatonPassword(e.target.value)}
+                  disabled={isDeploying || deployResult?.success === true}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
+
+            {/* Result banner */}
+            {deployResult && (
+              <div
+                className={`mb-4 p-3 rounded-lg text-sm ${
+                  deployResult.success
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}
+              >
+                {deployResult.success ? '✓ ' : '✗ '}
+                {deployResult.message}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeploy}
+                disabled={isDeploying || deployResult?.success === true}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                {isDeploying ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deploying…
+                  </>
+                ) : (
+                  <>
+                    <Rocket size={16} />
+                    {deployResult?.success ? 'Deployed' : 'Deploy'}
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeployModal(false);
+                  setDeployResult(null);
+                }}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                {deployResult?.success ? 'Close' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

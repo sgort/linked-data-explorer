@@ -219,11 +219,17 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       deploymentName,
       forms = [],
       subProcesses = [],
+      operatonUrl,
+      operatonUsername,
+      operatonPassword,
     } = req.body as {
       bpmnXml: string;
       deploymentName: string;
       forms: { id: string; schema: Record<string, unknown> }[];
       subProcesses: { filename: string; xml: string }[];
+      operatonUrl?: string;
+      operatonUsername?: string;
+      operatonPassword?: string;
     };
 
     if (!bpmnXml?.trim()) {
@@ -246,7 +252,10 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       bpmnXml,
       deploymentName,
       forms,
-      subProcesses
+      subProcesses,
+      operatonUrl,
+      operatonUsername,
+      operatonPassword
     );
 
     res.json({

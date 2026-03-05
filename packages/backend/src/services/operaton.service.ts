@@ -577,7 +577,10 @@ export class OperatonService {
     bpmnXml: string,
     deploymentName: string,
     forms: { id: string; schema: Record<string, unknown> }[],
-    subProcesses: { filename: string; xml: string }[] = []
+    subProcesses: { filename: string; xml: string }[] = [],
+    operatonUrl?: string,
+    operatonUsername?: string,
+    operatonPassword?: string
   ): Promise<{ deploymentId: string; resourceCount: number }> {
     try {
       logger.info('Deploying BPMN process to Operaton', {
@@ -585,6 +588,17 @@ export class OperatonService {
         formCount: forms.length,
         subProcessCount: subProcesses.length,
       });
+
+      const client = operatonUrl
+        ? axios.create({
+            baseURL: operatonUrl,
+            timeout: config.operaton.timeout,
+            ...(operatonUsername &&
+              operatonPassword && {
+                auth: { username: operatonUsername, password: operatonPassword },
+              }),
+          })
+        : this.client;
 
       const formData = new FormData();
       formData.append('deployment-name', deploymentName);
@@ -614,7 +628,7 @@ export class OperatonService {
         });
       }
 
-      const response = await this.client.post('/deployment/create', formData, {
+      const response = await client.post('/deployment/create', formData, {
         headers: formData.getHeaders(),
       });
 
