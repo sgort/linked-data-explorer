@@ -33,7 +33,7 @@ export const DEFAULT_BPMN_XML = `<?xml version="1.0" encoding="UTF-8"?>
 export const AWB_PROCESS_EXAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_AWB" targetNamespace="http://example.com/awb" exporter="Camunda Modeler" exporterVersion="5.43.1">
   <bpmn:process id="AwbShellProcess" name="AWB General Administrative Law Act - Generic Process" isExecutable="true" camunda:historyTimeToLive="365">
-    <bpmn:startEvent id="StartEvent_AWB" name="Application submitted" camunda:formKey="embedded:deployment:start-form.html">
+    <bpmn:startEvent id="StartEvent_AWB" name="Application submitted" camunda:formRef="kapvergunning-start" camunda:formRefBinding="latest">
       <bpmn:outgoing>Flow_Start_Phase1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:scriptTask id="Task_Phase1_Identity" name="Phase 1: Determine legal relationship (identification)" scriptFormat="javascript">
@@ -115,7 +115,7 @@ export const AWB_PROCESS_EXAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
       <bpmn:incoming>Flow_Recheck_Process</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase45_Phase6</bpmn:outgoing>
     </bpmn:callActivity>
-    <bpmn:userTask id="Task_Phase6_Notify" name="Phase 6: Notify applicant of decision (Awb 3:6)" camunda:formKey="embedded:deployment:inform-applicant-form.html" camunda:assignee="demo">
+    <bpmn:userTask id="Task_Phase6_Notify" name="Phase 6: Notify applicant of decision (Awb 3:6)" camunda:formRef="awb-notify-applicant" camunda:formRefBinding="latest" camunda:assignee="demo">
       <bpmn:incoming>Flow_Phase45_Phase6</bpmn:incoming>
       <bpmn:incoming>Flow_Refuse_Notify</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase6_PaymentGateway</bpmn:outgoing>
@@ -446,8 +446,7 @@ export const TREE_FELLING_EXAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
       Caseworker must claim via POST /v1/task/:id/claim before completing.
       candidateGroups routes this task to the caseworker group in Operaton.
     -->
-    <bpmn:userTask id="Sub_CaseReview" name="Case review: tree felling permit decision" camunda:candidateGroups="caseworker">
-      <bpmn:incoming>Flow_Sub_Replacement_Review</bpmn:incoming>
+      <bpmn:userTask id="Sub_CaseReview" name="Case review: tree felling permit decision" camunda:formRef="tree-felling-review" camunda:formRefBinding="latest" camunda:candidateGroups="case-workers">      <bpmn:incoming>Flow_Sub_Replacement_Review</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Review_Resolve</bpmn:outgoing>
     </bpmn:userTask>
 

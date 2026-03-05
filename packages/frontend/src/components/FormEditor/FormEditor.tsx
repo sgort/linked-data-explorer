@@ -82,6 +82,133 @@ const TREE_FELLING_REVIEW_SCHEMA: Record<string, unknown> = {
   ],
 };
 
+const AWB_NOTIFY_APPLICANT_SCHEMA: Record<string, unknown> = {
+  schemaVersion: 16,
+  type: 'default',
+  id: 'awb-notify-applicant',
+  executionPlatform: 'Camunda Platform',
+  executionPlatformVersion: '7.21.0',
+  components: [
+    { id: 'Text_Header', type: 'text', text: '# Phase 6 – Notify applicant of decision (Awb 3:6)' },
+    { id: 'Text_AppDetails', type: 'text', text: '## Application details' },
+    {
+      id: 'Field_TreeDiameter',
+      type: 'textfield',
+      label: 'Tree diameter (cm)',
+      key: 'treeDiameter',
+      readonly: true,
+      disabled: true,
+    },
+    {
+      id: 'Field_ProtectedArea',
+      type: 'textfield',
+      label: 'Protected area',
+      key: 'protectedArea',
+      readonly: true,
+      disabled: true,
+    },
+    { id: 'Text_Decision', type: 'text', text: '## Decision information' },
+    {
+      id: 'Field_Status',
+      type: 'textfield',
+      label: 'Status',
+      key: 'status',
+      readonly: true,
+      disabled: true,
+    },
+    {
+      id: 'Field_PermitDecision',
+      type: 'textfield',
+      label: 'Permit decision',
+      key: 'permitDecision',
+      readonly: true,
+      disabled: true,
+    },
+    {
+      id: 'Field_FinalMessage',
+      type: 'textarea',
+      label: 'Decision message',
+      key: 'finalMessage',
+      readonly: true,
+      disabled: true,
+    },
+    {
+      id: 'Field_ReplacementInfo',
+      type: 'textarea',
+      label: 'Replacement information',
+      key: 'replacementInfo',
+      readonly: true,
+      disabled: true,
+    },
+    { id: 'Text_Action', type: 'text', text: '## Notification action' },
+    {
+      id: 'Field_NotificationMethod',
+      type: 'select',
+      label: 'Notification method',
+      key: 'notificationMethod',
+      validate: { required: true },
+      values: [
+        { label: 'Email', value: 'email' },
+        { label: 'Letter (Post)', value: 'letter' },
+        { label: 'Phone call', value: 'phone' },
+        { label: 'Citizen portal', value: 'portal' },
+      ],
+      description: 'How should the applicant be informed of this decision?',
+    },
+    {
+      id: 'Field_NotificationNotes',
+      type: 'textarea',
+      label: 'Additional notes',
+      key: 'notificationNotes',
+      description: 'Optional. These notes will be included in the notification to the applicant.',
+    },
+    {
+      id: 'Field_ApplicantNotified',
+      type: 'checkbox',
+      label: 'I confirm the applicant will be notified',
+      key: 'applicantNotified',
+      validate: { required: true },
+    },
+  ],
+};
+
+const KAPVERGUNNING_START_SCHEMA: Record<string, unknown> = {
+  schemaVersion: 16,
+  type: 'default',
+  id: 'kapvergunning-start',
+  executionPlatform: 'Camunda Platform',
+  executionPlatformVersion: '7.21.0',
+  components: [
+    {
+      id: 'Text_Header',
+      type: 'text',
+      text: '# Apply for a tree felling permit',
+    },
+    {
+      id: 'Text_Intro',
+      type: 'text',
+      text: 'Use this form to submit your tree felling permit application. Your application will be assessed automatically based on municipal regulations (APV). You will receive a decision and, if applicable, information about replacement requirements.',
+    },
+    {
+      id: 'Field_TreeDiameter',
+      type: 'number',
+      label: 'Tree diameter (cm)',
+      key: 'treeDiameter',
+      validate: { required: true, min: 1, max: 500 },
+      description:
+        'Measure the trunk diameter at 1.30 metres above ground level (breast height). Examples: small tree 10–20 cm · medium tree 30–50 cm · large tree 60+ cm.',
+    },
+    {
+      id: 'Field_ProtectedArea',
+      type: 'checkbox',
+      label: 'The tree is located in a protected area',
+      key: 'protectedArea',
+      description:
+        'Protected areas include nature reserves, conservation zones, heritage sites, and areas with special environmental protection status.',
+    },
+  ],
+};
+
 const FormEditor: React.FC = () => {
   const [forms, setForms] = useState<FormSchema[]>(FormService.getForms());
   const [activeFormId, setActiveFormId] = useState<string | null>(null);
@@ -89,11 +216,29 @@ const FormEditor: React.FC = () => {
   const activeForm = forms.find((f) => f.id === activeFormId) || null;
 
   /**
-   * Seed the tree-felling-review example on first visit
+   * Seed both awb-notify-applicant and tree-felling-review example on first visit
    */
   useEffect(() => {
     const existing = FormService.getForms();
-    if (!existing.find((f) => f.id === 'example_tree_felling_review')) {
+    const existingIds = new Set(existing.map((f) => f.id));
+    const added: FormSchema[] = [];
+
+    if (!existingIds.has('example_kapvergunning_start')) {
+      const example: FormSchema = {
+        id: 'example_kapvergunning_start',
+        name: 'Kapvergunning Start (Example)',
+        description: 'Citizen-facing start form for the AWB Tree Felling Permit process',
+        schema: KAPVERGUNNING_START_SCHEMA,
+        createdAt: '2026-03-05T00:00:00.000Z',
+        updatedAt: '2026-03-05T00:00:00.000Z',
+        readonly: true,
+        status: 'example',
+      };
+      FormService.saveForm(example);
+      added.push(example);
+    }
+
+    if (!existingIds.has('example_tree_felling_review')) {
       const example: FormSchema = {
         id: 'example_tree_felling_review',
         name: 'Tree Felling Review (Example)',
@@ -105,9 +250,28 @@ const FormEditor: React.FC = () => {
         status: 'example',
       };
       FormService.saveForm(example);
+      added.push(example);
+    }
+
+    if (!existingIds.has('example_awb_notify_applicant')) {
+      const example: FormSchema = {
+        id: 'example_awb_notify_applicant',
+        name: 'AWB Notify Applicant (Example)',
+        description: 'Phase 6 notification form for the AWB Shell process (Awb 3:6)',
+        schema: AWB_NOTIFY_APPLICANT_SCHEMA,
+        createdAt: '2026-03-05T00:00:00.000Z',
+        updatedAt: '2026-03-05T00:00:00.000Z',
+        readonly: true,
+        status: 'example',
+      };
+      FormService.saveForm(example);
+      added.push(example);
+    }
+
+    if (added.length > 0) {
       const allForms = FormService.getForms();
       setForms(allForms);
-      setActiveFormId(example.id);
+      setActiveFormId(added[0].id);
     }
   }, []);
 

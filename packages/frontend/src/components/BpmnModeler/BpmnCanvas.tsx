@@ -15,6 +15,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 
 import DmnTemplateSelector from './DmnTemplateSelector';
+import FormTemplateSelector from './FormTemplateSelector';
 
 interface BpmnCanvasProps {
   xml: string;
@@ -129,7 +130,9 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
     // Clean up any existing React roots in the properties panel
     const cleanupReactRoots = () => {
-      const existingContainers = document.querySelectorAll('[id^="dmn-template-custom-"]');
+      const existingContainers = document.querySelectorAll(
+        '[id^="dmn-template-custom-"], [id^="form-template-custom-"]'
+      );
       existingContainers.forEach((container) => {
         if (container.parentElement) {
           container.parentElement.removeChild(container);
@@ -164,6 +167,28 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           selectedDecisionRef={currentDecisionRef}
         />
       );
+    } else if (elementType === 'bpmn:UserTask' || elementType === 'bpmn:StartEvent') {
+      cleanupReactRoots();
+
+      const propertiesPanel = document.querySelector('.bio-properties-panel-scroll-container');
+      if (!propertiesPanel) return;
+
+      const selectorContainer = document.createElement('div');
+      selectorContainer.id = `form-template-custom-${selectedElement.id}`;
+      propertiesPanel.appendChild(selectorContainer);
+
+      const modeling = modelerRef.current.get('modeling');
+      const businessObject = selectedElement.businessObject;
+      const currentFormRef = businessObject.get('camunda:formRef');
+
+      const root = ReactDOM.createRoot(selectorContainer);
+      root.render(
+        <FormTemplateSelector
+          element={selectedElement}
+          modeling={modeling}
+          selectedFormRef={currentFormRef}
+        />
+      );
     } else {
       cleanupReactRoots();
     }
@@ -183,23 +208,42 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     const overlays = modelerRef.current.get('overlays') as any;
     const elementRegistry = modelerRef.current.get('elementRegistry') as any;
 
-    // Remove all existing DMN badges
     overlays.remove({ type: 'dmn-linked' });
+    overlays.remove({ type: 'form-linked' });
 
-    // Add badge to each BusinessRuleTask that has a decisionRef
     elementRegistry.forEach((element: any) => {
-      if (element.type !== 'bpmn:BusinessRuleTask') return;
+      if (element.type === 'bpmn:BusinessRuleTask') {
+        const decisionRef = element.businessObject.get('camunda:decisionRef');
+        if (!decisionRef) return;
+        const badgeWidth = 130;
+        const leftOffset = Math.round((element.width - badgeWidth) / 2);
+        overlays.add(element.id, 'dmn-linked', {
+          position: { bottom: 8, left: leftOffset },
+          html: `<div class="dmn-linked-badge" title="${decisionRef}">📋 ${decisionRef}</div>`,
+        });
+      }
 
-      const decisionRef = element.businessObject.get('camunda:decisionRef');
-      if (!decisionRef) return;
+      if (element.type === 'bpmn:UserTask') {
+        const formRef = element.businessObject.get('camunda:formRef');
+        if (!formRef) return;
+        const badgeWidth = 130;
+        const leftOffset = Math.round((element.width - badgeWidth) / 2);
+        overlays.add(element.id, 'form-linked', {
+          position: { bottom: 8, left: leftOffset },
+          html: `<div class="form-linked-badge" title="${formRef}">📝 ${formRef}</div>`,
+        });
+      }
 
-      const badgeWidth = 130;
-      const leftOffset = Math.round((element.width - badgeWidth) / 2);
-
-      overlays.add(element.id, 'dmn-linked', {
-        position: { bottom: 8, left: leftOffset },
-        html: `<div class="dmn-linked-badge" title="${decisionRef}">📋 ${decisionRef}</div>`,
-      });
+      if (element.type === 'bpmn:StartEvent') {
+        const formRef = element.businessObject.get('camunda:formRef');
+        if (!formRef) return;
+        const badgeWidth = 110;
+        const leftOffset = Math.round((element.width - badgeWidth) / 2);
+        overlays.add(element.id, 'form-linked', {
+          position: { bottom: -22, left: leftOffset },
+          html: `<div class="form-linked-badge form-linked-badge--start" title="${formRef}">📝 ${formRef}</div>`,
+        });
+      }
     });
   };
 

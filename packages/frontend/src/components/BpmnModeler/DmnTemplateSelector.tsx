@@ -25,11 +25,12 @@ const DmnTemplateSelector: React.FC<DmnTemplateSelectorProps> = ({
   endpoint,
   element,
   modeling,
+  selectedDecisionRef,
 }) => {
   const [dmns, setDmns] = useState<DmnModel[]>([]);
   const [drdOptions, setDrdOptions] = useState<DmnOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedIdentifier, setSelectedIdentifier] = useState<string>('');
+  const [selectedIdentifier, setSelectedIdentifier] = useState<string>(selectedDecisionRef ?? '');
 
   // Load DMNs and DRD templates on mount
   useEffect(() => {
