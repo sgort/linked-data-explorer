@@ -214,7 +214,11 @@ router.post('/drd/deploy', async (req: Request, res: Response) => {
  */
 router.post('/process/deploy', async (req: Request, res: Response) => {
   try {
-    const { bpmnXml, deploymentName, forms = [] } = req.body as {
+    const {
+      bpmnXml,
+      deploymentName,
+      forms = [],
+    } = req.body as {
       bpmnXml: string;
       deploymentName: string;
       forms: { id: string; schema: Record<string, unknown> }[];
