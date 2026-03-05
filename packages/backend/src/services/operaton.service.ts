@@ -569,35 +569,47 @@ export class OperatonService {
   }
 
   /**
-   * Deploy a BPMN process together with its Camunda Form files in a single
+   * Deploy a BPMN process together with its Camunda Form files and Subprocess BPMNs in a single
    * multipart request. Operaton resolves camunda:formRef at runtime from the
    * same deployment, so all resources must land in one call.
    */
   async deployProcess(
     bpmnXml: string,
     deploymentName: string,
-    forms: { id: string; schema: Record<string, unknown> }[]
-  ): Promise<{ deploymentId: string }> {
+    forms: { id: string; schema: Record<string, unknown> }[],
+    subProcesses: { filename: string; xml: string }[] = []
+  ): Promise<{ deploymentId: string; resourceCount: number }> {
     try {
       logger.info('Deploying BPMN process to Operaton', {
         deploymentName,
         formCount: forms.length,
+        subProcessCount: subProcesses.length,
       });
 
       const formData = new FormData();
       formData.append('deployment-name', deploymentName);
       formData.append('enable-duplicate-filtering', 'false');
 
-      // BPMN file
-      formData.append('data', Buffer.from(bpmnXml, 'utf-8'), {
-        filename: `${deploymentName}.bpmn`,
+      // Main BPMN
+      const mainFilename = `${deploymentName}.bpmn`;
+      formData.append(mainFilename, Buffer.from(bpmnXml, 'utf-8'), {
+        filename: mainFilename,
         contentType: 'application/xml',
       });
 
-      // One .form file per linked form schema
+      // Subprocess BPMNs
+      for (const sp of subProcesses) {
+        formData.append(sp.filename, Buffer.from(sp.xml, 'utf-8'), {
+          filename: sp.filename,
+          contentType: 'application/xml',
+        });
+      }
+
+      // Form schemas
       for (const form of forms) {
-        formData.append('data', Buffer.from(JSON.stringify(form.schema), 'utf-8'), {
-          filename: `${form.id}.form`,
+        const formFilename = `${form.id}.form`;
+        formData.append(formFilename, Buffer.from(JSON.stringify(form.schema), 'utf-8'), {
+          filename: formFilename,
           contentType: 'application/json',
         });
       }
@@ -607,8 +619,9 @@ export class OperatonService {
       });
 
       const deploymentId: string = response.data.id;
-      logger.info('BPMN process deployed successfully', { deploymentId });
-      return { deploymentId };
+      const resourceCount = 1 + subProcesses.length + forms.length;
+      logger.info('BPMN process deployed successfully', { deploymentId, resourceCount });
+      return { deploymentId, resourceCount };
     } catch (error) {
       logger.error('BPMN process deployment failed', {
         deploymentName,

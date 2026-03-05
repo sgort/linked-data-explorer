@@ -14,6 +14,8 @@ import { Download, Rocket, Save } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 
+import { BpmnService } from '@/src/services/bpmnService';
+
 import { FormService } from '../../services/formService';
 import DmnTemplateSelector from './DmnTemplateSelector';
 import FormTemplateSelector from './FormTemplateSelector';
@@ -291,31 +293,66 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     try {
       const { xml } = await modelerRef.current.saveXML({ format: true });
 
-      // Extract all camunda:formRef values from the XML
-      const formRefMatches = [...xml.matchAll(/camunda:formRef="([^"]+)"/g)];
-      const formRefs = [...new Set(formRefMatches.map((m) => m[1]))];
+      // --- Helper: extract all camunda:formRef values from a BPMN string ---
+      const extractFormRefs = (bpmnXml: string): string[] => {
+        const matches = [...bpmnXml.matchAll(/camunda:formRef="([^"]+)"/g)];
+        return [...new Set(matches.map((m) => m[1]))];
+      };
 
-      // Resolve each formRef to its schema from localStorage
+      // --- Helper: extract all calledElement values from a BPMN string ---
+      const extractCalledElements = (bpmnXml: string): string[] => {
+        const matches = [...bpmnXml.matchAll(/calledElement="([^"]+)"/g)];
+        return [...new Set(matches.map((m) => m[1]))];
+      };
+
+      // --- Collect subprocess BPMNs by matching process id in BpmnService ---
+      const allProcesses = BpmnService.getProcesses();
+      const subProcessXmls: { filename: string; xml: string }[] = [];
+      const calledElements = extractCalledElements(xml);
+
+      for (const calledElement of calledElements) {
+        const match = allProcesses.find((p) => {
+          const doc = new DOMParser().parseFromString(p.xml, 'text/xml');
+          return doc.querySelector('process')?.getAttribute('id') === calledElement;
+        });
+        if (match) {
+          subProcessXmls.push({
+            filename: `${calledElement}.bpmn`,
+            xml: match.xml,
+          });
+        }
+      }
+
+      // --- Collect all form schemas: from main BPMN + all subprocesses ---
+      const allFormRefs = new Set<string>([
+        ...extractFormRefs(xml),
+        ...subProcessXmls.flatMap((sp) => extractFormRefs(sp.xml)),
+      ]);
+
+      const allForms = FormService.getForms();
       const forms: { id: string; schema: Record<string, unknown> }[] = [];
-      for (const ref of formRefs) {
-        const allForms = FormService.getForms();
+      for (const ref of allFormRefs) {
         const match = allForms.find((f) => (f.schema as Record<string, unknown>).id === ref);
         if (match) {
           forms.push({ id: ref, schema: match.schema });
         }
       }
 
-      // Derive deployment name from BPMN process id attribute
+      // --- Derive deployment name from the main process element ---
       const parser = new DOMParser();
       const doc = parser.parseFromString(xml, 'text/xml');
-      const processEl = doc.querySelector('process');
-      const processKey = processEl?.getAttribute('id') ?? `process-${Date.now()}`;
-      const deploymentName = processKey;
+      const processKey =
+        doc.querySelector('process')?.getAttribute('id') ?? `process-${Date.now()}`;
 
       const response = await fetch(`${API_BASE_URL}/api/dmns/process/deploy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bpmnXml: xml, deploymentName, forms }),
+        body: JSON.stringify({
+          bpmnXml: xml,
+          deploymentName: processKey,
+          forms,
+          subProcesses: subProcessXmls,
+        }),
       });
 
       const data = await response.json();
@@ -323,7 +360,9 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       if (data.success) {
         setDeployResult({
           success: true,
-          message: `Deployed ${processKey} — deployment ${data.data.deploymentId}${forms.length ? ` · ${forms.length} form(s) bundled` : ''}`,
+          message: `Deployed ${processKey} — deployment ${data.data.deploymentId}${
+            data.data.resourceCount ? ` · ${data.data.resourceCount} resources` : ''
+          }`,
         });
       } else {
         setDeployResult({ success: false, message: data.error?.message ?? 'Deployment failed' });

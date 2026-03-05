@@ -218,10 +218,12 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       bpmnXml,
       deploymentName,
       forms = [],
+      subProcesses = [],
     } = req.body as {
       bpmnXml: string;
       deploymentName: string;
       forms: { id: string; schema: Record<string, unknown> }[];
+      subProcesses: { filename: string; xml: string }[];
     };
 
     if (!bpmnXml?.trim()) {
@@ -240,13 +242,18 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       });
     }
 
-    const result = await operatonService.deployProcess(bpmnXml, deploymentName, forms);
+    const result = await operatonService.deployProcess(
+      bpmnXml,
+      deploymentName,
+      forms,
+      subProcesses
+    );
 
     res.json({
       success: true,
       data: {
         deploymentId: result.deploymentId,
-        formCount: forms.length,
+        resourceCount: result.resourceCount,
       },
       timestamp: new Date().toISOString(),
     });
