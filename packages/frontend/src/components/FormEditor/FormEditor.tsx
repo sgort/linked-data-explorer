@@ -218,6 +218,12 @@ const KAPVERGUNNING_START_SCHEMA: Record<string, unknown> = {
       description:
         'Protected areas include nature reserves, conservation zones, heritage sites, and areas with special environmental protection status.',
     },
+    {
+      id: 'Button_Submit',
+      type: 'button',
+      label: 'Submit application',
+      action: 'submit',
+    },
   ],
 };
 
