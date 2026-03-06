@@ -1,6 +1,79 @@
 {
   "versions": [
     {
+      "version": "1.0.0",
+      "status": "Major Release",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "March 5, 2026",
+      "sections": [
+        {
+          "title": "Form Editor",
+          "icon": "📝",
+          "iconColor": "green",
+          "items": [
+            "New Form Editor view using @bpmn-io/form-js — create and edit Camunda Forms (schemaVersion 16) directly in the application",
+            "Form list panel with create, rename, delete and status badges (EXAMPLE / WIP)",
+            "Three built-in example forms: Kapvergunning Start (citizen-facing), Tree Felling Review (caseworker), AWB Notify Applicant (caseworker)",
+            "Export individual forms as .form JSON files compatible with Camunda Modeler and Operaton",
+            "Forms stored in localStorage and available immediately to the BPMN Modeler"
+          ]
+        },
+        {
+          "title": "BPMN Modeler — Form Integration",
+          "icon": "🔗",
+          "iconColor": "blue",
+          "items": [
+            "Link to Form selector in the properties panel for UserTask and StartEvent elements",
+            "Selecting a form writes camunda:formRef and camunda:formRefBinding=\"latest\" to the BPMN XML",
+            "Green badges on UserTask and StartEvent elements when a form is linked (camunda:formRef present)",
+            "DmnTemplateSelector now pre-selects the linked DMN when a BusinessRuleTask is selected (was always empty)"
+          ]
+        },
+        {
+          "title": "BPMN Modeler — One-Click Deploy",
+          "icon": "🚀",
+          "iconColor": "purple",
+          "items": [
+            "Deploy button opens a modal listing all resources to be bundled: main BPMN, subprocess BPMNs (calledElement resolution), and linked .form files",
+            "All resources deployed in a single multipart POST to Operaton — camunda:formRef resolves at runtime because BPMN and forms share the same deployment ID",
+            "Configurable REST endpoint field pre-filled with VITE_OPERATON_BASE_URL so deployments can target any Operaton instance",
+            "Optional username and password fields for instances requiring HTTP Basic Auth",
+            "Deploy button disabled after a successful deployment to prevent accidental re-deploy"
+          ]
+        },
+        {
+          "title": "Backend — Process Deploy Endpoint",
+          "icon": "⚙️",
+          "iconColor": "orange",
+          "items": [
+            "POST /api/dmns/process/deploy — deploys BPMN + subprocess BPMNs + Camunda Forms in one multipart request to Operaton",
+            "Each resource appended with its filename as the multipart field name, matching Camunda Modeler behaviour",
+            "Supports custom Operaton URL and HTTP Basic Auth credentials per request"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "0.9.1",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "March 4, 2026",
+      "sections": [
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "blue",
+          "items": [
+            "Fixed 'Missing 1 required input(s)' error for optional Date inputs (e.g. overlijdensdatum) with a null test value",
+            "Fill with test data now explicitly sets Date inputs to null when no schema:value triple exists in RDF, registering the key in state so validation no longer flags it as absent",
+            "Validator now treats Date inputs without a value the same as Boolean — a null/empty date is semantically valid and no longer blocks chain execution"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.9.0",
       "status": "New Feature",
       "statusColor": "blue",

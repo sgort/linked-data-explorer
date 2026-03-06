@@ -530,9 +530,6 @@ export class OperatonService {
   /**
    * Deploy a DRD XML to Operaton.
    */
-  /**
-   * Deploy a DRD XML to Operaton.
-   */
   async deployDrd(
     drdXml: string,
     deploymentName: string,
@@ -567,6 +564,85 @@ export class OperatonService {
       });
       throw new Error(
         `DRD deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Deploy a BPMN process together with its Camunda Form files and Subprocess BPMNs in a single
+   * multipart request. Operaton resolves camunda:formRef at runtime from the
+   * same deployment, so all resources must land in one call.
+   */
+  async deployProcess(
+    bpmnXml: string,
+    deploymentName: string,
+    forms: { id: string; schema: Record<string, unknown> }[],
+    subProcesses: { filename: string; xml: string }[] = [],
+    operatonUrl?: string,
+    operatonUsername?: string,
+    operatonPassword?: string
+  ): Promise<{ deploymentId: string; resourceCount: number }> {
+    try {
+      logger.info('Deploying BPMN process to Operaton', {
+        deploymentName,
+        formCount: forms.length,
+        subProcessCount: subProcesses.length,
+      });
+
+      const client = operatonUrl
+        ? axios.create({
+            baseURL: operatonUrl,
+            timeout: config.operaton.timeout,
+            ...(operatonUsername &&
+              operatonPassword && {
+                auth: { username: operatonUsername, password: operatonPassword },
+              }),
+          })
+        : this.client;
+
+      const formData = new FormData();
+      formData.append('deployment-name', deploymentName);
+      formData.append('enable-duplicate-filtering', 'false');
+
+      // Main BPMN
+      const mainFilename = `${deploymentName}.bpmn`;
+      formData.append(mainFilename, Buffer.from(bpmnXml, 'utf-8'), {
+        filename: mainFilename,
+        contentType: 'application/xml',
+      });
+
+      // Subprocess BPMNs
+      for (const sp of subProcesses) {
+        formData.append(sp.filename, Buffer.from(sp.xml, 'utf-8'), {
+          filename: sp.filename,
+          contentType: 'application/xml',
+        });
+      }
+
+      // Form schemas
+      for (const form of forms) {
+        const formFilename = `${form.id}.form`;
+        formData.append(formFilename, Buffer.from(JSON.stringify(form.schema), 'utf-8'), {
+          filename: formFilename,
+          contentType: 'application/json',
+        });
+      }
+
+      const response = await client.post('/deployment/create', formData, {
+        headers: formData.getHeaders(),
+      });
+
+      const deploymentId: string = response.data.id;
+      const resourceCount = 1 + subProcesses.length + forms.length;
+      logger.info('BPMN process deployed successfully', { deploymentId, resourceCount });
+      return { deploymentId, resourceCount };
+    } catch (error) {
+      logger.error('BPMN process deployment failed', {
+        deploymentName,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw new Error(
+        `Process deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }

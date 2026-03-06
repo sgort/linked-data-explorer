@@ -126,8 +126,10 @@ const InputForm: React.FC<InputFormProps> = ({ chain, inputs, onInputChange, val
           const testDataFromRdf: Record<string, unknown> = {};
 
           allInputs.forEach((input) => {
-            if (input.testValue !== undefined && input.testValue !== null) {
+            if (input.testValue !== undefined) {
               testDataFromRdf[input.identifier] = input.testValue;
+            } else if (input.type === 'Date') {
+              testDataFromRdf[input.identifier] = null; // No schema:value in RDF = empty date is valid
             }
           });
 

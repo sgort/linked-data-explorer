@@ -202,6 +202,81 @@ router.post('/drd/deploy', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/dmns/process/deploy
+ * Deploy a BPMN process and its linked Camunda Form files in one multipart
+ * request to Operaton.
+ *
+ * Body: {
+ *   bpmnXml: string,
+ *   deploymentName: string,
+ *   forms: { id: string, schema: Record<string, unknown> }[]
+ * }
+ */
+router.post('/process/deploy', async (req: Request, res: Response) => {
+  try {
+    const {
+      bpmnXml,
+      deploymentName,
+      forms = [],
+      subProcesses = [],
+      operatonUrl,
+      operatonUsername,
+      operatonPassword,
+    } = req.body as {
+      bpmnXml: string;
+      deploymentName: string;
+      forms: { id: string; schema: Record<string, unknown> }[];
+      subProcesses: { filename: string; xml: string }[];
+      operatonUrl?: string;
+      operatonUsername?: string;
+      operatonPassword?: string;
+    };
+
+    if (!bpmnXml?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'bpmnXml is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!deploymentName?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'deploymentName is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const result = await operatonService.deployProcess(
+      bpmnXml,
+      deploymentName,
+      forms,
+      subProcesses,
+      operatonUrl,
+      operatonUsername,
+      operatonPassword
+    );
+
+    res.json({
+      success: true,
+      data: {
+        deploymentId: result.deploymentId,
+        resourceCount: result.resourceCount,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    logger.error('Process deploy error', getErrorDetails(error));
+    res.status(500).json({
+      success: false,
+      error: { code: 'PROCESS_DEPLOY_FAILED', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
  * GET /api/dmns/:identifier
  * Get a specific DMN by identifier
  *
