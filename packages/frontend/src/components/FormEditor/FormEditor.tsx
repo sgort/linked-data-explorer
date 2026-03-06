@@ -307,6 +307,7 @@ const FormEditor: React.FC = () => {
       },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      status: 'wip',
     };
     FormService.saveForm(newForm);
     setForms(FormService.getForms());
