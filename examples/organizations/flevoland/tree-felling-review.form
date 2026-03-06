@@ -87,6 +87,12 @@
         { "label": "Yes (True) – replacement required", "value": true },
         { "label": "No (False) – replacement not required", "value": false }
       ]
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit review",
+      "action": "submit"
     }
   ]
 }

@@ -79,6 +79,12 @@ const TREE_FELLING_REVIEW_SCHEMA: Record<string, unknown> = {
         { label: 'No – replacement not required', value: false },
       ],
     },
+    {
+      id: 'Button_Submit',
+      type: 'button',
+      label: 'Submit review',
+      action: 'submit',
+    },
   ],
 };
 
@@ -168,6 +174,12 @@ const AWB_NOTIFY_APPLICANT_SCHEMA: Record<string, unknown> = {
       label: 'I confirm the applicant will be notified',
       key: 'applicantNotified',
       validate: { required: true },
+    },
+    {
+      id: 'Button_Submit',
+      type: 'button',
+      label: 'Confirm notification',
+      action: 'submit',
     },
   ],
 };

@@ -104,6 +104,12 @@
       "label": "I confirm the applicant will be notified",
       "key": "applicantNotified",
       "validate": { "required": true }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Confirm notification",
+      "action": "submit"
     }
   ]
 }
