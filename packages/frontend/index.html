@@ -40,6 +40,49 @@
       .code-scroll::-webkit-scrollbar-thumb {
         background: #4a4a4a;
       }
+      /* TipTap editor */
+      .tiptap-content .ProseMirror {
+        outline: none;
+      }
+      .tiptap-content .ProseMirror h1 {
+        font-size: 1.4em;
+        font-weight: 700;
+        margin: 0.5em 0 0.25em;
+      }
+      .tiptap-content .ProseMirror h2 {
+        font-size: 1.2em;
+        font-weight: 600;
+        margin: 0.5em 0 0.25em;
+      }
+      .tiptap-content .ProseMirror h3 {
+        font-size: 1.05em;
+        font-weight: 600;
+        margin: 0.4em 0 0.2em;
+      }
+      .tiptap-content .ProseMirror p {
+        margin: 0.2em 0;
+      }
+      .tiptap-content .ProseMirror ul,
+      .tiptap-content .ProseMirror ol {
+        padding-left: 1.5em;
+        margin: 0.25em 0;
+      }
+      .tiptap-content .ProseMirror li {
+        margin: 0.1em 0;
+      }
+      .tiptap-content .ProseMirror strong {
+        font-weight: 700;
+      }
+      .tiptap-content .ProseMirror em {
+        font-style: italic;
+      }
+      .tiptap-content .ProseMirror p.is-editor-empty:first-child::before {
+        content: attr(data-placeholder);
+        float: left;
+        color: #adb5bd;
+        pointer-events: none;
+        height: 0;
+      }
     </style>
     <script type="importmap">
       {

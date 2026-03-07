@@ -18,6 +18,7 @@ import { BpmnService } from '@/src/services/bpmnService';
 
 import { FormService } from '../../services/formService';
 import DmnTemplateSelector from './DmnTemplateSelector';
+import DocumentTemplateSelector from './DocumentTemplateSelector';
 import FormTemplateSelector from './FormTemplateSelector';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -164,6 +165,14 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           container.parentElement.removeChild(container);
         }
       });
+      document.querySelectorAll('[id^="document-template-custom-"]').forEach((el) => {
+        try {
+          ReactDOM.createRoot(el).unmount();
+        } catch {
+          /* empty */
+        }
+        el.remove();
+      });
     };
 
     if (elementType === 'bpmn:BusinessRuleTask') {
@@ -199,6 +208,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       const propertiesPanel = document.querySelector('.bio-properties-panel-scroll-container');
       if (!propertiesPanel) return;
 
+      // ── Form selector ──
       const selectorContainer = document.createElement('div');
       selectorContainer.id = `form-template-custom-${selectedElement.id}`;
       propertiesPanel.appendChild(selectorContainer);
@@ -215,6 +225,24 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           selectedFormRef={currentFormRef}
         />
       );
+
+      // ── Document selector (UserTask only — not StartEvent) ──
+      if (elementType === 'bpmn:UserTask') {
+        const docSelectorContainer = document.createElement('div');
+        docSelectorContainer.id = `document-template-custom-${selectedElement.id}`;
+        propertiesPanel.appendChild(docSelectorContainer);
+
+        const currentDocumentRef = businessObject.get('camunda:documentRef');
+
+        const docRoot = ReactDOM.createRoot(docSelectorContainer);
+        docRoot.render(
+          <DocumentTemplateSelector
+            element={selectedElement}
+            modeling={modeling}
+            selectedDocumentRef={currentDocumentRef}
+          />
+        );
+      }
     } else {
       cleanupReactRoots();
     }
@@ -236,6 +264,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
     overlays.remove({ type: 'dmn-linked' });
     overlays.remove({ type: 'form-linked' });
+    overlays.remove({ type: 'document-linked' });
 
     elementRegistry.forEach((element: any) => {
       if (element.type === 'bpmn:BusinessRuleTask') {
@@ -268,6 +297,17 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
         overlays.add(element.id, 'form-linked', {
           position: { bottom: -22, left: leftOffset },
           html: `<div class="form-linked-badge form-linked-badge--start" title="${formRef}">📝 ${formRef}</div>`,
+        });
+      }
+
+      if (element.type === 'bpmn:UserTask') {
+        const documentRef = element.businessObject.get('camunda:documentRef');
+        if (!documentRef) return;
+        const badgeWidth = 130;
+        const leftOffset = Math.round((element.width - badgeWidth) / 2);
+        overlays.add(element.id, 'document-linked', {
+          position: { bottom: -36, left: leftOffset }, // below the form badge
+          html: `<div class="document-linked-badge" title="${documentRef}">📄 ${documentRef}</div>`,
         });
       }
     });
