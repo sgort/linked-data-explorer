@@ -3,12 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 import { BpmnService } from '../../services/bpmnService';
 import { BpmnProcess } from '../../types';
-import {
-  ASYLUM_MIGRATION_EXAMPLE_XML,
-  AWB_PROCESS_EXAMPLE_XML,
-  DEFAULT_BPMN_XML,
-  TREE_FELLING_EXAMPLE_XML,
-} from '../../utils/bpmnTemplates';
+import { ASYLUM_MIGRATION_EXAMPLE_XML, DEFAULT_BPMN_XML } from '../../utils/bpmnTemplates';
 import BpmnCanvas from './BpmnCanvas';
 import ProcessList from './ProcessList';
 
@@ -24,73 +19,83 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   const activeProcess = processes.find((p) => p.id === activeProcessId) || null;
 
   /**
-   * Initialize example process on first visit
+   * Seed example processes on first visit.
+   * AWB and Tree Felling are fetched from public/examples/flevoland/ so the
+   * .bpmn files there are the single source of truth.
+   * Asylum Migration stays inline (WIP, not a reference deployment file).
    */
   useEffect(() => {
-    const existingProcesses = BpmnService.getProcesses();
-    const existingIds = new Set(existingProcesses.map((p) => p.id));
-    const added: BpmnProcess[] = [];
+    const seed = async () => {
+      const existingProcesses = BpmnService.getProcesses();
+      const existingIds = new Set(existingProcesses.map((p) => p.id));
+      const added: BpmnProcess[] = [];
 
-    if (!existingIds.has('example_awb_process')) {
-      const awbExample: BpmnProcess = {
-        id: 'example_awb_process',
-        name: 'AWB Generic Process (Example)',
-        description:
-          'AWB General Administrative Law Act shell: 8-phase procedural process reusable across all Dutch government public services',
-        xml: AWB_PROCESS_EXAMPLE_XML,
-        createdAt: '2026-02-10T14:30:00.000Z',
-        updatedAt: '2026-02-10T14:30:00.000Z',
-        linkedDmnTemplates: ['AwbCompletenessCheck', 'ArchivesActRetention'],
-        readonly: true,
-        status: 'example',
-      };
-      BpmnService.saveProcess(awbExample);
-      added.push(awbExample);
-    }
-
-    if (!existingIds.has('example_tree_felling')) {
-      const treeFellingExample: BpmnProcess = {
-        id: 'example_tree_felling',
-        name: 'Tree Felling Permit (Example)',
-        description: 'Example BPMN process demonstrating DMN decision tasks with embedded forms',
-        xml: TREE_FELLING_EXAMPLE_XML,
-        createdAt: '2026-01-15T10:00:00.000Z',
-        updatedAt: '2026-01-15T10:00:00.000Z',
-        linkedDmnTemplates: ['TreeFellingDecision', 'ReplacementTreeDecision'],
-        readonly: true,
-        status: 'example',
-      };
-      BpmnService.saveProcess(treeFellingExample);
-      added.push(treeFellingExample);
-    }
-
-    if (!existingIds.has('wip_asylum_migration')) {
-      // Changed ID
-      const asylumMigration: BpmnProcess = {
-        id: 'wip_asylum_migration', // Changed ID
-        name: 'Migration & Asylum Procedure',
-        description: 'Complex migration and asylum procedure - work in progress',
-        xml: ASYLUM_MIGRATION_EXAMPLE_XML,
-        createdAt: '2026-02-18T09:15:00.000Z',
-        updatedAt: '2026-02-18T09:15:00.000Z',
-        linkedDmnTemplates: [],
-        readonly: false, // Changed to false - it's editable
-        status: 'wip', // shows WIP badge
-      };
-      BpmnService.saveProcess(asylumMigration);
-      added.push(asylumMigration);
-    }
-
-    if (added.length > 0) {
-      const allProcesses = BpmnService.getProcesses();
-      setProcesses(allProcesses);
-      // Activate the first newly added example if nothing is active yet
-      if (!activeProcessId) {
-        setActiveProcessId(added[0].id);
-        setCurrentXml(added[0].xml);
+      if (!existingIds.has('example_awb_process')) {
+        const xml = await fetch('/examples/flevoland/AwbShellProcess.bpmn').then((r) => r.text());
+        const awbExample: BpmnProcess = {
+          id: 'example_awb_process',
+          name: 'AWB Generic Process (Example)',
+          description:
+            'AWB General Administrative Law Act shell: 8-phase procedural process reusable across all Dutch government public services',
+          xml,
+          createdAt: '2026-02-10T14:30:00.000Z',
+          updatedAt: '2026-02-10T14:30:00.000Z',
+          linkedDmnTemplates: ['AwbCompletenessCheck', 'ArchivesActRetention'],
+          readonly: true,
+          status: 'example',
+        };
+        BpmnService.saveProcess(awbExample);
+        added.push(awbExample);
       }
-    }
-  }, [activeProcessId]);
+
+      if (!existingIds.has('example_tree_felling')) {
+        const xml = await fetch('/examples/flevoland/TreeFellingPermitSubProcess.bpmn').then((r) =>
+          r.text()
+        );
+        const treeFellingExample: BpmnProcess = {
+          id: 'example_tree_felling',
+          name: 'Tree Felling Permit (Example)',
+          description: 'Example BPMN process demonstrating DMN decision tasks with embedded forms',
+          xml,
+          createdAt: '2026-01-15T10:00:00.000Z',
+          updatedAt: '2026-01-15T10:00:00.000Z',
+          linkedDmnTemplates: ['TreeFellingDecision', 'ReplacementTreeDecision'],
+          readonly: true,
+          status: 'example',
+        };
+        BpmnService.saveProcess(treeFellingExample);
+        added.push(treeFellingExample);
+      }
+
+      if (!existingIds.has('wip_asylum_migration')) {
+        const asylumMigration: BpmnProcess = {
+          id: 'wip_asylum_migration',
+          name: 'Migration & Asylum Procedure',
+          description: 'Complex migration and asylum procedure - work in progress',
+          xml: ASYLUM_MIGRATION_EXAMPLE_XML,
+          createdAt: '2026-02-18T09:15:00.000Z',
+          updatedAt: '2026-02-18T09:15:00.000Z',
+          linkedDmnTemplates: [],
+          readonly: false,
+          status: 'wip',
+        };
+        BpmnService.saveProcess(asylumMigration);
+        added.push(asylumMigration);
+      }
+
+      if (added.length > 0) {
+        const allProcesses = BpmnService.getProcesses();
+        setProcesses(allProcesses);
+        if (!activeProcessId) {
+          setActiveProcessId(added[0].id);
+          setCurrentXml(added[0].xml);
+        }
+      }
+    };
+
+    seed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount — seeding is idempotent via existingIds guard
 
   /**
    * Create new BPMN process
@@ -147,7 +152,6 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   const handleDeleteProcess = (processId: string) => {
     const process = BpmnService.getProcess(processId);
 
-    // Prevent deletion of readonly processes
     if (process?.readonly) {
       alert('Cannot delete example processes');
       return;
