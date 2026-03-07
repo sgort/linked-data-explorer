@@ -4,10 +4,6 @@
   "id": "awb-notify-applicant",
   "executionPlatform": "Camunda Platform",
   "executionPlatformVersion": "7.21.0",
-  "exporter": {
-    "name": "Linked Data Explorer",
-    "version": "0.9.0"
-  },
   "components": [
     {
       "id": "Text_Header",
@@ -82,12 +78,26 @@
       "type": "select",
       "label": "Notification method",
       "key": "notificationMethod",
-      "validate": { "required": true },
+      "validate": {
+        "required": true
+      },
       "values": [
-        { "label": "Email", "value": "email" },
-        { "label": "Letter (Post)", "value": "letter" },
-        { "label": "Phone call", "value": "phone" },
-        { "label": "Citizen portal", "value": "portal" }
+        {
+          "label": "Email",
+          "value": "email"
+        },
+        {
+          "label": "Letter (Post)",
+          "value": "letter"
+        },
+        {
+          "label": "Phone call",
+          "value": "phone"
+        },
+        {
+          "label": "Citizen portal",
+          "value": "portal"
+        }
       ],
       "description": "How should the applicant be informed of this decision?"
     },
@@ -103,7 +113,9 @@
       "type": "checkbox",
       "label": "I confirm the applicant will be notified",
       "key": "applicantNotified",
-      "validate": { "required": true }
+      "validate": {
+        "required": true
+      }
     },
     {
       "id": "Button_Submit",
