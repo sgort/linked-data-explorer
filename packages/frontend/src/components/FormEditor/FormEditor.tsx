@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 import { FormService } from '../../services/formService';
 import { FormSchema } from '../../types';
+import { EXAMPLE_VERSIONS, getStoredVersion, setStoredVersion } from '../../utils/exampleVersions';
 import FormCanvas from './FormCanvas';
 import FormList from './FormList';
 
@@ -34,18 +35,16 @@ const FormEditor: React.FC = () => {
   const activeForm = forms.find((f) => f.id === activeFormId) || null;
 
   /**
-   * Seed example forms from public/examples/flevoland on first visit.
-   * Fetches the .form files instead of using inline schemas, so the
-   * public/ files are the single source of truth.
+   * Seed / refresh versioned example forms on mount.
+   * Re-fetches from public/examples/flevoland/ whenever EXAMPLE_VERSIONS
+   * has been bumped above the version stored in localStorage.
    */
   useEffect(() => {
     const seed = async () => {
-      const existing = FormService.getForms();
-      const existingIds = new Set(existing.map((f) => f.id));
-      const added: FormSchema[] = [];
+      const updated: FormSchema[] = [];
 
       for (const def of EXAMPLE_FORMS) {
-        if (existingIds.has(def.id)) continue;
+        if (getStoredVersion(def.id) >= EXAMPLE_VERSIONS[def.id]) continue;
 
         const schema = await fetch(def.path).then((r) => r.json());
         const form: FormSchema = {
@@ -54,17 +53,18 @@ const FormEditor: React.FC = () => {
           description: def.description,
           schema,
           createdAt: '2026-03-05T00:00:00.000Z',
-          updatedAt: '2026-03-05T00:00:00.000Z',
+          updatedAt: new Date().toISOString(),
           readonly: true,
           status: 'example',
         };
         FormService.saveForm(form);
-        added.push(form);
+        setStoredVersion(def.id, EXAMPLE_VERSIONS[def.id]);
+        updated.push(form);
       }
 
-      if (added.length > 0) {
+      if (updated.length > 0) {
         setForms(FormService.getForms());
-        setActiveFormId(added[0].id);
+        setActiveFormId(updated[0].id);
       }
     };
 

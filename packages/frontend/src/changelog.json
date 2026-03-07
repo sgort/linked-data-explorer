@@ -1,6 +1,32 @@
 {
   "versions": [
     {
+      "version": "1.0.1",
+      "status": "Bug Fix",
+      "statusColor": "orange",
+      "borderColor": "orange",
+      "date": "March 7, 2026",
+      "sections": [
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "red",
+          "items": [
+            "Fixed Task_Phase6_Notify and Task_RequestMissingInfo appearing pre-claimed in the caseworker dashboard — camunda:assignee=\"demo\" removed, camunda:candidateGroups=\"caseworker\" added to both tasks"
+          ]
+        },
+        {
+          "title": "Internal",
+          "icon": "🔧",
+          "iconColor": "slate",
+          "items": [
+            "Example .bpmn and .form files moved to public/examples/flevoland/ as the single source of truth — inline schemas removed from bpmnTemplates.ts and FormEditor.tsx",
+            "Added example version registry (exampleVersions.ts) — incrementing a version number now pushes updated example files to existing users on next page load without requiring a localStorage reset"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.0.0",
       "status": "Major Release",
       "statusColor": "emerald",
