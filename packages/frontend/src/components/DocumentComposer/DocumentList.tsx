@@ -49,11 +49,11 @@ const DocumentList: React.FC<DocumentListProps> = ({
     <div className="w-64 flex-shrink-0 flex flex-col border-r border-slate-200 bg-white">
       {/* Header */}
       <div className="h-12 flex items-center justify-between px-4 border-b border-slate-200 flex-shrink-0">
-        <span className="text-sm font-semibold text-slate-700">Documents</span>
+        <span className="text-sm font-semibold text-slate-700">DOCUMENTS</span>
         <button
           onClick={onCreateTemplate}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-          title="New document"
+          className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          title="Create New document"
         >
           <Plus size={16} />
         </button>
@@ -64,7 +64,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
         {templates.length === 0 && (
           <div className="text-center py-8 text-slate-400">
             <FileText size={28} className="mx-auto mb-2 opacity-30" />
-            <p className="text-xs">No documents</p>
+            <p className="text-xs">No documents yet</p>
             <p className="text-xs mt-1">Click + to get started</p>
           </div>
         )}

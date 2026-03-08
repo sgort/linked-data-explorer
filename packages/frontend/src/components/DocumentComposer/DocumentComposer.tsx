@@ -6,7 +6,7 @@
  * Top-level three-panel layout:
  *   Left  — DocumentList  (template list) + ContentLibrary / AssetLibrary tabs
  *   Middle — DocumentCanvas (editor)
- *   Right  — TemplateLibrary / BindingPanel tabs
+ *   Right  — BindingPanel
  *
  * The DndContext wraps everything. dragEndEvent is passed down to DocumentCanvas
  * which owns the drop resolution logic (same pattern as ChainBuilder).
@@ -23,7 +23,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { FileText, Image as ImageIcon, Layers, Variable } from 'lucide-react';
+import { FileText, Image as ImageIcon, Layers } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 import { DocumentService } from '../../services/documentService';
@@ -35,7 +35,6 @@ import ContentLibrary from './ContentLibrary';
 import { DEFAULT_TEMPLATES } from './defaultTemplates';
 import DocumentCanvas from './DocumentCanvas';
 import DocumentList from './DocumentList';
-import TemplateLibrary from './TemplateLibrary';
 
 interface DocumentComposerProps {
   endpoint: string;
@@ -53,8 +52,6 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
 
   // Left panel tab: 'content' | 'assets'
   const [leftTab, setLeftTab] = useState<'content' | 'assets'>('content');
-  // Right panel tab: 'templates' | 'bindings'
-  const [rightTab, setRightTab] = useState<'templates' | 'bindings'>('templates');
 
   // ─── Seed default templates on first load ──────────────────────────────
   useEffect(() => {
@@ -248,7 +245,6 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
           onDeleteTemplate={handleDeleteTemplate}
           onUpdateTemplateName={handleUpdateTemplateName}
         />
-
         {/* ── Left sub-panel: content / assets tabs ─────────────────── */}
         <div className="w-52 flex-shrink-0 flex flex-col border-r border-slate-200 bg-white">
           <div className="h-12 flex border-b border-slate-200 flex-shrink-0">
@@ -266,7 +262,6 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
             {leftTab === 'assets' && <AssetLibrary endpoint={endpoint} />}
           </div>
         </div>
-
         {/* ── Middle: Document canvas ───────────────────────────────── */}
         <div className="flex-1 flex flex-col border-x border-slate-200 min-w-0">
           {activeTemplate ? (
@@ -287,42 +282,27 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
                 <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
                   <FileText size={36} className="text-slate-300" />
                 </div>
-                <h3 className="text-base font-medium text-slate-600 mb-1">No document open</h3>
+                <h3 className="text-lg font-medium text-slate-600 mb-2">No document selected</h3>
                 <p className="text-sm text-slate-400 mb-4">
-                  Choose a template or create a new document
+                  Create a new document or select an existing one
                 </p>
                 <button
                   onClick={handleCreateTemplate}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  New document
+                  Create New document
                 </button>
               </div>
             </div>
           )}
         </div>
-
-        {/* ── Right: Templates / Bindings ──────────────────────────── */}
-        <div className="w-64 flex-shrink-0 flex flex-col bg-white border-l border-slate-200">
-          <div className="h-12 flex border-b border-slate-200 flex-shrink-0">
-            <TabBtn active={rightTab === 'templates'} onClick={() => setRightTab('templates')}>
-              <FileText size={13} />
-              Templates
-            </TabBtn>
-            <TabBtn active={rightTab === 'bindings'} onClick={() => setRightTab('bindings')}>
-              <Variable size={13} />
-              Bindings
-            </TabBtn>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3">
-            {rightTab === 'templates' && (
-              <TemplateLibrary
-                templates={templates}
-                activeTemplateId={activeTemplateId}
-                onLoadTemplate={(t) => handleLoadTemplate(t.id)}
-              />
-            )}
-            {rightTab === 'bindings' && activeTemplate && (
+        {/* ── Right: Bindings (only when a document is active) ─── */}
+        {activeTemplate && (
+          <div className="w-64 flex-shrink-0 flex flex-col bg-white border-l border-slate-200">
+            <div className="h-12 flex items-center px-4 border-b border-slate-200 flex-shrink-0">
+              <span className="text-sm font-semibold text-slate-700">Bindings</span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3">
               <BindingPanel
                 processKey={activeTemplate.processKey}
                 bindings={activeTemplate.bindings}
@@ -330,12 +310,9 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
                 onDelete={handleDeleteBinding}
                 onUpdateProcessKey={handleUpdateProcessKey}
               />
-            )}
-            {rightTab === 'bindings' && !activeTemplate && (
-              <p className="text-xs text-slate-400 px-1 mt-2">Open a document to link variables.</p>
-            )}
+            </div>
           </div>
-        </div>
+        )}{' '}
       </div>
 
       {/* Drag overlay */}
