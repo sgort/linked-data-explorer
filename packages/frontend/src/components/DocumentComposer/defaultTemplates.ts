@@ -116,7 +116,7 @@ export const TREE_FELLING_BESCHIKKING: DocumentTemplate = {
               {
                 type: 'heading',
                 attrs: { level: 1 },
-                content: [{ type: 'text', text: 'Gemeente Flevoland' }],
+                content: [{ type: 'text', text: 'Provincie Flevoland' }],
               },
               {
                 type: 'paragraph',
@@ -250,7 +250,7 @@ export const TREE_FELLING_BESCHIKKING: DocumentTemplate = {
           label: 'Bezwaartekst',
           content: paragraphs([
             'Tegen dit besluit kunt u binnen zes weken na de verzenddatum bezwaar maken.',
-            'U stuurt uw bezwaarschrift naar: Gemeente Flevoland, t.a.v. de Commissie Bezwaarschriften, Postbus 1234, 1234 AB Lelystad.',
+            'U stuurt uw bezwaarschrift naar: Provincie Flevoland, t.a.v. de Commissie Bezwaarschriften, Postbus 1234, 1234 AB Lelystad.',
             'Vermeld in uw bezwaarschrift: uw naam en adres, de datum, het dossiernummer ({{dossierReference}}), en de redenen van uw bezwaar.',
             'In spoedeisende gevallen kunt u een voorlopige voorziening vragen bij de voorzieningenrechter van de rechtbank Midden-Nederland.',
           ]),
@@ -275,7 +275,7 @@ export const TREE_FELLING_BESCHIKKING: DocumentTemplate = {
           type: 'text',
           label: 'Naam en functie',
           content: paragraphs([
-            'Namens Burgemeester en Wethouders van Gemeente Flevoland,',
+            'Namens Burgemeester en Wethouders van Provincie Flevoland,',
             '',
             'Hoofd afdeling Vergunningen',
           ]),

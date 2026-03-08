@@ -62,6 +62,12 @@ const TextBlockEditor: React.FC<TextBlockEditorProps> = ({
     }
   }, [editor, content]);
 
+  // Sync editable state when readonly prop changes (e.g. after Save as… on a readonly template)
+  useEffect(() => {
+    if (!editor) return;
+    editor.setEditable(!readonly);
+  }, [editor, readonly]);
+
   if (!editor) return null;
 
   return (
