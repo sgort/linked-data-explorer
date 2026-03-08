@@ -9,6 +9,7 @@ import templateRoutes from './template.routes';
 import triplydbRoutes from './triplydb.routes';
 import cacheRoutes from './cache.routes'; // NEW: Import cache routes
 import vendorRoutes from './vendor.routes';
+import processRoutes from './process.routes';
 
 const router = Router();
 
@@ -29,6 +30,7 @@ router.use('/v1/chains/templates', templateRoutes);
 router.use('/v1/chains', chainRoutes);
 router.use('/v1/triplydb', triplydbRoutes);
 router.use('/v1/vendors', vendorRoutes);
+router.use('/v1/process', processRoutes);
 
 // Legacy /api/* routes (deprecated but working)
 router.use('/api/health', deprecationMiddleware('/v1/health'), healthRoutes);

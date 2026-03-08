@@ -196,6 +196,34 @@ export class OperatonService {
   }
 
   /**
+   * Fetch deduplicated variable names and types from Operaton history
+   * for a given process definition key.
+   * Used by the Document Composer BindingPanel for variable discovery.
+   */
+  async getVariableHints(processKey: string): Promise<Array<{ name: string; type: string }>> {
+    try {
+      const response = await this.client.get('/history/variable-instance', {
+        params: { processDefinitionKey: processKey, firstResult: 0, maxResults: 500 },
+      });
+
+      const seen = new Map<string, string>();
+      for (const v of response.data as { name: string; type: string }[]) {
+        seen.set(v.name, v.type ?? 'String');
+      }
+
+      return Array.from(seen.entries())
+        .map(([name, type]) => ({ name, type }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error: unknown) {
+      logger.error('Failed to get variable hints', {
+        processKey,
+        error: getErrorMessage(error),
+      });
+      throw new Error(`Variable hints failed: ${getErrorMessage(error)}`);
+    }
+  }
+
+  /**
    * Fetch DMN XML content from Operaton
    * Add this method to the OperatonService class in operaton.service.ts
    *
@@ -591,13 +619,13 @@ export class OperatonService {
 
       const client = operatonUrl
         ? axios.create({
-            baseURL: operatonUrl,
-            timeout: config.operaton.timeout,
-            ...(operatonUsername &&
-              operatonPassword && {
-                auth: { username: operatonUsername, password: operatonPassword },
-              }),
-          })
+          baseURL: operatonUrl,
+          timeout: config.operaton.timeout,
+          ...(operatonUsername &&
+            operatonPassword && {
+            auth: { username: operatonUsername, password: operatonPassword },
+          }),
+        })
         : this.client;
 
       const formData = new FormData();

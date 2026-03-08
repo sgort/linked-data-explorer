@@ -39,7 +39,7 @@ const ProcessList: React.FC<ProcessListProps> = ({
     <div className="w-80 bg-white border-r border-slate-200 flex flex-col">
       {/* Header */}
       <div className="h-14 bg-slate-50 border-b border-slate-200 px-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-700">Processes</h2>
+        <h2 className="text-sm font-semibold text-slate-700">PROCESSES</h2>
         <button
           onClick={onCreateProcess}
           className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"

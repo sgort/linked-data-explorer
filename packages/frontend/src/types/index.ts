@@ -56,6 +56,7 @@ export enum ViewMode {
   BPMN = 'BPMN',
   VALIDATE = 'VALIDATE',
   FORM = 'FORM',
+  DOCUMENT = 'DOCUMENT',
 }
 
 export interface EndpointConfig {

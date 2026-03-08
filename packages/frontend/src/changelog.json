@@ -1,6 +1,52 @@
 {
   "versions": [
     {
+      "version": "1.1.0",
+      "status": "New Feature",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "March 8, 2026",
+      "sections": [
+        {
+          "title": "Document Composer",
+          "icon": "📄",
+          "iconColor": "purple",
+          "items": [
+            "New Document Composer view for authoring formal government decision documents (beschikkingen)",
+            "Fixed-zone document layout: Letterhead, Contact Information, Reference, Body, Closing, Sign-off, and optional Annex",
+            "Five block types: rich text (TipTap editor with bold, italic, headings, lists), variable placeholder, image, separator, and spacer",
+            "Drag blocks from the Content library onto any zone; reorder or move blocks across zones by dragging",
+            "Image library tab fetches assets directly from the active TriplyDB dataset",
+            "Documents stored in localStorage with create, rename, delete, and Save as… actions",
+            "Export document template as a .document JSON file",
+            "Read-only example document pre-loaded: Kapvergunning Beschikking (AwbShellProcess)"
+          ]
+        },
+        {
+          "title": "Variable Bindings",
+          "icon": "🔗",
+          "iconColor": "blue",
+          "items": [
+            "Bindings panel links {{placeholder}} tokens in document text to Operaton process variable keys",
+            "Discover Variables button queries Operaton history API for all variables used in a given process definition key",
+            "Discovered variables shown as clickable chips with type labels (String, Boolean, Double, etc.) for one-click binding creation",
+            "Bindings declare source as either process variable or DMN output for audit traceability"
+          ]
+        },
+        {
+          "title": "BPMN Modeler Integration",
+          "icon": "🔌",
+          "iconColor": "indigo",
+          "items": [
+            "Document Template selector injected into the BPMN properties panel for UserTask elements",
+            "Selecting a document template writes camunda:documentRef to the BPMN XML",
+            "Purple badge on UserTask canvas elements confirms a document template is linked",
+            "Distinct from the existing green form badge and amber DMN badge"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.0.1",
       "status": "Bug Fix",
       "statusColor": "orange",
