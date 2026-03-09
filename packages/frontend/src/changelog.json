@@ -5,7 +5,7 @@
       "status": "New Feature",
       "statusColor": "purple",
       "borderColor": "purple",
-      "date": "March 8, 2026",
+      "date": "March 9, 2026",
       "sections": [
         {
           "title": "Document Composer",
@@ -39,9 +39,20 @@
           "iconColor": "indigo",
           "items": [
             "Document Template selector injected into the BPMN properties panel for UserTask elements",
-            "Selecting a document template writes camunda:documentRef to the BPMN XML",
+            "Selecting a document template writes ronl:documentRef to the BPMN XML using a custom RONL moddleDescriptor (ronlModdleDescriptor.json)",
             "Purple badge on UserTask canvas elements confirms a document template is linked",
             "Distinct from the existing green form badge and amber DMN badge"
+          ]
+        },
+        {
+          "title": "Deploy Bundle",
+          "icon": "🚀",
+          "iconColor": "orange",
+          "items": [
+            "Deploy modal now resolves ronl:documentRef attributes across main BPMN and all subprocess BPMNs",
+            "Matched document templates included in the Operaton deployment bundle as .document JSON files alongside .bpmn and .form resources",
+            "Resource preview in the deploy modal lists .document files with a purple icon",
+            "Backend POST /api/dmns/process/deploy extended to accept and append document templates as multipart resources"
           ]
         }
       ]

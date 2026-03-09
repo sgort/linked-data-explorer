@@ -4,7 +4,7 @@
  * Destination: packages/frontend/src/components/BpmnModeler/DocumentTemplateSelector.tsx
  *
  * Injected into the bpmn-js properties panel for UserTask elements.
- * Writes camunda:documentRef to the BPMN element (same pattern as FormTemplateSelector).
+ * Writes ronl:documentRef to the BPMN element (same pattern as FormTemplateSelector).
  * Badge colour: purple (distinguishable from green form badge).
  */
 
@@ -41,13 +41,13 @@ const DocumentTemplateSelector: React.FC<DocumentTemplateSelectorProps> = ({
 
     if (!templateId) {
       modeling.updateProperties(element, {
-        'camunda:documentRef': undefined,
+        'ronl:documentRef': undefined,
       });
       return;
     }
 
     modeling.updateProperties(element, {
-      'camunda:documentRef': templateId,
+      'ronl:documentRef': templateId,
     });
   };
 

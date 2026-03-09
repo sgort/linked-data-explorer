@@ -22,6 +22,7 @@ import { DocumentTemplate } from '../../types/document.types';
 import DmnTemplateSelector from './DmnTemplateSelector';
 import DocumentTemplateSelector from './DocumentTemplateSelector';
 import FormTemplateSelector from './FormTemplateSelector';
+import ronlModdleDescriptor from './ronlModdleDescriptor.json';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -89,6 +90,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       ],
       moddleExtensions: {
         camunda: camundaModdleDescriptor,
+        ronl: ronlModdleDescriptor,
       },
     } as unknown);
 
@@ -235,7 +237,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
         docSelectorContainer.id = `document-template-custom-${selectedElement.id}`;
         propertiesPanel.appendChild(docSelectorContainer);
 
-        const currentDocumentRef = businessObject.get('camunda:documentRef');
+        const currentDocumentRef = businessObject.get('ronl:documentRef');
 
         const docRoot = ReactDOM.createRoot(docSelectorContainer);
         docRoot.render(
@@ -304,7 +306,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       }
 
       if (element.type === 'bpmn:UserTask') {
-        const documentRef = element.businessObject.get('camunda:documentRef');
+        const documentRef = element.businessObject.get('ronl:documentRef');
         if (!documentRef) return;
         const badgeWidth = 130;
         const leftOffset = Math.round((element.width - badgeWidth) / 2);
@@ -358,7 +360,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     ];
 
     const extractDocumentRefs = (bpmnXml: string) => [
-      ...new Set([...bpmnXml.matchAll(/camunda:documentRef="([^"]+)"/g)].map((m) => m[1])),
+      ...new Set([...bpmnXml.matchAll(/ronl:documentRef="([^"]+)"/g)].map((m) => m[1])),
     ];
 
     const extractCalledElements = (bpmnXml: string) => [
@@ -423,7 +425,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       ];
 
       const extractDocumentRefs = (bpmnXml: string) => [
-        ...new Set([...bpmnXml.matchAll(/camunda:documentRef="([^"]+)"/g)].map((m) => m[1])),
+        ...new Set([...bpmnXml.matchAll(/ronl:documentRef="([^"]+)"/g)].map((m) => m[1])),
       ];
 
       const extractCalledElements = (bpmnXml: string) => [

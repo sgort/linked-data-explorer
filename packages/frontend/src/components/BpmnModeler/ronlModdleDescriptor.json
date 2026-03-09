@@ -1,0 +1,20 @@
+{
+  "name": "RONL",
+  "uri": "http://ronl.nl/schema/1.0",
+  "prefix": "ronl",
+  "xml": { "tagAlias": "lowerCase" },
+  "associations": [],
+  "types": [
+    {
+      "name": "DocumentRefMixin",
+      "extends": ["bpmn:UserTask"],
+      "properties": [
+        {
+          "name": "documentRef",
+          "isAttr": true,
+          "type": "String"
+        }
+      ]
+    }
+  ]
+}
