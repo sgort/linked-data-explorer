@@ -606,6 +606,7 @@ export class OperatonService {
     deploymentName: string,
     forms: { id: string; schema: Record<string, unknown> }[],
     subProcesses: { filename: string; xml: string }[] = [],
+    documents: { id: string; template: Record<string, unknown> }[] = [],
     operatonUrl?: string,
     operatonUsername?: string,
     operatonPassword?: string
@@ -619,13 +620,13 @@ export class OperatonService {
 
       const client = operatonUrl
         ? axios.create({
-          baseURL: operatonUrl,
-          timeout: config.operaton.timeout,
-          ...(operatonUsername &&
-            operatonPassword && {
-            auth: { username: operatonUsername, password: operatonPassword },
-          }),
-        })
+            baseURL: operatonUrl,
+            timeout: config.operaton.timeout,
+            ...(operatonUsername &&
+              operatonPassword && {
+                auth: { username: operatonUsername, password: operatonPassword },
+              }),
+          })
         : this.client;
 
       const formData = new FormData();
@@ -656,12 +657,21 @@ export class OperatonService {
         });
       }
 
+      // Document templates
+      for (const doc of documents) {
+        const docFilename = `${doc.id}.document`;
+        formData.append(docFilename, Buffer.from(JSON.stringify(doc.template), 'utf-8'), {
+          filename: docFilename,
+          contentType: 'application/json',
+        });
+      }
+
       const response = await client.post('/deployment/create', formData, {
         headers: formData.getHeaders(),
       });
 
       const deploymentId: string = response.data.id;
-      const resourceCount = 1 + subProcesses.length + forms.length;
+      const resourceCount = 1 + subProcesses.length + forms.length + documents.length;
       logger.info('BPMN process deployed successfully', { deploymentId, resourceCount });
       return { deploymentId, resourceCount };
     } catch (error) {

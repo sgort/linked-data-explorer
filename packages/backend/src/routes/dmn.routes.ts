@@ -219,6 +219,7 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       deploymentName,
       forms = [],
       subProcesses = [],
+      documents = [],
       operatonUrl,
       operatonUsername,
       operatonPassword,
@@ -227,6 +228,7 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       deploymentName: string;
       forms: { id: string; schema: Record<string, unknown> }[];
       subProcesses: { filename: string; xml: string }[];
+      documents: { id: string; template: Record<string, unknown> }[];
       operatonUrl?: string;
       operatonUsername?: string;
       operatonPassword?: string;
@@ -253,6 +255,7 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       deploymentName,
       forms,
       subProcesses,
+      documents,
       operatonUrl,
       operatonUsername,
       operatonPassword

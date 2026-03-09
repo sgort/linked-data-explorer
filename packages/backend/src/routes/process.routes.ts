@@ -12,21 +12,21 @@ const router = Router();
  * Used by the Document Composer BindingPanel for variable discovery.
  */
 router.get('/:key/variable-hints', async (req: Request, res: Response) => {
-    const { key } = req.params;
+  const { key } = req.params;
 
-    try {
-        const variables = await operatonService.getVariableHints(key);
-        res.json({ success: true, variables });
-    } catch (error) {
-        logger.error('Failed to get variable hints', {
-            processKey: key,
-            error: getErrorMessage(error),
-        });
-        res.status(500).json({
-            success: false,
-            error: { code: 'VARIABLE_HINTS_FAILED', message: 'Failed to retrieve variable hints' },
-        });
-    }
+  try {
+    const variables = await operatonService.getVariableHints(key);
+    res.json({ success: true, variables });
+  } catch (error) {
+    logger.error('Failed to get variable hints', {
+      processKey: key,
+      error: getErrorMessage(error),
+    });
+    res.status(500).json({
+      success: false,
+      error: { code: 'VARIABLE_HINTS_FAILED', message: 'Failed to retrieve variable hints' },
+    });
+  }
 });
 
 export default router;
