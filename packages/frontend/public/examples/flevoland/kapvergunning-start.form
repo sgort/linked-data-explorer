@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "kapvergunning-start",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Apply for a tree felling permit"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Use this form to submit your tree felling permit application. Your application will be assessed automatically based on municipal regulations (APV). You will receive a decision and, if applicable, information about replacement requirements."
+    },
+    {
+      "id": "Field_TreeDiameter",
+      "type": "number",
+      "label": "Tree diameter (cm)",
+      "key": "treeDiameter",
+      "validate": {
+        "required": true,
+        "min": 1,
+        "max": 500
+      },
+      "description": "Measure the trunk diameter at 1.30 metres above ground level (breast height). Examples: small tree 10–20 cm · medium tree 30–50 cm · large tree 60+ cm."
+    },
+    {
+      "id": "Field_ProtectedArea",
+      "type": "checkbox",
+      "label": "The tree is located in a protected area",
+      "key": "protectedArea",
+      "description": "Protected areas include nature reserves, conservation zones, heritage sites, and areas with special environmental protection status."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit application",
+      "action": "submit"
+    }
+  ]
+}

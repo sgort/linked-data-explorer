@@ -67,8 +67,7 @@
       Caseworker must claim via POST /v1/task/:id/claim before completing.
       candidateGroups routes this task to the caseworker group in Operaton.
     -->
-    <bpmn:userTask id="Sub_CaseReview" name="Case review: tree felling permit decision" camunda:candidateGroups="caseworker">
-      <bpmn:incoming>Flow_Sub_Replacement_Review</bpmn:incoming>
+      <bpmn:userTask id="Sub_CaseReview" name="Case review: tree felling permit decision" camunda:formRef="tree-felling-review" camunda:formRefBinding="latest" camunda:candidateGroups="case-workers">      <bpmn:incoming>Flow_Sub_Replacement_Review</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Review_Resolve</bpmn:outgoing>
     </bpmn:userTask>
 

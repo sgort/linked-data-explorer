@@ -55,6 +55,8 @@ export enum ViewMode {
   TUTORIAL = 'TUTORIAL',
   BPMN = 'BPMN',
   VALIDATE = 'VALIDATE',
+  FORM = 'FORM',
+  DOCUMENT = 'DOCUMENT',
 }
 
 export interface EndpointConfig {
@@ -245,4 +247,16 @@ export interface EnhancedChainLink {
   variableType: string;
   matchType: 'exact' | 'semantic';
   sharedConcept: string;
+}
+
+// mirrors BpmnProcess, schema holds the raw .form JSON
+export interface FormSchema {
+  id: string;
+  name: string;
+  description?: string;
+  schema: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  readonly?: boolean;
+  status?: 'example' | 'wip';
 }

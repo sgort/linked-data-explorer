@@ -1,6 +1,143 @@
 {
   "versions": [
     {
+      "version": "1.1.0",
+      "status": "New Feature",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "March 9, 2026",
+      "sections": [
+        {
+          "title": "Document Composer",
+          "icon": "📄",
+          "iconColor": "purple",
+          "items": [
+            "New Document Composer view for authoring formal government decision documents (beschikkingen)",
+            "Fixed-zone document layout: Letterhead, Contact Information, Reference, Body, Closing, Sign-off, and optional Annex",
+            "Five block types: rich text (TipTap editor with bold, italic, headings, lists), variable placeholder, image, separator, and spacer",
+            "Drag blocks from the Content library onto any zone; reorder or move blocks across zones by dragging",
+            "Image library tab fetches assets directly from the active TriplyDB dataset",
+            "Documents stored in localStorage with create, rename, delete, and Save as… actions",
+            "Export document template as a .document JSON file",
+            "Read-only example document pre-loaded: Kapvergunning Beschikking (AwbShellProcess)"
+          ]
+        },
+        {
+          "title": "Variable Bindings",
+          "icon": "🔗",
+          "iconColor": "blue",
+          "items": [
+            "Bindings panel links {{placeholder}} tokens in document text to Operaton process variable keys",
+            "Discover Variables button queries Operaton history API for all variables used in a given process definition key",
+            "Discovered variables shown as clickable chips with type labels (String, Boolean, Double, etc.) for one-click binding creation",
+            "Bindings declare source as either process variable or DMN output for audit traceability"
+          ]
+        },
+        {
+          "title": "BPMN Modeler Integration",
+          "icon": "🔌",
+          "iconColor": "indigo",
+          "items": [
+            "Document Template selector injected into the BPMN properties panel for UserTask elements",
+            "Selecting a document template writes ronl:documentRef to the BPMN XML using a custom RONL moddleDescriptor (ronlModdleDescriptor.json)",
+            "Purple badge on UserTask canvas elements confirms a document template is linked",
+            "Distinct from the existing green form badge and amber DMN badge"
+          ]
+        },
+        {
+          "title": "Deploy Bundle",
+          "icon": "🚀",
+          "iconColor": "orange",
+          "items": [
+            "Deploy modal now resolves ronl:documentRef attributes across main BPMN and all subprocess BPMNs",
+            "Matched document templates included in the Operaton deployment bundle as .document JSON files alongside .bpmn and .form resources",
+            "Resource preview in the deploy modal lists .document files with a purple icon",
+            "Backend POST /api/dmns/process/deploy extended to accept and append document templates as multipart resources"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.0.1",
+      "status": "Bug Fix",
+      "statusColor": "orange",
+      "borderColor": "orange",
+      "date": "March 7, 2026",
+      "sections": [
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "red",
+          "items": [
+            "Fixed Task_Phase6_Notify and Task_RequestMissingInfo appearing pre-claimed in the caseworker dashboard — camunda:assignee=\"demo\" removed, camunda:candidateGroups=\"caseworker\" added to both tasks"
+          ]
+        },
+        {
+          "title": "Internal",
+          "icon": "🔧",
+          "iconColor": "slate",
+          "items": [
+            "Example .bpmn and .form files moved to public/examples/flevoland/ as the single source of truth — inline schemas removed from bpmnTemplates.ts and FormEditor.tsx",
+            "Added example version registry (exampleVersions.ts) — incrementing a version number now pushes updated example files to existing users on next page load without requiring a localStorage reset"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "status": "Major Release",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "March 5, 2026",
+      "sections": [
+        {
+          "title": "Form Editor",
+          "icon": "📝",
+          "iconColor": "green",
+          "items": [
+            "New Form Editor view using @bpmn-io/form-js — create and edit Camunda Forms (schemaVersion 16) directly in the application",
+            "Form list panel with create, rename, delete and status badges (EXAMPLE / WIP)",
+            "Three built-in example forms: Kapvergunning Start (citizen-facing), Tree Felling Review (caseworker), AWB Notify Applicant (caseworker)",
+            "Export individual forms as .form JSON files compatible with Camunda Modeler and Operaton",
+            "Forms stored in localStorage and available immediately to the BPMN Modeler"
+          ]
+        },
+        {
+          "title": "BPMN Modeler — Form Integration",
+          "icon": "🔗",
+          "iconColor": "blue",
+          "items": [
+            "Link to Form selector in the properties panel for UserTask and StartEvent elements",
+            "Selecting a form writes camunda:formRef and camunda:formRefBinding=\"latest\" to the BPMN XML",
+            "Green badges on UserTask and StartEvent elements when a form is linked (camunda:formRef present)",
+            "DmnTemplateSelector now pre-selects the linked DMN when a BusinessRuleTask is selected (was always empty)"
+          ]
+        },
+        {
+          "title": "BPMN Modeler — One-Click Deploy",
+          "icon": "🚀",
+          "iconColor": "purple",
+          "items": [
+            "Deploy button opens a modal listing all resources to be bundled: main BPMN, subprocess BPMNs (calledElement resolution), and linked .form files",
+            "All resources deployed in a single multipart POST to Operaton — camunda:formRef resolves at runtime because BPMN and forms share the same deployment ID",
+            "Configurable REST endpoint field pre-filled with VITE_OPERATON_BASE_URL so deployments can target any Operaton instance",
+            "Optional username and password fields for instances requiring HTTP Basic Auth",
+            "Deploy button disabled after a successful deployment to prevent accidental re-deploy"
+          ]
+        },
+        {
+          "title": "Backend — Process Deploy Endpoint",
+          "icon": "⚙️",
+          "iconColor": "orange",
+          "items": [
+            "POST /api/dmns/process/deploy — deploys BPMN + subprocess BPMNs + Camunda Forms in one multipart request to Operaton",
+            "Each resource appended with its filename as the multipart field name, matching Camunda Modeler behaviour",
+            "Supports custom Operaton URL and HTTP Basic Auth credentials per request"
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.9.1",
       "status": "Bug Fixes",
       "statusColor": "blue",
