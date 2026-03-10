@@ -162,14 +162,16 @@ export async function updateService(
   });
 
   try {
-    // POST with {"sync": "true"} body
+    // TriplyDB's service synchronisation API requires the literal string "true" (not the
+    // boolean true) as the value for the "sync" key. This matches the documented request
+    // body exactly — using a boolean would be silently ignored by the API.
     const syncResponse = await fetch(serviceUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${config.apiToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ sync: 'true' }), // Body from documentation
+      body: JSON.stringify({ sync: 'true' }),
     });
 
     logger.debug('[TriplyDB Service] Sync response received', {

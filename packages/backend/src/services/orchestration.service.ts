@@ -25,7 +25,12 @@ export class OrchestrationService {
     isDrd?: boolean, // NEW parameter
     drdEntryPointId?: string // NEW parameter
   ): Promise<ChainExecutionResult> {
-    // NEW: Handle DRD execution directly via Operaton
+    // When the chain has been pre-assembled and deployed as a Decision Requirements Diagram
+    // (DRD) in Operaton, we skip the sequential step-by-step execution entirely.
+    // Instead we send all inputs to Operaton's /decision-definition/key/:key/evaluate
+    // endpoint once, letting Operaton resolve internal data-flow dependencies itself.
+    // The drdEntryPointId is the key of the top-level decision in the assembled DRD
+    // (by convention the last DMN in the original ordered chain).
     if (isDrd && drdEntryPointId) {
       const startTime = Date.now();
       logger.info('Executing DRD via Operaton', { drdEntryPointId });
@@ -122,7 +127,10 @@ export class OrchestrationService {
             outputs: Object.keys(outputs),
           });
 
-          // Flatten/merge outputs into current variables (like BPMN script task)
+          // Merge this DMN's outputs into the running variable set.
+          // Outputs shadow any earlier variable with the same name, which replicates the
+          // behaviour of a BPMN process where a downstream script task overwrites
+          // a process variable set by an upstream task.
           currentVariables = { ...currentVariables, ...outputs };
         } catch (error: unknown) {
           // ✅ Changed from any
@@ -192,16 +200,22 @@ export class OrchestrationService {
 
   /**
    * Validate that inputs match required variables for a chain
+   *
+   * Only the first DMN's inputs are validated here because in a sequential chain
+   * every subsequent DMN receives its inputs from the accumulated outputs of the
+   * preceding DMNs. Providing all intermediate variables up-front is therefore
+   * not required — they are produced at runtime.
    */
   validateChainInputs(
     dmns: DmnModel[],
-    inputs: Record<string, unknown> // ✅ Changed from any
+    inputs: Record<string, unknown>
   ): { valid: boolean; missingInputs: string[]; errors: string[] } {
     const errors: string[] = [];
     const requiredInputs = new Set<string>();
 
-    // Collect all required inputs from the first DMN
-    // (subsequent DMNs get their inputs from previous outputs)
+    // Collect required inputs from the first DMN only.
+    // Subsequent DMNs receive their inputs from the accumulated outputs of
+    // earlier steps, so they do not need to be pre-supplied by the caller.
     if (dmns.length > 0) {
       const firstDmn = dmns[0];
       firstDmn.inputs.forEach((input) => {

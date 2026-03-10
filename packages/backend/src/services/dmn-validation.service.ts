@@ -115,9 +115,17 @@ const BWB_ID_RE = /^[A-Z]{4}\d{7}$/;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// libxmljs2 does not ship TypeScript type declarations; we use `any` here so
+// callers can use the full libxmljs2 Element API without constant type assertions.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type XmlElement = any; // libxmljs2 Element — typed via runtime import
+type XmlElement = any;
 
+/**
+ * Shorthand factory for ValidationIssue objects.
+ * Named "iss" (short for "issue") to keep the dense layer-validation functions readable.
+ * Optional fields are only included in the returned object when they carry a value,
+ * so the JSON response stays compact.
+ */
 function iss(
   severity: ValidationIssue['severity'],
   code: string,
@@ -136,6 +144,12 @@ function iss(
   };
 }
 
+/**
+ * Build a human-readable location string for a libxmljs2 element.
+ * Named "elLoc" (short for "element location") and used as the `location` field
+ * in validation issues so developers can pinpoint the offending element in the XML.
+ * Falls back gracefully if the element is malformed or libxmljs2 throws.
+ */
 function elLoc(el: XmlElement): string {
   try {
     const id = el.attr('id')?.value();
