@@ -1,6 +1,29 @@
 {
   "versions": [
     {
+      "version": "1.1.1",
+      "status": "Enhancement",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "March 10, 2026",
+      "sections": [
+        {
+          "title": "Import from File",
+          "icon": "📥",
+          "iconColor": "blue",
+          "items": [
+            "Import .bpmn files directly into the BPMN Modeler via the Upload button in the process list header",
+            "Import .form files directly into the Form Editor via the Upload button in the form list header",
+            "Import .document files directly into the Document Composer via the Upload button in the document list header",
+            "Imported BPMN processes derive their name from the process element's name attribute in the XML, falling back to the filename",
+            "Imported forms derive their name from the schema id field, falling back to the filename",
+            "Imported documents receive a fresh id and timestamps on import to avoid collisions with existing templates",
+            "All imported items open immediately in their respective editor and are persisted to localStorage"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.1.0",
       "status": "New Feature",
       "statusColor": "purple",

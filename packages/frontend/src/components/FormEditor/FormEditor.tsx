@@ -92,6 +92,20 @@ const FormEditor: React.FC = () => {
     setActiveFormId(newForm.id);
   };
 
+  const handleImportForm = (schema: Record<string, unknown>, name: string) => {
+    const newForm: FormSchema = {
+      id: `form_${Date.now()}`,
+      name,
+      schema,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'wip',
+    };
+    FormService.saveForm(newForm);
+    setForms(FormService.getForms());
+    setActiveFormId(newForm.id);
+  };
+
   const handleLoadForm = (formId: string) => {
     const form = FormService.getForm(formId);
     if (form) setActiveFormId(form.id);
@@ -135,6 +149,7 @@ const FormEditor: React.FC = () => {
         forms={forms}
         activeFormId={activeFormId}
         onCreateForm={handleCreateForm}
+        onImportForm={handleImportForm}
         onLoadForm={handleLoadForm}
         onDeleteForm={handleDeleteForm}
         onUpdateFormName={handleUpdateFormName}

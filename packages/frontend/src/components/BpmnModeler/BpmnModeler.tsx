@@ -118,6 +118,21 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     setCurrentXml(newProcess.xml);
   };
 
+  const handleImportProcess = (xml: string, name: string) => {
+    const newProcess: BpmnProcess = {
+      id: `process_${Date.now()}`,
+      name,
+      xml,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      linkedDmnTemplates: [],
+    };
+    BpmnService.saveProcess(newProcess);
+    setProcesses(BpmnService.getProcesses());
+    setActiveProcessId(newProcess.id);
+    setCurrentXml(xml);
+  };
+
   const handleLoadProcess = (processId: string) => {
     const process = BpmnService.getProcess(processId);
     if (process) {
@@ -171,6 +186,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         processes={processes}
         activeProcessId={activeProcessId}
         onCreateProcess={handleCreateProcess}
+        onImportProcess={handleImportProcess}
         onLoadProcess={handleLoadProcess}
         onDeleteProcess={handleDeleteProcess}
         onUpdateProcessName={handleUpdateProcessName}
