@@ -33,10 +33,8 @@ const DocumentList: React.FC<DocumentListProps> = ({
     reader.onload = (ev) => {
       try {
         const template = JSON.parse(ev.target?.result as string) as DocumentTemplate;
-        // Give it a fresh id and timestamps so it doesn't collide with the original
         onImportTemplate({
           ...template,
-          id: `doc_${Date.now()}`,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           readonly: false,

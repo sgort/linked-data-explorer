@@ -126,6 +126,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       linkedDmnTemplates: [],
+      status: 'wip',
     };
     BpmnService.saveProcess(newProcess);
     setProcesses(BpmnService.getProcesses());
