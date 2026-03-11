@@ -1,0 +1,483 @@
+{
+  "id": "hr-it-handover",
+  "name": "HR Onboarding — IT Accountaanvraag",
+  "description": "Interne overdracht aan IT voor aanmaken gebruikersaccount na goedgekeurde onboarding",
+  "processKey": "HrOnboardingProcess",
+  "serviceId": "HrOnboarding",
+  "schemaVersion": 1,
+  "readonly": true,
+  "status": "active",
+  "createdAt": "2026-03-11T00:00:00.000Z",
+  "updatedAt": "2026-03-11T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{employeeId}}",
+      "variableKey": "employeeId",
+      "source": "process",
+      "label": "Medewerker-ID"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{firstName}}",
+      "variableKey": "firstName",
+      "source": "process",
+      "label": "Voornaam"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{lastName}}",
+      "variableKey": "lastName",
+      "source": "process",
+      "label": "Achternaam"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{municipality}}",
+      "variableKey": "municipality",
+      "source": "process",
+      "label": "Gemeente"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{department}}",
+      "variableKey": "department",
+      "source": "process",
+      "label": "Afdeling"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{jobFunction}}",
+      "variableKey": "jobFunction",
+      "source": "process",
+      "label": "Functie"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{assignedRoles}}",
+      "variableKey": "assignedRoles",
+      "source": "dmn_output",
+      "label": "Toegewezen rollen"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{candidateGroups}}",
+      "variableKey": "candidateGroups",
+      "source": "dmn_output",
+      "label": "Taakgroepen"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{accessLevel}}",
+      "variableKey": "accessLevel",
+      "source": "dmn_output",
+      "label": "Toegangsniveau"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{startDate}}",
+      "variableKey": "startDate",
+      "source": "process",
+      "label": "Startdatum"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh_org_name",
+          "type": "text",
+          "label": "Organisatienaam",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": { "level": 1 },
+                "content": [
+                  { "type": "text", "text": "RONL — Regels Overheid Nederland" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Afdeling HR — Interne overdracht aan IT",
+                    "marks": [{ "type": "italic" }]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "lh_separator",
+          "type": "separator",
+          "label": "Scheidingslijn"
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": [
+        {
+          "id": "ci_address",
+          "type": "text",
+          "label": "Contactgegevens HR",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "Afdeling Personeelszaken" }]
+              },
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "Gemeente {{municipality}}" }]
+              },
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "E-mail: hr@open-regels.nl" }]
+              },
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "Verwerking via: RONL portaal" }]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref_header",
+          "type": "text",
+          "label": "Kenmerk en datum",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "Medewerker-ID: {{employeeId}}" }]
+              },
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "Startdatum: {{startDate}}" }]
+              },
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "Betreft: Accountaanvraag nieuwe medewerker" }]
+              }
+            ]
+          }
+        },
+        {
+          "id": "ref_addressee",
+          "type": "text",
+          "label": "Geachte",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "Geachte collega van de IT-afdeling," }]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "body_intro",
+          "type": "text",
+          "label": "Inleiding",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "De HR-afdeling verzoekt u een gebruikersaccount aan te maken voor onderstaande nieuwe medewerker. De onboarding is afgerond en goedgekeurd. De medewerker dient toegang te krijgen conform de onderstaande specificaties."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_employee_heading",
+          "type": "text",
+          "label": "Medewerkergegevens",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": { "level": 2 },
+                "content": [{ "type": "text", "text": "Medewerkergegevens" }]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_employee_details",
+          "type": "text",
+          "label": "Persoonsgegevens",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Naam: ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "{{firstName}} {{lastName}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Medewerker-ID: ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "{{employeeId}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Gemeente: ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "{{municipality}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Afdeling: ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "{{department}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Functie: ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "{{jobFunction}}" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_access_heading",
+          "type": "text",
+          "label": "Toegangsspecificaties",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": { "level": 2 },
+                "content": [{ "type": "text", "text": "Toegangsspecificaties" }]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_access_details",
+          "type": "text",
+          "label": "Rollen en toegangsniveau",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Toegangsniveau: ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "{{accessLevel}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Realm rollen (Keycloak): ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "{{assignedRoles}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Taakgroepen (Operaton): ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "{{candidateGroups}}" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_instructions_heading",
+          "type": "text",
+          "label": "Instructies",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": { "level": 2 },
+                "content": [{ "type": "text", "text": "Handelingsinstructies" }]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_instructions",
+          "type": "text",
+          "label": "Stappen voor IT",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "1. Maak een gebruikersaccount aan in Keycloak realm ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "ronl" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "   — Gebruikersnaam: conform naamgevingsconventie [voornaam].[achternaam]-[gemeente]" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "   — User attribute ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "municipality", "marks": [{ "type": "italic" }] },
+                  { "type": "text", "text": " instellen op: {{municipality}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "   — User attribute ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "employee_id", "marks": [{ "type": "italic" }] },
+                  { "type": "text", "text": " instellen op: {{employeeId}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "   — User attribute ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "assurance_level", "marks": [{ "type": "italic" }] },
+                  { "type": "text", "text": " instellen op: hoog" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "2. Ken de volgende realm rollen toe: ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "{{assignedRoles}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "3. Stel een tijdelijk wachtwoord in en zet ", "marks": [{ "type": "bold" }] },
+                  { "type": "text", "text": "Temporary", "marks": [{ "type": "italic" }] },
+                  { "type": "text", "text": " op aan zodat de medewerker dit bij eerste inlog wijzigt." }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "4. Bevestig aanmaak aan HR via hr@open-regels.nl met vermelding van medewerker-ID {{employeeId}}.", "marks": [{ "type": "bold" }] }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": [
+        {
+          "id": "cl_deadline",
+          "type": "text",
+          "label": "Termijn",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Wij verzoeken u het account uiterlijk één werkdag vóór de startdatum ({{startDate}}) aan te maken zodat de medewerker op de eerste werkdag direct toegang heeft."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so_closing",
+          "type": "text",
+          "label": "Afsluiting",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "Met vriendelijke groet," }]
+              }
+            ]
+          }
+        },
+        {
+          "id": "so_spacer",
+          "type": "spacer",
+          "label": "Ruimte handtekening"
+        },
+        {
+          "id": "so_name",
+          "type": "text",
+          "label": "Naam en functie",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Namens de afdeling HR," }
+                ]
+              },
+              {
+                "type": "paragraph"
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "HR-medewerker Onboarding", "marks": [{ "type": "bold" }] }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Gemeente {{municipality}}" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "annex": null
+  }
+}
