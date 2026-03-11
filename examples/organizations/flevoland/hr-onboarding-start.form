@@ -46,6 +46,7 @@
       "id": "Field_Municipality",
       "type": "select",
       "label": "Municipality",
+      "defaultValue": "Flevoland",
       "key": "municipality",
       "validate": {
         "required": true
@@ -54,7 +55,9 @@
         { "label": "Den Haag", "value": "denhaag" },
         { "label": "Utrecht", "value": "utrecht" },
         { "label": "Amsterdam", "value": "amsterdam" },
-        { "label": "Rotterdam", "value": "rotterdam" }
+        { "label": "Rotterdam", "value": "rotterdam" },
+        { "label": "Flevoland", "value": "flevoland" },
+        { "label": "Lelystad", "value": "lelystad" }
       ]
     },
     {

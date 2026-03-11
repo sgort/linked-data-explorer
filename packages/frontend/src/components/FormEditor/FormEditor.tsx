@@ -158,6 +158,7 @@ const FormEditor: React.FC = () => {
       <div className="flex-1 flex flex-col border-x border-slate-200">
         {activeForm ? (
           <FormCanvas
+            key={activeFormId}
             schema={activeForm.schema}
             onSave={handleSaveForm}
             onClose={handleCloseForm}

@@ -5,10 +5,10 @@
   "processKey": "HrOnboardingProcess",
   "serviceId": "HrOnboarding",
   "schemaVersion": 1,
-  "readonly": true,
-  "status": "active",
-  "createdAt": "2026-03-11T00:00:00.000Z",
-  "updatedAt": "2026-03-11T00:00:00.000Z",
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-03-11T19:50:30.649Z",
+  "updatedAt": "2026-03-11T19:53:26.814Z",
   "assets": [],
   "bindings": [
     {
@@ -80,6 +80,12 @@
       "variableKey": "startDate",
       "source": "process",
       "label": "Startdatum"
+    },
+    {
+      "placeholder": "{{organisationType}}",
+      "variableKey": "organisationType",
+      "source": "process",
+      "id": "b_1773258697914"
     }
   ],
   "zones": {
@@ -94,9 +100,14 @@
             "content": [
               {
                 "type": "heading",
-                "attrs": { "level": 1 },
+                "attrs": {
+                  "level": 1
+                },
                 "content": [
-                  { "type": "text", "text": "RONL — Regels Overheid Nederland" }
+                  {
+                    "type": "text",
+                    "text": "Provincie Flevoland"
+                  }
                 ]
               },
               {
@@ -104,8 +115,12 @@
                 "content": [
                   {
                     "type": "text",
-                    "text": "Afdeling HR — Interne overdracht aan IT",
-                    "marks": [{ "type": "italic" }]
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ],
+                    "text": "Afdeling HR — Interne overdracht aan IT"
                   }
                 ]
               }
@@ -113,9 +128,9 @@
           }
         },
         {
-          "id": "lh_separator",
+          "id": "blk_1773258800246_muf4j",
           "type": "separator",
-          "label": "Scheidingslijn"
+          "label": "Separator"
         }
       ]
     },
@@ -130,19 +145,39 @@
             "content": [
               {
                 "type": "paragraph",
-                "content": [{ "type": "text", "text": "Afdeling Personeelszaken" }]
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Afdeling Personeelszaken"
+                  }
+                ]
               },
               {
                 "type": "paragraph",
-                "content": [{ "type": "text", "text": "Gemeente {{municipality}}" }]
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Provincie {{municipality}}"
+                  }
+                ]
               },
               {
                 "type": "paragraph",
-                "content": [{ "type": "text", "text": "E-mail: hr@open-regels.nl" }]
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "E-mail: hr@flevoland.nl"
+                  }
+                ]
               },
               {
                 "type": "paragraph",
-                "content": [{ "type": "text", "text": "Verwerking via: RONL portaal" }]
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Verwerking via: IOU portaal"
+                  }
+                ]
               }
             ]
           }
@@ -160,15 +195,30 @@
             "content": [
               {
                 "type": "paragraph",
-                "content": [{ "type": "text", "text": "Medewerker-ID: {{employeeId}}" }]
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Medewerker-ID: {{employeeId}}"
+                  }
+                ]
               },
               {
                 "type": "paragraph",
-                "content": [{ "type": "text", "text": "Startdatum: {{startDate}}" }]
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Startdatum: {{startDate}}"
+                  }
+                ]
               },
               {
                 "type": "paragraph",
-                "content": [{ "type": "text", "text": "Betreft: Accountaanvraag nieuwe medewerker" }]
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Betreft: Accountaanvraag nieuwe medewerker"
+                  }
+                ]
               }
             ]
           }
@@ -182,7 +232,12 @@
             "content": [
               {
                 "type": "paragraph",
-                "content": [{ "type": "text", "text": "Geachte collega van de IT-afdeling," }]
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Geachte collega van de IT-afdeling,"
+                  }
+                ]
               }
             ]
           }
@@ -219,8 +274,15 @@
             "content": [
               {
                 "type": "heading",
-                "attrs": { "level": 2 },
-                "content": [{ "type": "text", "text": "Medewerkergegevens" }]
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Medewerkergegevens"
+                  }
+                ]
               }
             ]
           }
@@ -235,36 +297,91 @@
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "Naam: ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "{{firstName}} {{lastName}}" }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Naam: "
+                  },
+                  {
+                    "type": "text",
+                    "text": "{{firstName}} {{lastName}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "Medewerker-ID: ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "{{employeeId}}" }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Medewerker-ID: "
+                  },
+                  {
+                    "type": "text",
+                    "text": "{{employeeId}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "Gemeente: ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "{{municipality}}" }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Provincie: "
+                  },
+                  {
+                    "type": "text",
+                    "text": "{{municipality}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "Afdeling: ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "{{department}}" }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Afdeling: "
+                  },
+                  {
+                    "type": "text",
+                    "text": "{{department}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "Functie: ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "{{jobFunction}}" }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Functie: "
+                  },
+                  {
+                    "type": "text",
+                    "text": "{{jobFunction}}"
+                  }
                 ]
               }
             ]
@@ -279,8 +396,15 @@
             "content": [
               {
                 "type": "heading",
-                "attrs": { "level": 2 },
-                "content": [{ "type": "text", "text": "Toegangsspecificaties" }]
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Toegangsspecificaties"
+                  }
+                ]
               }
             ]
           }
@@ -295,22 +419,55 @@
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "Toegangsniveau: ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "{{accessLevel}}" }
+                  {
+                    "type": "text",
+                    "text": "Toegangsniveau: ",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": "{{accessLevel}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "Realm rollen (Keycloak): ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "{{assignedRoles}}" }
+                  {
+                    "type": "text",
+                    "text": "Realm rollen (Keycloak): ",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": "{{assignedRoles}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "Taakgroepen (Operaton): ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "{{candidateGroups}}" }
+                  {
+                    "type": "text",
+                    "text": "Taakgroepen (Operaton): ",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": "{{candidateGroups}}"
+                  }
                 ]
               }
             ]
@@ -325,8 +482,15 @@
             "content": [
               {
                 "type": "heading",
-                "attrs": { "level": 2 },
-                "content": [{ "type": "text", "text": "Handelingsinstructies" }]
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Handelingsinstructies"
+                  }
+                ]
               }
             ]
           }
@@ -341,59 +505,195 @@
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "1. Maak een gebruikersaccount aan in Keycloak realm ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "ronl" }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "1. Maak een gebruikersaccount aan in Keycloak realm "
+                  },
+                  {
+                    "type": "text",
+                    "text": "ronl"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "   — Gebruikersnaam: conform naamgevingsconventie [voornaam].[achternaam]-[gemeente]" }
+                  {
+                    "type": "text",
+                    "text": "   — Gebruikersnaam: conform naamgevingsconventie {{firstName}}.{{lastName}}-{{municipality}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "   — User attribute ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "municipality", "marks": [{ "type": "italic" }] },
-                  { "type": "text", "text": " instellen op: {{municipality}}" }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "   — User attribute "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ],
+                    "text": "municipality"
+                  },
+                  {
+                    "type": "text",
+                    "text": " instellen op: {{municipality}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "   — User attribute ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "employee_id", "marks": [{ "type": "italic" }] },
-                  { "type": "text", "text": " instellen op: {{employeeId}}" }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "   — User attribute "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ],
+                    "text": "employee_id"
+                  },
+                  {
+                    "type": "text",
+                    "text": " instellen op: {{employeeId}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "   — User attribute ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "assurance_level", "marks": [{ "type": "italic" }] },
-                  { "type": "text", "text": " instellen op: hoog" }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "   — User attribute "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ],
+                    "text": "assurance_level"
+                  },
+                  {
+                    "type": "text",
+                    "text": " instellen op: hoog"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "2. Ken de volgende realm rollen toe: ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "{{assignedRoles}}" }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "   — User attribute "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ],
+                    "text": "organisation_type"
+                  },
+                  {
+                    "type": "text",
+                    "text": " instellen op: {{organisationType}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "3. Stel een tijdelijk wachtwoord in en zet ", "marks": [{ "type": "bold" }] },
-                  { "type": "text", "text": "Temporary", "marks": [{ "type": "italic" }] },
-                  { "type": "text", "text": " op aan zodat de medewerker dit bij eerste inlog wijzigt." }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "2. Ken de volgende realm rollen toe: "
+                  },
+                  {
+                    "type": "text",
+                    "text": "{{assignedRoles}}"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "4. Bevestig aanmaak aan HR via hr@open-regels.nl met vermelding van medewerker-ID {{employeeId}}.", "marks": [{ "type": "bold" }] }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "3. Stel een tijdelijk wachtwoord in en zet "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ],
+                    "text": "Temporary"
+                  },
+                  {
+                    "type": "text",
+                    "text": " op aan zodat de medewerker dit bij eerste inlog wijzigt."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "4. Bevestig aanmaak aan HR via hr@flevoland.nl met vermelding van medewerker-ID {{employeeId}}."
+                  }
                 ]
               }
             ]
@@ -435,7 +735,12 @@
             "content": [
               {
                 "type": "paragraph",
-                "content": [{ "type": "text", "text": "Met vriendelijke groet," }]
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Met vriendelijke groet,"
+                  }
+                ]
               }
             ]
           }
@@ -455,7 +760,10 @@
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "Namens de afdeling HR," }
+                  {
+                    "type": "text",
+                    "text": "Namens de afdeling HR,"
+                  }
                 ]
               },
               {
@@ -464,13 +772,24 @@
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "HR-medewerker Onboarding", "marks": [{ "type": "bold" }] }
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "HR-medewerker Onboarding"
+                  }
                 ]
               },
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "Gemeente {{municipality}}" }
+                  {
+                    "type": "text",
+                    "text": "Provincie {{municipality}}"
+                  }
                 ]
               }
             ]

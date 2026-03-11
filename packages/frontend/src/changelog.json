@@ -1,6 +1,33 @@
 {
   "versions": [
     {
+      "version": "1.1.2",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "March 11, 2026",
+      "sections": [
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "red",
+          "items": [
+            "Form Editor — Save now correctly persists the current schema; previously the destructured return value of saveSchema() was undefined (form-js 1.20.x returns the schema object directly, not wrapped in { schema }), which caused undefined to be written to localStorage and the active form to disappear on the next render",
+            "Form Editor — Export .form now correctly writes the full schema to the downloaded file for the same reason",
+            "Form Editor — Vite dedupe config added for preact/preact/hooks/preact/compat to prevent duplicate Preact instances when npm resolves bpmn-io packages; fixes TypeError: Cannot read properties of undefined (reading 'context') that broke the form canvas after package updates"
+          ]
+        },
+        {
+          "title": "Known Issues",
+          "icon": "⚠️",
+          "iconColor": "yellow",
+          "items": [
+            "Form Editor — Typing in a properties panel field (e.g. label, key) loses focus after the first character; this is caused by Preact re-rendering the properties panel internally on every change event inside form-js 1.20.x and is an upstream issue to be resolved in a future release"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.1.1",
       "status": "Enhancement",
       "statusColor": "blue",
