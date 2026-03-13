@@ -1,6 +1,51 @@
 {
   "versions": [
     {
+      "version": "1.2.0",
+      "status": "New Feature",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "March 13, 2026",
+      "sections": [
+        {
+          "title": "RIP Phase 1 Process Bundle",
+          "icon": "🏗️",
+          "iconColor": "purple",
+          "items": [
+            "New deployment bundle for the Regular Infrastructure Projects (RIP) Phase 1 workflow — Project Definition & Preliminary Design Preparation",
+            "BPMN process covering the full Phase 1 scope: intake form, intake meeting, intake report, PSU organisation, PSU execution, PSU report, risk file, preliminary design principles, and two approval gateways",
+            "RipProjectTypeAssignment DMN determines candidateGroups and assignedRoles from projectType and department; designed for granular RBAC extension without BPMN changes",
+            "Seven forms: rip-intake, rip-intake-meeting, rip-intake-report, rip-psu-organize, rip-psu-execution, rip-risk-file, and a reusable rip-approval form shared by both approval gateways",
+            "Three document templates bound to process variables: intake report (column 2), PSU report (column 3), and preliminary design principles (column 4)",
+            "Bundle deployed to examples/organizations/flevoland/rip-phase1/ alongside the existing Flevoland HR onboarding bundle"
+          ]
+        },
+        {
+          "title": "eDOCS Integration (Stub Mode)",
+          "icon": "📁",
+          "iconColor": "blue",
+          "items": [
+            "New EdocsService wrapping the OpenText eDOCS REST API — connect, ensureWorkspace, uploadDocument, getWorkspaceDocuments, and healthCheck",
+            "Stub mode (EDOCS_STUB_MODE=true, default) returns realistic fake responses and logs all calls; transparent to BPMN and routes so the full process can run end-to-end before a live eDOCS server is available",
+            "Session token cached after POST /connect; automatically re-authenticated on 401/403",
+            "New ExternalTaskWorker polls Operaton using the external task pattern (fetchAndLock) for two topics: rip-edocs-workspace (creates or retrieves the project workspace) and rip-edocs-document (renders and uploads a document to eDOCS)",
+            "Worker started inside app.listen() and stopped cleanly on SIGTERM/SIGINT",
+            "Four new REST endpoints under /v1/edocs: GET /status, POST /workspaces/ensure, POST /documents, GET /workspaces/:id/documents",
+            "New EDOCS_BASE_URL, EDOCS_LIBRARY, EDOCS_USER_ID, EDOCS_PASSWORD, and EDOCS_STUB_MODE environment variables"
+          ]
+        },
+        {
+          "title": "DMN Validator — Interaction Rules",
+          "icon": "🛡️",
+          "iconColor": "indigo",
+          "items": [
+            "INT-005 (orphaned inputData) now only fires in DRDs — models with more than one decision or at least one informationRequirement element; single-decision standalone DMNs no longer produce false-positive warnings for their inputData contract declarations",
+            "New INT-007 warning: inputExpression variable has no matching top-level inputData declaration — catches the missing inputData elements that cause the CPSV Editor to generate an empty request body on deploy"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.1.2",
       "status": "Bug Fixes",
       "statusColor": "blue",
