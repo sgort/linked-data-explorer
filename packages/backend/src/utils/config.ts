@@ -36,6 +36,14 @@ export const config = {
     apiKey: process.env.OPERATON_API_KEY,
   },
 
+    edocs: {
+    baseUrl:  process.env.EDOCS_BASE_URL  || '',
+    library:  process.env.EDOCS_LIBRARY   || '',
+    userId:   process.env.EDOCS_USER_ID   || '',
+    password: process.env.EDOCS_PASSWORD  || '',
+    stubMode: process.env.EDOCS_STUB_MODE !== 'false',  // defaults to true for safety
+  },
+
   logging: {
     level: process.env.LOG_LEVEL || 'info',
     format: process.env.LOG_FORMAT || 'json',
@@ -54,6 +62,7 @@ export const config = {
 
 /**
  * Validate required configuration values
+ * add 'edocs.baseUrl' to the required array in validateConfig only when !stubMode
  */
 const validateConfig = () => {
   const required = ['triplydb.endpoint', 'operaton.baseUrl'];

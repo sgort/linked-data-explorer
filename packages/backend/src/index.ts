@@ -7,6 +7,7 @@ import logger from './utils/logger';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { versionMiddleware } from './middleware/version.middleware';
+import { externalTaskWorker } from './services/externalTaskWorker.service';
 import packageJson from '../package.json';
 
 const app: Express = express();
@@ -120,17 +121,21 @@ const startServer = () => {
     logger.info(`API available at: http://${host}:${port}/v1`);
     logger.info(`Health check: http://${host}:${port}/v1/health`);
     logger.info(`Legacy API: http://${host}:${port}/api (deprecated)`);
+
+    externalTaskWorker.start();
   });
 };
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully...');
+  externalTaskWorker.stop();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully...');
+  externalTaskWorker.stop();
   process.exit(0);
 });
 

@@ -720,17 +720,32 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
     }
   }
 
-  // Warn on orphaned inputData
-  for (const [id, el] of inputDataIds) {
-    if (!referencedInputData.has(id)) {
-      issues.push(
-        iss(
-          'warning',
-          'INT-005',
-          `<inputData id="${id}"> is not referenced by any informationRequirement and will be inaccessible to decisions.`,
-          elLoc(el)
-        )
-      );
+  // Warn on orphaned inputData — but only in DRDs.
+  //
+  // In a standalone single-decision DMN, <inputData> elements declare the
+  // input contract for CPSV/publishing purposes without needing
+  // <informationRequirement> wiring. Wiring is only required in a DRD where
+  // decisions reference other decisions or inputData nodes via
+  // informationRequirements. Firing INT-005 on standalone DMNs produces
+  // false positives on every well-formed RONL DMN (e.g. EmployeeRoleAssignment).
+  //
+  // A DMN is treated as a DRD when it has more than one <decision> element OR
+  // has at least one <informationRequirement> element anywhere in the document.
+  const isDrd =
+    decisionIds.size > 1 || find(doc, '//d:informationRequirement').length > 0;
+ 
+  if (isDrd) {
+    for (const [id, el] of inputDataIds) {
+      if (!referencedInputData.has(id)) {
+        issues.push(
+          iss(
+            'warning',
+            'INT-005',
+            `<inputData id="${id}"> is not referenced by any informationRequirement and will be inaccessible to decisions.`,
+            elLoc(el)
+          )
+        );
+      }
     }
   }
 
@@ -752,7 +767,47 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
       }
     }
   }
-
+ 
+  // INT-007: inputExpression variable with no matching <inputData> declaration.
+  //
+  // Each <inputExpression> whose text is a variable reference should have a
+  // corresponding top-level <inputData name="..."><variable .../></inputData>
+  // element. Without it the CPSV Editor cannot discover the input contract and
+  // will generate an empty request body on deploy.
+  //
+  // Skipped inputs:
+  //   - empty text (no variable)
+  //   - literal booleans ("true" / "false") — used as passthrough inputs in DRDs
+  //   - numeric or quoted-string literals — e.g. "0", "1.5", "'foo'" — these are
+  //     hardcoded values, not variable references, and need no inputData element
+  const inputDataNames = new Set<string>();
+  for (const el of find(doc, '//d:inputData')) {
+    const name = el.attr('name')?.value();
+    if (name) inputDataNames.add(name);
+  }
+ 
+  for (const ie of find(doc, '//d:inputExpression')) {
+    const textEl = get(ie, 'd:text');
+    const varName = textEl?.text()?.trim() ?? '';
+ 
+    if (!varName) continue;
+    if (/^(true|false)$/.test(varName)) continue;
+    if (/^[0-9"']/.test(varName)) continue;
+ 
+    if (!inputDataNames.has(varName)) {
+      const decision = get(ie, 'ancestor::d:decision');
+      issues.push(
+        iss(
+          'warning',
+          'INT-007',
+          `<inputExpression> uses variable "${varName}" but no <inputData name="${varName}"> is declared at the definitions level. ` +
+            `Add a matching <inputData> element with a <variable> child for CPSV Editor compatibility.`,
+          decision ? elLoc(decision) : undefined
+        )
+      );
+    }
+  }
+ 
   return { label: 'Interaction Rules', issues };
 }
 
