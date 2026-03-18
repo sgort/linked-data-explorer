@@ -25,18 +25,19 @@
       "description": "Granted or Rejected — as evaluated by resultaat_zorgtoeslag."
     },
     {
-      "id": "Field_EstimatedIncome",
+      "id": "Field_ProvisionalAmount",
       "type": "number",
-      "label": "estimatedIncome (current-year estimate)",
-      "key": "estimatedIncome",
+      "label": "Monthly amount (provisionalAmount, EUR)",
+      "key": "provisionalAmount",
       "readonly": true,
-      "disabled": true
+      "disabled": true,
+      "description": "Monthly entitlement derived from the annual DMN output (amountYear ÷ 12)."
     },
     {
-      "id": "Field_HouseholdSize",
+      "id": "Field_AmountYear",
       "type": "number",
-      "label": "householdSize",
-      "key": "householdSize",
+      "label": "Annual amount (amountYear, EUR)",
+      "key": "amountYear",
       "readonly": true,
       "disabled": true
     },

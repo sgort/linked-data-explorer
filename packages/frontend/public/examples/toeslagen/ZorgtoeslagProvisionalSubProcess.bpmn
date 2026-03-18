@@ -7,29 +7,33 @@
     <bpmn:scriptTask id="Sub_ValidateApplication" name="Validate application data" scriptFormat="javascript">
       <bpmn:incoming>Flow_Sub_Start_Validate</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Validate_Retrieve</bpmn:outgoing>
-      <bpmn:script>
-        // Stub — in production this calls the Belastingdienst / RvIG identity API.
+      <bpmn:script><![CDATA[
+        // Stub validation — in production: call RvIG identity API.
         execution.setVariable("applicationValid", true);
         execution.setVariable("validationMessage", "Application validated (stub).");
         execution.setVariable("validationTimestamp", new Date().toISOString());
-      </bpmn:script>
+      ]]></bpmn:script>
     </bpmn:scriptTask>
     <bpmn:scriptTask id="Sub_RetrieveData" name="Retrieve income and household data" scriptFormat="javascript">
       <bpmn:incoming>Flow_Sub_Validate_Retrieve</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Retrieve_Calc</bpmn:outgoing>
-      <bpmn:script>
-        // Stub — in production this calls the Belastingdienst income/household API.
-        // Values below represent a single-person household on modal income (2026).
-        execution.setVariable("estimatedIncome", 28000.0);
-        execution.setVariable("householdSize", 1);
-        execution.setVariable("partnerIncome", 0.0);
+      <bpmn:script><![CDATA[
+        // Coerce types that the zorgtoeslag DRD is strict about.
+        // form-js submits number fields as Integer when no decimal is entered;
+        // the DRD expects Double for income/factor and null (absent) for overlijdensdatum.
+        var income = execution.getVariable("toetsingsinkomen");
+        if (income != null) execution.setVariable("toetsingsinkomen", income * 1.0);
+
+        var factor = execution.getVariable("woonlandfactorBuitenland");
+        if (factor != null) execution.setVariable("woonlandfactorBuitenland", factor * 1.0);
+
+        // Treat empty string overlijdensdatum as absent (null cannot be set directly).
+        var od = execution.getVariable("overlijdensdatum");
+        if (od != null && String(od).trim() === "") execution.removeVariable("overlijdensdatum");
+
         execution.setVariable("dataRetrievalTimestamp", new Date().toISOString());
         execution.setVariable("dataSource", "stub");
-        // DMN input variables (zorgtoeslag_resultaat reads i_elig and i_amt directly).
-        // In production these are derived from the Belastingdienst response.
-        execution.setVariable("i_elig", true);
-        execution.setVariable("i_amt", 1100);
-      </bpmn:script>
+      ]]></bpmn:script>
     </bpmn:scriptTask>
     <bpmn:businessRuleTask id="Sub_CalcProvisional" name="Calculate provisional entitlement (Wzt)" camunda:resultVariable="provisionalResult" camunda:decisionRef="zorgtoeslag_resultaat" camunda:mapDecisionResult="singleResult">
       <bpmn:incoming>Flow_Sub_Retrieve_Calc</bpmn:incoming>
@@ -41,10 +45,12 @@
       <bpmn:script>
         var result = execution.getVariable("provisionalResult");
         var eligible = result.get("eligible");
-        execution.setVariable("provisionalDecision", eligible == true ? "Granted" : "Rejected");
         var amountYear = result.get("amountYear");
+        execution.setVariable("provisionalDecision", eligible == true ? "Granted" : "Rejected");
         execution.setVariable("provisionalAmount",
           amountYear != null ? (Number(amountYear) / 12.0) : 0.0);
+        execution.setVariable("eligible", eligible);
+        execution.setVariable("amountYear", amountYear != null ? Number(amountYear) : 0);
       </bpmn:script>
     </bpmn:scriptTask>
     <bpmn:userTask id="Sub_CaseReview" name="Case review: provisional entitlement decision" camunda:formRef="zorgtoeslag-provisional-review" camunda:formRefBinding="latest" camunda:candidateGroups="case-workers">
