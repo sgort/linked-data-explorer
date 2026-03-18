@@ -95,10 +95,20 @@ router.post('/documents', async (req: Request, res: Response) => {
     workspaceId?: string;
     filename?: string;
     contentBase64?: string;
-    metadata?: { docName?: string; appId?: string; formName?: string; extra?: Record<string, string> };
+    metadata?: {
+      docName?: string;
+      appId?: string;
+      formName?: string;
+      extra?: Record<string, string>;
+    };
   };
 
-  if (!workspaceId?.trim() || !filename?.trim() || !contentBase64?.trim() || !metadata?.docName?.trim()) {
+  if (
+    !workspaceId?.trim() ||
+    !filename?.trim() ||
+    !contentBase64?.trim() ||
+    !metadata?.docName?.trim()
+  ) {
     return res.status(400).json({
       success: false,
       error: {

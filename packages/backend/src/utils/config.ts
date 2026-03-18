@@ -36,12 +36,12 @@ export const config = {
     apiKey: process.env.OPERATON_API_KEY,
   },
 
-    edocs: {
-    baseUrl:  process.env.EDOCS_BASE_URL  || '',
-    library:  process.env.EDOCS_LIBRARY   || '',
-    userId:   process.env.EDOCS_USER_ID   || '',
-    password: process.env.EDOCS_PASSWORD  || '',
-    stubMode: process.env.EDOCS_STUB_MODE !== 'false',  // defaults to true for safety
+  edocs: {
+    baseUrl: process.env.EDOCS_BASE_URL || '',
+    library: process.env.EDOCS_LIBRARY || '',
+    userId: process.env.EDOCS_USER_ID || '',
+    password: process.env.EDOCS_PASSWORD || '',
+    stubMode: process.env.EDOCS_STUB_MODE !== 'false', // defaults to true for safety
   },
 
   logging: {

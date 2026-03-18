@@ -731,9 +731,8 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
   //
   // A DMN is treated as a DRD when it has more than one <decision> element OR
   // has at least one <informationRequirement> element anywhere in the document.
-  const isDrd =
-    decisionIds.size > 1 || find(doc, '//d:informationRequirement').length > 0;
- 
+  const isDrd = decisionIds.size > 1 || find(doc, '//d:informationRequirement').length > 0;
+
   if (isDrd) {
     for (const [id, el] of inputDataIds) {
       if (!referencedInputData.has(id)) {
@@ -767,7 +766,7 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
       }
     }
   }
- 
+
   // INT-007: inputExpression variable with no matching <inputData> declaration.
   //
   // Each <inputExpression> whose text is a variable reference should have a
@@ -785,15 +784,15 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
     const name = el.attr('name')?.value();
     if (name) inputDataNames.add(name);
   }
- 
+
   for (const ie of find(doc, '//d:inputExpression')) {
     const textEl = get(ie, 'd:text');
     const varName = textEl?.text()?.trim() ?? '';
- 
+
     if (!varName) continue;
     if (/^(true|false)$/.test(varName)) continue;
     if (/^[0-9"']/.test(varName)) continue;
- 
+
     if (!inputDataNames.has(varName)) {
       const decision = get(ie, 'ancestor::d:decision');
       issues.push(
@@ -807,7 +806,7 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
       );
     }
   }
- 
+
   return { label: 'Interaction Rules', issues };
 }
 

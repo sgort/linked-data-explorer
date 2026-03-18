@@ -102,7 +102,9 @@ export class EdocsService {
     // The X-DM-DST token is returned as a response header
     const token = response.headers['x-dm-dst'] as string | undefined;
     if (!token) {
-      throw new Error('eDOCS connect() succeeded but X-DM-DST token was absent from response headers');
+      throw new Error(
+        'eDOCS connect() succeeded but X-DM-DST token was absent from response headers'
+      );
     }
 
     this.sessionToken = token;
@@ -301,9 +303,7 @@ export class EdocsService {
   ): Promise<Array<{ id: string; name: string; documentNumber: string }>> {
     if (this.stubMode) {
       logger.info('[EdocsService:stub] getWorkspaceDocuments()', { workspaceId });
-      return [
-        { id: 'stub-doc-1', name: 'Stub document', documentNumber: 'STUB-001' },
-      ];
+      return [{ id: 'stub-doc-1', name: 'Stub document', documentNumber: 'STUB-001' }];
     }
 
     return this.withAuth(async () => {
@@ -324,7 +324,11 @@ export class EdocsService {
 
   // ─── Health ─────────────────────────────────────────────────────────────────
 
-  async healthCheck(): Promise<{ status: 'up' | 'down' | 'stub'; latency?: number; error?: string }> {
+  async healthCheck(): Promise<{
+    status: 'up' | 'down' | 'stub';
+    latency?: number;
+    error?: string;
+  }> {
     if (this.stubMode) {
       return { status: 'stub' };
     }
