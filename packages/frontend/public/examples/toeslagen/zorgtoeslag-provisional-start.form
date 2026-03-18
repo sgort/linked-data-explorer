@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "zorgtoeslag-provisional-start",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Apply for health care allowance (zorgtoeslag)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Use this form to apply for a provisional health care allowance (zorgtoeslag). Your entitlement will be assessed automatically based on your estimated income and household composition, which we retrieve from the Belastingdienst. You will receive a provisional decision and — if granted — monthly payments will start shortly after."
+    },
+    {
+      "id": "Text_Section_Insurance",
+      "type": "text",
+      "text": "### Health insurance"
+    },
+    {
+      "id": "Field_HealthInsurer",
+      "type": "textfield",
+      "label": "Health insurer (zorgverzekeraar)",
+      "key": "healthInsurer",
+      "validate": {
+        "required": true
+      },
+      "description": "The name of your basic health insurance provider (basisverzekering). Examples: Zilveren Kruis · Menzis · CZ · VGZ · DSW."
+    },
+    {
+      "id": "Field_PolicyNumber",
+      "type": "textfield",
+      "label": "Policy number (polisnummer)",
+      "key": "policyNumber",
+      "validate": {
+        "required": false
+      },
+      "description": "Optional. Your policy number as shown on your insurance card or annual statement."
+    },
+    {
+      "id": "Text_Section_Consent",
+      "type": "text",
+      "text": "### Data sharing"
+    },
+    {
+      "id": "Field_DataSharingConsent",
+      "type": "checkbox",
+      "label": "I authorise the Belastingdienst to share my income and household data for this application",
+      "key": "dataSharingConsent",
+      "validate": {
+        "required": true
+      },
+      "description": "Your estimated income and household composition will be retrieved automatically. Without this authorisation your application cannot be processed."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit application",
+      "action": "submit"
+    }
+  ]
+}

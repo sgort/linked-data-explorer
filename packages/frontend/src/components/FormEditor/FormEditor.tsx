@@ -26,6 +26,24 @@ const EXAMPLE_FORMS = [
     description: 'Phase 6 notification form for the AWB Shell process (Awb 3:6)',
     path: '/examples/flevoland/awb-notify-applicant.form',
   },
+  {
+    id: 'example_zorgtoeslag_provisional_start',
+    name: 'Zorgtoeslag Provisional Start (Example)',
+    description: 'Citizen-facing start form for the Zorgtoeslag Provisional Entitlement process',
+    path: '/examples/toeslagen/zorgtoeslag-provisional-start.form',
+  },
+  {
+    id: 'example_zorgtoeslag_provisional_review',
+    name: 'Zorgtoeslag Provisional Review (Example)',
+    description: 'Caseworker review form for the Zorgtoeslag Provisional Entitlement subprocess',
+    path: '/examples/toeslagen/zorgtoeslag-provisional-review.form',
+  },
+  {
+    id: 'example_zorgtoeslag_final_review',
+    name: 'Zorgtoeslag Final Settlement Review (Example)',
+    description: 'Caseworker review form for the Zorgtoeslag Final Settlement subprocess',
+    path: '/examples/toeslagen/zorgtoeslag-final-review.form',
+  },
 ];
 
 const FormEditor: React.FC = () => {
@@ -36,7 +54,7 @@ const FormEditor: React.FC = () => {
 
   /**
    * Seed / refresh versioned example forms on mount.
-   * Re-fetches from public/examples/flevoland/ whenever EXAMPLE_VERSIONS
+   * Re-fetches from public/examples/ whenever EXAMPLE_VERSIONS
    * has been bumped above the version stored in localStorage.
    */
   useEffect(() => {

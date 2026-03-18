@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  id="Definitions_ZorgtoeslagProvisional"
+  targetNamespace="http://example.com/zorgtoeslag"
+  exporter="Camunda Modeler"
+  exporterVersion="5.43.1">
+
+  <!--
+    ZorgtoeslagProvisionalSubProcess
+    ================================
+    Material law layer: provisional entitlement assessment for Zorgtoeslag (Health Care Allowance).
+    Called by the AWB Shell Process (AwbShellProcess) via a Call Activity.
+
+    Inputs  (from AWB parent via camunda:in variables="all"):
+      - applicantId        (String)  : BSN or applicant reference from AWB Phase 1
+      - applicationDate    (String)  : ISO date set by AWB Phase 2
+      - dossierReference   (String)  : dossier number set by AWB Phase 2
+
+    Outputs (to AWB parent via camunda:out variables="all"):
+      - provisionalDecision  (String)  : "Granted" or "Rejected"
+      - provisionalAmount    (Number)  : monthly allowance amount in EUR
+      - decisionType         (String)  : "Granted" or "Rejected" (for Archives DMN)
+      - finalMessage         (String)  : human-readable decision message
+      - paymentRequired      (Boolean) : true → AWB Task_Phase7_Payment initiates monthly payments
+      - chainProcessRequired (Boolean) : true → AWB Task_Phase8_Forward passes to ZorgtoeslagFinalSubProcess
+
+    Caseworker review:
+      Sub_CaseReview is a userTask assigned to candidateGroups="case-workers".
+      The caseworker must claim the task before acting on it.
+      On completion the form submits:
+        - reviewAction              (String) : "confirm" or "change"
+        - reviewEntitlementDecision (String) : "Granted" or "Rejected" (only when reviewAction="change")
+      Sub_ResolveDecision applies the override when reviewAction="change".
+
+    Legal basis: Wet op de zorgtoeslag (Wzt) — material law.
+  -->
+
+  <bpmn:process id="ZorgtoeslagProvisionalSubProcess"
+                name="Zorgtoeslag — Provisional Entitlement Assessment"
+                isExecutable="true"
+                camunda:historyTimeToLive="365">
+
+    <!-- No form on StartEvent — variables come from AWB parent Call Activity -->
+    <bpmn:startEvent id="SubStart" name="Start processing">
+      <bpmn:outgoing>Flow_Sub_Start_Validate</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!--
+      Validate the zorgtoeslag application data against Belastingdienst / RvIG.
+      In production: integrate with the DigiD / RvIG identity verification API.
+    -->
+    <bpmn:serviceTask id="Sub_ValidateApplication" name="Validate application data"
+                      camunda:type="external" camunda:topic="zorgtoeslag-validate-application">
+      <bpmn:incoming>Flow_Sub_Start_Validate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Validate_Retrieve</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!--
+      Retrieve current-year income estimate and household composition from Belastingdienst.
+      Sets: estimatedIncome, householdSize, partnerIncome.
+    -->
+    <bpmn:serviceTask id="Sub_RetrieveData" name="Retrieve income and household data"
+                      camunda:type="external" camunda:topic="zorgtoeslag-retrieve-data">
+      <bpmn:incoming>Flow_Sub_Validate_Retrieve</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Retrieve_Calc</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!--
+      Evaluate provisional entitlement using the Zorgtoeslag DMN.
+      Writes provisionalDecision ("Granted" / "Rejected") and provisionalAmount directly
+      as a singleEntry result variable — same pattern as TreeFellingPermitSubProcess.
+    -->
+    <bpmn:businessRuleTask id="Sub_CalcProvisional"
+                           name="Calculate provisional entitlement (Wzt)"
+                           camunda:decisionRef="resultaat_zorgtoeslag"
+                           camunda:resultVariable="provisionalDecision"
+                           camunda:mapDecisionResult="singleEntry">
+      <bpmn:incoming>Flow_Sub_Retrieve_Calc</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Calc_Review</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+
+    <!--
+      Caseworker reviews DMN outcome before provisional grant is confirmed.
+      No camunda:assignee — task is unassigned on creation.
+      Caseworker must claim via POST /v1/task/:id/claim before completing.
+    -->
+    <bpmn:userTask id="Sub_CaseReview"
+                   name="Case review: provisional entitlement decision"
+                   camunda:formRef="zorgtoeslag-provisional-review"
+                   camunda:formRefBinding="latest"
+                   camunda:candidateGroups="case-workers">
+      <bpmn:incoming>Flow_Sub_Calc_Review</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Review_Resolve</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!--
+      Apply caseworker override if reviewAction="change".
+      If reviewAction="confirm" (or not set), the DMN value is used as-is.
+    -->
+    <bpmn:scriptTask id="Sub_ResolveDecision"
+                     name="Resolve final provisional decision"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Sub_Review_Resolve</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Resolve_Gateway</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        if (execution.hasVariable("reviewAction") &&
+            execution.getVariable("reviewAction") === "change") {
+          if (execution.hasVariable("reviewEntitlementDecision")) {
+            execution.setVariable(
+              "provisionalDecision",
+              execution.getVariable("reviewEntitlementDecision")
+            );
+          }
+        }
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <bpmn:exclusiveGateway id="Sub_FinalGateway" name="Entitlement granted?">
+      <bpmn:incoming>Flow_Sub_Resolve_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Final_Granted</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Sub_Final_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!--
+      Granted: set paymentRequired=true so AWB Task_Phase7_Payment initiates monthly payments.
+      Set chainProcessRequired=true so AWB Task_Phase8_Forward passes the dossier to
+      ZorgtoeslagFinalSubProcess once final income data is available.
+    -->
+    <bpmn:scriptTask id="Sub_SetGranted"
+                     name="Set outcome: provisional grant"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Sub_Final_Granted</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Granted_End</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        execution.setVariable("provisionalDecision", "Granted");
+        execution.setVariable("decisionType", "Granted");
+        execution.setVariable("finalMessage",
+          "Your zorgtoeslag provisional entitlement has been GRANTED. " +
+          "Monthly payments will commence shortly. " +
+          "A final settlement will follow after your annual income is confirmed. " +
+          "You may appeal within 6 weeks (Awb 6:7).");
+        execution.setVariable("paymentRequired", true);      // → AWB Task_Phase7_Payment
+        execution.setVariable("chainProcessRequired", true); // → AWB Task_Phase8_Forward
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <!--
+      Rejected: no payment, no chain forwarding. AWB shell proceeds to archive.
+    -->
+    <bpmn:scriptTask id="Sub_SetRejected"
+                     name="Set outcome: provisional rejection"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Sub_Final_Rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Rejected_End</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        execution.setVariable("provisionalDecision", "Rejected");
+        execution.setVariable("decisionType", "Rejected");
+        execution.setVariable("finalMessage",
+          "Your zorgtoeslag provisional entitlement has been REJECTED. " +
+          "You may appeal within 6 weeks (Awb 6:7).");
+        execution.setVariable("paymentRequired", false);
+        execution.setVariable("chainProcessRequired", false);
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <bpmn:endEvent id="SubEnd" name="Decision ready">
+      <bpmn:incoming>Flow_Sub_Granted_End</bpmn:incoming>
+      <bpmn:incoming>Flow_Sub_Rejected_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_Sub_Start_Validate"   sourceRef="SubStart"               targetRef="Sub_ValidateApplication" />
+    <bpmn:sequenceFlow id="Flow_Sub_Validate_Retrieve" sourceRef="Sub_ValidateApplication" targetRef="Sub_RetrieveData" />
+    <bpmn:sequenceFlow id="Flow_Sub_Retrieve_Calc"    sourceRef="Sub_RetrieveData"        targetRef="Sub_CalcProvisional" />
+    <bpmn:sequenceFlow id="Flow_Sub_Calc_Review"      sourceRef="Sub_CalcProvisional"     targetRef="Sub_CaseReview" />
+    <bpmn:sequenceFlow id="Flow_Sub_Review_Resolve"   sourceRef="Sub_CaseReview"          targetRef="Sub_ResolveDecision" />
+    <bpmn:sequenceFlow id="Flow_Sub_Resolve_Gateway"  sourceRef="Sub_ResolveDecision"     targetRef="Sub_FinalGateway" />
+
+    <bpmn:sequenceFlow id="Flow_Sub_Final_Granted" sourceRef="Sub_FinalGateway" targetRef="Sub_SetGranted">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${provisionalDecision == "Granted"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Sub_Final_Rejected" sourceRef="Sub_FinalGateway" targetRef="Sub_SetRejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${provisionalDecision == "Rejected"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_Sub_Granted_End"  sourceRef="Sub_SetGranted"  targetRef="SubEnd" />
+    <bpmn:sequenceFlow id="Flow_Sub_Rejected_End" sourceRef="Sub_SetRejected" targetRef="SubEnd" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Sub">
+    <bpmndi:BPMNPlane id="BPMNPlane_Sub" bpmnElement="ZorgtoeslagProvisionalSubProcess">
+
+      <bpmndi:BPMNShape id="SubStart_di" bpmnElement="SubStart">
+        <dc:Bounds x="152" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="130" y="225" width="80" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sub_ValidateApplication_di" bpmnElement="Sub_ValidateApplication">
+        <dc:Bounds x="240" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sub_RetrieveData_di" bpmnElement="Sub_RetrieveData">
+        <dc:Bounds x="460" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sub_CalcProvisional_di" bpmnElement="Sub_CalcProvisional">
+        <dc:Bounds x="680" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sub_CaseReview_di" bpmnElement="Sub_CaseReview">
+        <dc:Bounds x="900" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sub_ResolveDecision_di" bpmnElement="Sub_ResolveDecision">
+        <dc:Bounds x="1120" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sub_FinalGateway_di" bpmnElement="Sub_FinalGateway" isMarkerVisible="true">
+        <dc:Bounds x="1340" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1322" y="151" width="87" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sub_SetGranted_di" bpmnElement="Sub_SetGranted">
+        <dc:Bounds x="1450" y="94" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sub_SetRejected_di" bpmnElement="Sub_SetRejected">
+        <dc:Bounds x="1450" y="270" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="SubEnd_di" bpmnElement="SubEnd">
+        <dc:Bounds x="1672" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1648" y="225" width="84" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Edges -->
+      <bpmndi:BPMNEdge id="Flow_Sub_Start_Validate_di" bpmnElement="Flow_Sub_Start_Validate">
+        <di:waypoint x="188" y="200" /><di:waypoint x="240" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Validate_Retrieve_di" bpmnElement="Flow_Sub_Validate_Retrieve">
+        <di:waypoint x="400" y="200" /><di:waypoint x="460" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Retrieve_Calc_di" bpmnElement="Flow_Sub_Retrieve_Calc">
+        <di:waypoint x="620" y="200" /><di:waypoint x="680" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Calc_Review_di" bpmnElement="Flow_Sub_Calc_Review">
+        <di:waypoint x="840" y="200" /><di:waypoint x="900" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Review_Resolve_di" bpmnElement="Flow_Sub_Review_Resolve">
+        <di:waypoint x="1060" y="200" /><di:waypoint x="1120" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Resolve_Gateway_di" bpmnElement="Flow_Sub_Resolve_Gateway">
+        <di:waypoint x="1280" y="200" /><di:waypoint x="1340" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Final_Granted_di" bpmnElement="Flow_Sub_Final_Granted">
+        <di:waypoint x="1365" y="175" /><di:waypoint x="1365" y="134" /><di:waypoint x="1450" y="134" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Final_Rejected_di" bpmnElement="Flow_Sub_Final_Rejected">
+        <di:waypoint x="1365" y="225" /><di:waypoint x="1365" y="310" /><di:waypoint x="1450" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Granted_End_di" bpmnElement="Flow_Sub_Granted_End">
+        <di:waypoint x="1610" y="134" /><di:waypoint x="1690" y="134" /><di:waypoint x="1690" y="182" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Rejected_End_di" bpmnElement="Flow_Sub_Rejected_End">
+        <di:waypoint x="1610" y="310" /><di:waypoint x="1690" y="310" /><di:waypoint x="1690" y="218" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

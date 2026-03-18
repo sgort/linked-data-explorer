@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "zorgtoeslag-provisional-review",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Zorgtoeslag — provisional entitlement review"
+    },
+    {
+      "id": "Text_DMN",
+      "type": "text",
+      "text": "## DMN outcome"
+    },
+    {
+      "id": "Field_ProvisionalDecision",
+      "type": "textfield",
+      "label": "provisionalDecision (DMN)",
+      "key": "provisionalDecision",
+      "readonly": true,
+      "disabled": true,
+      "description": "Granted or Rejected — as evaluated by resultaat_zorgtoeslag."
+    },
+    {
+      "id": "Field_EstimatedIncome",
+      "type": "number",
+      "label": "estimatedIncome (current-year estimate)",
+      "key": "estimatedIncome",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_HouseholdSize",
+      "type": "number",
+      "label": "householdSize",
+      "key": "householdSize",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Text_Action",
+      "type": "text",
+      "text": "## Review action\n- **Confirm**: accept DMN outcome as-is\n- **Change**: override the entitlement decision below\n"
+    },
+    {
+      "id": "Field_ReviewAction",
+      "type": "select",
+      "label": "Action",
+      "key": "reviewAction",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Confirm (accept DMN outcome)",
+          "value": "confirm"
+        },
+        {
+          "label": "Change (override decision)",
+          "value": "change"
+        }
+      ]
+    },
+    {
+      "id": "Field_ReviewEntitlementDecision",
+      "type": "select",
+      "label": "New entitlement decision (required when action = Change)",
+      "key": "reviewEntitlementDecision",
+      "values": [
+        {
+          "label": "Granted",
+          "value": "Granted"
+        },
+        {
+          "label": "Rejected",
+          "value": "Rejected"
+        }
+      ]
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit review",
+      "action": "submit"
+    }
+  ]
+}

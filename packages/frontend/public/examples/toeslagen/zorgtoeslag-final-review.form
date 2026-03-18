@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "zorgtoeslag-final-review",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Zorgtoeslag — final settlement review"
+    },
+    {
+      "id": "Text_Context",
+      "type": "text",
+      "text": "## Settlement context"
+    },
+    {
+      "id": "Field_ProvisionalAmount",
+      "type": "number",
+      "label": "provisionalAmount (monthly, EUR)",
+      "key": "provisionalAmount",
+      "readonly": true,
+      "disabled": true,
+      "description": "Monthly amount paid during the provisional period."
+    },
+    {
+      "id": "Field_FinalIncome",
+      "type": "number",
+      "label": "finalIncome (confirmed annual, EUR)",
+      "key": "finalIncome",
+      "readonly": true,
+      "disabled": true,
+      "description": "Confirmed annual income from Belastingdienst."
+    },
+    {
+      "id": "Text_DMN",
+      "type": "text",
+      "text": "## DMN outcome"
+    },
+    {
+      "id": "Field_SettlementOutcome",
+      "type": "textfield",
+      "label": "settlementOutcome (DMN)",
+      "key": "settlementOutcome",
+      "readonly": true,
+      "disabled": true,
+      "description": "underpaid, overpaid, or settled — as evaluated by resultaat_zorgtoeslag."
+    },
+    {
+      "id": "Text_Action",
+      "type": "text",
+      "text": "## Review action\n- **Confirm**: accept DMN outcome as-is\n- **Change**: override the settlement outcome below\n"
+    },
+    {
+      "id": "Field_ReviewAction",
+      "type": "select",
+      "label": "Action",
+      "key": "reviewAction",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Confirm (accept DMN outcome)",
+          "value": "confirm"
+        },
+        {
+          "label": "Change (override outcome)",
+          "value": "change"
+        }
+      ]
+    },
+    {
+      "id": "Field_ReviewSettlementOutcome",
+      "type": "select",
+      "label": "New settlement outcome (required when action = Change)",
+      "key": "reviewSettlementOutcome",
+      "values": [
+        {
+          "label": "Underpaid — pay additional amount",
+          "value": "underpaid"
+        },
+        {
+          "label": "Overpaid — initiate recovery",
+          "value": "overpaid"
+        },
+        {
+          "label": "Settled — no adjustment",
+          "value": "settled"
+        }
+      ]
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit review",
+      "action": "submit"
+    }
+  ]
+}
