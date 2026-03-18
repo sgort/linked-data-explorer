@@ -82,7 +82,7 @@
       <bpmn:incoming>Flow_Recheck_Process</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase45_Phase6</bpmn:outgoing>
     </bpmn:callActivity>
-    <bpmn:userTask id="Task_Phase6_Notify" name="Phase 6: Notify applicant of decision (Awb 3:6)" camunda:formRef="awb-notify-applicant" camunda:formRefBinding="latest" camunda:candidateGroups="caseworker" ronl:documentRef="example_zorgtoeslag_provisional_beschikking">
+    <bpmn:userTask id="Task_Phase6_Notify" name="Phase 6: Notify applicant of decision (Awb 3:6)" camunda:formRef="zorgtoeslag-notify-applicant" camunda:formRefBinding="latest" camunda:candidateGroups="caseworker" ronl:documentRef="example_zorgtoeslag_provisional_beschikking">
       <bpmn:incoming>Flow_Phase45_Phase6</bpmn:incoming>
       <bpmn:incoming>Flow_Refuse_Notify</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase6_PaymentGateway</bpmn:outgoing>

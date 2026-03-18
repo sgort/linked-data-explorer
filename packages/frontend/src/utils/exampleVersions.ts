@@ -27,7 +27,8 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_kapvergunning_start: 1,
   example_tree_felling_review: 1,
   example_awb_notify_applicant: 1,
-  example_zorgtoeslag_provisional_start: 2, // v2: citizen start form for ZorgtoeslagProvisionalSubProcess
+  example_zorgtoeslag_notify_applicant: 1, // v1: Phase 6 notify form for AwbZorgtoeslagProcess
+  example_zorgtoeslag_provisional_start: 1, // v1: citizen start form for ZorgtoeslagProvisionalSubProcess
   example_zorgtoeslag_provisional_review: 1, // v1: Sub_CaseReview form for ZorgtoeslagProvisionalSubProcess
   example_zorgtoeslag_final_review: 1, // v1: Sub_CaseReview form for ZorgtoeslagFinalSubProcess
 };

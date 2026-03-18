@@ -25,6 +25,10 @@
         execution.setVariable("partnerIncome", 0.0);
         execution.setVariable("dataRetrievalTimestamp", new Date().toISOString());
         execution.setVariable("dataSource", "stub");
+        // DMN input variables (zorgtoeslag_resultaat reads i_elig and i_amt directly).
+        // In production these are derived from the Belastingdienst response.
+        execution.setVariable("i_elig", true);
+        execution.setVariable("i_amt", 1100);
       </bpmn:script>
     </bpmn:scriptTask>
     <bpmn:businessRuleTask id="Sub_CalcProvisional" name="Calculate provisional entitlement (Wzt)" camunda:resultVariable="provisionalResult" camunda:decisionRef="zorgtoeslag_resultaat" camunda:mapDecisionResult="singleResult">

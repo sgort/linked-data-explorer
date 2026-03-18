@@ -27,6 +27,12 @@ const EXAMPLE_FORMS = [
     path: '/examples/flevoland/awb-notify-applicant.form',
   },
   {
+    id: 'example_zorgtoeslag_notify_applicant',
+    name: 'Zorgtoeslag Notify Applicant (Example)',
+    description: 'Phase 6 notification form for the AWB Zorgtoeslag process (Awb 3:6)',
+    path: '/examples/toeslagen/zorgtoeslag-notify-applicant.form',
+  },
+  {
     id: 'example_zorgtoeslag_provisional_start',
     name: 'Zorgtoeslag Provisional Start (Example)',
     description: 'Citizen-facing start form for the Zorgtoeslag Provisional Entitlement process',
