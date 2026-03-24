@@ -175,6 +175,9 @@ router.post('/drd/deploy', async (req: Request, res: Response) => {
       });
     }
 
+    // The last DMN in the ordered array is the entry point (the top-level decision that
+    // Operaton evaluates when the DRD is called). Operaton uses the entry-point decision's
+    // key as the deployment resource key, which is why the filename is derived from it.
     const entryPointId = dmnIds[dmnIds.length - 1];
     const filename = `${entryPointId}.dmn`;
 

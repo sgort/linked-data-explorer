@@ -1,4 +1,5 @@
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { FileText, Plus, Trash2, Upload } from 'lucide-react';
+import { useRef } from 'react';
 import React, { useState } from 'react';
 
 import { BpmnProcess } from '../../types';
@@ -7,6 +8,7 @@ interface ProcessListProps {
   processes: BpmnProcess[];
   activeProcessId: string | null;
   onCreateProcess: () => void;
+  onImportProcess: (xml: string, name: string) => void;
   onLoadProcess: (processId: string) => void;
   onDeleteProcess: (processId: string) => void;
   onUpdateProcessName: (processId: string, name: string) => void;
@@ -16,12 +18,29 @@ const ProcessList: React.FC<ProcessListProps> = ({
   processes,
   activeProcessId,
   onCreateProcess,
+  onImportProcess,
   onLoadProcess,
   onDeleteProcess,
   onUpdateProcessName,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const xml = ev.target?.result as string;
+      const match = xml.match(/<(?:bpmn:)?process[^>]+name="([^"]+)"/);
+      const name = match?.[1] ?? file.name.replace(/\.bpmn$/i, '');
+      onImportProcess(xml, name);
+    };
+    reader.readAsText(file);
+    // Reset so the same file can be re-imported if needed
+    e.target.value = '';
+  };
 
   const handleStartEdit = (process: BpmnProcess) => {
     setEditingId(process.id);
@@ -40,13 +59,29 @@ const ProcessList: React.FC<ProcessListProps> = ({
       {/* Header */}
       <div className="h-14 bg-slate-50 border-b border-slate-200 px-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-700">PROCESSES</h2>
-        <button
-          onClick={onCreateProcess}
-          className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          title="Create New Process"
-        >
-          <Plus size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".bpmn"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            title="Import .bpmn file"
+          >
+            <Upload size={16} />
+          </button>
+          <button
+            onClick={onCreateProcess}
+            className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            title="Create New Process"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Process List */}

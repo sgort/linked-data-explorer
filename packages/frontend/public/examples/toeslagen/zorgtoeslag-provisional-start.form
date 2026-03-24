@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "zorgtoeslag-provisional-start",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Apply for health care allowance (zorgtoeslag)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Use this form to apply for a provisional health care allowance (zorgtoeslag). Your entitlement is assessed based on your income, household composition and insurance status."
+    },
+    {
+      "id": "Text_Section_Dates",
+      "type": "text",
+      "text": "### Calculation dates"
+    },
+    {
+      "id": "Field_DatumBerekening",
+      "type": "textfield",
+      "label": "Calculation date (datumBerekening)",
+      "key": "datumBerekening",
+      "defaultValue": "2026-03-18",
+      "validate": {
+        "required": true,
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "description": "Format: YYYY-MM-DD. Defaults to today."
+    },
+    {
+      "id": "Field_Geboortedatum",
+      "type": "textfield",
+      "label": "Date of birth (geboortedatum)",
+      "key": "geboortedatum",
+      "validate": {
+        "required": true,
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      "description": "Format: YYYY-MM-DD."
+    },
+    {
+      "id": "Text_Section_Age",
+      "type": "text",
+      "text": "### Age (fill manually based on date of birth)"
+    },
+    {
+      "id": "Field_LeeftijdOpDatumBerekening",
+      "type": "number",
+      "label": "Age on calculation date (leeftijdOpDatumBerekening)",
+      "key": "leeftijdOpDatumBerekening",
+      "validate": {
+        "required": true,
+        "min": 0
+      },
+      "description": "TC1: 26 · TC2: 30 · TC3: 18 · TC4: 35 · TC5: 45 · TC6: 40 · TC7: 20 · TC8: 37 · TC9: 35"
+    },
+    {
+      "id": "Field_LeeftijdVorigeMaand",
+      "type": "number",
+      "label": "Age on last day of previous month (leeftijdOpLaatsteDagVorigeMaand)",
+      "key": "leeftijdOpLaatsteDagVorigeMaand",
+      "validate": {
+        "required": true,
+        "min": 0
+      },
+      "description": "Usually same as above. TC3 exception: 17 (birthday falls within current month)."
+    },
+    {
+      "id": "Field_LeeftijdHuidigeMaand",
+      "type": "number",
+      "label": "Age on last day of current month (leeftijdOpLaatsteDagHuidigeMaand)",
+      "key": "leeftijdOpLaatsteDagHuidigeMaand",
+      "validate": {
+        "required": true,
+        "min": 0
+      },
+      "description": "Usually same as leeftijdOpDatumBerekening."
+    },
+    {
+      "id": "Field_Overlijdensdatum",
+      "type": "textfield",
+      "label": "Date of death (overlijdensdatum)",
+      "key": "overlijdensdatum",
+      "validate": {
+        "required": false,
+        "pattern": "^(\\d{4}-\\d{2}-\\d{2})?$"
+      },
+      "description": "Format: YYYY-MM-DD. Leave empty if not applicable."
+    },
+    {
+      "id": "Text_Section_Residence",
+      "type": "text",
+      "text": "### Residence and insurance"
+    },
+    {
+      "id": "Field_WoonachtigNL",
+      "type": "checkbox",
+      "label": "Resident in the Netherlands (woonachtigNL)",
+      "key": "woonachtigNL",
+      "defaultValue": true
+    },
+    {
+      "id": "Field_RechtmatigVerblijfNL",
+      "type": "checkbox",
+      "label": "Lawful residence in the Netherlands (rechtmatigVerblijfNL)",
+      "key": "rechtmatigVerblijfNL",
+      "defaultValue": true
+    },
+    {
+      "id": "Field_StatusZorgverzekerd",
+      "type": "select",
+      "label": "Insurance status (statusZorgverzekerd)",
+      "key": "statusZorgverzekerd",
+      "defaultValue": "Binnenlands zorgverzekerd",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Binnenlands zorgverzekerd",
+          "value": "Binnenlands zorgverzekerd"
+        },
+        {
+          "label": "Buitenlands verdragsgerechtigd",
+          "value": "Buitenlands verdragsgerechtigd"
+        },
+        {
+          "label": "Niet verzekerd",
+          "value": "Niet verzekerd"
+        }
+      ]
+    },
+    {
+      "id": "Field_Gedetineerd",
+      "type": "checkbox",
+      "label": "Detained (gedetineerd)",
+      "key": "gedetineerd",
+      "defaultValue": false
+    },
+    {
+      "id": "Text_Section_Income",
+      "type": "text",
+      "text": "### Income"
+    },
+    {
+      "id": "Field_Toetsingsinkomen",
+      "type": "number",
+      "label": "Assessment income (toetsingsinkomen, EUR)",
+      "key": "toetsingsinkomen",
+      "validate": {
+        "required": true,
+        "min": 0
+      },
+      "description": "Annual income used for the entitlement calculation."
+    },
+    {
+      "id": "Field_Woonlandfactor",
+      "type": "number",
+      "label": "Country factor (woonlandfactorBuitenland)",
+      "key": "woonlandfactorBuitenland",
+      "defaultValue": 1,
+      "validate": {
+        "required": true,
+        "min": 0,
+        "max": 1
+      },
+      "description": "1.0 for NL residents. Reduced factor for treaty-country residents abroad (e.g. 0.85). See TC4 and TC9."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit application",
+      "action": "submit"
+    }
+  ]
+}

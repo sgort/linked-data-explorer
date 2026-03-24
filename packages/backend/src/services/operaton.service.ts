@@ -305,13 +305,23 @@ export class OperatonService {
   }
 
   /**
-   * Make all IDs in a decision/inputData unique by prefixing with dmnId prefix.
-   * Uses two-pass approach: first collect all IDs, then update all references.
+   * Make all IDs in a decision/inputData unique by prefixing with a DMN-scoped prefix.
+   *
+   * A two-pass approach is required:
+   *   Pass 1 — Walk the entire subtree and build a mapping of every old ID to its new
+   *             prefixed form. This ensures forward-referenced IDs (e.g. an
+   *             informationRequirement that references a decision defined later in the XML)
+   *             are known before we start rewriting them.
+   *   Pass 2 — Walk the subtree again and apply the ID renames to both @_id attributes
+   *             and @_href references (which use the "#id" fragment convention).
+   *
+   * Without this two-pass strategy a single forward pass would miss hrefs that point to
+   * IDs not yet renamed, leaving dangling references in the assembled DRD.
    */
   private makeIdsUnique(element: any, prefix: string): Map<string, string> {
     const idMap = new Map<string, string>();
 
-    // First pass: collect all IDs and build mapping
+    // Pass 1: collect all IDs and build old→new mapping
     const collectIds = (obj: any) => {
       if (!obj || typeof obj !== 'object') return;
 
@@ -330,7 +340,7 @@ export class OperatonService {
       }
     };
 
-    // Second pass: update all IDs and hrefs
+    // Pass 2: rewrite all @_id values and @_href fragment references using the mapping
     const updateReferences = (obj: any) => {
       if (!obj || typeof obj !== 'object') return;
 
@@ -364,8 +374,17 @@ export class OperatonService {
     return idMap;
   }
   /**
-   * Assemble a DRD from an ordered chain of DMN identifiers.
-   * dmnIds[0] has no dependencies; dmnIds[last] is the entry point.
+   * Assemble a Decision Requirements Diagram (DRD) from an ordered chain of DMN identifiers.
+   *
+   * Ordering convention:
+   *   dmnIds[0]    — the most upstream decision (no informationRequirement from another DMN)
+   *   dmnIds[last] — the entry point: the final decision that Operaton evaluates when
+   *                  the DRD is called. Its informationRequirement chain traverses all
+   *                  preceding decisions, so evaluating it triggers the entire chain.
+   *
+   * Each DMN's IDs are prefixed with "dmn{index}_" to prevent collisions when multiple
+   * DMN files define elements with the same local ID (e.g. every generated DMN has an
+   * inputData with id="InputData_1").
    */
   async assembleDrd(dmnIds: string[], drdName: string): Promise<string> {
     if (dmnIds.length < 2) {
@@ -454,7 +473,11 @@ export class OperatonService {
           });
         }
 
-        // The main decision is the one with prefixed id matching dmnId
+        // Identify the "main" (top-level) decision for this DMN — the one whose id
+        // matches the DMN's own identifier. By convention, Operaton DMN files use the
+        // decision key as the decision id (e.g. decision id="SVB_LeeftijdsInformatie").
+        // After prefixing, this becomes "dmn0_SVB_LeeftijdsInformatie".
+        // Sub-decisions within the same file have different IDs and are left unchanged.
         const mainDecision = decisions.find((d: any) => {
           return d['@_id'] === `${idPrefix}_${dmnId}`;
         });
@@ -466,11 +489,11 @@ export class OperatonService {
         const mainId = mainDecision ? mainDecision['@_id'] : decisions[0]['@_id'];
         mainDecisionIds.push(mainId);
 
-        // For the main decision, add chain-based informationRequirement at the START
+        // Wire the chain: the main decision of DMN i must declare an informationRequirement
+        // on the main decision of DMN i-1. This is prepended so it appears before any
+        // existing informationRequirements (which reference the DMN's own inputData).
         decisions.forEach((decision: any) => {
           if (decision['@_id'] === mainId) {
-            // This is the main decision
-            // Add chain requirement if not first DMN (PREPEND to existing requirements)
             if (i > 0) {
               const requiredId = mainDecisionIds[i - 1];
               logger.info('Adding chain requirement', {
@@ -484,12 +507,14 @@ export class OperatonService {
                 },
               };
 
-              // Prepend to existing informationRequirement array
+              // Normalise informationRequirement to an array before unshifting so we
+              // handle both the absent, single-object, and already-array cases uniformly.
               if (!decision.informationRequirement) {
                 decision.informationRequirement = [chainRequirement];
               } else if (Array.isArray(decision.informationRequirement)) {
                 decision.informationRequirement.unshift(chainRequirement);
               } else {
+                // fast-xml-parser returns a plain object when there is only one element
                 decision.informationRequirement = [
                   chainRequirement,
                   decision.informationRequirement,
@@ -497,7 +522,8 @@ export class OperatonService {
               }
             }
           }
-          // Sub-decisions keep their original informationRequirement unchanged
+          // Sub-decisions (helper decisions inside the same DMN file) keep their original
+          // informationRequirements unchanged — they already reference the correct inputData.
         });
 
         // Add all decisions from this DMN to the combined list
@@ -597,9 +623,17 @@ export class OperatonService {
   }
 
   /**
-   * Deploy a BPMN process together with its Camunda Form files and Subprocess BPMNs in a single
-   * multipart request. Operaton resolves camunda:formRef at runtime from the
-   * same deployment, so all resources must land in one call.
+   * Deploy a BPMN process together with its Camunda Form files, sub-process BPMNs,
+   * and document templates in a single multipart request to Operaton.
+   *
+   * All resources must be included in one deployment call because Operaton resolves
+   * camunda:formRef and sub-process references at runtime by looking up resources
+   * within the same deployment. Splitting them across multiple deployments would
+   * cause "form not found" or "process not found" errors at task execution time.
+   *
+   * An optional operatonUrl/operatonUsername/operatonPassword allows deploying to a
+   * different Operaton instance than the one configured in environment variables,
+   * which is used by the BPMN Modeler when users configure a custom Operaton server.
    */
   async deployProcess(
     bpmnXml: string,

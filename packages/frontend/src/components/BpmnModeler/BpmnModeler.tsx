@@ -72,6 +72,79 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         updated.push(treeFellingExample);
       }
 
+      // --- AWB Zorgtoeslag Process (shell wired for zorgtoeslag provisional) ---
+      const awbZorgId = 'example_awb_zorgtoeslag';
+      if (getStoredVersion(awbZorgId) < EXAMPLE_VERSIONS[awbZorgId]) {
+        const xml = await fetch('/examples/toeslagen/AwbZorgtoeslagProcess.bpmn').then((r) =>
+          r.text()
+        );
+        const awbZorgExample: BpmnProcess = {
+          id: awbZorgId,
+          name: 'AWB Zorgtoeslag — Provisional Entitlement (Example)',
+          description:
+            'AWB shell process wired for the Zorgtoeslag provisional entitlement subprocess. Isolated bundle deployable independently from the Tree Felling Permit.',
+          xml,
+          createdAt: '2026-03-18T00:00:00.000Z',
+          updatedAt: new Date().toISOString(),
+          linkedDmnTemplates: [
+            'AwbCompletenessCheck',
+            'ArchivesActRetention',
+            'resultaat_zorgtoeslag',
+          ],
+          readonly: true,
+          status: 'example',
+        };
+        BpmnService.saveProcess(awbZorgExample);
+        setStoredVersion(awbZorgId, EXAMPLE_VERSIONS[awbZorgId]);
+        updated.push(awbZorgExample);
+      }
+
+      // --- Zorgtoeslag Provisional Subprocess ---
+      const zorgProvisionalId = 'example_zorgtoeslag_provisional';
+      if (getStoredVersion(zorgProvisionalId) < EXAMPLE_VERSIONS[zorgProvisionalId]) {
+        const xml = await fetch('/examples/toeslagen/ZorgtoeslagProvisionalSubProcess.bpmn').then(
+          (r) => r.text()
+        );
+        const zorgProvisionalExample: BpmnProcess = {
+          id: zorgProvisionalId,
+          name: 'Zorgtoeslag — Provisional Entitlement (Example)',
+          description:
+            'Zorgtoeslag provisional entitlement subprocess: validates application, retrieves income data, evaluates DMN entitlement, and routes to caseworker review. Called from the AWB Generic Process via a Call Activity (Phase 4+5).',
+          xml,
+          createdAt: '2026-03-17T00:00:00.000Z',
+          updatedAt: new Date().toISOString(),
+          linkedDmnTemplates: ['resultaat_zorgtoeslag'],
+          readonly: true,
+          status: 'example',
+        };
+        BpmnService.saveProcess(zorgProvisionalExample);
+        setStoredVersion(zorgProvisionalId, EXAMPLE_VERSIONS[zorgProvisionalId]);
+        updated.push(zorgProvisionalExample);
+      }
+
+      // --- Zorgtoeslag Final Subprocess ---
+      const zorgFinalId = 'example_zorgtoeslag_final';
+      if (getStoredVersion(zorgFinalId) < EXAMPLE_VERSIONS[zorgFinalId]) {
+        const xml = await fetch('/examples/toeslagen/ZorgtoeslagFinalSubProcess.bpmn').then((r) =>
+          r.text()
+        );
+        const zorgFinalExample: BpmnProcess = {
+          id: zorgFinalId,
+          name: 'Zorgtoeslag — Final Settlement (Example)',
+          description:
+            'Zorgtoeslag final settlement subprocess: started via FinalIncomeReceived message (from Belastingdienst or caseworker). Evaluates confirmed annual income via DMN, routes to caseworker review, and sets settlement outcome (underpaid / overpaid / settled) for AWB Task_Phase7_Payment.',
+          xml,
+          createdAt: '2026-03-17T00:00:00.000Z',
+          updatedAt: new Date().toISOString(),
+          linkedDmnTemplates: ['resultaat_zorgtoeslag'],
+          readonly: true,
+          status: 'example',
+        };
+        BpmnService.saveProcess(zorgFinalExample);
+        setStoredVersion(zorgFinalId, EXAMPLE_VERSIONS[zorgFinalId]);
+        updated.push(zorgFinalExample);
+      }
+
       // --- Asylum Migration (inline WIP, no version tracking needed) ---
       const asylumId = 'wip_asylum_migration';
       if (!BpmnService.getProcess(asylumId)) {
@@ -116,6 +189,22 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     setProcesses(BpmnService.getProcesses());
     setActiveProcessId(newProcess.id);
     setCurrentXml(newProcess.xml);
+  };
+
+  const handleImportProcess = (xml: string, name: string) => {
+    const newProcess: BpmnProcess = {
+      id: `process_${Date.now()}`,
+      name,
+      xml,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      linkedDmnTemplates: [],
+      status: 'wip',
+    };
+    BpmnService.saveProcess(newProcess);
+    setProcesses(BpmnService.getProcesses());
+    setActiveProcessId(newProcess.id);
+    setCurrentXml(xml);
   };
 
   const handleLoadProcess = (processId: string) => {
@@ -171,6 +260,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         processes={processes}
         activeProcessId={activeProcessId}
         onCreateProcess={handleCreateProcess}
+        onImportProcess={handleImportProcess}
         onLoadProcess={handleLoadProcess}
         onDeleteProcess={handleDeleteProcess}
         onUpdateProcessName={handleUpdateProcessName}

@@ -26,6 +26,30 @@ const EXAMPLE_FORMS = [
     description: 'Phase 6 notification form for the AWB Shell process (Awb 3:6)',
     path: '/examples/flevoland/awb-notify-applicant.form',
   },
+  {
+    id: 'example_zorgtoeslag_notify_applicant',
+    name: 'Zorgtoeslag Notify Applicant (Example)',
+    description: 'Phase 6 notification form for the AWB Zorgtoeslag process (Awb 3:6)',
+    path: '/examples/toeslagen/zorgtoeslag-notify-applicant.form',
+  },
+  {
+    id: 'example_zorgtoeslag_provisional_start',
+    name: 'Zorgtoeslag Provisional Start (Example)',
+    description: 'Citizen-facing start form for the Zorgtoeslag Provisional Entitlement process',
+    path: '/examples/toeslagen/zorgtoeslag-provisional-start.form',
+  },
+  {
+    id: 'example_zorgtoeslag_provisional_review',
+    name: 'Zorgtoeslag Provisional Review (Example)',
+    description: 'Caseworker review form for the Zorgtoeslag Provisional Entitlement subprocess',
+    path: '/examples/toeslagen/zorgtoeslag-provisional-review.form',
+  },
+  {
+    id: 'example_zorgtoeslag_final_review',
+    name: 'Zorgtoeslag Final Settlement Review (Example)',
+    description: 'Caseworker review form for the Zorgtoeslag Final Settlement subprocess',
+    path: '/examples/toeslagen/zorgtoeslag-final-review.form',
+  },
 ];
 
 const FormEditor: React.FC = () => {
@@ -36,7 +60,7 @@ const FormEditor: React.FC = () => {
 
   /**
    * Seed / refresh versioned example forms on mount.
-   * Re-fetches from public/examples/flevoland/ whenever EXAMPLE_VERSIONS
+   * Re-fetches from public/examples/ whenever EXAMPLE_VERSIONS
    * has been bumped above the version stored in localStorage.
    */
   useEffect(() => {
@@ -92,6 +116,20 @@ const FormEditor: React.FC = () => {
     setActiveFormId(newForm.id);
   };
 
+  const handleImportForm = (schema: Record<string, unknown>, name: string) => {
+    const newForm: FormSchema = {
+      id: `form_${Date.now()}`,
+      name,
+      schema,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'wip',
+    };
+    FormService.saveForm(newForm);
+    setForms(FormService.getForms());
+    setActiveFormId(newForm.id);
+  };
+
   const handleLoadForm = (formId: string) => {
     const form = FormService.getForm(formId);
     if (form) setActiveFormId(form.id);
@@ -135,6 +173,7 @@ const FormEditor: React.FC = () => {
         forms={forms}
         activeFormId={activeFormId}
         onCreateForm={handleCreateForm}
+        onImportForm={handleImportForm}
         onLoadForm={handleLoadForm}
         onDeleteForm={handleDeleteForm}
         onUpdateFormName={handleUpdateFormName}
@@ -143,6 +182,7 @@ const FormEditor: React.FC = () => {
       <div className="flex-1 flex flex-col border-x border-slate-200">
         {activeForm ? (
           <FormCanvas
+            key={activeFormId}
             schema={activeForm.schema}
             onSave={handleSaveForm}
             onClose={handleCloseForm}

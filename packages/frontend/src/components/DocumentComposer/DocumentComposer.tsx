@@ -108,6 +108,13 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
     setHasChanges(false);
   };
 
+  const handleImportTemplate = (template: DocumentTemplate) => {
+    DocumentService.saveTemplate(template);
+    refreshTemplates();
+    setActiveTemplateId(template.id);
+    setHasChanges(false);
+  };
+
   const handleLoadTemplate = (id: string) => {
     setActiveTemplateId(id);
     setHasChanges(false);
@@ -241,6 +248,7 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
           templates={templates}
           activeTemplateId={activeTemplateId}
           onCreateTemplate={handleCreateTemplate}
+          onImportTemplate={handleImportTemplate}
           onLoadTemplate={handleLoadTemplate}
           onDeleteTemplate={handleDeleteTemplate}
           onUpdateTemplateName={handleUpdateTemplateName}

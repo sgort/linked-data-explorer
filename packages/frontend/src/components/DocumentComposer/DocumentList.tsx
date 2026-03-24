@@ -1,14 +1,5 @@
-/**
- * DocumentList
- *
- * Destination: packages/frontend/src/components/DocumentComposer/DocumentList.tsx
- *
- * Left list panel showing all document templates.
- * Mirrors FormList.tsx in structure and behaviour.
- */
-
-import { FileText, Plus, Trash2 } from 'lucide-react';
-import React, { useState } from 'react';
+import { FileText, Plus, Trash2, Upload } from 'lucide-react';
+import React, { useRef, useState } from 'react';
 
 import { DocumentTemplate } from '../../types/document.types';
 
@@ -16,6 +7,7 @@ interface DocumentListProps {
   templates: DocumentTemplate[];
   activeTemplateId: string | null;
   onCreateTemplate: () => void;
+  onImportTemplate: (template: DocumentTemplate) => void;
   onLoadTemplate: (id: string) => void;
   onDeleteTemplate: (id: string) => void;
   onUpdateTemplateName: (id: string, name: string) => void;
@@ -25,12 +17,36 @@ const DocumentList: React.FC<DocumentListProps> = ({
   templates,
   activeTemplateId,
   onCreateTemplate,
+  onImportTemplate,
   onLoadTemplate,
   onDeleteTemplate,
   onUpdateTemplateName,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const template = JSON.parse(ev.target?.result as string) as DocumentTemplate;
+        onImportTemplate({
+          ...template,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          readonly: false,
+          status: 'wip',
+        });
+      } catch {
+        alert('Invalid .document file — could not parse JSON.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   const handleStartEdit = (template: DocumentTemplate) => {
     if (template.readonly) return;
@@ -50,13 +66,29 @@ const DocumentList: React.FC<DocumentListProps> = ({
       {/* Header */}
       <div className="h-12 flex items-center justify-between px-4 border-b border-slate-200 flex-shrink-0">
         <span className="text-sm font-semibold text-slate-700">DOCUMENTS</span>
-        <button
-          onClick={onCreateTemplate}
-          className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          title="Create New document"
-        >
-          <Plus size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".document"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            title="Import .document file"
+          >
+            <Upload size={16} />
+          </button>
+          <button
+            onClick={onCreateTemplate}
+            className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            title="Create New document"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
       </div>
 
       {/* List */}

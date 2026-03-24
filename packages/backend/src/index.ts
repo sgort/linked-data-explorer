@@ -7,6 +7,7 @@ import logger from './utils/logger';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { versionMiddleware } from './middleware/version.middleware';
+import { externalTaskWorker } from './services/externalTaskWorker.service';
 import packageJson from '../package.json';
 
 const app: Express = express();
@@ -42,10 +43,13 @@ app.use(helmet());
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// Register routes
+// Register /api/dmns XML route BEFORE body-parsing middleware.
+// dmnXmlRoutes streams raw XML (Content-Type: application/xml), so it must not
+// pass through express.json(), which would attempt to parse the body as JSON.
 app.use('/api/dmns', dmnXmlRoutes);
 
-// Body parsing middleware
+// Body parsing middleware — only applied to routes registered after this point.
+// The 10 MB limit accommodates large BPMN/DMN XML payloads submitted for deployment.
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -117,17 +121,21 @@ const startServer = () => {
     logger.info(`API available at: http://${host}:${port}/v1`);
     logger.info(`Health check: http://${host}:${port}/v1/health`);
     logger.info(`Legacy API: http://${host}:${port}/api (deprecated)`);
+
+    externalTaskWorker.start();
   });
 };
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully...');
+  externalTaskWorker.stop();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully...');
+  externalTaskWorker.stop();
   process.exit(0);
 });
 
