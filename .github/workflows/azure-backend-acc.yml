@@ -37,6 +37,12 @@ jobs:
         working-directory: packages/backend
         run: npm run build
 
+      - name: Copy migration files
+        working-directory: packages/backend
+        run: |
+          mkdir -p dist/db/migrations
+          cp src/db/migrations/*.sql dist/db/migrations/
+
       - name: Verify build output
         working-directory: packages/backend
         run: |
