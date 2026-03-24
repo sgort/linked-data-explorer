@@ -12,6 +12,11 @@ interface BpmnModelerProps {
   endpoint: string;
 }
 
+const extractBpmnProcessId = (xml: string): string => {
+  const match = xml.match(/<(?:bpmn:)?process[^>]+\bid="([^"]+)"/);
+  return match?.[1] ?? 'unknown';
+};
+
 const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   const [processes, setProcesses] = useState<BpmnProcess[]>(BpmnService.getProcesses());
   const [activeProcessId, setActiveProcessId] = useState<string | null>(null);
@@ -44,6 +49,8 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           linkedDmnTemplates: ['AwbCompletenessCheck', 'ArchivesActRetention'],
           readonly: true,
           status: 'example',
+          bpmnProcessId: 'AwbShellProcess',
+          processRole: 'shell',
         };
         BpmnService.saveProcess(awbExample);
         setStoredVersion(awbId, EXAMPLE_VERSIONS[awbId]);
@@ -66,6 +73,9 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           linkedDmnTemplates: ['TreeFellingDecision', 'ReplacementTreeDecision'],
           readonly: true,
           status: 'example',
+          bpmnProcessId: 'TreeFellingPermitSubProcess',
+          processRole: 'subprocess',
+          calledElement: 'TreeFellingPermitSubProcess',
         };
         BpmnService.saveProcess(treeFellingExample);
         setStoredVersion(treeId, EXAMPLE_VERSIONS[treeId]);
@@ -93,6 +103,8 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           ],
           readonly: true,
           status: 'example',
+          bpmnProcessId: 'AwbZorgtoeslagProcess',
+          processRole: 'shell',
         };
         BpmnService.saveProcess(awbZorgExample);
         setStoredVersion(awbZorgId, EXAMPLE_VERSIONS[awbZorgId]);
@@ -116,6 +128,9 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           linkedDmnTemplates: ['resultaat_zorgtoeslag'],
           readonly: true,
           status: 'example',
+          bpmnProcessId: 'ZorgtoeslagProvisionalSubProcess',
+          processRole: 'subprocess',
+          calledElement: 'ZorgtoeslagProvisionalSubProcess',
         };
         BpmnService.saveProcess(zorgProvisionalExample);
         setStoredVersion(zorgProvisionalId, EXAMPLE_VERSIONS[zorgProvisionalId]);
@@ -139,6 +154,9 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           linkedDmnTemplates: ['resultaat_zorgtoeslag'],
           readonly: true,
           status: 'example',
+          bpmnProcessId: 'ZorgtoeslagFinalSubProcess',
+          processRole: 'subprocess',
+          calledElement: 'ZorgtoeslagFinalSubProcess',
         };
         BpmnService.saveProcess(zorgFinalExample);
         setStoredVersion(zorgFinalId, EXAMPLE_VERSIONS[zorgFinalId]);
@@ -158,6 +176,8 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           linkedDmnTemplates: [],
           readonly: false,
           status: 'wip',
+          bpmnProcessId: 'Process_Migratie_en_Asiel',
+          processRole: 'standalone',
         };
         BpmnService.saveProcess(asylumMigration);
         updated.push(asylumMigration);
@@ -176,6 +196,10 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     seed();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    BpmnService.hydrateFromServer().then(setProcesses);
+  }, []);
+
   const handleCreateProcess = () => {
     const newProcess: BpmnProcess = {
       id: `process_${Date.now()}`,
@@ -184,6 +208,8 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       linkedDmnTemplates: [],
+      bpmnProcessId: extractBpmnProcessId(DEFAULT_BPMN_XML),
+      processRole: 'standalone',
     };
     BpmnService.saveProcess(newProcess);
     setProcesses(BpmnService.getProcesses());
@@ -200,6 +226,8 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       updatedAt: new Date().toISOString(),
       linkedDmnTemplates: [],
       status: 'wip',
+      bpmnProcessId: extractBpmnProcessId(xml),
+      processRole: 'standalone',
     };
     BpmnService.saveProcess(newProcess);
     setProcesses(BpmnService.getProcesses());

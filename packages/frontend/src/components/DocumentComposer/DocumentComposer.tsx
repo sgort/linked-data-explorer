@@ -75,6 +75,10 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
     }
   }, []);
 
+  useEffect(() => {
+    DocumentService.hydrateFromServer().then(setTemplates);
+  }, []);
+
   const activeTemplate = templates.find((t) => t.id === activeTemplateId) ?? null;
 
   // ─── Template CRUD ─────────────────────────────────────────────────────

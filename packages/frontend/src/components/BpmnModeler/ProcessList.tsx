@@ -86,16 +86,30 @@ const ProcessList: React.FC<ProcessListProps> = ({
 
       {/* Process List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {processes.length === 0 ? (
-          <div className="text-center py-8">
-            <FileText size={48} className="mx-auto text-slate-300 mb-2" />
-            <p className="text-sm text-slate-400">No processes yet</p>
-          </div>
-        ) : (
-          processes.map((process) => (
+        {(() => {
+          if (processes.length === 0) {
+            return (
+              <div className="text-center py-8">
+                <FileText size={48} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-sm text-slate-400">No processes yet</p>
+              </div>
+            );
+          }
+
+          const shells = processes.filter((p) => p.processRole === 'shell');
+          const standaloneAndUnclassified = processes.filter(
+            (p) => !p.processRole || p.processRole === 'standalone'
+          );
+
+          const getSubprocesses = (shell: BpmnProcess) =>
+            processes.filter(
+              (p) => p.processRole === 'subprocess' && p.calledElement === shell.bpmnProcessId
+            );
+
+          const renderCard = (process: BpmnProcess, indented = false) => (
             <div
               key={process.id}
-              className={`p-3 rounded-lg border transition-all cursor-pointer ${
+              className={`p-3 rounded-lg border transition-all cursor-pointer ${indented ? 'ml-4' : ''} ${
                 activeProcessId === process.id
                   ? 'bg-blue-50 border-blue-200'
                   : 'bg-white border-slate-200 hover:border-slate-300'
@@ -119,7 +133,7 @@ const ProcessList: React.FC<ProcessListProps> = ({
                   />
                 ) : (
                   <div className="flex-1" onDoubleClick={() => handleStartEdit(process)}>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-medium text-slate-800 text-sm">{process.name}</h3>
                       {process.status === 'example' && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
@@ -129,6 +143,16 @@ const ProcessList: React.FC<ProcessListProps> = ({
                       {process.status === 'wip' && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
                           WIP
+                        </span>
+                      )}
+                      {process.processRole === 'shell' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-medium">
+                          SHELL
+                        </span>
+                      )}
+                      {process.processRole === 'subprocess' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 font-medium">
+                          SUB
                         </span>
                       )}
                     </div>
@@ -148,14 +172,31 @@ const ProcessList: React.FC<ProcessListProps> = ({
                       ? 'text-slate-300 cursor-not-allowed'
                       : 'hover:bg-red-100 text-slate-400 hover:text-red-600'
                   }`}
-                  title={process.readonly ? 'Cannot delete example' : 'Delete Process'}
+                  title={process.readonly ? 'Cannot delete example' : 'Delete'}
                 >
                   <Trash2 size={14} />
                 </button>
               </div>
             </div>
-          ))
-        )}
+          );
+
+          return (
+            <div className="space-y-2">
+              {shells.map((shell) => (
+                <div key={shell.id}>
+                  {renderCard(shell)}
+                  {getSubprocesses(shell).map((sub) => (
+                    <div key={sub.id} className="flex items-start gap-1 mt-1">
+                      <div className="mt-3 ml-2 text-slate-300 select-none">└</div>
+                      <div className="flex-1">{renderCard(sub, true)}</div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              {standaloneAndUnclassified.map((p) => renderCard(p))}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
