@@ -25,7 +25,10 @@ export const logger = winston.createLogger({
   ],
 });
 
-// Create logs directory if it doesn't exist
+// Ensure the logs/ directory exists before Winston tries to open the log files.
+// This runs as a module-level side-effect so it executes once on startup, before
+// any logger calls are made. The path is relative to the process working directory
+// (i.e. packages/backend/ when started with `npm start` or `ts-node src/index.ts`).
 import { existsSync, mkdirSync } from 'fs';
 if (!existsSync('logs')) {
   mkdirSync('logs');

@@ -1,5 +1,5 @@
-import { LayoutTemplate, Plus, Trash2 } from 'lucide-react';
-import React, { useState } from 'react';
+import { LayoutTemplate, Plus, Trash2, Upload } from 'lucide-react';
+import React, { useRef, useState } from 'react';
 
 import { FormSchema } from '../../types';
 
@@ -7,6 +7,7 @@ interface FormListProps {
   forms: FormSchema[];
   activeFormId: string | null;
   onCreateForm: () => void;
+  onImportForm: (schema: Record<string, unknown>, name: string) => void;
   onLoadForm: (formId: string) => void;
   onDeleteForm: (formId: string) => void;
   onUpdateFormName: (formId: string, name: string) => void;
@@ -16,12 +17,31 @@ const FormList: React.FC<FormListProps> = ({
   forms,
   activeFormId,
   onCreateForm,
+  onImportForm,
   onLoadForm,
   onDeleteForm,
   onUpdateFormName,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const schema = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
+        const name = (schema.id as string) ?? file.name.replace(/\.form$/i, '');
+        onImportForm(schema, name);
+      } catch {
+        alert('Invalid .form file — could not parse JSON.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   const handleStartEdit = (form: FormSchema) => {
     if (form.readonly) return;
@@ -39,15 +59,32 @@ const FormList: React.FC<FormListProps> = ({
   return (
     <div className="w-64 border-r border-slate-200 bg-white flex flex-col flex-shrink-0">
       <div className="p-4 border-b border-slate-200">
+        {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Forms</h2>
-          <button
-            onClick={onCreateForm}
-            className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-            title="New Form"
-          >
-            <Plus size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".form"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              title="Import .form file"
+            >
+              <Upload size={16} />
+            </button>
+            <button
+              onClick={onCreateForm}
+              className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              title="New Form"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
         </div>
       </div>
 

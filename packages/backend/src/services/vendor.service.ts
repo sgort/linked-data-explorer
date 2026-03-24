@@ -206,12 +206,27 @@ ORDER BY ?basedOnIdentifier ?providerName
    * @param endpoint - SPARQL endpoint URL
    * @returns Full logo URL with version ID or undefined
    */
+  /**
+   * Resolve a vendor logo stored in the RDF graph to a versioned TriplyDB asset URL.
+   *
+   * TriplyDB asset URLs contain a content-addressable version ID that changes every
+   * time the asset is updated. The RDF graph may store any of three forms:
+   *   1. A complete versioned URL  — returned as-is (already usable by browsers).
+   *   2. An incomplete TriplyDB URL without version ID  — must be resolved via the
+   *      assets API to retrieve the latest version's URL.
+   *   3. A bare filename / relative path  — treated the same as (2).
+   *   4. Any other absolute URL (e.g. a vendor's own CDN)  — returned as-is.
+   *
+   * Resolution calls the TriplyDB assets API once per unique vendor service; results
+   * are not cached here because the caller deduplicates vendor services by URI before
+   * invoking this method.
+   */
   private async resolveVendorLogo(
     logoPath: string,
     endpoint?: string
   ): Promise<string | undefined> {
     try {
-      // Check if it's already a complete TriplyDB URL with version ID
+      // Case 1: already a complete TriplyDB versioned URL — use directly.
       // Pattern: https://api.open-regels.triply.cc/datasets/{account}/{dataset}/assets/{id}/{versionId}
       const completeUrlPattern =
         /^https?:\/\/api\..*\.triply\.cc\/datasets\/[^/]+\/[^/]+\/assets\/[^/]+\/[^/]+$/;
@@ -220,19 +235,19 @@ ORDER BY ?basedOnIdentifier ?providerName
         return logoPath;
       }
 
-      // Check if it's an incomplete TriplyDB URL (needs resolution)
+      // Case 2: incomplete TriplyDB URL — we know the filename but not the version ID.
       // Pattern: https://open-regels.triply.cc/{account}/{dataset}/assets/{filename}
       const incompleteUrlPattern = /^https?:\/\/.*\.triply\.cc\/[^/]+\/[^/]+\/assets\/[^/]+$/;
       const isIncompleteUrl = incompleteUrlPattern.test(logoPath);
 
-      // Extract filename from either relative path or incomplete URL
+      // Extract the bare filename from whichever format was provided.
       const filename = logoPath.split('/').pop();
       if (!filename) {
         logger.debug('Could not extract filename from logo path', { logoPath });
         return undefined;
       }
 
-      // If it's some other complete URL (not TriplyDB), return as-is
+      // Case 4: an external URL that isn't a TriplyDB asset — return as-is.
       if (!isIncompleteUrl && (logoPath.startsWith('http://') || logoPath.startsWith('https://'))) {
         logger.debug('Vendor logo is external URL, returning as-is', { logoPath });
         return logoPath;

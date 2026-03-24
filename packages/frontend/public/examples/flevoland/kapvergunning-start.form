@@ -4,10 +4,6 @@
   "id": "kapvergunning-start",
   "executionPlatform": "Camunda Platform",
   "executionPlatformVersion": "7.21.0",
-  "exporter": {
-    "name": "Linked Data Explorer",
-    "version": "0.9.0"
-  },
   "components": [
     {
       "id": "Text_Header",

@@ -3,229 +3,54 @@ import React, { useEffect, useState } from 'react';
 
 import { FormService } from '../../services/formService';
 import { FormSchema } from '../../types';
+import { EXAMPLE_VERSIONS, getStoredVersion, setStoredVersion } from '../../utils/exampleVersions';
 import FormCanvas from './FormCanvas';
 import FormList from './FormList';
 
-const TREE_FELLING_REVIEW_SCHEMA: Record<string, unknown> = {
-  schemaVersion: 16,
-  type: 'default',
-  id: 'tree-felling-review',
-  executionPlatform: 'Camunda Platform',
-  executionPlatformVersion: '7.21.0',
-  components: [
-    { id: 'Text_Header', type: 'text', text: '# Tree felling permit – case worker review' },
-    {
-      id: 'Field_ReviewError',
-      type: 'textfield',
-      label: 'Validation message',
-      key: 'reviewError',
-      disabled: true,
-      readonly: true,
-      description: 'If this is filled, fix the issue below and submit again.',
-    },
-    { id: 'Text_Current', type: 'text', text: '## Current (DMN) decisions' },
-    {
-      id: 'Field_PermitDecision',
-      type: 'textfield',
-      label: 'permitDecision (current)',
-      key: 'permitDecision',
-      disabled: true,
-      readonly: true,
-    },
-    {
-      id: 'Field_ReplacementDecision',
-      type: 'textfield',
-      label: 'replacementDecision (current)',
-      key: 'replacementDecision',
-      disabled: true,
-      readonly: true,
-      description: 'May be empty/null if permit was rejected.',
-    },
-    {
-      id: 'Text_Action',
-      type: 'text',
-      text: '## Review action\n- **Confirm**: keep DMN decisions as-is\n- **Reject**: force permitDecision = `Reject`\n- **Change**: override decisions below\n',
-    },
-    {
-      id: 'Field_ReviewAction',
-      type: 'select',
-      label: 'What do you want to do?',
-      key: 'reviewAction',
-      validate: { required: true },
-      values: [
-        { label: 'Confirm (keep DMN decisions)', value: 'confirm' },
-        { label: 'Reject (force rejection)', value: 'reject' },
-        { label: 'Change (override decisions)', value: 'change' },
-      ],
-    },
-    {
-      id: 'Field_ReviewPermitDecision',
-      type: 'select',
-      label: 'New permitDecision (required when action = Change)',
-      key: 'reviewPermitDecision',
-      values: [
-        { label: 'Permit', value: 'Permit' },
-        { label: 'Reject', value: 'Reject' },
-      ],
-    },
-    {
-      id: 'Field_ReviewReplacementDecision',
-      type: 'radio',
-      label: 'Is a replacement tree required?',
-      key: 'reviewReplacementDecision',
-      validate: { required: true },
-      values: [
-        { label: 'Yes – replacement required', value: true },
-        { label: 'No – replacement not required', value: false },
-      ],
-    },
-    {
-      id: 'Button_Submit',
-      type: 'button',
-      label: 'Submit review',
-      action: 'submit',
-    },
-  ],
-};
-
-const AWB_NOTIFY_APPLICANT_SCHEMA: Record<string, unknown> = {
-  schemaVersion: 16,
-  type: 'default',
-  id: 'awb-notify-applicant',
-  executionPlatform: 'Camunda Platform',
-  executionPlatformVersion: '7.21.0',
-  components: [
-    { id: 'Text_Header', type: 'text', text: '# Phase 6 – Notify applicant of decision (Awb 3:6)' },
-    { id: 'Text_AppDetails', type: 'text', text: '## Application details' },
-    {
-      id: 'Field_TreeDiameter',
-      type: 'textfield',
-      label: 'Tree diameter (cm)',
-      key: 'treeDiameter',
-      readonly: true,
-      disabled: true,
-    },
-    {
-      id: 'Field_ProtectedArea',
-      type: 'textfield',
-      label: 'Protected area',
-      key: 'protectedArea',
-      readonly: true,
-      disabled: true,
-    },
-    { id: 'Text_Decision', type: 'text', text: '## Decision information' },
-    {
-      id: 'Field_Status',
-      type: 'textfield',
-      label: 'Status',
-      key: 'status',
-      readonly: true,
-      disabled: true,
-    },
-    {
-      id: 'Field_PermitDecision',
-      type: 'textfield',
-      label: 'Permit decision',
-      key: 'permitDecision',
-      readonly: true,
-      disabled: true,
-    },
-    {
-      id: 'Field_FinalMessage',
-      type: 'textarea',
-      label: 'Decision message',
-      key: 'finalMessage',
-      readonly: true,
-      disabled: true,
-    },
-    {
-      id: 'Field_ReplacementInfo',
-      type: 'textarea',
-      label: 'Replacement information',
-      key: 'replacementInfo',
-      readonly: true,
-      disabled: true,
-    },
-    { id: 'Text_Action', type: 'text', text: '## Notification action' },
-    {
-      id: 'Field_NotificationMethod',
-      type: 'select',
-      label: 'Notification method',
-      key: 'notificationMethod',
-      validate: { required: true },
-      values: [
-        { label: 'Email', value: 'email' },
-        { label: 'Letter (Post)', value: 'letter' },
-        { label: 'Phone call', value: 'phone' },
-        { label: 'Citizen portal', value: 'portal' },
-      ],
-      description: 'How should the applicant be informed of this decision?',
-    },
-    {
-      id: 'Field_NotificationNotes',
-      type: 'textarea',
-      label: 'Additional notes',
-      key: 'notificationNotes',
-      description: 'Optional. These notes will be included in the notification to the applicant.',
-    },
-    {
-      id: 'Field_ApplicantNotified',
-      type: 'checkbox',
-      label: 'I confirm the applicant will be notified',
-      key: 'applicantNotified',
-      validate: { required: true },
-    },
-    {
-      id: 'Button_Submit',
-      type: 'button',
-      label: 'Confirm notification',
-      action: 'submit',
-    },
-  ],
-};
-
-const KAPVERGUNNING_START_SCHEMA: Record<string, unknown> = {
-  schemaVersion: 16,
-  type: 'default',
-  id: 'kapvergunning-start',
-  executionPlatform: 'Camunda Platform',
-  executionPlatformVersion: '7.21.0',
-  components: [
-    {
-      id: 'Text_Header',
-      type: 'text',
-      text: '# Apply for a tree felling permit',
-    },
-    {
-      id: 'Text_Intro',
-      type: 'text',
-      text: 'Use this form to submit your tree felling permit application. Your application will be assessed automatically based on municipal regulations (APV). You will receive a decision and, if applicable, information about replacement requirements.',
-    },
-    {
-      id: 'Field_TreeDiameter',
-      type: 'number',
-      label: 'Tree diameter (cm)',
-      key: 'treeDiameter',
-      validate: { required: true, min: 1, max: 500 },
-      description:
-        'Measure the trunk diameter at 1.30 metres above ground level (breast height). Examples: small tree 10–20 cm · medium tree 30–50 cm · large tree 60+ cm.',
-    },
-    {
-      id: 'Field_ProtectedArea',
-      type: 'checkbox',
-      label: 'The tree is located in a protected area',
-      key: 'protectedArea',
-      description:
-        'Protected areas include nature reserves, conservation zones, heritage sites, and areas with special environmental protection status.',
-    },
-    {
-      id: 'Button_Submit',
-      type: 'button',
-      label: 'Submit application',
-      action: 'submit',
-    },
-  ],
-};
+const EXAMPLE_FORMS = [
+  {
+    id: 'example_kapvergunning_start',
+    name: 'Kapvergunning Start (Example)',
+    description: 'Citizen-facing start form for the AWB Tree Felling Permit process',
+    path: '/examples/flevoland/kapvergunning-start.form',
+  },
+  {
+    id: 'example_tree_felling_review',
+    name: 'Tree Felling Review (Example)',
+    description: 'Caseworker review form for the Tree Felling Permit subprocess',
+    path: '/examples/flevoland/tree-felling-review.form',
+  },
+  {
+    id: 'example_awb_notify_applicant',
+    name: 'AWB Notify Applicant (Example)',
+    description: 'Phase 6 notification form for the AWB Shell process (Awb 3:6)',
+    path: '/examples/flevoland/awb-notify-applicant.form',
+  },
+  {
+    id: 'example_zorgtoeslag_notify_applicant',
+    name: 'Zorgtoeslag Notify Applicant (Example)',
+    description: 'Phase 6 notification form for the AWB Zorgtoeslag process (Awb 3:6)',
+    path: '/examples/toeslagen/zorgtoeslag-notify-applicant.form',
+  },
+  {
+    id: 'example_zorgtoeslag_provisional_start',
+    name: 'Zorgtoeslag Provisional Start (Example)',
+    description: 'Citizen-facing start form for the Zorgtoeslag Provisional Entitlement process',
+    path: '/examples/toeslagen/zorgtoeslag-provisional-start.form',
+  },
+  {
+    id: 'example_zorgtoeslag_provisional_review',
+    name: 'Zorgtoeslag Provisional Review (Example)',
+    description: 'Caseworker review form for the Zorgtoeslag Provisional Entitlement subprocess',
+    path: '/examples/toeslagen/zorgtoeslag-provisional-review.form',
+  },
+  {
+    id: 'example_zorgtoeslag_final_review',
+    name: 'Zorgtoeslag Final Settlement Review (Example)',
+    description: 'Caseworker review form for the Zorgtoeslag Final Settlement subprocess',
+    path: '/examples/toeslagen/zorgtoeslag-final-review.form',
+  },
+];
 
 const FormEditor: React.FC = () => {
   const [forms, setForms] = useState<FormSchema[]>(FormService.getForms());
@@ -234,63 +59,40 @@ const FormEditor: React.FC = () => {
   const activeForm = forms.find((f) => f.id === activeFormId) || null;
 
   /**
-   * Seed both awb-notify-applicant and tree-felling-review example on first visit
+   * Seed / refresh versioned example forms on mount.
+   * Re-fetches from public/examples/ whenever EXAMPLE_VERSIONS
+   * has been bumped above the version stored in localStorage.
    */
   useEffect(() => {
-    const existing = FormService.getForms();
-    const existingIds = new Set(existing.map((f) => f.id));
-    const added: FormSchema[] = [];
+    const seed = async () => {
+      const updated: FormSchema[] = [];
 
-    if (!existingIds.has('example_kapvergunning_start')) {
-      const example: FormSchema = {
-        id: 'example_kapvergunning_start',
-        name: 'Kapvergunning Start (Example)',
-        description: 'Citizen-facing start form for the AWB Tree Felling Permit process',
-        schema: KAPVERGUNNING_START_SCHEMA,
-        createdAt: '2026-03-05T00:00:00.000Z',
-        updatedAt: '2026-03-05T00:00:00.000Z',
-        readonly: true,
-        status: 'example',
-      };
-      FormService.saveForm(example);
-      added.push(example);
-    }
+      for (const def of EXAMPLE_FORMS) {
+        if (getStoredVersion(def.id) >= EXAMPLE_VERSIONS[def.id]) continue;
 
-    if (!existingIds.has('example_tree_felling_review')) {
-      const example: FormSchema = {
-        id: 'example_tree_felling_review',
-        name: 'Tree Felling Review (Example)',
-        description: 'Caseworker review form for the Tree Felling Permit subprocess',
-        schema: TREE_FELLING_REVIEW_SCHEMA,
-        createdAt: '2026-03-05T00:00:00.000Z',
-        updatedAt: '2026-03-05T00:00:00.000Z',
-        readonly: true,
-        status: 'example',
-      };
-      FormService.saveForm(example);
-      added.push(example);
-    }
+        const schema = await fetch(def.path).then((r) => r.json());
+        const form: FormSchema = {
+          id: def.id,
+          name: def.name,
+          description: def.description,
+          schema,
+          createdAt: '2026-03-05T00:00:00.000Z',
+          updatedAt: new Date().toISOString(),
+          readonly: true,
+          status: 'example',
+        };
+        FormService.saveForm(form);
+        setStoredVersion(def.id, EXAMPLE_VERSIONS[def.id]);
+        updated.push(form);
+      }
 
-    if (!existingIds.has('example_awb_notify_applicant')) {
-      const example: FormSchema = {
-        id: 'example_awb_notify_applicant',
-        name: 'AWB Notify Applicant (Example)',
-        description: 'Phase 6 notification form for the AWB Shell process (Awb 3:6)',
-        schema: AWB_NOTIFY_APPLICANT_SCHEMA,
-        createdAt: '2026-03-05T00:00:00.000Z',
-        updatedAt: '2026-03-05T00:00:00.000Z',
-        readonly: true,
-        status: 'example',
-      };
-      FormService.saveForm(example);
-      added.push(example);
-    }
+      if (updated.length > 0) {
+        setForms(FormService.getForms());
+        setActiveFormId(updated[0].id);
+      }
+    };
 
-    if (added.length > 0) {
-      const allForms = FormService.getForms();
-      setForms(allForms);
-      setActiveFormId(added[0].id);
-    }
+    seed();
   }, []);
 
   const handleCreateForm = () => {
@@ -307,6 +109,21 @@ const FormEditor: React.FC = () => {
       },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      status: 'wip',
+    };
+    FormService.saveForm(newForm);
+    setForms(FormService.getForms());
+    setActiveFormId(newForm.id);
+  };
+
+  const handleImportForm = (schema: Record<string, unknown>, name: string) => {
+    const newForm: FormSchema = {
+      id: `form_${Date.now()}`,
+      name,
+      schema,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'wip',
     };
     FormService.saveForm(newForm);
     setForms(FormService.getForms());
@@ -356,6 +173,7 @@ const FormEditor: React.FC = () => {
         forms={forms}
         activeFormId={activeFormId}
         onCreateForm={handleCreateForm}
+        onImportForm={handleImportForm}
         onLoadForm={handleLoadForm}
         onDeleteForm={handleDeleteForm}
         onUpdateFormName={handleUpdateFormName}
@@ -364,6 +182,7 @@ const FormEditor: React.FC = () => {
       <div className="flex-1 flex flex-col border-x border-slate-200">
         {activeForm ? (
           <FormCanvas
+            key={activeFormId}
             schema={activeForm.schema}
             onSave={handleSaveForm}
             onClose={handleCloseForm}

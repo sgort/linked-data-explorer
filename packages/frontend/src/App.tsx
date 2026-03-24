@@ -4,6 +4,7 @@ import {
   Code2,
   Database,
   Download,
+  FileOutput,
   GitBranch,
   HelpCircle,
   LayoutTemplate,
@@ -23,6 +24,7 @@ import BpmnModeler from './components/BpmnModeler/BpmnModeler';
 import ChainBuilder from './components/ChainBuilder/ChainBuilder';
 import Changelog from './components/Changelog';
 import DmnValidator from './components/DmnValidator';
+import DocumentComposer from './components/DocumentComposer/DocumentComposer';
 import FormEditor from './components/FormEditor/FormEditor';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
@@ -58,9 +60,10 @@ const App: React.FC = () => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
   /**
-   * Determine connection type based on active view
-   * ORCHESTRATION uses proxied backend connection
-   * All other views use direct connection
+   * Returns 'proxied' for the Orchestration view because DMN discovery and chain execution
+   * must go through the Express backend (which holds Operaton credentials, caches SPARQL
+   * results, and avoids CORS restrictions imposed by TriplyDB on browser-to-API calls).
+   * All other views query SPARQL endpoints directly from the browser.
    */
   const getConnectionType = (): 'direct' | 'proxied' => {
     return viewMode === ViewMode.ORCHESTRATION ? 'proxied' : 'direct';
@@ -127,8 +130,16 @@ const App: React.FC = () => {
   };
 
   /**
-   * Handle cache refresh for Orchestration view
-   * Clears the DMN cache and triggers a fresh fetch
+   * Handle cache refresh for the Orchestration view.
+   *
+   * The backend maintains a 5-minute TTL cache of DMN lists keyed by endpoint URL.
+   * This handler:
+   *   1. Calls DELETE /api/cache/clear?endpoint=... to invalidate the cache entry.
+   *   2. Briefly sets the endpoint to an empty string, then restores it after 10 ms.
+   *      ChainBuilder detects the endpoint prop change and re-fetches the DMN list,
+   *      which will now hit the backend fresh (cache was just cleared).
+   *      The 10 ms delay is enough for React to commit the empty-endpoint render and
+   *      trigger the useEffect inside ChainBuilder that watches the endpoint prop.
    */
   const handleRefreshCache = async () => {
     if (viewMode !== ViewMode.ORCHESTRATION) return;
@@ -137,7 +148,6 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      // Clear cache for current endpoint
       const clearUrl = `${API_BASE_URL}/api/cache/clear?endpoint=${encodeURIComponent(endpoint)}`;
       const clearResponse = await fetch(clearUrl, { method: 'DELETE' });
 
@@ -145,8 +155,7 @@ const App: React.FC = () => {
         throw new Error('Failed to clear cache');
       }
 
-      // The ChainBuilder component will automatically refetch when endpoint changes
-      // We trigger a re-render by briefly toggling the endpoint
+      // Toggle endpoint to empty string and back to force ChainBuilder to re-fetch.
       const currentEndpoint = endpoint;
       setEndpoint('');
       setTimeout(() => setEndpoint(currentEndpoint), 10);
@@ -251,6 +260,14 @@ const App: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setViewMode(ViewMode.DOCUMENT)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.DOCUMENT ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="Document Composer"
+          >
+            <FileOutput size={24} />
+          </button>
+
+          <button
             onClick={() => setViewMode(ViewMode.VALIDATE)}
             className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.VALIDATE ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
             title="DMN Validator"
@@ -308,6 +325,7 @@ const App: React.FC = () => {
           {viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.TUTORIAL &&
             viewMode !== ViewMode.FORM &&
+            viewMode !== ViewMode.DOCUMENT &&
             viewMode !== ViewMode.VALIDATE && (
               <div className="flex items-center gap-3">
                 <div className="hidden lg:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
@@ -405,7 +423,17 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* DMN Validator View — always mounted to preserve dropped files across navigation */}
+          {/* Document Composer View */}
+          {viewMode === ViewMode.DOCUMENT && (
+            <div className="flex-1 overflow-hidden">
+              <DocumentComposer endpoint={endpoint} />
+            </div>
+          )}
+
+          {/* DMN Validator is always mounted (hidden via CSS rather than unmounted) so that
+              files dropped onto its drop-zone are not lost when the user briefly navigates
+              away to another view. All other views are conditionally rendered (unmounted
+              when inactive) because they do not have local drag-and-drop state to preserve. */}
           <div
             className={`flex-1 overflow-hidden flex flex-col ${viewMode === ViewMode.VALIDATE ? '' : 'hidden'}`}
           >
@@ -587,6 +615,7 @@ const App: React.FC = () => {
             viewMode !== ViewMode.TUTORIAL &&
             viewMode !== ViewMode.BPMN &&
             viewMode !== ViewMode.FORM &&
+            viewMode !== ViewMode.DOCUMENT &&
             viewMode !== ViewMode.VALIDATE && (
               <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
                 <div className="flex-1 flex flex-col min-h-0">
@@ -644,6 +673,7 @@ const App: React.FC = () => {
             viewMode !== ViewMode.TUTORIAL &&
             viewMode !== ViewMode.BPMN &&
             viewMode !== ViewMode.FORM &&
+            viewMode !== ViewMode.DOCUMENT &&
             viewMode !== ViewMode.VALIDATE && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
                 {/* Error Overlay */}

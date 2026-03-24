@@ -2,7 +2,17 @@ import { SparqlResponse } from '../types';
 
 /**
  * Executes a SPARQL query against a remote endpoint.
- * Includes a CORS fallback for browsers.
+ *
+ * Connection strategy:
+ *   1. First attempt: direct POST to the endpoint with Content-Type: application/x-www-form-urlencoded.
+ *      This is the standard SPARQL protocol and works for any CORS-enabled endpoint.
+ *   2. Auto-retry via CORS proxy: if the direct request fails with a network/CORS error on a
+ *      remote host, the function transparently retries via the allorigins.win public proxy.
+ *      This is a best-effort fallback — the proxy may introduce latency or be rate-limited.
+ *      It is NOT used for localhost endpoints, where CORS issues indicate a misconfigured server.
+ *
+ * For the Orchestration view the backend proxies SPARQL queries itself (via /v1/triplydb/query)
+ * so this function is only called from the SPARQL editor and graph-visualisation views.
  */
 export const executeSparqlQuery = async (
   endpoint: string,
@@ -11,9 +21,10 @@ export const executeSparqlQuery = async (
 ): Promise<SparqlResponse> => {
   let targetUrl = endpoint;
 
-  // CORS Proxy fallback: some public endpoints block direct browser requests.
+  // Build the allorigins proxy URL by embedding the full SPARQL GET request as a query
+  // parameter. allorigins fetches the URL server-side and returns the response body in
+  // a JSON envelope under the "contents" key.
   if (useProxy) {
-    // We use allorigins as a reliable public proxy
     targetUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(endpoint + (endpoint.includes('?') ? '&' : '?') + 'query=' + encodeURIComponent(query))}`;
   }
 
@@ -65,7 +76,11 @@ export const executeSparqlQuery = async (
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('SPARQL Execution Failed:', errorMessage);
 
-    // Auto-retry with proxy if it looks like a CORS/Network failure on a remote host
+    // A TypeError typically indicates a network-level failure (CORS preflight rejection,
+    // DNS resolution failure, or no response). For remote endpoints we attempt one retry
+    // through the CORS proxy before surfacing the error to the user. Local endpoints
+    // are excluded because a local server refusing the request is a configuration issue
+    // that the proxy cannot fix — and bypassing CORS locally hides the real problem.
     const isRemote = !endpoint.includes('localhost') && !endpoint.includes('127.0.0.1');
     if (
       !useProxy &&

@@ -95,10 +95,10 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     logger.info('Chain discovery request');
 
-    // Get chain links from SPARQL
+    // Fetch all pairwise chain links from SPARQL.
+    // Each link represents one output-to-input variable connection between two DMNs.
     const links = await sparqlService.findChainLinks();
 
-    // ✅ Define proper type for chain map entries
     interface ChainMapEntry {
       from: string;
       connections: Array<{
@@ -108,7 +108,8 @@ router.get('/', async (req: Request, res: Response) => {
       }>;
     }
 
-    // ✅ Use the type
+    // Group links by their source DMN so the response presents each DMN alongside
+    // all the downstream DMNs it can feed, rather than a flat list of pairs.
     const chainMap = new Map<string, ChainMapEntry>();
 
     for (const link of links) {
@@ -119,7 +120,6 @@ router.get('/', async (req: Request, res: Response) => {
         });
       }
 
-      // ✅ Type-safe access
       const chainData = chainMap.get(link.from);
       if (chainData) {
         chainData.connections.push({

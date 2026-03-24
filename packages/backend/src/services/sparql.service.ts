@@ -94,7 +94,10 @@ export class SparqlService {
         queryLength: query.length,
       });
 
-      // Create ad-hoc client for custom endpoint, or use default
+      // A new Axios instance is created on every call when a custom endpoint is provided.
+      // This is intentional: custom endpoints are ad-hoc and their host/base path differ
+      // from the default client, so they cannot share the same Axios instance.
+      // The default client (this.client) is reused for performance on the standard endpoint.
       const client = endpoint
         ? axios.create({
             baseURL: endpoint,
@@ -229,18 +232,25 @@ ORDER BY ?identifier
 
     const data = await this.executeQuery(query, endpoint);
     const bindings = data.results?.bindings || [];
-    // NEW: Get vendor counts
+
+    // Fetch vendor counts in a single aggregated query up front so we avoid
+    // issuing one extra SPARQL request per DMN when building the final list.
     const vendorCounts = await this.getVendorCounts(targetEndpoint);
 
     logger.info(`Found ${bindings.length} DMN records`);
 
-    // Group by DMN URI to handle duplicates
+    // The main SPARQL query returns one row per (DMN, service, organisation) combination,
+    // which means a single DMN appears multiple times when it is linked to several services
+    // or organisations. We group by DMN URI and keep only the first occurrence's scalar
+    // fields (identifier, title, etc.) while discarding the repeated service/org columns.
     const dmnMap = new Map<string, DmnModel>();
 
     for (const binding of bindings) {
       const id = binding.dmn.value;
       if (!dmnMap.has(id)) {
-        // Resolve logo URL if logo filename is present
+        // Resolve the logo filename stored in the RDF graph to a versioned TriplyDB asset URL.
+        // This is done once per unique DMN (inside the deduplication check) to avoid
+        // redundant network calls for repeated rows of the same DMN.
         let logoUrl: string | undefined;
         if (binding.logo?.value && binding.organization?.value) {
           logoUrl = await this.resolveLogoUrl(
@@ -283,7 +293,10 @@ ORDER BY ?identifier
       }
     }
 
-    // Get unique DMNs and enrich with inputs/outputs
+    // Each unique DMN requires two additional SPARQL queries (inputs + outputs).
+    // This is an intentional N+1 pattern: combining everything into one query would
+    // produce a Cartesian product of (services × inputs × outputs) that is
+    // exponentially larger and harder to deduplicate correctly.
     const dmns = Array.from(dmnMap.values());
     logger.info(`Processing ${dmns.length} unique DMNs`);
 
@@ -914,8 +927,10 @@ GROUP BY ?basedOn
     endpoint?: string
   ): Promise<string | undefined> {
     try {
-      // Extract account/dataset from endpoint
+      // The SPARQL endpoint URL encodes the account and dataset in its path.
       // Example: https://api.open-regels.triply.cc/datasets/stevengort/facts/services/facts/sparql
+      // We extract these segments so we can build the assets API URL without
+      // storing them as separate configuration values.
       const match = endpoint?.match(/datasets\/([^/]+)\/([^/]+)/);
       if (!match) {
         logger.debug('Could not extract account/dataset from endpoint', { endpoint });

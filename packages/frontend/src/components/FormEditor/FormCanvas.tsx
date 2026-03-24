@@ -3,7 +3,7 @@ import '@bpmn-io/form-js/dist/assets/form-js-editor.css';
 
 import { FormEditor as FormJsEditor } from '@bpmn-io/form-js';
 import { Download, Save } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface FormCanvasProps {
   schema: Record<string, unknown>;
@@ -14,7 +14,6 @@ interface FormCanvasProps {
 const FormCanvas: React.FC<FormCanvasProps> = ({ schema, onSave, onClose }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<FormJsEditor | null>(null);
-  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -26,27 +25,21 @@ const FormCanvas: React.FC<FormCanvasProps> = ({ schema, onSave, onClose }) => {
       console.error('Failed to import form schema:', err);
     });
 
-    editor.on('changed', () => {
-      setHasChanges(true);
-    });
-
     return () => {
       editor.destroy();
       editorRef.current = null;
     };
-    // schema identity is stable per selection — re-mounting on change is intentional
-  }, [schema]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     if (!editorRef.current) return;
-    const { schema: savedSchema } = await editorRef.current.saveSchema();
+    const savedSchema = await editorRef.current.saveSchema();
     onSave(savedSchema as Record<string, unknown>);
-    setHasChanges(false);
   };
 
   const handleExport = async () => {
     if (!editorRef.current) return;
-    const { schema: exportSchema } = await editorRef.current.saveSchema();
+    const exportSchema = await editorRef.current.saveSchema();
     const blob = new Blob([JSON.stringify(exportSchema, null, 2)], {
       type: 'application/json',
     });
@@ -68,12 +61,7 @@ const FormCanvas: React.FC<FormCanvasProps> = ({ schema, onSave, onClose }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={handleSave}
-            disabled={!hasChanges}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              hasChanges
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-            }`}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
           >
             <Save size={16} />
             Save

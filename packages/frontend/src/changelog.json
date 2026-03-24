@@ -1,6 +1,184 @@
 {
   "versions": [
     {
+      "version": "1.2.0",
+      "status": "New Feature",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "March 13, 2026",
+      "sections": [
+        {
+          "title": "RIP Phase 1 Process Bundle",
+          "icon": "🏗️",
+          "iconColor": "purple",
+          "items": [
+            "New deployment bundle for the Regular Infrastructure Projects (RIP) Phase 1 workflow — Project Definition & Preliminary Design Preparation",
+            "BPMN process covering the full Phase 1 scope: intake form, intake meeting, intake report, PSU organisation, PSU execution, PSU report, risk file, preliminary design principles, and two approval gateways",
+            "RipProjectTypeAssignment DMN determines candidateGroups and assignedRoles from projectType and department; designed for granular RBAC extension without BPMN changes",
+            "Seven forms: rip-intake, rip-intake-meeting, rip-intake-report, rip-psu-organize, rip-psu-execution, rip-risk-file, and a reusable rip-approval form shared by both approval gateways",
+            "Three document templates bound to process variables: intake report (column 2), PSU report (column 3), and preliminary design principles (column 4)",
+            "Bundle deployed to examples/organizations/flevoland/rip-phase1/ alongside the existing Flevoland HR onboarding bundle"
+          ]
+        },
+        {
+          "title": "eDOCS Integration (Stub Mode)",
+          "icon": "📁",
+          "iconColor": "blue",
+          "items": [
+            "New EdocsService wrapping the OpenText eDOCS REST API — connect, ensureWorkspace, uploadDocument, getWorkspaceDocuments, and healthCheck",
+            "Stub mode (EDOCS_STUB_MODE=true, default) returns realistic fake responses and logs all calls; transparent to BPMN and routes so the full process can run end-to-end before a live eDOCS server is available",
+            "Session token cached after POST /connect; automatically re-authenticated on 401/403",
+            "New ExternalTaskWorker polls Operaton using the external task pattern (fetchAndLock) for two topics: rip-edocs-workspace (creates or retrieves the project workspace) and rip-edocs-document (renders and uploads a document to eDOCS)",
+            "Worker started inside app.listen() and stopped cleanly on SIGTERM/SIGINT",
+            "Four new REST endpoints under /v1/edocs: GET /status, POST /workspaces/ensure, POST /documents, GET /workspaces/:id/documents",
+            "New EDOCS_BASE_URL, EDOCS_LIBRARY, EDOCS_USER_ID, EDOCS_PASSWORD, and EDOCS_STUB_MODE environment variables"
+          ]
+        },
+        {
+          "title": "DMN Validator — Interaction Rules",
+          "icon": "🛡️",
+          "iconColor": "indigo",
+          "items": [
+            "INT-005 (orphaned inputData) now only fires in DRDs — models with more than one decision or at least one informationRequirement element; single-decision standalone DMNs no longer produce false-positive warnings for their inputData contract declarations",
+            "New INT-007 warning: inputExpression variable has no matching top-level inputData declaration — catches the missing inputData elements that cause the CPSV Editor to generate an empty request body on deploy"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.1.2",
+      "status": "Bug Fixes",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "March 11, 2026",
+      "sections": [
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "red",
+          "items": [
+            "Form Editor — Save now correctly persists the current schema; previously the destructured return value of saveSchema() was undefined (form-js 1.20.x returns the schema object directly, not wrapped in { schema }), which caused undefined to be written to localStorage and the active form to disappear on the next render",
+            "Form Editor — Export .form now correctly writes the full schema to the downloaded file for the same reason",
+            "Form Editor — Vite dedupe config added for preact/preact/hooks/preact/compat to prevent duplicate Preact instances when npm resolves bpmn-io packages; fixes TypeError: Cannot read properties of undefined (reading 'context') that broke the form canvas after package updates"
+          ]
+        },
+        {
+          "title": "Known Issues",
+          "icon": "⚠️",
+          "iconColor": "yellow",
+          "items": [
+            "Form Editor — Typing in a properties panel field (e.g. label, key) loses focus after the first character; this is caused by Preact re-rendering the properties panel internally on every change event inside form-js 1.20.x and is an upstream issue to be resolved in a future release"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.1.1",
+      "status": "Enhancement",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "date": "March 10, 2026",
+      "sections": [
+        {
+          "title": "Import from File",
+          "icon": "📥",
+          "iconColor": "blue",
+          "items": [
+            "Import .bpmn files directly into the BPMN Modeler via the Upload button in the process list header",
+            "Import .form files directly into the Form Editor via the Upload button in the form list header",
+            "Import .document files directly into the Document Composer via the Upload button in the document list header",
+            "Imported BPMN processes derive their name from the process element's name attribute in the XML, falling back to the filename",
+            "Imported forms derive their name from the schema id field, falling back to the filename",
+            "Imported documents receive a fresh id and timestamps on import to avoid collisions with existing templates",
+            "All imported items open immediately in their respective editor and are persisted to localStorage"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "status": "New Feature",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "date": "March 9, 2026",
+      "sections": [
+        {
+          "title": "Document Composer",
+          "icon": "📄",
+          "iconColor": "purple",
+          "items": [
+            "New Document Composer view for authoring formal government decision documents (beschikkingen)",
+            "Fixed-zone document layout: Letterhead, Contact Information, Reference, Body, Closing, Sign-off, and optional Annex",
+            "Five block types: rich text (TipTap editor with bold, italic, headings, lists), variable placeholder, image, separator, and spacer",
+            "Drag blocks from the Content library onto any zone; reorder or move blocks across zones by dragging",
+            "Image library tab fetches assets directly from the active TriplyDB dataset",
+            "Documents stored in localStorage with create, rename, delete, and Save as… actions",
+            "Export document template as a .document JSON file",
+            "Read-only example document pre-loaded: Kapvergunning Beschikking (AwbShellProcess)"
+          ]
+        },
+        {
+          "title": "Variable Bindings",
+          "icon": "🔗",
+          "iconColor": "blue",
+          "items": [
+            "Bindings panel links {{placeholder}} tokens in document text to Operaton process variable keys",
+            "Discover Variables button queries Operaton history API for all variables used in a given process definition key",
+            "Discovered variables shown as clickable chips with type labels (String, Boolean, Double, etc.) for one-click binding creation",
+            "Bindings declare source as either process variable or DMN output for audit traceability"
+          ]
+        },
+        {
+          "title": "BPMN Modeler Integration",
+          "icon": "🔌",
+          "iconColor": "indigo",
+          "items": [
+            "Document Template selector injected into the BPMN properties panel for UserTask elements",
+            "Selecting a document template writes ronl:documentRef to the BPMN XML using a custom RONL moddleDescriptor (ronlModdleDescriptor.json)",
+            "Purple badge on UserTask canvas elements confirms a document template is linked",
+            "Distinct from the existing green form badge and amber DMN badge"
+          ]
+        },
+        {
+          "title": "Deploy Bundle",
+          "icon": "🚀",
+          "iconColor": "orange",
+          "items": [
+            "Deploy modal now resolves ronl:documentRef attributes across main BPMN and all subprocess BPMNs",
+            "Matched document templates included in the Operaton deployment bundle as .document JSON files alongside .bpmn and .form resources",
+            "Resource preview in the deploy modal lists .document files with a purple icon",
+            "Backend POST /api/dmns/process/deploy extended to accept and append document templates as multipart resources"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.0.1",
+      "status": "Bug Fix",
+      "statusColor": "orange",
+      "borderColor": "orange",
+      "date": "March 7, 2026",
+      "sections": [
+        {
+          "title": "Bug Fixes",
+          "icon": "🐛",
+          "iconColor": "red",
+          "items": [
+            "Fixed Task_Phase6_Notify and Task_RequestMissingInfo appearing pre-claimed in the caseworker dashboard — camunda:assignee=\"demo\" removed, camunda:candidateGroups=\"caseworker\" added to both tasks"
+          ]
+        },
+        {
+          "title": "Internal",
+          "icon": "🔧",
+          "iconColor": "slate",
+          "items": [
+            "Example .bpmn and .form files moved to public/examples/flevoland/ as the single source of truth — inline schemas removed from bpmnTemplates.ts and FormEditor.tsx",
+            "Added example version registry (exampleVersions.ts) — incrementing a version number now pushes updated example files to existing users on next page load without requiring a localStorage reset"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.0.0",
       "status": "Major Release",
       "statusColor": "emerald",

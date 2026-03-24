@@ -10,12 +10,13 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     build: {
-      chunkSizeWarningLimit: 1000, // Vite's default threshold is 500 KB uncompressed
+      chunkSizeWarningLimit: 1000,
     },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+      dedupe: ['preact', 'preact/hooks', 'preact/compat'],
     },
   };
 });

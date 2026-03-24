@@ -16,9 +16,13 @@ import ReactDOM from 'react-dom/client';
 
 import { BpmnService } from '@/src/services/bpmnService';
 
+import { DocumentService } from '../../services/documentService';
 import { FormService } from '../../services/formService';
+import { DocumentTemplate } from '../../types/document.types';
 import DmnTemplateSelector from './DmnTemplateSelector';
+import DocumentTemplateSelector from './DocumentTemplateSelector';
 import FormTemplateSelector from './FormTemplateSelector';
+import ronlModdleDescriptor from './ronlModdleDescriptor.json';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -52,7 +56,8 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     processKey: string;
     bpmnFiles: string[];
     formFiles: string[];
-  }>({ processKey: '', bpmnFiles: [], formFiles: [] });
+    documentFiles: string[];
+  }>({ processKey: '', bpmnFiles: [], formFiles: [], documentFiles: [] });
 
   // To make the endpoint user-configurable we need to thread it through the
   // full chain: modal state → request body → backend route → service method
@@ -85,6 +90,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       ],
       moddleExtensions: {
         camunda: camundaModdleDescriptor,
+        ronl: ronlModdleDescriptor,
       },
     } as unknown);
 
@@ -164,6 +170,14 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           container.parentElement.removeChild(container);
         }
       });
+      document.querySelectorAll('[id^="document-template-custom-"]').forEach((el) => {
+        try {
+          ReactDOM.createRoot(el).unmount();
+        } catch {
+          /* empty */
+        }
+        el.remove();
+      });
     };
 
     if (elementType === 'bpmn:BusinessRuleTask') {
@@ -199,6 +213,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       const propertiesPanel = document.querySelector('.bio-properties-panel-scroll-container');
       if (!propertiesPanel) return;
 
+      // ── Form selector ──
       const selectorContainer = document.createElement('div');
       selectorContainer.id = `form-template-custom-${selectedElement.id}`;
       propertiesPanel.appendChild(selectorContainer);
@@ -215,6 +230,24 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           selectedFormRef={currentFormRef}
         />
       );
+
+      // ── Document selector (UserTask only — not StartEvent) ──
+      if (elementType === 'bpmn:UserTask') {
+        const docSelectorContainer = document.createElement('div');
+        docSelectorContainer.id = `document-template-custom-${selectedElement.id}`;
+        propertiesPanel.appendChild(docSelectorContainer);
+
+        const currentDocumentRef = businessObject.get('ronl:documentRef');
+
+        const docRoot = ReactDOM.createRoot(docSelectorContainer);
+        docRoot.render(
+          <DocumentTemplateSelector
+            element={selectedElement}
+            modeling={modeling}
+            selectedDocumentRef={currentDocumentRef}
+          />
+        );
+      }
     } else {
       cleanupReactRoots();
     }
@@ -236,6 +269,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
     overlays.remove({ type: 'dmn-linked' });
     overlays.remove({ type: 'form-linked' });
+    overlays.remove({ type: 'document-linked' });
 
     elementRegistry.forEach((element: any) => {
       if (element.type === 'bpmn:BusinessRuleTask') {
@@ -268,6 +302,17 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
         overlays.add(element.id, 'form-linked', {
           position: { bottom: -22, left: leftOffset },
           html: `<div class="form-linked-badge form-linked-badge--start" title="${formRef}">📝 ${formRef}</div>`,
+        });
+      }
+
+      if (element.type === 'bpmn:UserTask') {
+        const documentRef = element.businessObject.get('ronl:documentRef');
+        if (!documentRef) return;
+        const badgeWidth = 130;
+        const leftOffset = Math.round((element.width - badgeWidth) / 2);
+        overlays.add(element.id, 'document-linked', {
+          position: { bottom: -36, left: leftOffset }, // below the form badge
+          html: `<div class="document-linked-badge" title="${documentRef}">📄 ${documentRef}</div>`,
         });
       }
     });
@@ -314,6 +359,10 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       ...new Set([...bpmnXml.matchAll(/camunda:formRef="([^"]+)"/g)].map((m) => m[1])),
     ];
 
+    const extractDocumentRefs = (bpmnXml: string) => [
+      ...new Set([...bpmnXml.matchAll(/ronl:documentRef="([^"]+)"/g)].map((m) => m[1])),
+    ];
+
     const extractCalledElements = (bpmnXml: string) => [
       ...new Set([...bpmnXml.matchAll(/calledElement="([^"]+)"/g)].map((m) => m[1])),
     ];
@@ -343,10 +392,20 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       (ref) => !allForms.some((f) => (f.schema as Record<string, unknown>).id === ref)
     );
 
+    const allDocumentRefs = new Set([
+      ...extractDocumentRefs(xml),
+      ...subProcessXmls.flatMap((sp) => extractDocumentRefs(sp.xml)),
+    ]);
+    const allDocumentTemplates = DocumentService.getTemplates();
+    const matchedDocuments = [...allDocumentRefs].filter((ref) =>
+      allDocumentTemplates.some((d) => d.id === ref)
+    );
+
     setDeployResources({
       processKey,
       bpmnFiles: [`${processKey}.bpmn`, ...subProcessXmls.map((sp) => sp.filename)],
       formFiles: matchedForms.map((ref) => `${ref}.form`),
+      documentFiles: matchedDocuments.map((ref) => `${ref}.document`),
       ...(unmatchedForms.length ? { unmatchedForms } : {}),
     } as typeof deployResources & { unmatchedForms?: string[] });
 
@@ -363,6 +422,10 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
       const extractFormRefs = (bpmnXml: string) => [
         ...new Set([...bpmnXml.matchAll(/camunda:formRef="([^"]+)"/g)].map((m) => m[1])),
+      ];
+
+      const extractDocumentRefs = (bpmnXml: string) => [
+        ...new Set([...bpmnXml.matchAll(/ronl:documentRef="([^"]+)"/g)].map((m) => m[1])),
       ];
 
       const extractCalledElements = (bpmnXml: string) => [
@@ -392,6 +455,17 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
         if (match) forms.push({ id: ref, schema: match.schema });
       }
 
+      const allDocumentRefs = new Set([
+        ...extractDocumentRefs(xml),
+        ...subProcessXmls.flatMap((sp) => extractDocumentRefs(sp.xml)),
+      ]);
+      const allDocumentTemplates = DocumentService.getTemplates();
+      const documents: { id: string; template: DocumentTemplate }[] = [];
+      for (const ref of allDocumentRefs) {
+        const match = allDocumentTemplates.find((d) => d.id === ref);
+        if (match) documents.push({ id: ref, template: match });
+      }
+
       const parser = new DOMParser();
       const doc = parser.parseFromString(xml, 'text/xml');
       const processKey =
@@ -404,6 +478,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           bpmnXml: xml,
           deploymentName: processKey,
           forms,
+          documents,
           subProcesses: subProcessXmls,
           operatonUrl: operatonUrl.trim() || undefined,
         }),
@@ -562,10 +637,19 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                     <span className="text-green-500">📝</span> {f}
                   </li>
                 ))}
+                {deployResources.documentFiles.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
+                    <span className="text-purple-500">📄</span> {f}
+                  </li>
+                ))}
               </ul>
               <div className="mt-2 text-xs text-slate-500">
                 {deployResources.bpmnFiles.length + deployResources.formFiles.length} resource(s) ·
-                process key: <span className="font-mono">{deployResources.processKey}</span>
+                {deployResources.bpmnFiles.length +
+                  deployResources.formFiles.length +
+                  deployResources.documentFiles.length}{' '}
+                resource(s) · process key:{' '}
+                <span className="font-mono">{deployResources.processKey}</span>
               </div>
             </div>
 

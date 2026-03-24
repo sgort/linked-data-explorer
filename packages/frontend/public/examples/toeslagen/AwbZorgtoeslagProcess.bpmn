@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_AWB" targetNamespace="http://example.com/awb" exporter="Camunda Modeler" exporterVersion="5.36.0">
-  <bpmn:process id="AwbShellProcess" name="AWB General Administrative Law Act - Generic Process" isExecutable="true" camunda:historyTimeToLive="365">
-    <bpmn:startEvent id="StartEvent_AWB" name="Application submitted" camunda:formKey="embedded:deployment:start-form.html">
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:ronl="http://ronl.nl/schema/1.0" id="Definitions_AWB_Zorgtoeslag" targetNamespace="http://example.com/zorgtoeslag/awb" exporter="Camunda Modeler" exporterVersion="5.43.1">
+  <bpmn:process id="AwbZorgtoeslagProcess" name="AWB Zorgtoeslag — Provisional Entitlement Process" isExecutable="true" camunda:historyTimeToLive="365">
+    <bpmn:startEvent id="StartEvent_AWB" name="Application submitted" camunda:formRef="zorgtoeslag-provisional-start" camunda:formRefBinding="latest">
       <bpmn:outgoing>Flow_Start_Phase1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:scriptTask id="Task_Phase1_Identity" name="Phase 1: Determine legal relationship (identification)" scriptFormat="javascript">
@@ -18,7 +18,7 @@
           execution.setVariable("applicantId", "APPLICANT-" + Date.now());
         }
         if (!execution.getVariable("productType")) {
-          execution.setVariable("productType", "TreeFellingPermit");
+          execution.setVariable("productType", "Zorgtoeslag");
         }
 
         execution.setVariable("phase1Complete", true);
@@ -50,20 +50,12 @@
       <bpmn:incoming>Flow_Phase2_Phase3</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase3_Gateway</bpmn:outgoing>
     </bpmn:businessRuleTask>
-    <bpmn:scriptTask id="Task_ExtractCompleteness" name="Extract completeness flag" scriptFormat="javascript">
-      <bpmn:script>
-    var result = execution.getVariable("completenessResult");
-    execution.setVariable("isComplete", result.get("isComplete"));
-    execution.setVariable("missingFieldsDescription", result.get("missingFields"));
-    execution.removeVariable("completenessResult");
-  </bpmn:script>
-    </bpmn:scriptTask>
     <bpmn:exclusiveGateway id="Gateway_Complete" name="Application complete?">
       <bpmn:incoming>Flow_Phase3_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Complete_Yes</bpmn:outgoing>
       <bpmn:outgoing>Flow_Complete_No</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Task_RequestMissingInfo" name="Request missing information (Awb 4:5)" camunda:formKey="embedded:deployment:awb-missing-info-form.html" camunda:assignee="demo">
+    <bpmn:userTask id="Task_RequestMissingInfo" name="Request missing information (Awb 4:5)" camunda:formKey="embedded:deployment:awb-missing-info-form.html" camunda:candidateGroups="caseworker">
       <bpmn:incoming>Flow_Complete_No</bpmn:incoming>
       <bpmn:outgoing>Flow_MissingInfo_Recheck</bpmn:outgoing>
     </bpmn:userTask>
@@ -77,12 +69,11 @@
       <bpmn:outgoing>Flow_Refuse_Notify</bpmn:outgoing>
       <bpmn:script>
         execution.setVariable("status", "Not admissible");
-        execution.setVariable("finalMessage", "Your application has not been processed due to missing information (Awb 4:5 paragraph 2).");
+        execution.setVariable("finalMessage", "Your application has not been processed due to missing information (Awb 4:5 paragraph 2). You may appeal within 6 weeks (Awb 6:7).");
         execution.setVariable("decisionType", "Refused");
-        execution.setVariable("replacementInfo", "N/A");
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:callActivity id="Task_Phase45_Process" name="Phase 4+5: Processing and Decision" calledElement="TreeFellingPermitSubProcess">
+    <bpmn:callActivity id="Task_Phase45_Process" name="Phase 4+5: Processing and Decision" calledElement="ZorgtoeslagProvisionalSubProcess">
       <bpmn:extensionElements>
         <camunda:in variables="all" />
         <camunda:out variables="all" />
@@ -91,7 +82,7 @@
       <bpmn:incoming>Flow_Recheck_Process</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase45_Phase6</bpmn:outgoing>
     </bpmn:callActivity>
-    <bpmn:userTask id="Task_Phase6_Notify" name="Phase 6: Notify applicant of decision (Awb 3:6)" camunda:formKey="embedded:deployment:inform-applicant-form.html" camunda:candidateGroups="caseworker">
+    <bpmn:userTask id="Task_Phase6_Notify" name="Phase 6: Notify applicant of decision (Awb 3:6)" camunda:formRef="zorgtoeslag-notify-applicant" camunda:formRefBinding="latest" camunda:candidateGroups="caseworker" ronl:documentRef="example_zorgtoeslag_provisional_beschikking">
       <bpmn:incoming>Flow_Phase45_Phase6</bpmn:incoming>
       <bpmn:incoming>Flow_Refuse_Notify</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase6_PaymentGateway</bpmn:outgoing>
@@ -105,7 +96,8 @@
       <bpmn:incoming>Flow_Payment_Yes</bpmn:incoming>
       <bpmn:outgoing>Flow_PaymentTask_Chain</bpmn:outgoing>
       <bpmn:script>
-        // In production: integrate with payment provider / iDEAL
+        // Initiates monthly zorgtoeslag payments via the payment provider.
+        // In production: integrate with payment provider / Belastingdienst disbursement API.
         execution.setVariable("paymentProcessed", true);
         execution.setVariable("paymentDate", new Date().toISOString());
       </bpmn:script>
@@ -116,40 +108,42 @@
       <bpmn:outgoing>Flow_Chain_Yes</bpmn:outgoing>
       <bpmn:outgoing>Flow_Chain_No</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:scriptTask id="Task_Phase8_Forward" name="Phase 8: Forward to chain process" scriptFormat="javascript">
+    <bpmn:scriptTask id="Task_Phase8_Forward" name="Phase 8: Forward to ZorgtoeslagFinalSubProcess" scriptFormat="javascript">
       <bpmn:incoming>Flow_Chain_Yes</bpmn:incoming>
       <bpmn:outgoing>Flow_ChainTask_Archives</bpmn:outgoing>
       <bpmn:script>
-        // In production: call external service / API
+        // Signals that the dossier should be forwarded to ZorgtoeslagFinalSubProcess
+        // once final annual income data is available from Belastingdienst.
+        // In production: send FinalIncomeReceived message or register a timer callback.
         execution.setVariable("chainForwardDate", new Date().toISOString());
-        execution.setVariable("chainForwardComplete", true);
+        execution.setVariable("chainProcessKey", "ZorgtoeslagFinalSubProcess");
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:businessRuleTask id="Task_ArchivesDMN" name="Archiving: retention and destruction period (Archives Act)" camunda:resultVariable="archivingResult" camunda:decisionRef="ArchivesActRetention" camunda:mapDecisionResult="singleResult">
+    <bpmn:businessRuleTask id="Task_ArchivesDMN" name="Determine retention period (Archives Act)" camunda:resultVariable="archivesResult" camunda:decisionRef="ArchivesActRetention" camunda:mapDecisionResult="singleResult">
       <bpmn:incoming>Flow_Chain_No</bpmn:incoming>
       <bpmn:incoming>Flow_ChainTask_Archives</bpmn:incoming>
       <bpmn:outgoing>Flow_ArchivesDMN_Record</bpmn:outgoing>
     </bpmn:businessRuleTask>
-    <bpmn:scriptTask id="Task_ArchiveRecord" name="Archive dossier" scriptFormat="javascript">
+    <bpmn:scriptTask id="Task_ArchiveRecord" name="Archive dossier (Awb 4:17)" scriptFormat="javascript">
       <bpmn:incoming>Flow_ArchivesDMN_Record</bpmn:incoming>
       <bpmn:outgoing>Flow_Archive_End</bpmn:outgoing>
       <bpmn:script>
-        var result = execution.getVariable("archivingResult");
-        if (result) {
+        // Archive the dossier according to the retention period from ArchivesActRetention DMN.
+        execution.setVariable("archiveDate", new Date().toISOString());
+        execution.setVariable("archiveStatus", "Archived");
+        if (execution.getVariable("archivesResult")) {
+          var result = execution.getVariable("archivesResult");
           execution.setVariable("retentionYears", result.retentionYears);
           execution.setVariable("retentionClass", result.retentionClass);
-          execution.setVariable("archivingLegalBasis", result.legalBasis);
-          execution.setVariable("destroyable", result.destroyable);
-
-          var destroyDate = new Date();
-          destroyDate.setFullYear(destroyDate.getFullYear() + parseInt(result.retentionYears));
-          execution.setVariable("destroyAfterDate", destroyDate.toISOString().substring(0, 10));
+          execution.setVariable("destroyDate",
+            new Date(new Date().setFullYear(
+              new Date().getFullYear() + (result.retentionYears || 10)
+            )).toISOString()
+          );
         }
-        execution.setVariable("archiveDate", new Date().toISOString());
-        execution.setVariable("archiveComplete", true);
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:endEvent id="EndEvent_AWB" name="Dossier closed">
+    <bpmn:endEvent id="EndEvent_AWB" name="Process completed">
       <bpmn:incoming>Flow_Archive_End</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_Start_Phase1" sourceRef="StartEvent_AWB" targetRef="Task_Phase1_Identity" />
@@ -190,7 +184,7 @@
     <bpmn:sequenceFlow id="Flow_Archive_End" sourceRef="Task_ArchiveRecord" targetRef="EndEvent_AWB" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_AWB">
-    <bpmndi:BPMNPlane id="BPMNPlane_AWB" bpmnElement="AwbShellProcess">
+    <bpmndi:BPMNPlane id="BPMNPlane_AWB" bpmnElement="AwbZorgtoeslagProcess">
       <bpmndi:BPMNShape id="StartEvent_AWB_di" bpmnElement="StartEvent_AWB">
         <dc:Bounds x="160" y="299" width="36" height="36" />
         <bpmndi:BPMNLabel>
@@ -286,7 +280,7 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_MissingInfo_Recheck_di" bpmnElement="Flow_MissingInfo_Recheck">
         <di:waypoint x="941" y="520" />
-        <di:waypoint x="941" y="598" />
+        <di:waypoint x="941" y="595" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Recheck_Process_di" bpmnElement="Flow_Recheck_Process">
         <di:waypoint x="969" y="620" />

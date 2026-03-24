@@ -1,13 +1,9 @@
 {
   "schemaVersion": 16,
   "type": "default",
-  "id": "awb-notify-applicant",
+  "id": "zorgtoeslag-notify-applicant",
   "executionPlatform": "Camunda Platform",
   "executionPlatformVersion": "7.21.0",
-  "exporter": {
-    "name": "Linked Data Explorer",
-    "version": "0.9.0"
-  },
   "components": [
     {
       "id": "Text_Header",
@@ -20,18 +16,18 @@
       "text": "## Application details"
     },
     {
-      "id": "Field_TreeDiameter",
+      "id": "Field_DossierReference",
       "type": "textfield",
-      "label": "Tree diameter (cm)",
-      "key": "treeDiameter",
+      "label": "Dossier reference",
+      "key": "dossierReference",
       "readonly": true,
       "disabled": true
     },
     {
-      "id": "Field_ProtectedArea",
+      "id": "Field_HealthInsurer",
       "type": "textfield",
-      "label": "Protected area",
-      "key": "protectedArea",
+      "label": "Health insurer",
+      "key": "healthInsurer",
       "readonly": true,
       "disabled": true
     },
@@ -41,18 +37,18 @@
       "text": "## Decision information"
     },
     {
-      "id": "Field_Status",
+      "id": "Field_ProvisionalDecision",
       "type": "textfield",
-      "label": "Status",
-      "key": "status",
+      "label": "Provisional entitlement decision",
+      "key": "provisionalDecision",
       "readonly": true,
       "disabled": true
     },
     {
-      "id": "Field_PermitDecision",
-      "type": "textfield",
-      "label": "Permit decision",
-      "key": "permitDecision",
+      "id": "Field_ProvisionalAmount",
+      "type": "number",
+      "label": "Monthly amount (EUR)",
+      "key": "provisionalAmount",
       "readonly": true,
       "disabled": true
     },
@@ -61,14 +57,6 @@
       "type": "textarea",
       "label": "Decision message",
       "key": "finalMessage",
-      "readonly": true,
-      "disabled": true
-    },
-    {
-      "id": "Field_ReplacementInfo",
-      "type": "textarea",
-      "label": "Replacement information",
-      "key": "replacementInfo",
       "readonly": true,
       "disabled": true
     },
@@ -82,7 +70,9 @@
       "type": "select",
       "label": "Notification method",
       "key": "notificationMethod",
-      "validate": { "required": true },
+      "validate": {
+        "required": true
+      },
       "values": [
         { "label": "Email", "value": "email" },
         { "label": "Letter (Post)", "value": "letter" },
@@ -103,7 +93,9 @@
       "type": "checkbox",
       "label": "I confirm the applicant will be notified",
       "key": "applicantNotified",
-      "validate": { "required": true }
+      "validate": {
+        "required": true
+      }
     },
     {
       "id": "Button_Submit",
