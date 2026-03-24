@@ -1,6 +1,51 @@
 {
   "versions": [
     {
+      "version": "1.3.0",
+      "status": "Infrastructure",
+      "statusColor": "indigo",
+      "borderColor": "indigo",
+      "date": "March 24, 2026",
+      "sections": [
+        {
+          "title": "PostgreSQL Asset Storage",
+          "icon": "🗄️",
+          "iconColor": "indigo",
+          "items": [
+            "BPMN processes, form schemas, and document templates now persist to PostgreSQL via the LDE backend — assets survive localStorage clearing and are shared across browsers and devices",
+            "Write-through cache strategy: saves update localStorage immediately for zero-latency UI, then POST to /v1/assets/ in the background",
+            "Async hydration on editor mount: GET /v1/assets/ replaces non-readonly localStorage entries with authoritative server state on each page load",
+            "Graceful degradation: if the backend is unreachable, localStorage is used as fallback without any error surfaced to the user",
+            "Example assets (readonly: true) are excluded from server writes — they remain seeded from public/examples/ as before",
+            "New backend routes: GET/POST /v1/assets/bpmn, GET/POST /v1/assets/forms, GET/POST /v1/assets/documents, DELETE /v1/assets/{type}/:id",
+            "New backend route GET /v1/assets/bpmn/by-bpmn-id/:bpmnProcessId for bundle assembly lookup by BPMN process id"
+          ]
+        },
+        {
+          "title": "AWB Shell / Subprocess Hierarchy",
+          "icon": "🏗️",
+          "iconColor": "violet",
+          "items": [
+            "BpmnProcess type extended with bpmnProcessId, processRole ('shell' | 'subprocess' | 'standalone'), and calledElement fields",
+            "All seeded example processes carry explicit role and relationship metadata: AwbShellProcess and AwbZorgtoeslagProcess as shells, TreeFellingPermitSubProcess, ZorgtoeslagProvisionalSubProcess, and ZorgtoeslagFinalSubProcess as subprocesses",
+            "Imported and user-created processes default to standalone with bpmnProcessId derived from the BPMN <process id=\"...\"> attribute",
+            "Process library renders a grouped hierarchical view: shell processes are top-level entries, their subprocesses are indented beneath with a tree connector",
+            "SHELL and SUB role badges displayed on process cards for at-a-glance orientation",
+            "PostgreSQL process_definitions table stores process_role, called_element, and bpmn_process_id as indexed columns enabling server-side hierarchy queries"
+          ]
+        },
+        {
+          "title": "Schema Versioning",
+          "icon": "🔢",
+          "iconColor": "blue",
+          "items": [
+            "schema_version column added to all three PostgreSQL tables (process_definitions, form_schemas, document_templates)",
+            "Enables server-side re-seeding of example assets when source files change — all users on all devices receive updates automatically on next connect, without requiring a localStorage reset"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.2.0",
       "status": "New Feature",
       "statusColor": "purple",
