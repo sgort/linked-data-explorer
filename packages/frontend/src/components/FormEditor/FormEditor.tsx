@@ -95,6 +95,10 @@ const FormEditor: React.FC = () => {
     seed();
   }, []);
 
+  useEffect(() => {
+    FormService.hydrateFromServer().then(setForms);
+  }, []);
+
   const handleCreateForm = () => {
     const newForm: FormSchema = {
       id: `form_${Date.now()}`,

@@ -186,9 +186,12 @@ export interface BpmnProcess {
   xml: string;
   createdAt: string;
   updatedAt: string;
-  linkedDmnTemplates: string[]; // DMN template IDs
+  linkedDmnTemplates: string[];
   readonly?: boolean;
   status?: 'example' | 'wip';
+  bpmnProcessId?: string;
+  processRole?: 'shell' | 'subprocess' | 'standalone';
+  calledElement?: string;
 }
 
 export interface BpmnBusinessRuleTask {

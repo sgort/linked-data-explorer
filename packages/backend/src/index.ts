@@ -8,6 +8,7 @@ import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { versionMiddleware } from './middleware/version.middleware';
 import { externalTaskWorker } from './services/externalTaskWorker.service';
+import { migrate } from './db/migrate';
 import packageJson from '../package.json';
 
 const app: Express = express();
@@ -104,7 +105,8 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start server
-const startServer = () => {
+const startServer = async () => {
+  await migrate();
   const port = config.port;
   const host = config.host;
 

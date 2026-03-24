@@ -44,6 +44,10 @@ export const config = {
     stubMode: process.env.EDOCS_STUB_MODE !== 'false', // defaults to true for safety
   },
 
+  database: {
+    url: process.env.DATABASE_URL || '',
+  },
+
   logging: {
     level: process.env.LOG_LEVEL || 'info',
     format: process.env.LOG_FORMAT || 'json',
