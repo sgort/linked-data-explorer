@@ -75,7 +75,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'TreeFellingPermitSubProcess',
           processRole: 'subprocess',
-          calledElement: 'TreeFellingPermitSubProcess',
+          calledElement: 'AwbShellProcess',
         };
         BpmnService.saveProcess(treeFellingExample);
         setStoredVersion(treeId, EXAMPLE_VERSIONS[treeId]);
@@ -130,7 +130,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'ZorgtoeslagProvisionalSubProcess',
           processRole: 'subprocess',
-          calledElement: 'ZorgtoeslagProvisionalSubProcess',
+          calledElement: 'AwbZorgtoeslagProcess',
         };
         BpmnService.saveProcess(zorgProvisionalExample);
         setStoredVersion(zorgProvisionalId, EXAMPLE_VERSIONS[zorgProvisionalId]);
@@ -156,7 +156,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'ZorgtoeslagFinalSubProcess',
           processRole: 'subprocess',
-          calledElement: 'ZorgtoeslagFinalSubProcess',
+          calledElement: 'AwbZorgtoeslagProcess',
         };
         BpmnService.saveProcess(zorgFinalExample);
         setStoredVersion(zorgFinalId, EXAMPLE_VERSIONS[zorgFinalId]);
