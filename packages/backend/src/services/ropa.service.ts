@@ -91,34 +91,33 @@ export async function upsertRopa(
   try {
     await client.query('BEGIN');
 
-    const { rows } = await client.query(
-      `INSERT INTO ropa_records (
-         bpmn_process_id, process_level, title, controller_name, controller_contact,
-         dpo_contact, purpose, legal_basis_uri, legal_basis_label, gdpr_article,
-         data_subjects, recipients, third_country_transfers, third_country_details,
-         retention_period, security_measures, status, schema_version
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
-       ON CONFLICT (id) DO UPDATE SET
-         bpmn_process_id        = EXCLUDED.bpmn_process_id,
-         process_level          = EXCLUDED.process_level,
-         title                  = EXCLUDED.title,
-         controller_name        = EXCLUDED.controller_name,
-         controller_contact     = EXCLUDED.controller_contact,
-         dpo_contact            = EXCLUDED.dpo_contact,
-         purpose                = EXCLUDED.purpose,
-         legal_basis_uri        = EXCLUDED.legal_basis_uri,
-         legal_basis_label      = EXCLUDED.legal_basis_label,
-         gdpr_article           = EXCLUDED.gdpr_article,
-         data_subjects          = EXCLUDED.data_subjects,
-         recipients             = EXCLUDED.recipients,
-         third_country_transfers = EXCLUDED.third_country_transfers,
-         third_country_details  = EXCLUDED.third_country_details,
-         retention_period       = EXCLUDED.retention_period,
-         security_measures      = EXCLUDED.security_measures,
-         status                 = EXCLUDED.status,
-         schema_version         = EXCLUDED.schema_version,
-         updated_at             = NOW()
-       RETURNING id`,
+const { rows } = await client.query(
+  `INSERT INTO ropa_records (
+     bpmn_process_id, process_level, title, controller_name, controller_contact,
+     dpo_contact, purpose, legal_basis_uri, legal_basis_label, gdpr_article,
+     data_subjects, recipients, third_country_transfers, third_country_details,
+     retention_period, security_measures, status, schema_version
+   ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+   ON CONFLICT (bpmn_process_id) DO UPDATE SET
+     process_level          = EXCLUDED.process_level,
+     title                  = EXCLUDED.title,
+     controller_name        = EXCLUDED.controller_name,
+     controller_contact     = EXCLUDED.controller_contact,
+     dpo_contact            = EXCLUDED.dpo_contact,
+     purpose                = EXCLUDED.purpose,
+     legal_basis_uri        = EXCLUDED.legal_basis_uri,
+     legal_basis_label      = EXCLUDED.legal_basis_label,
+     gdpr_article           = EXCLUDED.gdpr_article,
+     data_subjects          = EXCLUDED.data_subjects,
+     recipients             = EXCLUDED.recipients,
+     third_country_transfers = EXCLUDED.third_country_transfers,
+     third_country_details  = EXCLUDED.third_country_details,
+     retention_period       = EXCLUDED.retention_period,
+     security_measures      = EXCLUDED.security_measures,
+     status                 = EXCLUDED.status,
+     schema_version         = EXCLUDED.schema_version,
+     updated_at             = NOW()
+   RETURNING id`,
       [
         record.bpmnProcessId,
         record.processLevel,

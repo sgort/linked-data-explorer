@@ -89,7 +89,7 @@ export async function migrate(): Promise<void> {
         updated_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW()
       );
 
-      CREATE INDEX IF NOT EXISTS idx_ropa_bpmn_process_id
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_ropa_bpmn_process_id_unique
         ON ropa_records (bpmn_process_id);
       CREATE INDEX IF NOT EXISTS idx_ropa_status
         ON ropa_records (status);

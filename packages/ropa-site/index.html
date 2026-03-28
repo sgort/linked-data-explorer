@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register van verwerkingsactiviteiten — Provincie Flevoland</title>
+  <style>
+    /* ── Reset & base ────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:        #0f6b3d;
+      --accent-light:  #e8f5ee;
+      --accent-dark:   #094d2c;
+      --surface:       #ffffff;
+      --bg:            #f8fafc;
+      --border:        #e2e8f0;
+      --text:          #1e293b;
+      --muted:         #64748b;
+      --radius:        8px;
+      --shadow:        0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:     0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    a { color: var(--accent); }
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85em;
+      background: #f1f5f9;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────── */
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 2rem 2rem 1.5rem;
+    }
+
+    .header-inner {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .header-eyebrow {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      opacity: 0.75;
+      margin-bottom: 0.4rem;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    header p {
+      font-size: 0.875rem;
+      opacity: 0.85;
+      margin-top: 0.4rem;
+    }
+
+    .header-badges {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────────── */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .intro {
+      font-size: 0.875rem;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      padding: 1rem 1.25rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      border-left: 3px solid var(--accent);
+    }
+
+    /* ── Loading / error ─────────────────────────────────────────────── */
+    #status {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-bottom: 0.75rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Cards ───────────────────────────────────────────────────────── */
+    .records { display: flex; flex-direction: column; gap: 1rem; }
+
+    .record-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: box-shadow 0.15s;
+    }
+
+    .record-card:hover { box-shadow: var(--shadow-md); }
+
+    .card-header {
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid transparent;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .card-header:hover { background: #f8fafc; }
+    .card-header.open   { border-bottom-color: var(--border); }
+
+    .card-title-group { flex: 1; min-width: 0; }
+
+    .card-title {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .card-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .card-sub-sep { color: var(--border); }
+
+    .card-badges {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+
+    /* ── Badges ──────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 2px 8px;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+
+    .badge-shell      { background: var(--accent-light); color: var(--accent-dark); }
+    .badge-subprocess { background: #eff6ff; color: #1d4ed8; }
+    .badge-active     { background: #dcfce7; color: #15803d; }
+
+    /* ── Chevron ─────────────────────────────────────────────────────── */
+    .chevron {
+      flex-shrink: 0;
+      color: var(--muted);
+      transition: transform 0.2s ease;
+    }
+    .chevron.open { transform: rotate(180deg); }
+
+    /* ── Card body ───────────────────────────────────────────────────── */
+    .card-body {
+      padding: 1.25rem;
+      display: none;
+    }
+    .card-body.visible { display: block; }
+
+    /* ── Section headers ─────────────────────────────────────────────── */
+    .section-label {
+      font-size: 0.6rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.35rem;
+      margin: 1.25rem 0 0.75rem;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    /* ── Meta grid ───────────────────────────────────────────────────── */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem 2rem;
+    }
+
+    @media (max-width: 600px) { .meta-grid { grid-template-columns: 1fr; } }
+
+    .meta-item label {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.2rem;
+    }
+
+    .meta-item p    { font-size: 0.875rem; }
+    .meta-item.full { grid-column: 1 / -1; }
+
+    .legal-link {
+      font-size: 0.8rem;
+      word-break: break-all;
+      text-decoration: none;
+    }
+    .legal-link:hover { text-decoration: underline; }
+
+    /* ── No-transfer pill ────────────────────────────────────────────── */
+    .pill-no  { color: var(--muted); font-size: 0.875rem; }
+    .pill-yes {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 1px 8px;
+      border-radius: 99px;
+    }
+
+    /* ── Fields table ────────────────────────────────────────────────── */
+    .fields-wrap { overflow-x: auto; margin-top: 0.5rem; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    thead { background: #f8fafc; }
+
+    th {
+      text-align: left;
+      font-size: 0.6rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    td code { font-size: 0.75rem; }
+
+    .special-badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 700;
+      background: #fef2f2;
+      color: #dc2626;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .cat-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 99px;
+    }
+
+    /* category colours */
+    .cat-identity     { background: #eff6ff; color: #1d4ed8; }
+    .cat-financial    { background: #f0fdf4; color: #15803d; }
+    .cat-residence    { background: #fefce8; color: #854d0e; }
+    .cat-health       { background: #fdf4ff; color: #7e22ce; }
+    .cat-civil-status { background: #fff7ed; color: #c2410c; }
+    .cat-criminal     { background: #fef2f2; color: #b91c1c; }
+    .cat-other        { background: #f8fafc; color: #475569; }
+
+    /* ── Empty table ─────────────────────────────────────────────────── */
+    .no-fields {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-style: italic;
+      padding: 0.5rem 0;
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 1rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    .footer-inner { max-width: 900px; margin: 0 auto; }
+
+    /* ── Last updated bar ────────────────────────────────────────────── */
+    .updated-bar {
+      text-align: right;
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ───────────────────────────────────────────────────────────── -->
+<header>
+  <div class="header-inner">
+    <p class="header-eyebrow">Provincie Flevoland</p>
+    <h1>Register van verwerkingsactiviteiten</h1>
+    <p>Gepubliceerd conform de Algemene Verordening Gegevensbescherming (AVG)</p>
+    <div class="header-badges">
+      <span class="header-badge">AVG Art. 30</span>
+      <span class="header-badge">GDPR Art. 30</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ─────────────────────────────────────────────────────────────── -->
+<main>
+  <p class="intro">
+    Dit register geeft inzicht in de verwerkingsactiviteiten waarbij de Provincie Flevoland
+    persoonsgegevens verwerkt. Elk record beschrijft het doel, de rechtsgrond, de betrokkenen,
+    de bewaartermijn en de technische beveiligingsmaatregelen voor een specifiek proces.
+  </p>
+
+  <div id="status">
+    <div class="spinner"></div>
+    <p>Records worden geladen…</p>
+  </div>
+
+  <div id="records" class="records"></div>
+</main>
+
+<!-- ── Footer ───────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <p>
+      Dit register wordt automatisch gegenereerd vanuit het
+      <a href="https://linkeddata.open-regels.nl" target="_blank" rel="noopener">
+        RONL Linked Data Explorer
+      </a>
+      platform.
+    </p>
+    <p style="margin-top:0.4rem">
+      Vragen of opmerkingen?
+      Neem contact op via
+      <a href="mailto:avg@flevoland.nl">avg@flevoland.nl</a>
+      of raadpleeg de
+      <a href="https://www.flevoland.nl/privacy" target="_blank" rel="noopener">
+        privacyverklaring
+      </a>.
+    </p>
+  </div>
+</footer>
+
+<script>
+  'use strict';
+
+  // ── Config ────────────────────────────────────────────────────────────────
+  const API_URL =
+    'https://acc.backend.linkeddata.open-regels.nl/v1/ropa/public?organisation=flevoland';
+
+  // ── Dutch labels ──────────────────────────────────────────────────────────
+  const CAT_NL = {
+    'identity':     'Identiteitsgegevens',
+    'financial':    'Financiële gegevens',
+    'residence':    'Verblijfsgegevens',
+    'health':       'Gezondheidsgegevens',
+    'civil status': 'Burgerlijke staat',
+    'criminal':     'Strafrechtelijke gegevens',
+    'other':        'Overige gegevens',
+  };
+
+  const CAT_CLASS = {
+    'identity':     'cat-identity',
+    'financial':    'cat-financial',
+    'residence':    'cat-residence',
+    'health':       'cat-health',
+    'civil status': 'cat-civil-status',
+    'criminal':     'cat-criminal',
+    'other':        'cat-other',
+  };
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function esc(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('nl-NL', {
+      year: 'numeric', month: 'long', day: 'numeric',
+    });
+  }
+
+  // ── Chevron SVG ───────────────────────────────────────────────────────────
+  function chevronSvg() {
+    return `<svg class="chevron" width="16" height="16" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" stroke-width="2.5"
+      stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>`;
+  }
+
+  // ── Card body HTML ────────────────────────────────────────────────────────
+  function buildBody(r) {
+    // Legal basis
+    const legalBasis = r.legalBasisUri
+      ? `<a class="legal-link" href="${esc(r.legalBasisUri)}"
+            target="_blank" rel="noopener">${esc(r.legalBasisLabel)}</a>`
+      : esc(r.legalBasisLabel) || '—';
+
+    // Third country transfers
+    const transferCell = r.thirdCountryTransfers
+      ? `<span class="pill-yes">Ja</span>`
+        + (r.thirdCountryDetails
+          ? `<p style="font-size:0.8rem;margin-top:0.3rem">${esc(r.thirdCountryDetails)}</p>`
+          : '')
+      : `<span class="pill-no">Nee</span>`;
+
+    // Fields table
+    let fieldsHtml;
+    if (!r.personalDataFields || r.personalDataFields.length === 0) {
+      fieldsHtml = '<p class="no-fields">Geen persoonsgegevens geregistreerd voor dit record.</p>';
+    } else {
+      const rows = r.personalDataFields.map((f) => {
+        const catClass = CAT_CLASS[f.dataCategory] ?? 'cat-other';
+        const catLabel = CAT_NL[f.dataCategory] ?? f.dataCategory;
+        const special = f.specialCategory
+          ? '<span class="special-badge">Art. 9/10</span>'
+          : '—';
+        return `
+          <tr>
+            <td><code>${esc(f.fieldKey)}</code></td>
+            <td>${esc(f.fieldLabel)}</td>
+            <td><span class="cat-badge ${catClass}">${esc(catLabel)}</span></td>
+            <td style="text-align:center">${special}</td>
+          </tr>`;
+      }).join('');
+
+      fieldsHtml = `
+        <div class="fields-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Veldnaam</th>
+                <th>Omschrijving</th>
+                <th>Categorie</th>
+                <th style="text-align:center">Bijzondere categorie</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    return `
+      <p class="section-label">Verwerkingsverantwoordelijke</p>
+      <div class="meta-grid">
+        <div class="meta-item">
+          <label>Organisatie</label>
+          <p>${esc(r.controllerName)}</p>
+        </div>
+        <div class="meta-item">
+          <label>AVG-grondslag</label>
+          <p>${esc(r.gdprArticle)}</p>
+        </div>
+        <div class="meta-item full">
+          <label>Wettelijke grondslag (eli:LegalResource)</label>
+          <p>${legalBasis}</p>
+        </div>
+      </div>
+
+      <p class="section-label">Verwerking</p>
+      <div class="meta-grid">
+        <div class="meta-item full">
+          <label>Doel van de verwerking</label>
+          <p>${esc(r.purpose)}</p>
+        </div>
+        <div class="meta-item full">
+          <label>Betrokkenen</label>
+          <p>${esc(r.dataSubjects)}</p>
+        </div>
+        <div class="meta-item full">
+          <label>Ontvangers</label>
+          <p>${esc(r.recipients)}</p>
+        </div>
+        <div class="meta-item">
+          <label>Bewaartermijn</label>
+          <p>${esc(r.retentionPeriod)}</p>
+        </div>
+        <div class="meta-item">
+          <label>Doorgifte aan derde landen</label>
+          <p>${transferCell}</p>
+        </div>
+      </div>
+
+      <p class="section-label">Technische en organisatorische maatregelen</p>
+      <div class="meta-grid">
+        <div class="meta-item full">
+          <label>Beveiligingsmaatregelen</label>
+          <p>${esc(r.securityMeasures)}</p>
+        </div>
+      </div>
+
+      <p class="section-label">Verwerkte persoonsgegevens</p>
+      ${fieldsHtml}
+
+      <p style="font-size:0.7rem;color:var(--muted);margin-top:1rem">
+        Laatste wijziging: ${formatDate(r.updatedAt)}
+        &nbsp;·&nbsp;
+        BPMN-proces: <code>${esc(r.bpmnProcessId)}</code>
+      </p>`;
+  }
+
+  // ── Card builder ──────────────────────────────────────────────────────────
+  function buildCard(r) {
+    const card = document.createElement('article');
+    card.className = 'record-card';
+    card.setAttribute('data-id', r.id);
+
+    const levelLabel = r.processLevel === 'shell' ? 'Processchil' : 'Deelproces';
+    const levelClass = r.processLevel === 'shell' ? 'badge-shell' : 'badge-subprocess';
+
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    header.setAttribute('role', 'button');
+    header.setAttribute('aria-expanded', 'false');
+    header.innerHTML = `
+      <div class="card-title-group">
+        <div class="card-title">${esc(r.title)}</div>
+        <div class="card-sub">
+          <span>${esc(r.controllerName)}</span>
+          <span class="card-sub-sep">·</span>
+          <span>${esc(r.gdprArticle)}</span>
+        </div>
+      </div>
+      <div class="card-badges">
+        <span class="badge ${levelClass}">${levelLabel}</span>
+        <span class="badge badge-active">Actief</span>
+        ${chevronSvg()}
+      </div>`;
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+    body.innerHTML = buildBody(r);
+
+    header.addEventListener('click', () => {
+      const isOpen = body.classList.toggle('visible');
+      header.classList.toggle('open', isOpen);
+      header.setAttribute('aria-expanded', String(isOpen));
+      header.querySelector('.chevron').classList.toggle('open', isOpen);
+    });
+
+    card.appendChild(header);
+    card.appendChild(body);
+    return card;
+  }
+
+  // ── Load and render ───────────────────────────────────────────────────────
+  async function load() {
+    const statusEl  = document.getElementById('status');
+    const recordsEl = document.getElementById('records');
+
+    try {
+      const res = await fetch(API_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
+
+      const json = await res.json();
+      const data = json.data ?? [];
+
+      statusEl.style.display = 'none';
+
+      if (data.length === 0) {
+        statusEl.style.display = 'block';
+        statusEl.innerHTML =
+          '<p>Geen gepubliceerde verwerkingsactiviteiten gevonden.</p>';
+        return;
+      }
+
+      // Shells first, then subprocesses — preserves the AWB shell → subprocess hierarchy
+      const shells = data.filter((r) => r.processLevel === 'shell');
+      const subs   = data.filter((r) => r.processLevel === 'subprocess');
+
+      // Show a timestamp above the list
+      const bar = document.createElement('p');
+      bar.className = 'updated-bar';
+      bar.textContent =
+        `${data.length} verwerkingsactiviteit${data.length !== 1 ? 'en' : ''} · `
+        + `Bijgewerkt op ${new Date().toLocaleDateString('nl-NL')}`;
+      recordsEl.appendChild(bar);
+
+      [...shells, ...subs].forEach((r) => recordsEl.appendChild(buildCard(r)));
+
+    } catch (err) {
+      statusEl.innerHTML =
+        `<p style="color:#dc2626">Fout bij laden van het register:<br>
+         <code>${esc(err.message)}</code></p>
+         <p style="margin-top:0.75rem;font-size:0.8rem">
+           Probeer de pagina te vernieuwen of neem contact op via
+           <a href="mailto:avg@flevoland.nl">avg@flevoland.nl</a>.
+         </p>`;
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>

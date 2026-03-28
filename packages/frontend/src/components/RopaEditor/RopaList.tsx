@@ -83,17 +83,11 @@ const RopaList: React.FC<RopaListProps> = ({
           <p className="text-xs text-slate-400 text-center py-8">No records yet</p>
         ) : (
           <>
-            {shells.map((s) => (
-              <div key={s.id}>
-                {renderCard(s)}
-                {subs
-                  .filter((sub) => sub.bpmnProcessId && s.bpmnProcessId)
-                  .map((sub) => (
-                    <div key={sub.id} className="flex items-start gap-1 mt-1">
-                      <div className="mt-3 ml-2 text-slate-300 select-none">└</div>
-                      <div className="flex-1">{renderCard(sub, true)}</div>
-                    </div>
-                  ))}
+            {shells.map((s) => renderCard(s))}
+            {subs.map((sub) => (
+              <div key={sub.id} className="flex items-start gap-1">
+                <div className="mt-3 ml-2 text-slate-300 select-none">└</div>
+                <div className="flex-1">{renderCard(sub, true)}</div>
               </div>
             ))}
           </>

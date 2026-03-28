@@ -41,8 +41,20 @@ const corsOptions: cors.CorsOptions = {
 app.use(helmet());
 
 // apply CORS to both normal requests and preflight
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.use((req, res, next) => {
+  if (req.path.startsWith('/v1/ropa/public')) {
+    cors({ origin: '*', methods: ['GET', 'OPTIONS'] })(req, res, next);
+  } else {
+    cors(corsOptions)(req, res, next);
+  }
+});
+app.options('*', (req, res, next) => {
+  if (req.path.startsWith('/v1/ropa/public')) {
+    cors({ origin: '*', methods: ['GET', 'OPTIONS'] })(req, res, next);
+  } else {
+    cors(corsOptions)(req, res, next);
+  }
+});
 
 // Register /api/dmns XML route BEFORE body-parsing middleware.
 // dmnXmlRoutes streams raw XML (Content-Type: application/xml), so it must not
