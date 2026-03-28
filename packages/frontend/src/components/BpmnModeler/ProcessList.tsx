@@ -3,25 +3,30 @@ import { useRef } from 'react';
 import React, { useState } from 'react';
 
 import { BpmnProcess } from '../../types';
+import RopaSelector from './RopaSelector';
 
 interface ProcessListProps {
   processes: BpmnProcess[];
   activeProcessId: string | null;
+  activeProcess: BpmnProcess | null;
   onCreateProcess: () => void;
   onImportProcess: (xml: string, name: string) => void;
   onLoadProcess: (processId: string) => void;
   onDeleteProcess: (processId: string) => void;
   onUpdateProcessName: (processId: string, name: string) => void;
+  onRopaRefChange: (ropaRef: string | undefined) => void;
 }
 
 const ProcessList: React.FC<ProcessListProps> = ({
   processes,
   activeProcessId,
+  activeProcess,
   onCreateProcess,
   onImportProcess,
   onLoadProcess,
   onDeleteProcess,
   onUpdateProcessName,
+  onRopaRefChange,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -83,7 +88,6 @@ const ProcessList: React.FC<ProcessListProps> = ({
           </button>
         </div>
       </div>
-
       {/* Process List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {(() => {
@@ -179,7 +183,6 @@ const ProcessList: React.FC<ProcessListProps> = ({
               </div>
             </div>
           );
-
           return (
             <div className="space-y-2">
               {shells.map((shell) => (
@@ -198,6 +201,15 @@ const ProcessList: React.FC<ProcessListProps> = ({
           );
         })()}
       </div>
+      {activeProcess && (
+        <div className="border-t border-slate-200 bg-slate-50 shrink-0">
+          <RopaSelector
+            bpmnProcessId={activeProcess.bpmnProcessId ?? ''}
+            currentRopaRef={activeProcess.xml.match(/ronl:ropaRef="([^"]+)"/)?.[1]}
+            onRopaRefChange={onRopaRefChange}
+          />
+        </div>
+      )}{' '}
     </div>
   );
 };
