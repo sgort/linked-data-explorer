@@ -140,7 +140,7 @@ ORDER BY ?serviceTitle`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           endpoint:
-            'https://api.open-regels.triply.cc/datasets/RONL/ronl-knowledge-graph/services/ronl-knowledge-graph/sparql',
+            'https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql',
           query,
         }),
       });
