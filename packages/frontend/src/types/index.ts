@@ -57,6 +57,7 @@ export enum ViewMode {
   VALIDATE = 'VALIDATE',
   FORM = 'FORM',
   DOCUMENT = 'DOCUMENT',
+  ROPA = 'ROPA',
 }
 
 export interface EndpointConfig {

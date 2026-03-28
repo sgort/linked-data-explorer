@@ -282,16 +282,46 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     setCurrentXml(DEFAULT_BPMN_XML);
   };
 
+  const handleRopaRefChange = (ropaRef: string | undefined) => {
+    if (!activeProcessId) return;
+    const process = BpmnService.getProcess(activeProcessId);
+    if (!process) return;
+
+    let xml = process.xml;
+
+    // Ensure the ronl namespace is declared on the definitions element
+    if (!xml.includes('xmlns:ronl=')) {
+      xml = xml.replace(/(<(?:bpmn:)?definitions\b)/, '$1 xmlns:ronl="http://ronl.nl/schema/1.0"');
+    }
+
+    if (ropaRef) {
+      if (xml.includes('ronl:ropaRef=')) {
+        xml = xml.replace(/ronl:ropaRef="[^"]*"/, `ronl:ropaRef="${ropaRef}"`);
+      } else {
+        // Inject into the <bpmn:process> opening tag before its closing > or />
+        xml = xml.replace(/(<(?:bpmn:)?process\b[^>]*?)(\/?>)/, `$1 ronl:ropaRef="${ropaRef}"$2`);
+      }
+    } else {
+      xml = xml.replace(/\s*ronl:ropaRef="[^"]*"/, '');
+    }
+
+    BpmnService.saveProcess({ ...process, xml, updatedAt: new Date().toISOString() });
+    setProcesses(BpmnService.getProcesses());
+    setCurrentXml(xml);
+  };
+
   return (
     <div className="flex h-full bg-slate-50">
       <ProcessList
         processes={processes}
         activeProcessId={activeProcessId}
+        activeProcess={activeProcess}
         onCreateProcess={handleCreateProcess}
         onImportProcess={handleImportProcess}
         onLoadProcess={handleLoadProcess}
         onDeleteProcess={handleDeleteProcess}
         onUpdateProcessName={handleUpdateProcessName}
+        onRopaRefChange={handleRopaRefChange}
       />
 
       <div className="flex-1 flex flex-col border-x border-slate-200">

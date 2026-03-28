@@ -1,6 +1,75 @@
 {
   "versions": [
     {
+      "version": "1.4.0",
+      "status": "New Feature",
+      "statusColor": "teal",
+      "borderColor": "teal",
+      "date": "March 28, 2026",
+      "sections": [
+        {
+          "title": "RoPA Records — PostgreSQL",
+          "icon": "🔒",
+          "iconColor": "teal",
+          "items": [
+            "Two new PostgreSQL tables: ropa_records (one record per process) and ropa_personal_data_fields (one row per personal data field collected by the linked forms)",
+            "ropa_records keyed by bpmn_process_id with a unique index — re-running the seed updates records in place rather than inserting duplicates",
+            "ropa_personal_data_fields cascade-deleted when the parent record is removed, ensuring referential integrity",
+            "New backend service ropa.service.ts with transactional upsert: record header and all field rows committed atomically or rolled back together",
+            "Seeded with four active records covering the AWB Shell (Flevoland), Tree Felling Permit subprocess, AWB Shell (Zorgtoeslag), and Zorgtoeslag Provisional Entitlement subprocess"
+          ]
+        },
+        {
+          "title": "RoPA Records — API",
+          "icon": "🌐",
+          "iconColor": "teal",
+          "items": [
+            "Authenticated asset routes: GET/POST /v1/assets/ropa and DELETE /v1/assets/ropa/:id, GET /v1/assets/ropa/by-bpmn-id/:bpmnProcessId",
+            "Public read-only route GET /v1/ropa/public?organisation= with open CORS — serves only active records and strips internal contact details before returning",
+            "Public route bypasses the global CORS origin whitelist via path-aware middleware in index.ts, enabling consumption from any external domain including ropa.flevoland.nl"
+          ]
+        },
+        {
+          "title": "RoPA Editor — LDE UI",
+          "icon": "📋",
+          "iconColor": "teal",
+          "items": [
+            "New RoPA Records view in the LDE sidebar (ScrollText icon), using the same three-panel layout as BPMN Modeler and Document Composer",
+            "Left panel: record list grouped as shells first then subprocesses, with DRAFT / ACTIVE / ARCHIVED status badges and delete controls",
+            "Record tab: all GDPR Art. 30 mandatory fields — controller, purpose, GDPR article, legal basis, data subjects, recipients, third-country transfers, retention period, security measures",
+            "Legal basis Lookup button queries the TriplyDB SPARQL endpoint for eli:LegalResource resources and presents a pick-list — selected URI and label populate both fields automatically",
+            "Personal Data Fields tab: hydrates field rows from the form schemas linked to the process via camunda:formRef — Product Owner classifies each field with a data category and Art. 9/10 flag",
+            "BPMN Link tab: reads and writes ronl:ropaRef directly into the process XML via BpmnService, with status indicator showing whether the current record ID matches the value in the BPMN",
+            "Status tab: three lifecycle buttons (Draft / Active / Archived) with confirmation dialog before activation — activating a record makes it publicly visible"
+          ]
+        },
+        {
+          "title": "RoPA Selector — BPMN Modeler",
+          "icon": "🔗",
+          "iconColor": "teal",
+          "items": [
+            "RoPA record selector rendered as a fixed footer panel at the bottom of the ProcessList when a process is active — no canvas element selection required",
+            "Selecting a record writes ronl:ropaRef into the process XML and persists via BpmnService.saveProcess, including automatic xmlns:ronl namespace injection if absent",
+            "ronl:ropaRef added to ronlModdleDescriptor.json as a bpmn:Process-level attribute alongside the existing ronl:documentRef UserTask extension",
+            "Deploy modal shows an amber warning when no ronl:ropaRef is found on the process element — non-blocking but visible before production deployment"
+          ]
+        },
+        {
+          "title": "RoPA Public Site — MVP",
+          "icon": "🏛️",
+          "iconColor": "teal",
+          "items": [
+            "New package packages/ropa-site — a zero-dependency static HTML/CSS/JS site deployable as an Azure Static Web Apps resource isolated from the LDE stack",
+            "Fetches active RoPA records from GET /v1/ropa/public and renders them as collapsible cards with Provincie Flevoland house style (dark green accent)",
+            "Each card shows controller, GDPR article, legal basis (linked to eli:LegalResource URI), purpose, data subjects, recipients, retention period, security measures, and a personal data fields table",
+            "Personal data fields table colour-codes data categories and flags Art. 9/10 special categories in red",
+            "Shells rendered first, subprocesses second — matching the AWB two-level process hierarchy",
+            "staticwebapp.config.json included for Azure Static Web Apps deployment with no-cache headers"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.3.0",
       "status": "Infrastructure",
       "statusColor": "indigo",

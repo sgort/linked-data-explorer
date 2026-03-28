@@ -12,6 +12,7 @@ import {
   Play,
   Plus,
   RefreshCw,
+  ScrollText,
   Settings,
   Share2,
   ShieldCheck,
@@ -28,6 +29,7 @@ import DocumentComposer from './components/DocumentComposer/DocumentComposer';
 import FormEditor from './components/FormEditor/FormEditor';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
+import RopaEditor from './components/RopaEditor/RopaEditor';
 import Tutorial from './components/Tutorial/Tutorial';
 import { executeSparqlQuery } from './services/sparqlService';
 import { SparqlResponse, ViewMode } from './types';
@@ -268,6 +270,14 @@ const App: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setViewMode(ViewMode.ROPA)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.ROPA ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="RoPA Records"
+          >
+            <ScrollText size={24} />
+          </button>
+
+          <button
             onClick={() => setViewMode(ViewMode.VALIDATE)}
             className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.VALIDATE ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
             title="DMN Validator"
@@ -326,7 +336,8 @@ const App: React.FC = () => {
             viewMode !== ViewMode.TUTORIAL &&
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
-            viewMode !== ViewMode.VALIDATE && (
+            viewMode !== ViewMode.VALIDATE &&
+            viewMode !== ViewMode.ROPA && (
               <div className="flex items-center gap-3">
                 <div className="hidden lg:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
                   <span className="text-xs text-slate-500 mr-2 font-semibold uppercase tracking-tight">
@@ -427,6 +438,12 @@ const App: React.FC = () => {
           {viewMode === ViewMode.DOCUMENT && (
             <div className="flex-1 overflow-hidden">
               <DocumentComposer endpoint={endpoint} />
+            </div>
+          )}
+
+          {viewMode === ViewMode.ROPA && (
+            <div className="flex-1 overflow-hidden">
+              <RopaEditor />
             </div>
           )}
 
@@ -616,6 +633,7 @@ const App: React.FC = () => {
             viewMode !== ViewMode.BPMN &&
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
+            viewMode !== ViewMode.ROPA &&
             viewMode !== ViewMode.VALIDATE && (
               <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
                 <div className="flex-1 flex flex-col min-h-0">
@@ -674,6 +692,7 @@ const App: React.FC = () => {
             viewMode !== ViewMode.BPMN &&
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
+            viewMode !== ViewMode.ROPA &&
             viewMode !== ViewMode.VALIDATE && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
                 {/* Error Overlay */}

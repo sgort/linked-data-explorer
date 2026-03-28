@@ -62,6 +62,52 @@ export async function migrate(): Promise<void> {
         created_at     TIMESTAMPTZ NOT NULL,
         updated_at     TIMESTAMPTZ NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS ropa_records (
+        id                       UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+        bpmn_process_id          VARCHAR(255) NOT NULL,
+        process_level            VARCHAR(20)  NOT NULL
+                                 CHECK (process_level IN ('shell', 'subprocess')),
+        title                    VARCHAR(500) NOT NULL,
+        controller_name          TEXT         NOT NULL,
+        controller_contact       TEXT         NOT NULL,
+        dpo_contact              TEXT,
+        purpose                  TEXT         NOT NULL,
+        legal_basis_uri          TEXT         NOT NULL,
+        legal_basis_label        TEXT         NOT NULL,
+        gdpr_article             VARCHAR(50)  NOT NULL,
+        data_subjects            TEXT         NOT NULL,
+        recipients               TEXT         NOT NULL,
+        third_country_transfers  BOOLEAN      NOT NULL DEFAULT FALSE,
+        third_country_details    TEXT,
+        retention_period         TEXT         NOT NULL,
+        security_measures        TEXT         NOT NULL,
+        status                   VARCHAR(20)  NOT NULL DEFAULT 'draft'
+                                 CHECK (status IN ('draft', 'active', 'archived')),
+        schema_version           INTEGER      NOT NULL DEFAULT 1,
+        created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        updated_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_ropa_bpmn_process_id_unique
+        ON ropa_records (bpmn_process_id);
+      CREATE INDEX IF NOT EXISTS idx_ropa_status
+        ON ropa_records (status);
+
+      CREATE TABLE IF NOT EXISTS ropa_personal_data_fields (
+        id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+        ropa_record_id   UUID         NOT NULL
+                           REFERENCES ropa_records(id) ON DELETE CASCADE,
+        form_id          TEXT         NOT NULL,
+        field_key        VARCHAR(255) NOT NULL,
+        field_label      TEXT         NOT NULL,
+        data_category    VARCHAR(100) NOT NULL,
+        special_category BOOLEAN      NOT NULL DEFAULT FALSE,
+        sort_order       INTEGER      NOT NULL DEFAULT 0
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_rpdf_ropa_record_id
+        ON ropa_personal_data_fields (ropa_record_id);
     `);
     logger.info('[DB] Migrations applied');
   } finally {

@@ -8,13 +8,12 @@
     {
       "name": "DocumentRefMixin",
       "extends": ["bpmn:UserTask"],
-      "properties": [
-        {
-          "name": "documentRef",
-          "isAttr": true,
-          "type": "String"
-        }
-      ]
+      "properties": [{ "name": "documentRef", "isAttr": true, "type": "String" }]
+    },
+    {
+      "name": "RopaRefMixin",
+      "extends": ["bpmn:Process"],
+      "properties": [{ "name": "ropaRef", "isAttr": true, "type": "String" }]
     }
   ]
 }

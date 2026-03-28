@@ -392,6 +392,8 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       (ref) => !allForms.some((f) => (f.schema as Record<string, unknown>).id === ref)
     );
 
+    const ropaRefMissing = !xml.includes('ronl:ropaRef=');
+
     const allDocumentRefs = new Set([
       ...extractDocumentRefs(xml),
       ...subProcessXmls.flatMap((sp) => extractDocumentRefs(sp.xml)),
@@ -407,8 +409,8 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       formFiles: matchedForms.map((ref) => `${ref}.form`),
       documentFiles: matchedDocuments.map((ref) => `${ref}.document`),
       ...(unmatchedForms.length ? { unmatchedForms } : {}),
-    } as typeof deployResources & { unmatchedForms?: string[] });
-
+      ropaRefMissing, // ← new field
+    } as typeof deployResources & { unmatchedForms?: string[]; ropaRefMissing?: boolean });
     setDeployResult(null);
     setShowDeployModal(true);
   };
@@ -643,6 +645,13 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                   </li>
                 ))}
               </ul>
+              {(deployResources as any).ropaRefMissing && (
+                <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                  ⚠️ No <code className="font-mono">ronl:ropaRef</code> found on the process
+                  element. Link a RoPA record in the BPMN properties panel before deploying to
+                  production.
+                </div>
+              )}
               <div className="mt-2 text-xs text-slate-500">
                 {deployResources.bpmnFiles.length + deployResources.formFiles.length} resource(s) ·
                 {deployResources.bpmnFiles.length +
