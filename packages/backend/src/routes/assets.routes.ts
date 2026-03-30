@@ -75,15 +75,13 @@ router.get('/bpmn/by-bpmn-id/:bpmnProcessId', async (req: Request, res: Response
   try {
     const result = await getBpmnByBpmnProcessId(req.params.bpmnProcessId);
     if (!result)
-      return res
-        .status(404)
-        .json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: `No process found for bpmnProcessId: ${req.params.bpmnProcessId}`,
-          },
-        });
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: `No process found for bpmnProcessId: ${req.params.bpmnProcessId}`,
+        },
+      });
     res.json({ success: true, data: result });
   } catch (err) {
     logger.error('[assets] getBpmnByBpmnProcessId failed', { error: getErrorMessage(err) });

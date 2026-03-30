@@ -12,7 +12,7 @@ import vendorRoutes from './vendor.routes';
 import processRoutes from './process.routes';
 import edocsRoutes from './edocs.routes';
 import assetsRoutes from './assets.routes';
-import ropaRoutes       from './ropa.routes';
+import ropaRoutes from './ropa.routes';
 import ropaPublicRoutes from './ropa.public.routes';
 
 const router = Router();
@@ -38,7 +38,7 @@ router.use('/v1/process', processRoutes);
 router.use('/v1/edocs', edocsRoutes);
 router.use('/v1/assets', assetsRoutes);
 router.use('/v1/assets/ropa', ropaRoutes);
-router.use('/v1/ropa/public',  ropaPublicRoutes);
+router.use('/v1/ropa/public', ropaPublicRoutes);
 
 // Legacy /api/* routes (deprecated but working)
 router.use('/api/health', deprecationMiddleware('/v1/health'), healthRoutes);

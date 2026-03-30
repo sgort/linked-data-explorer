@@ -15,12 +15,10 @@ const router = Router();
 
 const dbRequired = (_req: Request, res: Response): boolean => {
   if (!pool) {
-    res
-      .status(503)
-      .json({
-        success: false,
-        error: { code: 'DB_NOT_CONFIGURED', message: 'Asset storage not configured' },
-      });
+    res.status(503).json({
+      success: false,
+      error: { code: 'DB_NOT_CONFIGURED', message: 'Asset storage not configured' },
+    });
     return false;
   }
   return true;
@@ -45,15 +43,13 @@ router.get('/by-bpmn-id/:bpmnProcessId', async (req, res) => {
   try {
     const result = await getRopaByBpmnProcessId(req.params.bpmnProcessId);
     if (!result)
-      return res
-        .status(404)
-        .json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: `No RoPA record for bpmnProcessId: ${req.params.bpmnProcessId}`,
-          },
-        });
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: `No RoPA record for bpmnProcessId: ${req.params.bpmnProcessId}`,
+        },
+      });
     res.json({ success: true, data: result });
   } catch (err) {
     logger.error('[ropa] getRopaByBpmnProcessId failed', { error: getErrorMessage(err) });

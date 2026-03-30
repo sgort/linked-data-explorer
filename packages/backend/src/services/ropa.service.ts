@@ -91,8 +91,8 @@ export async function upsertRopa(
   try {
     await client.query('BEGIN');
 
-const { rows } = await client.query(
-  `INSERT INTO ropa_records (
+    const { rows } = await client.query(
+      `INSERT INTO ropa_records (
      bpmn_process_id, process_level, title, controller_name, controller_contact,
      dpo_contact, purpose, legal_basis_uri, legal_basis_label, gdpr_article,
      data_subjects, recipients, third_country_transfers, third_country_details,
