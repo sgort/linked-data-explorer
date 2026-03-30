@@ -1,81 +1,41 @@
 import pool from '../db/pool';
-import { RopaRecord, RopaPersonalDataField, PublicRopaRecord } from '../types/ropa.types';
-
-// ─── Mapping helpers ──────────────────────────────────────────────────────────
-
-function rowToRecord(r: Record<string, unknown>, fields: RopaPersonalDataField[]): RopaRecord {
-  return {
-    id: r.id as string,
-    bpmnProcessId: r.bpmn_process_id as string,
-    processLevel: r.process_level as RopaRecord['processLevel'],
-    title: r.title as string,
-    controllerName: r.controller_name as string,
-    controllerContact: r.controller_contact as string,
-    dpoContact: (r.dpo_contact as string) ?? undefined,
-    purpose: r.purpose as string,
-    legalBasisUri: r.legal_basis_uri as string,
-    legalBasisLabel: r.legal_basis_label as string,
-    gdprArticle: r.gdpr_article as string,
-    dataSubjects: r.data_subjects as string,
-    recipients: r.recipients as string,
-    thirdCountryTransfers: r.third_country_transfers as boolean,
-    thirdCountryDetails: (r.third_country_details as string) ?? undefined,
-    retentionPeriod: r.retention_period as string,
-    securityMeasures: r.security_measures as string,
-    status: r.status as RopaRecord['status'],
-    schemaVersion: r.schema_version as number,
-    personalDataFields: fields,
-    createdAt: (r.created_at as Date).toISOString(),
-    updatedAt: (r.updated_at as Date).toISOString(),
-  };
-}
-
-function rowToField(r: Record<string, unknown>): RopaPersonalDataField {
-  return {
-    id: r.id as string,
-    ropaRecordId: r.ropa_record_id as string,
-    formId: r.form_id as string,
-    fieldKey: r.field_key as string,
-    fieldLabel: r.field_label as string,
-    dataCategory: r.data_category as string,
-    specialCategory: r.special_category as boolean,
-    sortOrder: r.sort_order as number,
-  };
-}
+import { RopaRecordRow, RopaFieldRow } from '../db/types';
+import { RopaRecord, PublicRopaRecord } from '../types/ropa.types';
+import { mapRopaRecord, mapRopaField } from '../db/mappers';
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
 
 export async function listRopa(): Promise<RopaRecord[]> {
   if (!pool) return [];
-  const { rows: recordRows } = await pool.query(
+  const { rows: recordRows } = await pool.query<RopaRecordRow>(
     `SELECT * FROM ropa_records ORDER BY updated_at DESC`
   );
   if (recordRows.length === 0) return [];
   const ids = recordRows.map((r) => r.id);
-  const { rows: fieldRows } = await pool.query(
+  const { rows: fieldRows } = await pool.query<RopaFieldRow>(
     `SELECT * FROM ropa_personal_data_fields
      WHERE ropa_record_id = ANY($1) ORDER BY sort_order ASC`,
     [ids]
   );
   return recordRows.map((r) =>
-    rowToRecord(r, fieldRows.filter((f) => f.ropa_record_id === r.id).map(rowToField))
+    mapRopaRecord(r, fieldRows.filter((f) => f.ropa_record_id === r.id).map(mapRopaField))
   );
 }
 
 export async function getRopaById(id: string): Promise<RopaRecord | null> {
   if (!pool) return null;
-  const { rows } = await pool.query(`SELECT * FROM ropa_records WHERE id = $1`, [id]);
+  const { rows } = await pool.query<RopaRecordRow>(`SELECT * FROM ropa_records WHERE id = $1`, [id]);
   if (rows.length === 0) return null;
-  const { rows: fieldRows } = await pool.query(
+  const { rows: fieldRows } = await pool.query<RopaFieldRow>(
     `SELECT * FROM ropa_personal_data_fields WHERE ropa_record_id = $1 ORDER BY sort_order ASC`,
     [id]
   );
-  return rowToRecord(rows[0], fieldRows.map(rowToField));
+  return mapRopaRecord(rows[0], fieldRows.map(mapRopaField));
 }
 
 export async function getRopaByBpmnProcessId(bpmnProcessId: string): Promise<RopaRecord | null> {
   if (!pool) return null;
-  const { rows } = await pool.query(
+  const { rows } = await pool.query<RopaRecordRow>(
     `SELECT * FROM ropa_records WHERE bpmn_process_id = $1 ORDER BY updated_at DESC LIMIT 1`,
     [bpmnProcessId]
   );
@@ -187,18 +147,18 @@ export async function listPublicRopa(organisation?: string): Promise<PublicRopaR
     params.push(`%${organisation}%`);
     where += ` AND r.controller_name ILIKE $${params.length}`;
   }
-  const { rows: recordRows } = await pool.query(
+  const { rows: recordRows } = await pool.query<RopaRecordRow>(
     `SELECT * FROM ropa_records r ${where} ORDER BY r.updated_at DESC`,
     params
   );
   if (recordRows.length === 0) return [];
   const ids = recordRows.map((r) => r.id);
-  const { rows: fieldRows } = await pool.query(
+  const { rows: fieldRows } = await pool.query<RopaFieldRow>(
     `SELECT * FROM ropa_personal_data_fields WHERE ropa_record_id = ANY($1) ORDER BY sort_order ASC`,
     [ids]
   );
   return recordRows.map((r) => {
-    const full = rowToRecord(r, fieldRows.filter((f) => f.ropa_record_id === r.id).map(rowToField));
+    const full = mapRopaRecord(r, fieldRows.filter((f) => f.ropa_record_id === r.id).map(mapRopaField));
     // Strip internal fields before exposing publicly
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { schemaVersion, controllerContact, dpoContact, ...pub } = full;
