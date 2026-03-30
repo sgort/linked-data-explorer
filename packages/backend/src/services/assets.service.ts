@@ -1,30 +1,19 @@
 import pool from '../db/pool';
+import { BpmnRow, FormRow, DocumentRow } from '../db/types';
+import { Bpmn, Form, Document } from '../domain/types';
+import { mapBpmn, mapForm, mapDocument } from '../db/mappers';
 
 // ─── BPMN ────────────────────────────────────────────────────────────────────
 
-export async function listBpmn(): Promise<unknown[]> {
+export async function listBpmn(): Promise<Bpmn[]> {
   if (!pool) return [];
-  const { rows } = await pool.query(
+  const { rows } = await pool.query<BpmnRow>(
     `SELECT lde_id, bpmn_process_id, name, description, xml,
             process_role, called_element, linked_dmn_templates,
             status, readonly, schema_version, created_at, updated_at
      FROM process_definitions ORDER BY updated_at DESC`
   );
-  return rows.map((r) => ({
-    id: r.lde_id,
-    bpmnProcessId: r.bpmn_process_id,
-    name: r.name,
-    description: r.description ?? undefined,
-    xml: r.xml,
-    processRole: r.process_role,
-    calledElement: r.called_element ?? undefined,
-    linkedDmnTemplates: r.linked_dmn_templates ?? [],
-    status: r.status,
-    readonly: r.readonly,
-    schemaVersion: r.schema_version,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-  }));
+  return rows.map(mapBpmn);
 }
 
 export async function upsertBpmn(p: {
@@ -90,21 +79,15 @@ export async function getBpmnByBpmnProcessId(bpmnProcessId: string): Promise<unk
 
 // ─── Forms ───────────────────────────────────────────────────────────────────
 
-export async function listForms(): Promise<unknown[]> {
+export async function listForms(): Promise<Form[]> {
   if (!pool) return [];
-  const { rows } = await pool.query(
-    'SELECT id, name, description, schema, status, created_at, updated_at FROM form_schemas ORDER BY updated_at DESC'
+
+  const { rows } = await pool.query<FormRow>(
+    `SELECT id, name, description, schema, status, created_at, updated_at
+     FROM form_schemas
+     ORDER BY updated_at DESC`
   );
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    description: r.description ?? undefined,
-    schema: r.schema,
-    status: r.status,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-    readonly: false,
-  }));
+  return rows.map(mapForm);
 }
 
 export async function upsertForm(f: {
@@ -145,26 +128,17 @@ export async function deleteForm(id: string): Promise<void> {
 
 // ─── Documents ───────────────────────────────────────────────────────────────
 
-export async function listDocuments(): Promise<unknown[]> {
+export async function listDocuments(): Promise<Document[]> {
   if (!pool) return [];
-  const { rows } = await pool.query(
-    'SELECT id, name, description, process_key, service_id, schema_version, zones, bindings, assets, status, created_at, updated_at FROM document_templates ORDER BY updated_at DESC'
+
+  const { rows } = await pool.query<DocumentRow>(
+    `SELECT id, name, description, process_key, service_id,
+            schema_version, zones, bindings, assets, status,
+            created_at, updated_at
+     FROM document_templates
+     ORDER BY updated_at DESC`
   );
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    description: r.description ?? undefined,
-    processKey: r.process_key ?? undefined,
-    serviceId: r.service_id ?? undefined,
-    schemaVersion: r.schema_version,
-    zones: r.zones,
-    bindings: r.bindings,
-    assets: r.assets,
-    status: r.status,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-    readonly: false,
-  }));
+  return rows.map(mapDocument);
 }
 
 export async function upsertDocument(d: {
