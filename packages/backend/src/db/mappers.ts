@@ -1,5 +1,3 @@
-// db/mappers.ts
-
 import { BpmnRow, FormRow, DocumentRow } from './types';
 import { Bpmn, Form, Document } from '../domain/types';
 

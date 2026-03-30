@@ -1,5 +1,3 @@
-// db/types.ts
-
 export type BpmnRow = {
   lde_id: string;
   bpmn_process_id: string;

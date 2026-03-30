@@ -1,5 +1,3 @@
-// domain/types.ts
-
 export type Bpmn = {
   id: string;
   bpmnProcessId: string;
