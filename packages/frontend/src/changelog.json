@@ -17,6 +17,7 @@
             "Forms and documents are expanded by name in the response — forms joined via schema JSON id field, documents joined via document_templates.id",
             "Subprocesses linked to a shell via calledElement are resolved and included as a nested array",
             "New PATCH /v1/assets/bpmn/:id/deploy endpoint writes deployment metadata back to the process_definitions row immediately after a successful Operaton deploy",
+            "To cover example bundles removed `readonly: true` from the seed records entirely, kept the EXAMPLE badge, and protect deletion by checking status === 'example' instead of readonly",
             "PATCH method added to the backend CORS allowed methods list"
           ]
         },
