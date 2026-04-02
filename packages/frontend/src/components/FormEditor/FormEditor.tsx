@@ -78,7 +78,7 @@ const FormEditor: React.FC = () => {
           schema,
           createdAt: '2026-03-05T00:00:00.000Z',
           updatedAt: new Date().toISOString(),
-          readonly: true,
+          readonly: false,
           status: 'example',
         };
         FormService.saveForm(form);
@@ -150,7 +150,7 @@ const FormEditor: React.FC = () => {
 
   const handleDeleteForm = (formId: string) => {
     const form = FormService.getForm(formId);
-    if (form?.readonly) {
+    if (form?.status === 'example') {
       alert('Cannot delete example forms');
       return;
     }

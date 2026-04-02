@@ -17,20 +17,20 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 2, // v2: removed camunda:assignee="demo", added candidateGroups="caseworker"
-  example_tree_felling: 2, // v2: extracted from bpmnTemplates.ts, no logic changes
-  example_awb_zorgtoeslag: 1, // v1: initial release — AWB shell wired for zorgtoeslag provisional
-  example_zorgtoeslag_provisional: 1, // v1: initial release — provisional entitlement subprocess
-  example_zorgtoeslag_final: 1, // v1: initial release — final settlement subprocess (message start)
+  example_awb_process: 3,
+  example_tree_felling: 4,
+  example_awb_zorgtoeslag: 2,
+  example_zorgtoeslag_provisional: 3,
+  example_zorgtoeslag_final: 3,
 
   // Camunda Forms
-  example_kapvergunning_start: 1,
-  example_tree_felling_review: 1,
-  example_awb_notify_applicant: 1,
-  example_zorgtoeslag_notify_applicant: 1, // v1: Phase 6 notify form for AwbZorgtoeslagProcess
-  example_zorgtoeslag_provisional_start: 1, // v1: citizen start form for ZorgtoeslagProvisionalSubProcess
-  example_zorgtoeslag_provisional_review: 1, // v1: Sub_CaseReview form for ZorgtoeslagProvisionalSubProcess
-  example_zorgtoeslag_final_review: 1, // v1: Sub_CaseReview form for ZorgtoeslagFinalSubProcess
+  example_kapvergunning_start: 2,
+  example_tree_felling_review: 2,
+  example_awb_notify_applicant: 2,
+  example_zorgtoeslag_notify_applicant: 2,
+  example_zorgtoeslag_provisional_start: 2,
+  example_zorgtoeslag_provisional_review: 2,
+  example_zorgtoeslag_final_review: 2,
 };
 
 const STORAGE_KEY = 'linkedDataExplorer_exampleVersions';

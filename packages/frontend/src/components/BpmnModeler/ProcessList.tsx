@@ -170,13 +170,8 @@ const ProcessList: React.FC<ProcessListProps> = ({
                     e.stopPropagation();
                     onDeleteProcess(process.id);
                   }}
-                  disabled={process.readonly}
-                  className={`p-1 rounded transition-colors ${
-                    process.readonly
-                      ? 'text-slate-300 cursor-not-allowed'
-                      : 'hover:bg-red-100 text-slate-400 hover:text-red-600'
-                  }`}
-                  title={process.readonly ? 'Cannot delete example' : 'Delete'}
+                  disabled={process.status === 'example'}
+                  title={process.status === 'example' ? 'Cannot delete example' : 'Delete'}
                 >
                   <Trash2 size={14} />
                 </button>

@@ -47,7 +47,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           createdAt: '2026-02-10T14:30:00.000Z',
           updatedAt: new Date().toISOString(),
           linkedDmnTemplates: ['AwbCompletenessCheck', 'ArchivesActRetention'],
-          readonly: true,
+          readonly: false,
           status: 'example',
           bpmnProcessId: 'AwbShellProcess',
           processRole: 'shell',
@@ -71,7 +71,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           createdAt: '2026-01-15T10:00:00.000Z',
           updatedAt: new Date().toISOString(),
           linkedDmnTemplates: ['TreeFellingDecision', 'ReplacementTreeDecision'],
-          readonly: true,
+          readonly: false,
           status: 'example',
           bpmnProcessId: 'TreeFellingPermitSubProcess',
           processRole: 'subprocess',
@@ -101,7 +101,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
             'ArchivesActRetention',
             'resultaat_zorgtoeslag',
           ],
-          readonly: true,
+          readonly: false,
           status: 'example',
           bpmnProcessId: 'AwbZorgtoeslagProcess',
           processRole: 'shell',
@@ -126,7 +126,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           createdAt: '2026-03-17T00:00:00.000Z',
           updatedAt: new Date().toISOString(),
           linkedDmnTemplates: ['resultaat_zorgtoeslag'],
-          readonly: true,
+          readonly: false,
           status: 'example',
           bpmnProcessId: 'ZorgtoeslagProvisionalSubProcess',
           processRole: 'subprocess',
@@ -152,7 +152,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           createdAt: '2026-03-17T00:00:00.000Z',
           updatedAt: new Date().toISOString(),
           linkedDmnTemplates: ['resultaat_zorgtoeslag'],
-          readonly: true,
+          readonly: false,
           status: 'example',
           bpmnProcessId: 'ZorgtoeslagFinalSubProcess',
           processRole: 'subprocess',
@@ -255,7 +255,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
 
   const handleDeleteProcess = (processId: string) => {
     const process = BpmnService.getProcess(processId);
-    if (process?.readonly) {
+    if (process?.status === 'example') {
       alert('Cannot delete example processes');
       return;
     }

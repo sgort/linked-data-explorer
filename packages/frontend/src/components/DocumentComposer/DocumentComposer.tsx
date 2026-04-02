@@ -126,7 +126,7 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
 
   const handleDeleteTemplate = (id: string) => {
     const t = DocumentService.getTemplate(id);
-    if (t?.readonly) {
+    if (t?.status === 'example') {
       alert('Example documents cannot be deleted.');
       return;
     }
