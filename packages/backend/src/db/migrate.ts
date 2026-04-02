@@ -29,6 +29,13 @@ export async function migrate(): Promise<void> {
         updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
+      ALTER TABLE process_definitions
+      ADD COLUMN IF NOT EXISTS deployed_at            TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS operaton_url           TEXT,
+      ADD COLUMN IF NOT EXISTS operaton_deployment_id TEXT,
+      ADD COLUMN IF NOT EXISTS deployed_forms         TEXT[] NOT NULL DEFAULT '{}',
+      ADD COLUMN IF NOT EXISTS deployed_documents     TEXT[] NOT NULL DEFAULT '{}';
+
       CREATE INDEX IF NOT EXISTS idx_pd_bpmn_process_id
         ON process_definitions (bpmn_process_id);
       CREATE INDEX IF NOT EXISTS idx_pd_called_element

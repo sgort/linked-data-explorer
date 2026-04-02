@@ -77,6 +77,119 @@ export async function getBpmnByBpmnProcessId(bpmnProcessId: string): Promise<unk
   return { id: rows[0].lde_id, bpmnProcessId: rows[0].bpmn_process_id, xml: rows[0].xml };
 }
 
+export async function markDeployed(
+  ldeId: string,
+  deploymentId: string,
+  operatonUrl: string | undefined,
+  formIds: string[],
+  documentIds: string[]
+): Promise<void> {
+  if (!pool) return;
+  await pool.query(
+    `UPDATE process_definitions SET
+       deployed_at            = NOW(),
+       operaton_deployment_id = $2,
+       operaton_url           = $3,
+       deployed_forms         = $4,
+       deployed_documents     = $5
+     WHERE lde_id = $1`,
+    [ldeId, deploymentId, operatonUrl ?? null, formIds, documentIds]
+  );
+}
+
+export async function listPublicBundles(): Promise<unknown[]> {
+  if (!pool) return [];
+  const { rows } = await pool.query<{
+    lde_id: string;
+    bpmn_process_id: string;
+    name: string;
+    description: string | null;
+    process_role: string;
+    called_element: string | null;
+    linked_dmn_templates: string[];
+    status: string;
+    deployed_at: Date;
+    operaton_url: string | null;
+    operaton_deployment_id: string | null;
+    deployed_forms: string[];
+    deployed_documents: string[];
+    updated_at: Date;
+  }>(
+    `SELECT pd_shell.lde_id,
+            pd_shell.bpmn_process_id,
+            pd_shell.name,
+            pd_shell.description,
+            pd_shell.process_role,
+            pd_shell.linked_dmn_templates,
+            pd_shell.status,
+            pd_shell.deployed_at,
+            pd_shell.operaton_url,
+            pd_shell.operaton_deployment_id,
+            pd_shell.deployed_forms,
+            pd_shell.deployed_documents,
+            pd_shell.updated_at,
+            COALESCE(
+              json_agg(
+                json_build_object(
+                  'id', pd_sub.lde_id,
+                  'name', pd_sub.name,
+                  'bpmnProcessId', pd_sub.bpmn_process_id,
+                  'status', pd_sub.status
+                )
+              ) FILTER (WHERE pd_sub.lde_id IS NOT NULL),
+              '[]'
+            ) AS subprocesses,
+            COALESCE(
+              (SELECT json_agg(json_build_object('id', fs.schema->>'id', 'name', fs.name))
+               FROM form_schemas fs
+               WHERE fs.schema->>'id' = ANY(pd_shell.deployed_forms)),
+              '[]'
+            ) AS forms,
+            COALESCE(
+              (SELECT json_agg(json_build_object('id', dt.id, 'name', dt.name))
+               FROM document_templates dt
+               WHERE dt.id = ANY(pd_shell.deployed_documents)),
+              '[]'
+            ) AS documents
+     FROM process_definitions pd_shell
+     LEFT JOIN process_definitions pd_sub
+       ON pd_sub.called_element = pd_shell.bpmn_process_id
+      AND pd_sub.process_role   = 'subprocess'
+     WHERE pd_shell.process_role IN ('shell', 'standalone')
+       AND pd_shell.deployed_at IS NOT NULL
+     GROUP BY pd_shell.lde_id,
+              pd_shell.bpmn_process_id,
+              pd_shell.name,
+              pd_shell.description,
+              pd_shell.process_role,
+              pd_shell.linked_dmn_templates,
+              pd_shell.status,
+              pd_shell.deployed_at,
+              pd_shell.operaton_url,
+              pd_shell.operaton_deployment_id,
+              pd_shell.deployed_forms,
+              pd_shell.deployed_documents,
+              pd_shell.updated_at
+     ORDER BY pd_shell.deployed_at DESC`
+  );
+  return rows.map((r) => ({
+    id: r.lde_id,
+    bpmnProcessId: r.bpmn_process_id,
+    name: r.name,
+    description: r.description ?? undefined,
+    processRole: r.process_role,
+    linkedDmnTemplates: r.linked_dmn_templates ?? [],
+    status: r.status,
+    deployedAt: r.deployed_at,
+    operatonUrl: r.operaton_url ?? undefined,
+    operatonDeploymentId: r.operaton_deployment_id ?? undefined,
+    deployedForms: (r as unknown as { forms: { id: string; name: string }[] }).forms,
+    deployedDocuments: (r as unknown as { documents: { id: string; name: string }[] }).documents,
+    subprocesses: (r as unknown as { subprocesses: { id: string; name: string; bpmnProcessId: string; status: string }[] }).subprocesses,
+    updatedAt: r.updated_at,
+  }));
+}
+
 // ─── Forms ───────────────────────────────────────────────────────────────────
 
 export async function listForms(): Promise<Form[]> {

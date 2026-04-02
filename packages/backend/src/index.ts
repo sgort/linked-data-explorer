@@ -33,7 +33,7 @@ const corsOptions: cors.CorsOptions = {
     callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
@@ -41,15 +41,18 @@ const corsOptions: cors.CorsOptions = {
 app.use(helmet());
 
 // apply CORS to both normal requests and preflight
+const isPublicPath = (path: string) =>
+  path.startsWith('/v1/ropa/public') || path.startsWith('/v1/bundles/public');
+
 app.use((req, res, next) => {
-  if (req.path.startsWith('/v1/ropa/public')) {
+  if (isPublicPath(req.path)) {
     cors({ origin: '*', methods: ['GET', 'OPTIONS'] })(req, res, next);
   } else {
     cors(corsOptions)(req, res, next);
   }
 });
 app.options('*', (req, res, next) => {
-  if (req.path.startsWith('/v1/ropa/public')) {
+  if (isPublicPath(req.path)) {
     cors({ origin: '*', methods: ['GET', 'OPTIONS'] })(req, res, next);
   } else {
     cors(corsOptions)(req, res, next);

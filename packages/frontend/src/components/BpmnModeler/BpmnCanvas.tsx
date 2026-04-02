@@ -488,11 +488,26 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
       const data = await response.json();
 
-      setDeployResult(
-        data.success
-          ? { success: true, message: `Deployment ID: ${data.data.deploymentId}` }
-          : { success: false, message: data.error?.message ?? 'Deployment failed' }
-      );
+      if (data.success) {
+        setDeployResult({ success: true, message: `Deployment ID: ${data.data.deploymentId}` });
+
+        // Write deployment metadata back to the process_definitions record
+        const ldeId = BpmnService.getProcesses().find((p) => p.bpmnProcessId === processKey)?.id;
+        if (ldeId) {
+          fetch(`${API_BASE_URL}/v1/assets/bpmn/${ldeId}/deploy`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              deploymentId: data.data.deploymentId,
+              operatonUrl: operatonUrl.trim() || undefined,
+              formIds: forms.map((f) => f.id),
+              documentIds: documents.map((d) => d.id),
+            }),
+          }).catch((err) => console.warn('[BpmnCanvas] Deploy record update failed:', err));
+        }
+      } else {
+        setDeployResult({ success: false, message: data.error?.message ?? 'Deployment failed' });
+      }
     } catch (err) {
       setDeployResult({
         success: false,

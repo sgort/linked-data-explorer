@@ -8,6 +8,7 @@ import {
   listBpmn,
   listDocuments,
   listForms,
+  markDeployed,
   upsertBpmn,
   upsertDocument,
   upsertForm,
@@ -66,6 +67,23 @@ router.delete('/bpmn/:id', async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ success: false, error: { code: 'DELETE_FAILED', message: getErrorMessage(err) } });
+  }
+});
+
+router.patch('/bpmn/:id/deploy', async (req: Request, res: Response) => {
+  if (!dbRequired(req, res)) return;
+  try {
+    const { deploymentId, operatonUrl, formIds = [], documentIds = [] } = req.body as {
+      deploymentId: string;
+      operatonUrl?: string;
+      formIds?: string[];
+      documentIds?: string[];
+    };
+    await markDeployed(req.params.id, deploymentId, operatonUrl, formIds, documentIds);
+    res.json({ success: true });
+  } catch (err) {
+    logger.error('[assets] markDeployed failed', { error: getErrorMessage(err) });
+    res.status(500).json({ success: false, error: { code: 'DEPLOY_MARK_FAILED', message: getErrorMessage(err) } });
   }
 });
 

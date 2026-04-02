@@ -1,6 +1,39 @@
 {
   "versions": [
     {
+      "version": "1.4.1",
+      "status": "New Feature",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "April 2, 2026",
+      "sections": [
+        {
+          "title": "Public Bundle Library",
+          "icon": "📚",
+          "iconColor": "emerald",
+          "items": [
+            "New public endpoint GET /v1/bundles/public serves deployed bundle records with no authentication required and fully open CORS — consumable by the RONL Business API caseworker dashboard",
+            "A bundle is recorded at deploy time: shell or standalone BPMN process, Operaton deployment ID, Operaton URL, resolved form IDs, and resolved document template IDs are written to process_definitions",
+            "Forms and documents are expanded by name in the response — forms joined via schema JSON id field, documents joined via document_templates.id",
+            "Subprocesses linked to a shell via calledElement are resolved and included as a nested array",
+            "New PATCH /v1/assets/bpmn/:id/deploy endpoint writes deployment metadata back to the process_definitions row immediately after a successful Operaton deploy",
+            "PATCH method added to the backend CORS allowed methods list"
+          ]
+        },
+        {
+          "title": "Deploy Write-back",
+          "icon": "🔗",
+          "iconColor": "blue",
+          "items": [
+            "BpmnCanvas fires a background PATCH to /v1/assets/bpmn/:id/deploy after every successful deploy — no spinner, no blocking UX change",
+            "Write-back carries: Operaton deployment ID, Operaton URL, form IDs resolved from camunda:formRef, document IDs resolved from ronl:documentRef",
+            "LDE process ID is resolved by matching the active process bpmnProcessId against the deployment processKey — only user-authored (non-readonly) processes are written",
+            "Redeploying a bundle updates the existing row — deployed_at is always the most recent successful deploy"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.4.0",
       "status": "New Feature",
       "statusColor": "teal",
