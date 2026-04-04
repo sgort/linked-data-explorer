@@ -15,6 +15,7 @@ import assetsRoutes from './assets.routes';
 import ropaRoutes from './ropa.routes';
 import ropaPublicRoutes from './ropa.public.routes';
 import assetsPublicRoutes from './assets.public.routes';
+import dsoRoutes from './dso.routes';
 
 const router = Router();
 
@@ -41,6 +42,7 @@ router.use('/v1/assets', assetsRoutes);
 router.use('/v1/assets/ropa', ropaRoutes);
 router.use('/v1/ropa/public', ropaPublicRoutes);
 router.use('/v1/bundles/public', assetsPublicRoutes);
+router.use('/v1/dso', dsoRoutes);
 
 // Legacy /api/* routes (deprecated but working)
 router.use('/api/health', deprecationMiddleware('/v1/health'), healthRoutes);

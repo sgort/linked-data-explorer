@@ -36,6 +36,17 @@ export const config = {
     apiKey: process.env.OPERATON_API_KEY,
   },
 
+  dso: {
+    catalogueBaseUrl:
+      process.env.DSO_CATALOGUE_BASE_URL ||
+      'https://service.pre.omgevingswet.overheid.nl/publiek/catalogus/api/opvragen/v3',
+    rtrBaseUrl:
+      process.env.DSO_RTR_BASE_URL ||
+      'https://service.pre.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/rtrgegevens/v2',
+    apiKey: process.env.DSO_API_KEY || '',
+    timeout: parseInt(process.env.DSO_TIMEOUT || '15000', 10),
+  },
+
   edocs: {
     baseUrl: process.env.EDOCS_BASE_URL || '',
     library: process.env.EDOCS_LIBRARY || '',
