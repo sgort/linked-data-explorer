@@ -58,6 +58,7 @@ export enum ViewMode {
   FORM = 'FORM',
   DOCUMENT = 'DOCUMENT',
   ROPA = 'ROPA',
+  DSO = 'DSO',
 }
 
 export interface EndpointConfig {

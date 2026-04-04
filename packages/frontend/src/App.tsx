@@ -7,6 +7,7 @@ import {
   FileOutput,
   GitBranch,
   HelpCircle,
+  Landmark,
   LayoutTemplate,
   Loader2,
   Play,
@@ -26,6 +27,7 @@ import ChainBuilder from './components/ChainBuilder/ChainBuilder';
 import Changelog from './components/Changelog';
 import DmnValidator from './components/DmnValidator';
 import DocumentComposer from './components/DocumentComposer/DocumentComposer';
+import DsoExplorer from './components/DsoExplorer/DsoExplorer';
 import FormEditor from './components/FormEditor/FormEditor';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
@@ -278,6 +280,14 @@ const App: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setViewMode(ViewMode.DSO)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.DSO ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="DSO Explorer"
+          >
+            <Landmark size={24} />
+          </button>
+
+          <button
             onClick={() => setViewMode(ViewMode.VALIDATE)}
             className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.VALIDATE ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
             title="DMN Validator"
@@ -337,7 +347,8 @@ const App: React.FC = () => {
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
             viewMode !== ViewMode.VALIDATE &&
-            viewMode !== ViewMode.ROPA && (
+            viewMode !== ViewMode.ROPA &&
+            viewMode !== ViewMode.DSO && (
               <div className="flex items-center gap-3">
                 <div className="hidden lg:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
                   <span className="text-xs text-slate-500 mr-2 font-semibold uppercase tracking-tight">
@@ -444,6 +455,12 @@ const App: React.FC = () => {
           {viewMode === ViewMode.ROPA && (
             <div className="flex-1 overflow-hidden">
               <RopaEditor />
+            </div>
+          )}
+
+          {viewMode === ViewMode.DSO && (
+            <div className="flex-1 overflow-hidden">
+              <DsoExplorer />
             </div>
           )}
 
@@ -634,6 +651,7 @@ const App: React.FC = () => {
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
             viewMode !== ViewMode.ROPA &&
+            viewMode !== ViewMode.DSO &&
             viewMode !== ViewMode.VALIDATE && (
               <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
                 <div className="flex-1 flex flex-col min-h-0">
@@ -693,6 +711,7 @@ const App: React.FC = () => {
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
             viewMode !== ViewMode.ROPA &&
+            viewMode !== ViewMode.DSO &&
             viewMode !== ViewMode.VALIDATE && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
                 {/* Error Overlay */}
