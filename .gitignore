@@ -41,6 +41,9 @@ dist-ssr
 *.sln
 *.sw?
 
-#flatten script & dir
+# flatten script & dir
 flatten_directory.sh
 flattened
+
+# Claudesync
+.claudesync
