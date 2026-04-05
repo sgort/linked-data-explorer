@@ -70,6 +70,21 @@ export interface ActiviteitenOptions {
   pageSize?: number;
 }
 
+export async function getActiviteit(urn: string, datum?: string): Promise<unknown> {
+  const d = new Date();
+  const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+
+  const params = new URLSearchParams();
+  params.set('datum', datum ?? today);
+
+  const url = `${config.dso.rtrBaseUrl}/activiteiten/${encodeURIComponent(urn)}?${params}`;
+  logger.info('[DSO] GET activiteit detail', { urn, datum: datum ?? today });
+  return dsoFetch(url);
+  // const result = await dsoFetch(url);
+  // logger.info('[DSO] activiteit raw', { urn, result: JSON.stringify(result) });
+  // return result;
+}
+
 /**
  * GET /activiteiten — all activities valid on a given date.
  * `datum` is required by DSO; we default to today when omitted.

@@ -16,10 +16,36 @@ export interface DsoBegrip {
 
 export interface DsoActiviteit {
   urn: string;
-  naam?: string;
-  bovenliggendeActiviteit?: { urn: string } | null;
-  begindatumJuridischeGeldigheid?: string;
-  einddatumJuridischeGeldigheid?: string | null;
+  omschrijving?: string;
+  beginDatum?: string;
+  eindDatum?: string | null;
+  _links?: {
+    bovenliggendeActiviteit?: { href: string } | null;
+  };
+}
+
+export interface DsoRegelbeheerobject {
+  urn: string;
+  omschrijving?: string;
+  typering: 'conclusie' | 'indieningsvereisten' | 'maatregelen';
+}
+
+export interface DsoActiviteitDetail extends DsoActiviteit {
+  verfijnbaar?: boolean;
+  bestuursorgaan?: {
+    oin: string;
+    bestuurslaag: string;
+    organisatieType: string;
+    organisatieCode: string;
+  };
+  regelBeheerObjecten?: DsoRegelbeheerobject[];
+  locaties?: { identificatie: string; beginDatum?: string }[];
+}
+
+/** Extract the activiteit URN from a HAL href like ...activiteiten/{urn}?datum=... */
+export function urnFromHref(href: string): string {
+  const match = href.match(/activiteiten\/([^?]+)/);
+  return match ? decodeURIComponent(match[1]) : href;
 }
 
 export interface DsoPage {
@@ -59,6 +85,15 @@ export async function searchBegrippen(zoekTerm: string, page = 1): Promise<Begri
     page: pageInfo,
     hasNext: !!links?.next?.href,
   };
+}
+
+export async function getActiviteitDetail(
+  urn: string,
+  datum?: string
+): Promise<DsoActiviteitDetail> {
+  const params = new URLSearchParams();
+  if (datum) params.set('datum', datum);
+  return get<DsoActiviteitDetail>(`/v1/dso/activiteiten/${encodeURIComponent(urn)}?${params}`);
 }
 
 export async function getActiviteiten(datum?: string, page = 1): Promise<ActiviteitenResult> {

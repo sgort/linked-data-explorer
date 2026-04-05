@@ -8,6 +8,30 @@ import packageJson from '../../package.json';
 const router = Router();
 
 /**
+ * GET /v1/dso/activiteiten/:urn
+ * Fetch a single activity by URN from the RTR.
+ *
+ * Query params:
+ *   datum  — dd-MM-yyyy (optional, defaults to today)
+ */
+router.get('/activiteiten/:urn', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+
+  try {
+    const urn = decodeURIComponent(req.params.urn);
+    const datum = req.query.datum as string | undefined;
+
+    const data = await dsoService.getActiviteit(urn, datum);
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    const status = msg.includes('404') ? 404 : 502;
+    logger.error('[DSO Routes] GET /activiteiten/:urn failed', { error: msg });
+    res.status(status).json({ success: false, error: msg });
+  }
+});
+
+/**
  * GET /v1/dso/begrippen
  * Search concepts in the DSO Stelselcatalogus.
  *
