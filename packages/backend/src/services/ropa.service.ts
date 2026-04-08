@@ -24,7 +24,9 @@ export async function listRopa(): Promise<RopaRecord[]> {
 
 export async function getRopaById(id: string): Promise<RopaRecord | null> {
   if (!pool) return null;
-  const { rows } = await pool.query<RopaRecordRow>(`SELECT * FROM ropa_records WHERE id = $1`, [id]);
+  const { rows } = await pool.query<RopaRecordRow>(`SELECT * FROM ropa_records WHERE id = $1`, [
+    id,
+  ]);
   if (rows.length === 0) return null;
   const { rows: fieldRows } = await pool.query<RopaFieldRow>(
     `SELECT * FROM ropa_personal_data_fields WHERE ropa_record_id = $1 ORDER BY sort_order ASC`,
@@ -158,7 +160,10 @@ export async function listPublicRopa(organisation?: string): Promise<PublicRopaR
     [ids]
   );
   return recordRows.map((r) => {
-    const full = mapRopaRecord(r, fieldRows.filter((f) => f.ropa_record_id === r.id).map(mapRopaField));
+    const full = mapRopaRecord(
+      r,
+      fieldRows.filter((f) => f.ropa_record_id === r.id).map(mapRopaField)
+    );
     // Strip internal fields before exposing publicly
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { schemaVersion, controllerContact, dpoContact, ...pub } = full;

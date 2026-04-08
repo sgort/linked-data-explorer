@@ -51,45 +51,42 @@ export function mapDocument(r: DocumentRow): Document {
   };
 }
 
-export function mapRopaRecord(
-  row: RopaRecordRow,
-  fields: RopaPersonalDataField[]
-): RopaRecord {
+export function mapRopaRecord(row: RopaRecordRow, fields: RopaPersonalDataField[]): RopaRecord {
   return {
-    id:                    row.id,
-    bpmnProcessId:         row.bpmn_process_id,
-    processLevel:          row.process_level as RopaRecord['processLevel'],
-    title:                 row.title,
-    controllerName:        row.controller_name,
-    controllerContact:     row.controller_contact,
-    dpoContact:            row.dpo_contact ?? undefined,
-    purpose:               row.purpose,
-    legalBasisUri:         row.legal_basis_uri,
-    legalBasisLabel:       row.legal_basis_label,
-    gdprArticle:           row.gdpr_article,
-    dataSubjects:          row.data_subjects,
-    recipients:            row.recipients,
+    id: row.id,
+    bpmnProcessId: row.bpmn_process_id,
+    processLevel: row.process_level as RopaRecord['processLevel'],
+    title: row.title,
+    controllerName: row.controller_name,
+    controllerContact: row.controller_contact,
+    dpoContact: row.dpo_contact ?? undefined,
+    purpose: row.purpose,
+    legalBasisUri: row.legal_basis_uri,
+    legalBasisLabel: row.legal_basis_label,
+    gdprArticle: row.gdpr_article,
+    dataSubjects: row.data_subjects,
+    recipients: row.recipients,
     thirdCountryTransfers: row.third_country_transfers,
-    thirdCountryDetails:   row.third_country_details ?? undefined,
-    retentionPeriod:       row.retention_period,
-    securityMeasures:      row.security_measures,
-    status:                row.status as RopaRecord['status'],
-    schemaVersion:         row.schema_version,
-    personalDataFields:    fields,
-    createdAt:             row.created_at.toISOString(),
-    updatedAt:             row.updated_at.toISOString(),
+    thirdCountryDetails: row.third_country_details ?? undefined,
+    retentionPeriod: row.retention_period,
+    securityMeasures: row.security_measures,
+    status: row.status as RopaRecord['status'],
+    schemaVersion: row.schema_version,
+    personalDataFields: fields,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
   };
 }
 
 export function mapRopaField(row: RopaFieldRow): RopaPersonalDataField {
   return {
-    id:              row.id,
-    ropaRecordId:    row.ropa_record_id,
-    formId:          row.form_id,
-    fieldKey:        row.field_key,
-    fieldLabel:      row.field_label,
-    dataCategory:    row.data_category,
+    id: row.id,
+    ropaRecordId: row.ropa_record_id,
+    formId: row.form_id,
+    fieldKey: row.field_key,
+    fieldLabel: row.field_label,
+    dataCategory: row.data_category,
     specialCategory: row.special_category,
-    sortOrder:       row.sort_order,
+    sortOrder: row.sort_order,
   };
 }

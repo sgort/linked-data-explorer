@@ -185,7 +185,11 @@ export async function listPublicBundles(): Promise<unknown[]> {
     operatonDeploymentId: r.operaton_deployment_id ?? undefined,
     deployedForms: (r as unknown as { forms: { id: string; name: string }[] }).forms,
     deployedDocuments: (r as unknown as { documents: { id: string; name: string }[] }).documents,
-    subprocesses: (r as unknown as { subprocesses: { id: string; name: string; bpmnProcessId: string; status: string }[] }).subprocesses,
+    subprocesses: (
+      r as unknown as {
+        subprocesses: { id: string; name: string; bpmnProcessId: string; status: string }[];
+      }
+    ).subprocesses,
     updatedAt: r.updated_at,
   }));
 }
