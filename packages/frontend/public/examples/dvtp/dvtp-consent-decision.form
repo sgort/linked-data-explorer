@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "dvtp-consent-decision",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Uw toestemming"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Op basis van de informatie die u heeft gelezen, vragen wij u nu om uw toestemming. Uw beslissing wordt geregistreerd (FR-09/10)."
+    },
+    {
+      "id": "Text_Section_Summary",
+      "type": "text",
+      "text": "### Samenvatting"
+    },
+    {
+      "id": "Field_ServiceName",
+      "type": "textfield",
+      "label": "Dienst",
+      "key": "serviceName",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ServiceDoel",
+      "type": "textarea",
+      "label": "Doel",
+      "key": "serviceDoel",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_TtlLabel",
+      "type": "textfield",
+      "label": "Geldigheid",
+      "key": "configTtlLabel",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Text_Section_Decision",
+      "type": "text",
+      "text": "### Uw beslissing (FR-10)"
+    },
+    {
+      "id": "Field_ConsentGiven",
+      "type": "select",
+      "label": "Geeft u toestemming?",
+      "key": "consentGiven",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Ja, ik geef toestemming",
+          "value": "granted"
+        },
+        {
+          "label": "Nee, ik weiger toestemming",
+          "value": "refused"
+        }
+      ],
+      "description": "Uw keuze wordt direct geregistreerd in het toestemmingsregister (FR-11)."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Bevestig mijn keuze",
+      "action": "submit"
+    }
+  ]
+}

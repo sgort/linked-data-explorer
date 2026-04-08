@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "dvtp-consent-start",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Toestemming geven — DvTP"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Een private dienstverlener vraagt uw toestemming om gegevens te mogen ophalen of uitwisselen. Doorloop deze procedure om uw toestemming te geven of te weigeren. U kunt uw toestemming altijd intrekken."
+    },
+    {
+      "id": "Text_Section_PD",
+      "type": "text",
+      "text": "### Private dienstverlener"
+    },
+    {
+      "id": "Field_InitiatorId",
+      "type": "select",
+      "label": "Initiator ID (private dienstverlener)",
+      "key": "initiatorId",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "DEMO-INITIATOR-001 (1 jaar TTL)",
+          "value": "DEMO-INITIATOR-001"
+        },
+        {
+          "label": "DEMO-INITIATOR-002 (30 dagen TTL)",
+          "value": "DEMO-INITIATOR-002"
+        },
+        {
+          "label": "DEMO-INITIATOR-003 (NIET geregistreerd — wordt geweigerd)",
+          "value": "DEMO-INITIATOR-003"
+        },
+        {
+          "label": "OTHER (catch-all, standaard toegestaan)",
+          "value": "OTHER"
+        }
+      ],
+      "description": "Selecteer de private dienstverlener die toestemming aanvraagt. DEMO-INITIATOR-003 demonstreert de weigering."
+    },
+    {
+      "id": "Field_ReturnUrl",
+      "type": "textfield",
+      "label": "Return URL",
+      "key": "returnUrl",
+      "defaultValue": "https://demo.private-party.nl/callback",
+      "validate": {
+        "required": true
+      },
+      "description": "URL waarnaar de burger wordt teruggeleid na afronding."
+    },
+    {
+      "id": "Text_Section_Service",
+      "type": "text",
+      "text": "### Dienst"
+    },
+    {
+      "id": "Field_ServiceName",
+      "type": "textfield",
+      "label": "Naam van de dienst (serviceName)",
+      "key": "serviceName",
+      "defaultValue": "Demo Financieel Overzicht",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ServiceDoel",
+      "type": "textarea",
+      "label": "Doel van de gegevensuitwisseling (serviceDoel, FR-06)",
+      "key": "serviceDoel",
+      "defaultValue": "Het samenstellen van een persoonlijk financieel overzicht op basis van uw toeslagen- en inkomensgegevens.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ServiceScope",
+      "type": "textarea",
+      "label": "Welke gegevens worden gedeeld (serviceScope, FR-05)",
+      "key": "serviceScope",
+      "defaultValue": "BSN, jaarinkomen, toeslagbedragen (zorgtoeslag, huurtoeslag), huishoudensamenstelling.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ServiceParties",
+      "type": "textfield",
+      "label": "Ontvangende partijen (serviceParties, FR-07)",
+      "key": "serviceParties",
+      "defaultValue": "Demo Financial Services B.V.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ServiceIntegrator",
+      "type": "textfield",
+      "label": "Technisch integrator (serviceIntegrator)",
+      "key": "serviceIntegrator",
+      "defaultValue": "Demo Tech Integrator B.V.",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "Text_Section_Delegation",
+      "type": "text",
+      "text": "### Machtiging (voor demo- en testdoeleinden, FR-02)"
+    },
+    {
+      "id": "Field_MachtigingAanwezig",
+      "type": "checkbox",
+      "label": "Machtiging gedetecteerd (machtigingAanwezig)",
+      "key": "machtigingAanwezig",
+      "defaultValue": false,
+      "description": "Vink aan om een machtiging te simuleren. Combineer met 'Delegatie uitgesloten' om FR-02 te testen."
+    },
+    {
+      "id": "Field_DelegatieUitgesloten",
+      "type": "checkbox",
+      "label": "Delegatie uitgesloten voor deze dienst (delegatieUitgesloten)",
+      "key": "delegatieUitgesloten",
+      "defaultValue": false,
+      "description": "Vink aan om te simuleren dat deze dienst delegatie uitsluit (FR-02)."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Start toestemmingsprocedure",
+      "action": "submit"
+    }
+  ]
+}

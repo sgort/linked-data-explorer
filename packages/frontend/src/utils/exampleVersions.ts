@@ -31,6 +31,12 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_zorgtoeslag_provisional_start: 2,
   example_zorgtoeslag_provisional_review: 2,
   example_zorgtoeslag_final_review: 2,
+
+  // DvTP consent bundle
+  example_dvtp_toestemming: 1, // v1: initial release — DvTP Flow A standalone process
+  example_dvtp_consent_start: 1, // v1: citizen start form for DvtpToestemmingGevenProcess
+  example_dvtp_consent_info: 1, // v1: pre-consent info screen (FR-05/06/07/08)
+  example_dvtp_consent_decision: 1, // v1: consent decision form (FR-09/10)
 };
 
 const STORAGE_KEY = 'linkedDataExplorer_exampleVersions';
