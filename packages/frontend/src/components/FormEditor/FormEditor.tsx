@@ -50,6 +50,24 @@ const EXAMPLE_FORMS = [
     description: 'Caseworker review form for the Zorgtoeslag Final Settlement subprocess',
     path: '/examples/toeslagen/zorgtoeslag-final-review.form',
   },
+  {
+    id: 'example_dvtp_consent_start',
+    name: 'DvTP Consent Start (Example)',
+    description: 'Citizen start form for the DvTP consent-granting process (Flow A)',
+    path: '/examples/dvtp/dvtp-consent-start.form',
+  },
+  {
+    id: 'example_dvtp_consent_info',
+    name: 'DvTP Consent Info (Example)',
+    description: 'Pre-consent information screen — force-read (FR-05/06/07/08)',
+    path: '/examples/dvtp/dvtp-consent-info.form',
+  },
+  {
+    id: 'example_dvtp_consent_decision',
+    name: 'DvTP Consent Decision (Example)',
+    description: 'Citizen consent decision form — binary grant or refuse (FR-09/10)',
+    path: '/examples/dvtp/dvtp-consent-decision.form',
+  },
 ];
 
 const FormEditor: React.FC = () => {

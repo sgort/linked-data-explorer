@@ -11,16 +11,16 @@ const router = Router();
 router.use(cors({ origin: '*', methods: ['GET', 'OPTIONS'] }));
 
 router.get('/', async (_req: Request, res: Response) => {
-    try {
-        const data = await listPublicBundles();
-        res.json({ success: true, data });
-    } catch (err) {
-        logger.error('[assets.public] listPublicBundles failed', { error: getErrorMessage(err) });
-        res.status(500).json({
-            success: false,
-            error: { code: 'LIST_FAILED', message: getErrorMessage(err) },
-        });
-    }
+  try {
+    const data = await listPublicBundles();
+    res.json({ success: true, data });
+  } catch (err) {
+    logger.error('[assets.public] listPublicBundles failed', { error: getErrorMessage(err) });
+    res.status(500).json({
+      success: false,
+      error: { code: 'LIST_FAILED', message: getErrorMessage(err) },
+    });
+  }
 });
 
 export default router;

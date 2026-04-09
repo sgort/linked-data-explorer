@@ -163,6 +163,31 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         updated.push(zorgFinalExample);
       }
 
+      // --- DvTP Toestemming geven (standalone) ---
+      const dvtpId = 'example_dvtp_toestemming';
+      if (getStoredVersion(dvtpId) < EXAMPLE_VERSIONS[dvtpId]) {
+        const xml = await fetch('/examples/dvtp/DvtpToestemmingGevenProcess.bpmn').then((r) =>
+          r.text()
+        );
+        const dvtpExample: BpmnProcess = {
+          id: dvtpId,
+          name: 'DvTP — Flow A: Toestemming geven (Example)',
+          description:
+            'DvTP Flow A: standalone consent-granting process. Citizens grant or refuse permission for private parties to access their government data. Implements FR-01 t/m FR-32.',
+          xml,
+          createdAt: '2026-03-19T00:00:00.000Z',
+          updatedAt: new Date().toISOString(),
+          linkedDmnTemplates: ['DvtpConfigCheck', 'DvtpDelegationCheck'],
+          readonly: true,
+          status: 'example',
+          bpmnProcessId: 'DvtpToestemmingGevenProcess',
+          processRole: 'standalone',
+        };
+        BpmnService.saveProcess(dvtpExample);
+        setStoredVersion(dvtpId, EXAMPLE_VERSIONS[dvtpId]);
+        updated.push(dvtpExample);
+      }
+
       // --- Asylum Migration (inline WIP, no version tracking needed) ---
       const asylumId = 'wip_asylum_migration';
       if (!BpmnService.getProcess(asylumId)) {

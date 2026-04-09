@@ -793,8 +793,376 @@ export const ZORGTOESLAG_FINAL_BESCHIKKING: DocumentTemplate = {
   },
 };
 
+export const DVTP_CONSENT_RECEIPT: DocumentTemplate = {
+  id: 'example_dvtp_consent_receipt',
+  name: 'DvTP Toestemmingsbewijs (Example)',
+  description: 'Formeel ontvangstbewijs van geregistreerde toestemming — DvTP Flow A',
+  processKey: 'DvtpToestemmingGevenProcess',
+  serviceId: 'DvtpConsent',
+  schemaVersion: 1,
+  readonly: true,
+  status: 'example',
+  createdAt: '2026-03-19T00:00:00.000Z',
+  updatedAt: '2026-03-19T00:00:00.000Z',
+  assets: [],
+  bindings: [
+    {
+      id: 'b1',
+      placeholder: '{{consentReference}}',
+      variableKey: 'consentReference',
+      source: 'process',
+      label: 'Toestemmingskenmerk',
+    },
+    {
+      id: 'b2',
+      placeholder: '{{applicantId}}',
+      variableKey: 'applicantId',
+      source: 'process',
+      label: 'BSN / Burger-ID',
+    },
+    {
+      id: 'b3',
+      placeholder: '{{serviceName}}',
+      variableKey: 'serviceName',
+      source: 'process',
+      label: 'Naam dienst',
+    },
+    {
+      id: 'b4',
+      placeholder: '{{serviceDoel}}',
+      variableKey: 'serviceDoel',
+      source: 'process',
+      label: 'Doel gegevensuitwisseling',
+    },
+    {
+      id: 'b5',
+      placeholder: '{{serviceScope}}',
+      variableKey: 'serviceScope',
+      source: 'process',
+      label: 'Gedeelde gegevens',
+    },
+    {
+      id: 'b6',
+      placeholder: '{{configTtlLabel}}',
+      variableKey: 'configTtlLabel',
+      source: 'dmn_output',
+      label: 'Geldigheid toestemming',
+    },
+    {
+      id: 'b7',
+      placeholder: '{{consentDate}}',
+      variableKey: 'consentDate',
+      source: 'process',
+      label: 'Datum toestemming',
+    },
+    {
+      id: 'b8',
+      placeholder: '{{consentExpiry}}',
+      variableKey: 'consentExpiry',
+      source: 'process',
+      label: 'Vervaldatum toestemming',
+    },
+    {
+      id: 'b9',
+      placeholder: '{{initiatorId}}',
+      variableKey: 'initiatorId',
+      source: 'process',
+      label: 'Initiator-ID',
+    },
+  ],
+  zones: {
+    letterhead: {
+      blocks: [
+        {
+          id: 'lh_org_name',
+          type: 'text',
+          label: 'Organisatienaam',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'heading',
+                attrs: { level: 1 },
+                content: [{ type: 'text', text: 'DvTP Toestemmingsportaal' }],
+              },
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Dienst Verlening via Toestemming met Private partijen',
+                    marks: [{ type: 'italic' }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        { id: 'lh_separator', type: 'separator', label: 'Scheidingslijn' },
+      ],
+    },
+    contactInformation: {
+      blocks: [
+        {
+          id: 'ci_address',
+          type: 'text',
+          label: 'Contactgegevens',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Ministerie van Binnenlandse Zaken en Koninkrijksrelaties',
+                  },
+                ],
+              },
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'Postbus 20011 · 2500 EA Den Haag' }],
+              },
+              { type: 'paragraph', content: [{ type: 'text', text: 'E-mail: dvtp@minbzk.nl' }] },
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'www.digitaleoverheid.nl/dvtp' }],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    reference: {
+      blocks: [
+        {
+          id: 'ref_header',
+          type: 'text',
+          label: 'Kenmerk en datum',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'Kenmerk: {{consentReference}}' }],
+              },
+              { type: 'paragraph', content: [{ type: 'text', text: 'Datum: {{consentDate}}' }] },
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Betreft: Ontvangstbewijs toestemming gegevensuitwisseling',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'ref_subject',
+          type: 'text',
+          label: 'Aanhef',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'Geachte burger (ID: {{applicantId}}),' }],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    body: {
+      blocks: [
+        {
+          id: 'body_intro',
+          type: 'text',
+          label: 'Inleiding',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Uw toestemming voor gegevensuitwisseling is geregistreerd. Dit document dient als officieel ontvangstbewijs.',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'body_service_heading',
+          type: 'text',
+          label: 'Dienst',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'heading',
+                attrs: { level: 2 },
+                content: [{ type: 'text', text: 'Dienst waarvoor u toestemming heeft gegeven' }],
+              },
+            ],
+          },
+        },
+        {
+          id: 'body_service_name',
+          type: 'variable',
+          variableKey: 'serviceName',
+          label: 'Naam dienst (variabel)',
+        },
+        {
+          id: 'body_service_doel',
+          type: 'variable',
+          variableKey: 'serviceDoel',
+          label: 'Doel (variabel)',
+        },
+        {
+          id: 'body_service_scope',
+          type: 'variable',
+          variableKey: 'serviceScope',
+          label: 'Gedeelde gegevens (variabel)',
+        },
+        {
+          id: 'body_duration_heading',
+          type: 'text',
+          label: 'Duur',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'heading',
+                attrs: { level: 2 },
+                content: [{ type: 'text', text: 'Geldigheid' }],
+              },
+            ],
+          },
+        },
+        {
+          id: 'body_ttl',
+          type: 'variable',
+          variableKey: 'configTtlLabel',
+          label: 'Geldigheid (variabel)',
+        },
+        {
+          id: 'body_expiry',
+          type: 'variable',
+          variableKey: 'consentExpiry',
+          label: 'Vervaldatum (variabel)',
+        },
+        {
+          id: 'body_legal',
+          type: 'text',
+          label: 'Wettelijke basis',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'heading',
+                attrs: { level: 2 },
+                content: [{ type: 'text', text: 'Wettelijke basis' }],
+              },
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Deze toestemming is verleend op grond van AVG artikel 6 lid 1 sub a (toestemming van de betrokkene) en de DvTP-specificatie.',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    closing: {
+      blocks: [
+        {
+          id: 'cl_withdrawal',
+          type: 'text',
+          label: 'Intrekking',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'heading',
+                attrs: { level: 2 },
+                content: [{ type: 'text', text: 'Toestemming intrekken' }],
+              },
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'U kunt uw toestemming te allen tijde intrekken via het DvTP Toestemmingsportaal. De intrekking heeft geen terugwerkende kracht voor reeds gedeelde gegevens (AVG art. 7 lid 3).',
+                  },
+                ],
+              },
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Vermeld bij intrekking uw kenmerk: {{consentReference}}.',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    signOff: {
+      blocks: [
+        {
+          id: 'so_closing',
+          type: 'text',
+          label: 'Afsluiting',
+          content: {
+            type: 'doc',
+            content: [
+              { type: 'paragraph', content: [{ type: 'text', text: 'Met vriendelijke groet,' }] },
+            ],
+          },
+        },
+        { id: 'so_spacer', type: 'spacer', label: 'Ruimte handtekening' },
+        {
+          id: 'so_name',
+          type: 'text',
+          label: 'Naam en functie',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'Namens het DvTP Toestemmingsportaal,' }],
+              },
+              { type: 'paragraph', content: [] },
+              {
+                type: 'paragraph',
+                content: [
+                  { type: 'text', text: 'Directie Digitale Overheid — Ministerie van BZK' },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    annex: null,
+  },
+};
+
 export const DEFAULT_TEMPLATES: DocumentTemplate[] = [
   TREE_FELLING_BESCHIKKING,
   ZORGTOESLAG_PROVISIONAL_BESCHIKKING,
   ZORGTOESLAG_FINAL_BESCHIKKING,
+  DVTP_CONSENT_RECEIPT,
 ];

@@ -73,7 +73,12 @@ router.delete('/bpmn/:id', async (req: Request, res: Response) => {
 router.patch('/bpmn/:id/deploy', async (req: Request, res: Response) => {
   if (!dbRequired(req, res)) return;
   try {
-    const { deploymentId, operatonUrl, formIds = [], documentIds = [] } = req.body as {
+    const {
+      deploymentId,
+      operatonUrl,
+      formIds = [],
+      documentIds = [],
+    } = req.body as {
       deploymentId: string;
       operatonUrl?: string;
       formIds?: string[];
@@ -83,7 +88,12 @@ router.patch('/bpmn/:id/deploy', async (req: Request, res: Response) => {
     res.json({ success: true });
   } catch (err) {
     logger.error('[assets] markDeployed failed', { error: getErrorMessage(err) });
-    res.status(500).json({ success: false, error: { code: 'DEPLOY_MARK_FAILED', message: getErrorMessage(err) } });
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: { code: 'DEPLOY_MARK_FAILED', message: getErrorMessage(err) },
+      });
   }
 });
 

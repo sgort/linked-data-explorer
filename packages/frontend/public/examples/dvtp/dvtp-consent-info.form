@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "dvtp-consent-info",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Informatie over de gegevensuitwisseling"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Lees onderstaande informatie zorgvuldig door voordat u toestemming geeft. U bent verplicht deze informatie te lezen voordat u verder kunt gaan (FR-08)."
+    },
+    {
+      "id": "Text_Section_Service",
+      "type": "text",
+      "text": "### Over de dienst"
+    },
+    {
+      "id": "Field_ServiceName",
+      "type": "textfield",
+      "label": "Naam van de dienst",
+      "key": "serviceName",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ServiceDoel",
+      "type": "textarea",
+      "label": "Doel van de gegevensuitwisseling (FR-06)",
+      "key": "serviceDoel",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ServiceScope",
+      "type": "textarea",
+      "label": "Welke gegevens worden gedeeld (FR-05)",
+      "key": "serviceScope",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ServiceParties",
+      "type": "textfield",
+      "label": "Ontvangende partijen (FR-07)",
+      "key": "serviceParties",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ServiceIntegrator",
+      "type": "textfield",
+      "label": "Technisch integrator",
+      "key": "serviceIntegrator",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Text_Section_Duration",
+      "type": "text",
+      "text": "### Duur van de toestemming"
+    },
+    {
+      "id": "Field_TtlLabel",
+      "type": "textfield",
+      "label": "Geldigheid toestemming (FR-09)",
+      "key": "configTtlLabel",
+      "readonly": true,
+      "disabled": true,
+      "description": "Na afloop van deze periode vervalt uw toestemming automatisch."
+    },
+    {
+      "id": "Text_Section_Rights",
+      "type": "text",
+      "text": "### Uw rechten\n\nU kunt uw toestemming te allen tijde intrekken. Gegevens die al zijn gedeeld kunnen niet worden teruggehaald. U heeft het recht op inzage, correctie en verwijdering van uw gegevens (AVG art. 15-17)."
+    },
+    {
+      "id": "Text_Section_Confirm",
+      "type": "text",
+      "text": "### Bevestiging (FR-08)"
+    },
+    {
+      "id": "Field_AckRead",
+      "type": "checkbox",
+      "label": "Ik heb bovenstaande informatie gelezen en begrepen",
+      "key": "ackRead",
+      "validate": {
+        "required": true
+      },
+      "description": "U moet bevestigen dat u de informatie heeft gelezen om door te kunnen gaan."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Doorgaan naar toestemmingsvraag",
+      "action": "submit"
+    }
+  ]
+}
