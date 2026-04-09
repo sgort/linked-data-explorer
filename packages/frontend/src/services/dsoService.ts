@@ -40,6 +40,11 @@ export interface DsoActiviteitDetail extends DsoActiviteit {
   };
   regelBeheerObjecten?: DsoRegelbeheerobject[];
   locaties?: { identificatie: string; beginDatum?: string }[];
+  _links?: {
+    self?: { href: string };
+    bovenliggendeActiviteit?: { href: string } | null;
+    onderliggendeActiviteiten?: { href: string }[];
+  };
 }
 
 /** Extract the activiteit URN from a HAL href like ...activiteiten/{urn}?datum=... */
@@ -82,6 +87,35 @@ export async function searchBegrippen(zoekTerm: string, page = 1): Promise<Begri
   const links = (raw as { _links?: { next?: { href?: string | null } } })._links;
   return {
     items: embedded?.begrippen ?? [],
+    page: pageInfo,
+    hasNext: !!links?.next?.href,
+  };
+}
+
+export async function zoekActiviteiten(opts: {
+  datum?: string;
+  lat?: number;
+  lon?: number;
+  page?: number;
+  pageSize?: number;
+}): Promise<ActiviteitenResult> {
+  const res = await fetch(`${API_BASE}/v1/dso/activiteiten/zoek`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(opts),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const envelope = (await res.json()) as { success: boolean; data: Record<string, unknown> };
+  if (!envelope.success) throw new Error('DSO search failed');
+  const raw = envelope.data;
+  const embedded = (raw as { _embedded?: { activiteiten?: DsoActiviteit[] } })._embedded;
+  const pageInfo = (raw as { page?: DsoPage }).page ?? {
+    number: opts.page ?? 1,
+    size: opts.pageSize ?? 20,
+  };
+  const links = (raw as { _links?: { next?: { href?: string | null } } })._links;
+  return {
+    items: embedded?.activiteiten ?? [],
     page: pageInfo,
     hasNext: !!links?.next?.href,
   };

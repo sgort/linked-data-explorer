@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import React, { useState } from 'react';
 
 import { BpmnProcess } from '../../types';
+import DsoActiviteitSelector from './DsoActiviteitSelector';
 import RopaSelector from './RopaSelector';
 
 interface ProcessListProps {
@@ -15,6 +16,7 @@ interface ProcessListProps {
   onDeleteProcess: (processId: string) => void;
   onUpdateProcessName: (processId: string, name: string) => void;
   onRopaRefChange: (ropaRef: string | undefined) => void;
+  onDsoActiviteitUrnChange: (urn: string | undefined) => void;
 }
 
 const ProcessList: React.FC<ProcessListProps> = ({
@@ -27,6 +29,7 @@ const ProcessList: React.FC<ProcessListProps> = ({
   onDeleteProcess,
   onUpdateProcessName,
   onRopaRefChange,
+  onDsoActiviteitUrnChange,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -203,6 +206,13 @@ const ProcessList: React.FC<ProcessListProps> = ({
             currentRopaRef={activeProcess.xml.match(/ronl:ropaRef="([^"]+)"/)?.[1]}
             onRopaRefChange={onRopaRefChange}
           />
+          <div className="border-t border-slate-200">
+            <DsoActiviteitSelector
+              bpmnProcessId={activeProcess.bpmnProcessId ?? ''}
+              currentUrn={activeProcess.xml.match(/ronl:dsoActiviteitUrn="([^"]+)"/)?.[1]}
+              onUrnChange={onDsoActiviteitUrnChange}
+            />
+          </div>
         </div>
       )}{' '}
     </div>

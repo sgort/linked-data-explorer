@@ -14,6 +14,7 @@ import {
   getActiviteiten,
   searchBegrippen,
   urnFromHref,
+  zoekActiviteiten,
 } from '../../services/dsoService';
 
 type Tab = 'begrippen' | 'activiteiten';
@@ -205,7 +206,7 @@ const ActivityDetailPanel: React.FC<{
   }, [urn, datum]);
 
   return (
-    <div className="flex flex-col h-full border-l border-slate-200 bg-white w-[380px] flex-shrink-0">
+    <div className="flex flex-col h-full border-l border-slate-200 bg-white w-1/3 flex-shrink-0">
       {/* Panel header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50 flex-shrink-0">
         <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -324,6 +325,27 @@ const ActivityDetailPanel: React.FC<{
               </Section>
             )}
 
+            {/* Child activities */}
+            {detail._links?.onderliggendeActiviteiten &&
+              detail._links.onderliggendeActiviteiten.length > 0 && (
+                <Section
+                  title={`Child activities (${detail._links.onderliggendeActiviteiten.length})`}
+                >
+                  <ul className="space-y-1">
+                    {detail._links.onderliggendeActiviteiten.map((c) => (
+                      <li key={c.href}>
+                        <button
+                          onClick={() => onNavigate(urnFromHref(c.href))}
+                          className="text-xs text-blue-600 hover:underline text-left font-mono break-all"
+                        >
+                          {urnFromHref(c.href)}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              )}
+
             {/* Locations */}
             {detail.locaties && detail.locaties.length > 0 && (
               <Section title={`Locations (${detail.locaties.length})`}>
@@ -370,14 +392,22 @@ const ActiviteitRow: React.FC<{
 );
 
 const ActiviteitenTab: React.FC = () => {
+  // ── preset locations ────────────────────────────────────────────────
+  const PRESETS = [
+    { label: 'Lelystad', lat: 52.5125, lon: 5.4739 },
+    { label: 'Flevoland', lat: 52.5269, lon: 5.5542 },
+  ] as const;
+
   const [datum, setDatum] = useState('');
   const [activeDatum, setActiveDatum] = useState<string | undefined>(undefined);
-  const [urnInput, setUrnInput] = useState('');
   const [result, setResult] = useState<ActiviteitenResult | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedUrn, setSelectedUrn] = useState<string | null>(null);
+  const [urnInput, setUrnInput] = useState('');
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [activeLocation, setActiveLocation] = useState<{ lat: number; lon: number } | null>(null);
 
   const toDsoDate = (iso: string) => {
     if (!iso) return undefined;
@@ -385,57 +415,98 @@ const ActiviteitenTab: React.FC = () => {
     return `${d}-${m}-${y}`;
   };
 
-  const load = useCallback(async (d: string, p: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setResult(await getActiviteiten(toDsoDate(d), p));
-      setActiveDatum(toDsoDate(d));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (d: string, p: number, loc: { lat: number; lon: number } | null) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const dsoDate = toDsoDate(d);
+        const res = loc
+          ? await zoekActiviteiten({ datum: dsoDate, lat: loc.lat, lon: loc.lon, page: p })
+          : await getActiviteiten(dsoDate, p);
+        setResult(res);
+        setActiveDatum(dsoDate);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load');
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    load('', 1);
+    load('', 1, null);
   }, [load]);
 
   const handleLoad = () => {
     setPage(1);
     setSelectedUrn(null);
-    load(datum, 1);
+    load(datum, 1, activeLocation);
+  };
+
+  const handlePreset = (preset: (typeof PRESETS)[number]) => {
+    const isActive = activePreset === preset.label;
+    const loc = isActive ? null : { lat: preset.lat, lon: preset.lon };
+    setActivePreset(isActive ? null : preset.label);
+    setActiveLocation(loc);
+    setPage(1);
+    setSelectedUrn(null);
+    load(datum, 1, loc);
   };
 
   const goPage = (p: number) => {
     setPage(p);
     setSelectedUrn(null);
-    load(datum, p);
+    load(datum, p, activeLocation);
   };
 
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="border-b border-slate-200 bg-white flex-shrink-0">
-        <div className="p-3 flex gap-2 items-center border-b border-slate-100">
+        {/* Row 1: date + load */}
+        <div className="px-3 pt-3 pb-2 flex gap-2 items-center border-b border-slate-100">
           <label className="text-xs text-slate-500 shrink-0">Valid on</label>
           <input
             type="date"
             value={datum}
             placeholder="Today"
             onChange={(e) => setDatum(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="flex-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
           <button
             onClick={handleLoad}
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             Load
           </button>
         </div>
-        <div className="p-3 flex gap-2 items-center">
+        {/* Row 2: location presets */}
+        <div className="px-3 py-2 flex items-center gap-2 border-b border-slate-100">
+          <span className="text-xs text-slate-400 shrink-0">Location</span>
+          {PRESETS.map((p) => (
+            <button
+              key={p.label}
+              onClick={() => handlePreset(p)}
+              className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+                activePreset === p.label
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+          {activePreset && (
+            <span className="text-[10px] text-slate-400 ml-auto">
+              {activeLocation?.lat.toFixed(4)}, {activeLocation?.lon.toFixed(4)}
+            </span>
+          )}
+        </div>
+        {/* Row 3: URN paste */}
+        <div className="px-3 py-2 flex gap-2 items-center">
           <input
             value={urnInput}
             onChange={(e) => setUrnInput(e.target.value)}
@@ -443,14 +514,14 @@ const ActiviteitenTab: React.FC = () => {
               if (e.key === 'Enter' && urnInput.trim()) setSelectedUrn(urnInput.trim());
             }}
             placeholder="Paste URN to inspect directly…"
-            className="flex-1 px-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="flex-1 px-2.5 py-1.5 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
           <button
             onClick={() => {
               if (urnInput.trim()) setSelectedUrn(urnInput.trim());
             }}
             disabled={!urnInput.trim()}
-            className="px-3 py-2 bg-slate-700 text-white text-xs rounded-lg hover:bg-slate-800 disabled:opacity-40 transition-colors"
+            className="px-3 py-1.5 bg-slate-700 text-white text-xs rounded-lg hover:bg-slate-800 disabled:opacity-40 transition-colors"
           >
             Inspect
           </button>

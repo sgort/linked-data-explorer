@@ -70,6 +70,71 @@ export interface ActiviteitenOptions {
   pageSize?: number;
 }
 
+export interface ZoekOptions {
+  datum?: string;       // dd-MM-yyyy, defaults to today
+  lat?: number;         // WGS84
+  lon?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function zoekActiviteiten(opts: ZoekOptions = {}): Promise<unknown> {
+  const d = new Date();
+  const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+  const datum = opts.datum ?? today;
+
+  const params = new URLSearchParams();
+  params.set('page', String(opts.page ?? 1));
+  params.set('pageSize', String(opts.pageSize ?? 20));
+
+  const body: Record<string, unknown> = { datum };
+  if (opts.lat !== undefined && opts.lon !== undefined) {
+    body.geometrie = {
+      type: 'Point',
+      coordinates: [opts.lon, opts.lat],
+    };
+  }
+
+  // crs is a query param per the RTR spec, not a header
+  if (opts.lat !== undefined && opts.lon !== undefined) {
+    params.set('crs', 'epsg:4326');
+  }
+
+  const url = `${config.dso.rtrBaseUrl}/activiteiten/_zoek?${params}`;
+  logger.info('[DSO] POST activiteiten/_zoek request', {
+    url,
+    body: JSON.stringify(body),
+    lat: opts.lat,
+    lon: opts.lon,
+  });
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'x-api-key': config.dso.apiKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/hal+json',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    logger.info('[DSO] POST activiteiten/_zoek response', {
+      status: response.status,
+      body: text.substring(0, 1000),
+    });
+    if (!response.ok) {
+      throw new Error(`DSO responded ${response.status}: ${text}`);
+    }
+    return JSON.parse(text);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function getActiviteit(urn: string, datum?: string): Promise<unknown> {
   const d = new Date();
   const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;

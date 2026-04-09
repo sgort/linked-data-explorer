@@ -1,6 +1,55 @@
 {
   "versions": [
     {
+      "version": "1.5.0",
+      "date": "April 2026",
+      "status": "Released",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "sections": [
+        {
+          "icon": "🏛️",
+          "title": "DSO Explorer",
+          "iconColor": "blue",
+          "items": [
+            "New DSO Explorer panel (Landmark icon in sidebar) connecting LDE to the Digitaal Stelsel Omgevingswet pre-production environment",
+            "Concepts tab: full-text search across the Stelselcatalogus /begrippen endpoint — returns definitions, explanations, validity dates, and concept URIs",
+            "Activities tab: paginated list of RTR activiteiten valid on any selected date, defaulting to today with manual dd-MM-yyyy formatting (Azure App Service Intl-safe)",
+            "Location presets for Lelystad and Flevoland filter the activity list via POST /activiteiten/_zoek with GeoJSON Point geometry",
+            "URN paste-to-inspect input: paste any activiteit URN directly to open its detail panel without navigating the list",
+            "Activity Detail panel (1/3 width): shows omschrijving, authority (bestuurslaag, organisatieType, organisatieCode, OIN), parent activity, validity window, refinable flag, rule types present (conclusie / indieningsvereisten / maatregelen), child activities, and location identifiers",
+            "Parent and child activity links are navigable — clicking navigates the detail panel without returning to the list",
+            "DSO Explorer header shows environment label (pre-production) to make the data context explicit"
+          ]
+        },
+        {
+          "icon": "🔗",
+          "title": "DSO ↔ BPMN Linking",
+          "iconColor": "indigo",
+          "items": [
+            "New ronl:dsoActiviteitUrn moddleExtension on bpmn:Process — persisted in the BPMN XML alongside ronl:ropaRef",
+            "DsoActiviteitSelector footer panel in the BPMN Modeler (below RopaSelector): paste a URN, verify it live against the DSO RTR, and save it to the active process",
+            "Verification call fetches the activity detail and confirms omschrijving and authority before saving — prevents storing invalid URNs",
+            "Direct link to the activity in the production RTR viewer (omgevingswet.overheid.nl) shown after successful verification",
+            "TreeFellingPermitSubProcess can now be formally grounded in its DSO activiteit (boom kappen / nl.imow-gm0014) as the first Phase 3 example"
+          ]
+        },
+        {
+          "icon": "⚙️",
+          "title": "Backend — DSO Service",
+          "iconColor": "gray",
+          "items": [
+            "New dso.service.ts with shared dsoFetch helper: x-api-key header, configurable timeout, clean error propagation",
+            "GET /v1/dso/begrippen — proxies Catalogus /begrippen with zoekTerm, geldigOp, page, pageSize forwarding",
+            "GET /v1/dso/activiteiten — proxies RTR /activiteiten with today-default datum (manual dd-MM-yyyy format, no Intl dependency)",
+            "GET /v1/dso/activiteiten/:urn — fetches a single activity by URN with today-default datum",
+            "POST /v1/dso/activiteiten/zoek — proxies RTR /activiteiten/_zoek with GeoJSON geometrie body and crs=epsg:4326 query param",
+            "DSO config block in config.ts: DSO_CATALOGUE_BASE_URL, DSO_RTR_BASE_URL, DSO_API_KEY, DSO_TIMEOUT environment variables"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.4.1",
       "status": "New Feature",
       "statusColor": "emerald",

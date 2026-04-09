@@ -8,6 +8,31 @@ import packageJson from '../../package.json';
 const router = Router();
 
 /**
+ * POST /v1/dso/activiteiten/zoek
+ * Search activities by date and optional point geometry.
+ *
+ * Body: { datum?: string, lat?: number, lon?: number, page?: number, pageSize?: number }
+ */
+router.post('/activiteiten/zoek', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const { datum, lat, lon, page, pageSize } = req.body as {
+      datum?: string;
+      lat?: number;
+      lon?: number;
+      page?: number;
+      pageSize?: number;
+    };
+    const data = await dsoService.zoekActiviteiten({ datum, lat, lon, page, pageSize });
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    logger.error('[DSO Routes] POST /activiteiten/zoek failed', { error: msg });
+    res.status(502).json({ success: false, error: msg });
+  }
+});
+
+/**
  * GET /v1/dso/activiteiten/:urn
  * Fetch a single activity by URN from the RTR.
  *

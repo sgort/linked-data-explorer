@@ -335,6 +335,35 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     setCurrentXml(xml);
   };
 
+  const handleDsoActiviteitUrnChange = (urn: string | undefined) => {
+    if (!activeProcessId) return;
+    const process = BpmnService.getProcess(activeProcessId);
+    if (!process) return;
+
+    let xml = process.xml;
+
+    if (!xml.includes('xmlns:ronl=')) {
+      xml = xml.replace(/(<(?:bpmn:)?definitions\b)/, '$1 xmlns:ronl="http://ronl.nl/schema/1.0"');
+    }
+
+    if (urn) {
+      if (xml.includes('ronl:dsoActiviteitUrn=')) {
+        xml = xml.replace(/ronl:dsoActiviteitUrn="[^"]*"/, `ronl:dsoActiviteitUrn="${urn}"`);
+      } else {
+        xml = xml.replace(
+          /(<(?:bpmn:)?process\b[^>]*?)(\/?>)/,
+          `$1 ronl:dsoActiviteitUrn="${urn}"$2`
+        );
+      }
+    } else {
+      xml = xml.replace(/\s*ronl:dsoActiviteitUrn="[^"]*"/, '');
+    }
+
+    BpmnService.saveProcess({ ...process, xml, updatedAt: new Date().toISOString() });
+    setProcesses(BpmnService.getProcesses());
+    setCurrentXml(xml);
+  };
+
   return (
     <div className="flex h-full bg-slate-50">
       <ProcessList
@@ -347,6 +376,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         onDeleteProcess={handleDeleteProcess}
         onUpdateProcessName={handleUpdateProcessName}
         onRopaRefChange={handleRopaRefChange}
+        onDsoActiviteitUrnChange={handleDsoActiviteitUrnChange}
       />
 
       <div className="flex-1 flex flex-col border-x border-slate-200">
