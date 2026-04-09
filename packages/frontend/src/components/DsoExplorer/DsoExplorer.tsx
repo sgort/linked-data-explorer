@@ -194,13 +194,37 @@ const ActivityDetailPanel: React.FC<{
   const [detail, setDetail] = useState<DsoActiviteitDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [childNames, setChildNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setLoading(true);
     setError(null);
     setDetail(null);
+    setChildNames({});
     getActiviteitDetail(urn, datum)
-      .then(setDetail)
+      .then((d) => {
+        setDetail(d);
+        // Fetch child names in parallel after parent loads
+        const children = d._links?.onderliggendeActiviteiten ?? [];
+        if (children.length > 0) {
+          Promise.allSettled(
+            children.map((c) =>
+              getActiviteitDetail(urnFromHref(c.href), datum).then((child) => ({
+                urn: urnFromHref(c.href),
+                name: child.omschrijving ?? null,
+              }))
+            )
+          ).then((results) => {
+            const names: Record<string, string> = {};
+            results.forEach((r) => {
+              if (r.status === 'fulfilled' && r.value.name) {
+                names[r.value.urn] = r.value.name;
+              }
+            });
+            setChildNames(names);
+          });
+        }
+      })
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false));
   }, [urn, datum]);
@@ -331,17 +355,29 @@ const ActivityDetailPanel: React.FC<{
                 <Section
                   title={`Child activities (${detail._links.onderliggendeActiviteiten.length})`}
                 >
-                  <ul className="space-y-1">
-                    {detail._links.onderliggendeActiviteiten.map((c) => (
-                      <li key={c.href}>
-                        <button
-                          onClick={() => onNavigate(urnFromHref(c.href))}
-                          className="text-xs text-blue-600 hover:underline text-left font-mono break-all"
-                        >
-                          {urnFromHref(c.href)}
-                        </button>
-                      </li>
-                    ))}
+                  <ul className="space-y-1.5">
+                    {detail._links.onderliggendeActiviteiten.map((c) => {
+                      const childUrn = urnFromHref(c.href);
+                      const name = childNames[childUrn];
+                      return (
+                        <li key={c.href}>
+                          <button
+                            onClick={() => onNavigate(childUrn)}
+                            className="w-full text-left group"
+                          >
+                            {name ? (
+                              <span className="text-xs text-blue-600 group-hover:underline font-medium">
+                                {name}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-blue-400 group-hover:underline font-mono break-all">
+                                {childUrn}
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </Section>
               )}
