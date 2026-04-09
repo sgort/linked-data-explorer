@@ -28,7 +28,6 @@ const DsoActiviteitSelector: React.FC<DsoActiviteitSelectorProps> = ({
       setInput(currentUrn);
       verify(currentUrn);
     }
-     
   }, [currentUrn]);
 
   const verify = async (urn: string) => {

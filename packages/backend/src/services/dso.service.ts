@@ -71,8 +71,8 @@ export interface ActiviteitenOptions {
 }
 
 export interface ZoekOptions {
-  datum?: string;       // dd-MM-yyyy, defaults to today
-  lat?: number;         // WGS84
+  datum?: string; // dd-MM-yyyy, defaults to today
+  lat?: number; // WGS84
   lon?: number;
   page?: number;
   pageSize?: number;

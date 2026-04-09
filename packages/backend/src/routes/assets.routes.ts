@@ -88,12 +88,10 @@ router.patch('/bpmn/:id/deploy', async (req: Request, res: Response) => {
     res.json({ success: true });
   } catch (err) {
     logger.error('[assets] markDeployed failed', { error: getErrorMessage(err) });
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: { code: 'DEPLOY_MARK_FAILED', message: getErrorMessage(err) },
-      });
+    res.status(500).json({
+      success: false,
+      error: { code: 'DEPLOY_MARK_FAILED', message: getErrorMessage(err) },
+    });
   }
 });
 
