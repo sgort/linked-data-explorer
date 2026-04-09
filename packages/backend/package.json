@@ -4,7 +4,8 @@
   "description": "Backend orchestration service for DMN chain execution",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon",
+    "dev": "bash scripts/check-docker.sh && nodemon",
+    "docker:check": "bash scripts/check-docker.sh",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "jest",
