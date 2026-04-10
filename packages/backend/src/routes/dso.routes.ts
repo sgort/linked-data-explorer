@@ -12,6 +12,28 @@ const getEnv = (req: Request): 'pre' | 'prod' => {
 };
 
 /**
+ * POST /v1/dso/activiteiten/oin
+ * Retrieve all activities registered by a specific authority (OIN).
+ *
+ * Body: { oin: string }
+ */
+router.post('/activiteiten/oin', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const { oin, datumVanaf } = req.body as { oin?: string; datumVanaf?: string };
+    if (!oin) {
+      return res.status(400).json({ success: false, error: 'oin is required' });
+    }
+    const data = await dsoService.getActiviteitenByOin(oin, getEnv(req), datumVanaf);
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    logger.error('[DSO Routes] POST /activiteiten/oin failed', { error: msg });
+    res.status(502).json({ success: false, error: msg });
+  }
+});
+
+/**
  * POST /v1/dso/activiteiten/zoek
  * Search activities by date and optional point geometry.
  *

@@ -13,6 +13,7 @@ import {
   DsoRegelbeheerobject,
   getActiviteitDetail,
   getActiviteiten,
+  getActiviteitenByOin,
   searchBegrippen,
   urnFromHref,
   zoekActiviteiten,
@@ -211,7 +212,7 @@ const ActivityDetailPanel: React.FC<{
     setChildNames({});
     getActiviteitDetail(urn, datum)
       .then((d) => {
-        setDetail(d);
+        setDetail(d as DsoActiviteitDetail);
         // Fetch child names in parallel after parent loads
         const children = d._links?.onderliggendeActiviteiten ?? [];
         if (children.length > 0) {
@@ -233,7 +234,14 @@ const ActivityDetailPanel: React.FC<{
           });
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : 'Failed to load';
+        setError(
+          msg.includes('404')
+            ? `This activity is not available in the ${env === 'prod' ? 'production' : 'pre-production'} DSO environment.`
+            : msg
+        );
+      })
       .finally(() => setLoading(false));
   }, [urn, datum]);
 
@@ -436,22 +444,22 @@ const ActiviteitRow: React.FC<{
 );
 
 const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
-  // ── preset locations ────────────────────────────────────────────────
+  // ── preset authorities ───────────────────────────────────────────────
   const PRESETS = [
-    { label: 'Lelystad', lat: 52.5125, lon: 5.4739 },
-    { label: 'Flevoland', lat: 52.5269, lon: 5.5542 },
+    { label: 'Lelystad', oin: '00000001005024249000' },
+    { label: 'Flevoland', oin: '00000001006203243000' },
   ] as const;
 
   const [datum, setDatum] = useState('');
   const [activeDatum, setActiveDatum] = useState<string | undefined>(undefined);
   const [result, setResult] = useState<ActiviteitenResult | null>(null);
+  const [urnOnlyItems, setUrnOnlyItems] = useState<string[] | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedUrn, setSelectedUrn] = useState<string | null>(null);
   const [urnInput, setUrnInput] = useState('');
   const [activePreset, setActivePreset] = useState<string | null>(null);
-  const [activeLocation, setActiveLocation] = useState<{ lat: number; lon: number } | null>(null);
 
   const toDsoDate = (iso: string) => {
     if (!iso) return undefined;
@@ -460,16 +468,32 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   };
 
   const load = useCallback(
-    async (d: string, p: number, loc: { lat: number; lon: number } | null) => {
+    async (d: string, p: number) => {
       setLoading(true);
       setError(null);
+      setUrnOnlyItems(null);
       try {
         const dsoDate = toDsoDate(d);
-        const res = loc
-          ? await zoekActiviteiten({ datum: dsoDate, lat: loc.lat, lon: loc.lon, page: p }, env)
-          : await getActiviteiten(dsoDate, p, env);
+        const res = await getActiviteiten(dsoDate, p, env);
         setResult(res);
         setActiveDatum(dsoDate);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [env]
+  );
+
+  const loadByOin = useCallback(
+    async (oin: string, dsoDate?: string) => {
+      setLoading(true);
+      setError(null);
+      setResult(null);
+      try {
+        const urns = await getActiviteitenByOin(oin, env, dsoDate);
+        setUrnOnlyItems(urns);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load');
       } finally {
@@ -482,30 +506,44 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   useEffect(() => {
     setSelectedUrn(null);
     setActivePreset(null);
-    setActiveLocation(null);
-    load('', 1, null);
+    setUrnOnlyItems(null);
+    load('', 1);
   }, [load]);
 
   const handleLoad = () => {
     setPage(1);
     setSelectedUrn(null);
-    load(datum, 1, activeLocation);
+    if (activePreset) {
+      const preset = PRESETS.find((p) => p.label === activePreset);
+      if (preset) loadByOin(preset.oin, toDsoDate(datum));
+    } else {
+      setUrnOnlyItems(null);
+      load(datum, 1);
+    }
   };
 
   const handlePreset = (preset: (typeof PRESETS)[number]) => {
     const isActive = activePreset === preset.label;
-    const loc = isActive ? null : { lat: preset.lat, lon: preset.lon };
     setActivePreset(isActive ? null : preset.label);
-    setActiveLocation(loc);
-    setPage(1);
     setSelectedUrn(null);
-    load(datum, 1, loc);
+    if (isActive) {
+      setUrnOnlyItems(null);
+      setDatum('');
+      load('', 1);
+    } else {
+      // Show yesterday in the Valid on field so the user sees what date filters the preset
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      const yesterday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      setDatum(yesterday);
+      loadByOin(preset.oin, toDsoDate(yesterday));
+    }
   };
 
   const goPage = (p: number) => {
     setPage(p);
     setSelectedUrn(null);
-    load(datum, p, activeLocation);
+    load(datum, p);
   };
 
   return (
@@ -547,9 +585,23 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
             </button>
           ))}
           {activePreset && (
-            <span className="text-[10px] text-slate-400 ml-auto">
-              {activeLocation?.lat.toFixed(4)}, {activeLocation?.lon.toFixed(4)}
-            </span>
+            <>
+              <span className="text-[10px] text-slate-400 italic">
+                Showing {activePreset} activities only
+              </span>
+              <button
+                onClick={() => {
+                  setActivePreset(null);
+                  setUrnOnlyItems(null);
+                  setSelectedUrn(null);
+                  setDatum('');
+                  load('', 1);
+                }}
+                className="ml-auto text-[10px] text-slate-400 hover:text-slate-600 underline transition-colors"
+              >
+                Clear
+              </button>
+            </>
           )}
         </div>
         {/* Row 3: URN paste */}
@@ -593,8 +645,29 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
           {!loading && !error && result && result.items.length === 0 && (
             <p className="text-center text-slate-400 text-sm py-12">No activities found.</p>
           )}
+          {!loading && !error && urnOnlyItems && urnOnlyItems.length === 0 && (
+            <p className="text-center text-slate-400 text-sm py-12">
+              No activities registered for this authority.
+            </p>
+          )}
           {!loading &&
             !error &&
+            urnOnlyItems?.map((urn) => (
+              <button
+                key={urn}
+                onClick={() => setSelectedUrn(urn === selectedUrn ? null : urn)}
+                className={`w-full text-left bg-white border rounded-lg p-3 transition-colors ${
+                  selectedUrn === urn
+                    ? 'border-blue-400 ring-1 ring-blue-400'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <p className="text-[11px] text-blue-600 font-mono break-all">{urn}</p>
+              </button>
+            ))}
+          {!loading &&
+            !error &&
+            !urnOnlyItems &&
             result?.items.map((a) => (
               <ActiviteitRow
                 key={a.urn}
@@ -618,7 +691,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
       </div>
 
       {/* Pagination */}
-      {result && (result.items.length > 0 || page > 1) && (
+      {!urnOnlyItems && result && (result.items.length > 0 || page > 1) && (
         <div className="p-3 border-t border-slate-200 bg-white flex items-center justify-between flex-shrink-0">
           <span className="text-xs text-slate-500">
             Page {page} · {result.items.length} items

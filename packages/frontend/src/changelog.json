@@ -1,6 +1,46 @@
 {
   "versions": [
     {
+      "version": "1.5.2",
+      "date": "April 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "✨",
+          "title": "DSO Explorer — improvements",
+          "iconColor": "blue",
+          "items": [
+            "DSO environment selector added to the Settings panel (gear icon): switch between pre-production and production DSO independently of the LDE environment, persisted across sessions in localStorage",
+            "Environment badge in the DSO Explorer header updates to reflect the active DSO environment (amber for pre-production, green for production)",
+            "Both DSO environments (pre-production and production) use separate API keys configured via DSO_API_KEY and DSO_API_KEY_PROD environment variables",
+            "Location presets (Lelystad, Flevoland) now filter by authority OIN via POST /activiteiten/_wijzigingen instead of geometry — shows only that authority's registered activities rather than all activities geographically intersecting the area",
+            "datumVanaf flows from the Valid on date field through to the _wijzigingen call — changing the date while a preset is active and pressing Load reloads that authority's list for the new date",
+            "Pressing Load while a preset is active reloads the authority list for the selected date instead of deselecting the preset and reverting to the default list",
+            "Clear button added next to active preset label to explicitly reset to the default list",
+            "Yesterday used as the default datumVanaf for authority presets",
+            "Child activities in the detail panel now show human-readable names fetched in parallel after the parent detail loads",
+            "Graceful 404 handling in the detail panel: activities not available in the active DSO environment show a clear message instead of a raw error",
+            "Pagination unified to 20 items per page across both Concepts and Activities tabs"
+          ]
+        },
+        {
+          "icon": "⚙️",
+          "title": "Backend — DSO service",
+          "iconColor": "gray",
+          "items": [
+            "POST /v1/dso/activiteiten/oin — new endpoint wrapping _wijzigingen, accepts oin and optional datumVanaf, defaults to yesterday",
+            "X-Dso-Env request header added to all DSO frontend calls; backend reads it to select pre-production or production DSO config",
+            "X-Dso-Env added to CORS allowedHeaders to resolve preflight errors",
+            "dsoProd config block in config.ts: DSO_CATALOGUE_BASE_URL_PROD, DSO_RTR_BASE_URL_PROD, DSO_API_KEY_PROD environment variables",
+            "getDsoConfig() helper selects the correct base URL and API key per request",
+            "env parameter threaded through all dso.service.ts exported functions and logged with each DSO request"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.5.1",
       "date": "April 2026",
       "status": "Released",

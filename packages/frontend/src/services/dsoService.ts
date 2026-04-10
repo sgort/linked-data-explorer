@@ -100,6 +100,24 @@ export async function searchBegrippen(
   };
 }
 
+export async function getActiviteitenByOin(
+  oin: string,
+  env: DsoEnv = 'pre',
+  datumVanaf?: string
+): Promise<string[]> {
+  const res = await fetch(`${API_BASE}/v1/dso/activiteiten/oin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Dso-Env': env },
+    body: JSON.stringify({ oin, datumVanaf }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const envelope = (await res.json()) as { success: boolean; data: Record<string, unknown> };
+  if (!envelope.success) throw new Error('DSO OIN request failed');
+  const embedded = (envelope.data as { _embedded?: { activiteiten?: { urn: string }[] } })
+    ._embedded;
+  return (embedded?.activiteiten ?? []).map((a) => a.urn);
+}
+
 export async function zoekActiviteiten(
   opts: {
     datum?: string;

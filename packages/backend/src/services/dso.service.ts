@@ -85,6 +85,41 @@ export interface ZoekOptions {
   pageSize?: number;
 }
 
+export async function getActiviteitenByOin(oin: string, env: DsoEnv = 'pre', datumVanaf?: string): Promise<unknown> {
+  const url = `${getDsoConfig(env).rtrBaseUrl}/activiteiten/_wijzigingen`;
+
+  // Default to yesterday if no date provided — today returns empty due to DSO timing
+  if (!datumVanaf) {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    datumVanaf = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+  }
+
+  logger.info('[DSO] POST activiteiten/_wijzigingen', { env, oin, datumVanaf });
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'x-api-key': getDsoConfig(env).apiKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/hal+json',
+      },
+      body: JSON.stringify({ oin, datumVanaf }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`DSO responded ${response.status}: ${text}`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function zoekActiviteiten(opts: ZoekOptions = {}, env: DsoEnv = 'pre'): Promise<unknown> {
   const d = new Date();
   const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
