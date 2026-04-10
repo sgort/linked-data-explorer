@@ -1,6 +1,24 @@
 {
   "versions": [
     {
+      "version": "1.5.1",
+      "date": "April 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "✨",
+          "title": "Improvements",
+          "iconColor": "emerald",
+          "items": [
+            "Child activities in the detail panel now show human-readable names instead of raw URNs — names are fetched in parallel after the parent detail loads and swap in progressively as requests resolve",
+            "Activities without an omschrijving in DSO gracefully fall back to their URN in both the list and the detail panel child links"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.5.0",
       "date": "April 2026",
       "status": "Released",
