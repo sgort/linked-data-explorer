@@ -87,7 +87,7 @@ export async function searchBegrippen(
   page = 1,
   env: DsoEnv = 'pre'
 ): Promise<BegrippenResult> {
-  const params = new URLSearchParams({ page: String(page), pageSize: '10' });
+  const params = new URLSearchParams({ page: String(page), pageSize: '20' });
   if (zoekTerm.trim()) params.set('zoekTerm', zoekTerm.trim());
   const raw = await get<Record<string, unknown>>(`/v1/dso/begrippen?${params}`, env);
   const embedded = (raw as { _embedded?: { begrippen?: DsoBegrip[] } })._embedded;

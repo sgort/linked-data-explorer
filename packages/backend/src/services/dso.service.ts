@@ -3,7 +3,7 @@
 import { config } from '../utils/config';
 import { logger } from '../utils/logger';
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 20;
 
 export type DsoEnv = 'pre' | 'prod';
 

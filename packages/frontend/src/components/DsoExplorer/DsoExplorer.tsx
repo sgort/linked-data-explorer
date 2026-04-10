@@ -62,20 +62,26 @@ const BegrippenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async (term: string, p: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setResult(await searchBegrippen(term, p, env));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (term: string, p: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        setResult(await searchBegrippen(term, p, env));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [env]
+  );
 
   // Load on mount with empty term to show something immediately
   useEffect(() => {
+    setQuery('');
+    setSubmitted('');
+    setPage(1);
     load('', 1);
   }, [load]);
 
@@ -211,7 +217,7 @@ const ActivityDetailPanel: React.FC<{
         if (children.length > 0) {
           Promise.allSettled(
             children.map((c) =>
-              getActiviteitDetail(urnFromHref(c.href), datum).then((child) => ({
+              getActiviteitDetail(urnFromHref(c.href), datum, env).then((child) => ({
                 urn: urnFromHref(c.href),
                 name: child.omschrijving ?? null,
               }))
@@ -470,10 +476,13 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
         setLoading(false);
       }
     },
-    []
+    [env]
   );
 
   useEffect(() => {
+    setSelectedUrn(null);
+    setActivePreset(null);
+    setActiveLocation(null);
     load('', 1, null);
   }, [load]);
 
