@@ -57,6 +57,9 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [dsoEnv, setDsoEnv] = useState<'pre' | 'prod'>(() => {
+    return (localStorage.getItem('lde_dso_env') as 'pre' | 'prod') || 'pre';
+  });
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
   const [selectedLibraryQuery, setSelectedLibraryQuery] = useState<string | null>(null);
@@ -77,6 +80,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(VIEWMODE_STORAGE_KEY, viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem('lde_dso_env', dsoEnv);
+  }, [dsoEnv]);
 
   const handleRunQuery = async () => {
     setIsLoading(true);
@@ -460,7 +467,7 @@ const App: React.FC = () => {
 
           {viewMode === ViewMode.DSO && (
             <div className="flex-1 overflow-hidden">
-              <DsoExplorer />
+              <DsoExplorer env={dsoEnv} />
             </div>
           )}
 
@@ -554,6 +561,39 @@ const App: React.FC = () => {
                         )}
                       </div>
                     </div>
+                  </div>
+
+                  <hr className="border-slate-100" />
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wider">
+                      DSO Environment
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setDsoEnv('pre')}
+                        className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                          dsoEnv === 'pre'
+                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                            : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                        }`}
+                      >
+                        Pre-production
+                      </button>
+                      <button
+                        onClick={() => setDsoEnv('prod')}
+                        className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                          dsoEnv === 'prod'
+                            ? 'bg-green-100 text-green-800 border-green-300'
+                            : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                        }`}
+                      >
+                        Production
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Independent of the LDE environment. Persisted across sessions.
+                    </p>
                   </div>
 
                   <hr className="border-slate-100" />

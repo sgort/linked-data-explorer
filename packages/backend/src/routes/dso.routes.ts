@@ -7,6 +7,10 @@ import packageJson from '../../package.json';
 
 const router = Router();
 
+const getEnv = (req: Request): 'pre' | 'prod' => {
+  return req.headers['x-dso-env'] === 'prod' ? 'prod' : 'pre';
+};
+
 /**
  * POST /v1/dso/activiteiten/zoek
  * Search activities by date and optional point geometry.
@@ -23,7 +27,7 @@ router.post('/activiteiten/zoek', async (req: Request, res: Response) => {
       page?: number;
       pageSize?: number;
     };
-    const data = await dsoService.zoekActiviteiten({ datum, lat, lon, page, pageSize });
+    const data = await dsoService.zoekActiviteiten({ datum, lat, lon, page, pageSize }, getEnv(req));
     res.status(200).json({ success: true, data });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
@@ -46,7 +50,7 @@ router.get('/activiteiten/:urn', async (req: Request, res: Response) => {
     const urn = decodeURIComponent(req.params.urn);
     const datum = req.query.datum as string | undefined;
 
-    const data = await dsoService.getActiviteit(urn, datum);
+    const data = await dsoService.getActiviteit(urn, datum, getEnv(req));
     res.status(200).json({ success: true, data });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
@@ -79,7 +83,7 @@ router.get('/begrippen', async (req: Request, res: Response) => {
       geldigOp: geldigOp as string | undefined,
       page: page ? parseInt(page as string, 10) : undefined,
       pageSize: pageSize ? parseInt(pageSize as string, 10) : undefined,
-    });
+    }, getEnv(req));
 
     res.status(200).json({ success: true, data });
   } catch (error) {
@@ -112,7 +116,7 @@ router.get('/activiteiten', async (req: Request, res: Response) => {
       datum: datum as string | undefined,
       page: page ? parseInt(page as string, 10) : undefined,
       pageSize: pageSize ? parseInt(pageSize as string, 10) : undefined,
-    });
+    }, getEnv(req));
 
     res.status(200).json({ success: true, data });
   } catch (error) {

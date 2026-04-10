@@ -9,6 +9,7 @@ import {
   DsoActiviteit,
   DsoActiviteitDetail,
   DsoBegrip,
+  DsoEnv,
   DsoRegelbeheerobject,
   getActiviteitDetail,
   getActiviteiten,
@@ -52,7 +53,7 @@ const BegripCard: React.FC<{ begrip: DsoBegrip }> = ({ begrip }) => (
   </div>
 );
 
-const BegrippenTab: React.FC = () => {
+const BegrippenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');
   const [result, setResult] = useState<BegrippenResult | null>(null);
@@ -65,7 +66,7 @@ const BegrippenTab: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      setResult(await searchBegrippen(term, p));
+      setResult(await searchBegrippen(term, p, env));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -188,9 +189,10 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 const ActivityDetailPanel: React.FC<{
   urn: string;
   datum?: string;
+  env: DsoEnv;
   onClose: () => void;
   onNavigate: (urn: string) => void;
-}> = ({ urn, datum, onClose, onNavigate }) => {
+}> = ({ urn, datum, env, onClose, onNavigate }) => {
   const [detail, setDetail] = useState<DsoActiviteitDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -199,7 +201,7 @@ const ActivityDetailPanel: React.FC<{
     setLoading(true);
     setError(null);
     setDetail(null);
-    getActiviteitDetail(urn, datum)
+    getActiviteitDetail(urn, datum, env)
       .then(setDetail)
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false));
@@ -391,7 +393,7 @@ const ActiviteitRow: React.FC<{
   </button>
 );
 
-const ActiviteitenTab: React.FC = () => {
+const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   // ── preset locations ────────────────────────────────────────────────
   const PRESETS = [
     { label: 'Lelystad', lat: 52.5125, lon: 5.4739 },
@@ -422,8 +424,8 @@ const ActiviteitenTab: React.FC = () => {
       try {
         const dsoDate = toDsoDate(d);
         const res = loc
-          ? await zoekActiviteiten({ datum: dsoDate, lat: loc.lat, lon: loc.lon, page: p })
-          : await getActiviteiten(dsoDate, p);
+          ? await zoekActiviteiten({ datum: dsoDate, lat: loc.lat, lon: loc.lon, page: p }, env)
+          : await getActiviteiten(dsoDate, p, env);
         setResult(res);
         setActiveDatum(dsoDate);
       } catch (e) {
@@ -563,6 +565,7 @@ const ActiviteitenTab: React.FC = () => {
           <ActivityDetailPanel
             urn={selectedUrn}
             datum={activeDatum}
+            env={env}
             onClose={() => setSelectedUrn(null)}
             onNavigate={(urn) => setSelectedUrn(urn)}
           />
@@ -599,7 +602,11 @@ const ActiviteitenTab: React.FC = () => {
 
 // ── Panel shell ──────────────────────────────────────────────────────────────
 
-const DsoExplorer: React.FC = () => {
+interface DsoExplorerProps {
+  env?: DsoEnv;
+}
+
+const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
   const [tab, setTab] = useState<Tab>('begrippen');
 
   const tabCls = (t: Tab) =>
@@ -619,8 +626,12 @@ const DsoExplorer: React.FC = () => {
           </div>
           <span className="font-semibold text-slate-800 text-sm">DSO Explorer</span>
         </div>
-        <span className="text-xs text-slate-400">
-          Digitaal Stelsel Omgevingswet · pre-production
+        <span
+          className={`text-xs font-medium px-2 py-0.5 rounded ${
+            env === 'prod' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+          }`}
+        >
+          {env === 'prod' ? 'production' : 'pre-production'}
         </span>
       </div>
 
@@ -638,8 +649,8 @@ const DsoExplorer: React.FC = () => {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        {tab === 'begrippen' && <BegrippenTab />}
-        {tab === 'activiteiten' && <ActiviteitenTab />}
+        {tab === 'begrippen' && <BegrippenTab env={env} />}
+        {tab === 'activiteiten' && <ActiviteitenTab env={env} />}
       </div>
     </div>
   );

@@ -1,23 +1,5 @@
 # DSO Integration — Implementation Notes
 
-## Pending fix before first deploy
-
-### `packages/backend/src/services/dso.service.ts` — `getActiviteiten` date default
-
-Do **not** use `toLocaleDateString('nl-NL', ...)`. Azure App Service Node.js runtimes may
-not have full `Intl` locale data, causing incorrect or empty output. Use the manual format:
-
-```typescript
-const d = new Date();
-const datum =
-  opts.datum ??
-  `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-```
-
-The DSO RTR API requires `datum` in `dd-MM-yyyy` format. Missing or malformed → 400.
-
----
-
 ## Pending UX improvements — `DsoExplorer.tsx`
 
 ### 1. Activities tab: make the today-default visible

@@ -47,6 +47,17 @@ export const config = {
     timeout: parseInt(process.env.DSO_TIMEOUT || '15000', 10),
   },
 
+  dsoProd: {
+    catalogueBaseUrl:
+      process.env.DSO_CATALOGUE_BASE_URL_PROD ||
+      'https://service.omgevingswet.overheid.nl/publiek/catalogus/api/opvragen/v3',
+    rtrBaseUrl:
+      process.env.DSO_RTR_BASE_URL_PROD ||
+      'https://service.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/rtrgegevens/v2',
+    apiKey: process.env.DSO_API_KEY_PROD || '',
+    timeout: parseInt(process.env.DSO_TIMEOUT || '15000', 10),
+  },
+
   edocs: {
     baseUrl: process.env.EDOCS_BASE_URL || '',
     library: process.env.EDOCS_LIBRARY || '',
