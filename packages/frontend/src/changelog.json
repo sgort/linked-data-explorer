@@ -1,6 +1,62 @@
 {
   "versions": [
     {
+      "version": "1.5.3",
+      "date": "April 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "🔍",
+          "title": "Works tab — new",
+          "iconColor": "blue",
+          "items": [
+            "New Works tab in the DSO Explorer (between Concepts and Activities) backed by the Zoekinterface API — search werkzaamheden by user intent (e.g. 'boom kappen') with autocomplete suggestions after 2 characters",
+            "Each result shows the human-readable omschrijving, the functioneleStructuurRef (full concept URI — the Phase 4 pivot to STTR files), and the short werkzaamheid URN",
+            "Selecting a result opens a detail panel showing the current version's omschrijving, validity period, and full version history with start/end dates and a 'current' badge",
+            "Autocomplete uses POST /werkzaamheden/_suggereer with 300ms debounce; selecting a suggestion immediately fires the search",
+            "Reloads on DSO environment switch with the same clean-slate behaviour as the other tabs"
+          ]
+        },
+        {
+          "icon": "📍",
+          "title": "Activities tab — OIN preset fix",
+          "iconColor": "emerald",
+          "items": [
+            "Lelystad and Flevoland presets now use POST /activiteiten/_zoek with bestuursorgaan.oin filter instead of _wijzigingen — returns activities valid on a given date rather than a delta sync of changed activities",
+            "Activities now appear in the list with their full omschrijving visible immediately, without requiring parallel detail fetches",
+            "Date field now defaults to today for OIN presets (yesterday offset removed — no longer needed with _zoek)",
+            "Pagination works correctly in OIN mode — Load button reloads the authority list for the selected date",
+            "Empty state message distinguishes between no activities found in general vs no activities found for the selected authority on the selected date"
+          ]
+        },
+        {
+          "icon": "🐛",
+          "title": "Bug fixes",
+          "iconColor": "red",
+          "items": [
+            "Fixed Activity Detail panel always using pre-production DSO when opened from the Activities list — env was missing from the getActiviteitDetail call, causing 404 for production-only activities",
+            "Fixed Activity Detail panel not re-fetching when DSO environment is switched while a URN is already selected — env added to the useEffect dependency array",
+            "Fixed Activity Detail panel showing stale date context in OIN preset mode — activeDatum now set correctly by loadByOin alongside the result",
+            "Fixed _wijzigingen datumVanaf returning empty for dates within the last two weeks — root cause was that _wijzigingen is a delta sync endpoint, not a browse endpoint; replaced entirely with _zoek + OIN filter"
+          ]
+        },
+        {
+          "icon": "⚙️",
+          "title": "Backend — DSO service",
+          "iconColor": "gray",
+          "items": [
+            "zoekinterfaceBaseUrl and opvragenWerkzaamhedenBaseUrl added to both dso and dsoProd config blocks — defaults baked in, no new env vars required",
+            "POST /v1/dso/werkzaamheden/zoek — proxies Zoekinterface /werkzaamheden/_zoek",
+            "POST /v1/dso/werkzaamheden/suggereer — proxies Zoekinterface /werkzaamheden/_suggereer",
+            "GET /v1/dso/werkzaamheden/:urn — proxies Opvragen Werkzaamheden /werkzaamheden/{urn} (version history, without expand — _expandScope enum value not yet resolved)",
+            "POST /v1/dso/activiteiten/oin now uses /activiteiten/_zoek with bestuursorgaan.oin body field and datum instead of _wijzigingen with datumVanaf"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.5.2",
       "date": "April 2026",
       "status": "Released",

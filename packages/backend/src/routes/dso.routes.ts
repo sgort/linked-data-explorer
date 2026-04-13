@@ -20,11 +20,11 @@ const getEnv = (req: Request): 'pre' | 'prod' => {
 router.post('/activiteiten/oin', async (req: Request, res: Response) => {
   res.set('API-Version', packageJson.version);
   try {
-    const { oin, datumVanaf } = req.body as { oin?: string; datumVanaf?: string };
+    const { oin, datum } = req.body as { oin?: string; datum?: string };
     if (!oin) {
       return res.status(400).json({ success: false, error: 'oin is required' });
     }
-    const data = await dsoService.getActiviteitenByOin(oin, getEnv(req), datumVanaf);
+    const data = await dsoService.getActiviteitenByOin(oin, getEnv(req), datum);
     res.status(200).json({ success: true, data });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
@@ -49,7 +49,10 @@ router.post('/activiteiten/zoek', async (req: Request, res: Response) => {
       page?: number;
       pageSize?: number;
     };
-    const data = await dsoService.zoekActiviteiten({ datum, lat, lon, page, pageSize }, getEnv(req));
+    const data = await dsoService.zoekActiviteiten(
+      { datum, lat, lon, page, pageSize },
+      getEnv(req)
+    );
     res.status(200).json({ success: true, data });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
@@ -100,12 +103,15 @@ router.get('/begrippen', async (req: Request, res: Response) => {
   try {
     const { zoekTerm, geldigOp, page, pageSize } = req.query;
 
-    const data = await dsoService.getBegrippen({
-      zoekTerm: zoekTerm as string | undefined,
-      geldigOp: geldigOp as string | undefined,
-      page: page ? parseInt(page as string, 10) : undefined,
-      pageSize: pageSize ? parseInt(pageSize as string, 10) : undefined,
-    }, getEnv(req));
+    const data = await dsoService.getBegrippen(
+      {
+        zoekTerm: zoekTerm as string | undefined,
+        geldigOp: geldigOp as string | undefined,
+        page: page ? parseInt(page as string, 10) : undefined,
+        pageSize: pageSize ? parseInt(pageSize as string, 10) : undefined,
+      },
+      getEnv(req)
+    );
 
     res.status(200).json({ success: true, data });
   } catch (error) {
@@ -134,11 +140,14 @@ router.get('/activiteiten', async (req: Request, res: Response) => {
   try {
     const { datum, page, pageSize } = req.query;
 
-    const data = await dsoService.getActiviteiten({
-      datum: datum as string | undefined,
-      page: page ? parseInt(page as string, 10) : undefined,
-      pageSize: pageSize ? parseInt(pageSize as string, 10) : undefined,
-    }, getEnv(req));
+    const data = await dsoService.getActiviteiten(
+      {
+        datum: datum as string | undefined,
+        page: page ? parseInt(page as string, 10) : undefined,
+        pageSize: pageSize ? parseInt(pageSize as string, 10) : undefined,
+      },
+      getEnv(req)
+    );
 
     res.status(200).json({ success: true, data });
   } catch (error) {
@@ -149,6 +158,67 @@ router.get('/activiteiten', async (req: Request, res: Response) => {
       success: false,
       error: error instanceof Error ? error.message : 'DSO request failed',
     });
+  }
+});
+
+/**
+ * POST /v1/dso/werkzaamheden/zoek
+ * Search werkzaamheden via the Zoekinterface.
+ * Body: { zoekterm?: string, page?: number, pageSize?: number }
+ */
+router.post('/werkzaamheden/zoek', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const { zoekterm, page, pageSize } = req.body as {
+      zoekterm?: string;
+      page?: number;
+      pageSize?: number;
+    };
+    const data = await dsoService.zoekWerkzaamheden({ zoekterm, page, pageSize }, getEnv(req));
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    logger.error('[DSO Routes] POST /werkzaamheden/zoek failed', { error: msg });
+    res.status(502).json({ success: false, error: msg });
+  }
+});
+
+/**
+ * POST /v1/dso/werkzaamheden/suggereer
+ * Autocomplete suggestions for werkzaamheden search terms.
+ * Body: { zoekterm: string }
+ */
+router.post('/werkzaamheden/suggereer', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const { zoekterm } = req.body as { zoekterm?: string };
+    if (!zoekterm) {
+      return res.status(400).json({ success: false, error: 'zoekterm is required' });
+    }
+    const data = await dsoService.suggereerWerkzaamheden(zoekterm, getEnv(req));
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    logger.error('[DSO Routes] POST /werkzaamheden/suggereer failed', { error: msg });
+    res.status(502).json({ success: false, error: msg });
+  }
+});
+
+/**
+ * GET /v1/dso/werkzaamheden/:urn
+ * Retrieve versioned detail for a single werkzaamheid.
+ */
+router.get('/werkzaamheden/:urn', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const urn = decodeURIComponent(req.params.urn);
+    const data = await dsoService.getWerkzaamheidDetail(urn, getEnv(req));
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    const status = msg.includes('404') ? 404 : 502;
+    logger.error('[DSO Routes] GET /werkzaamheden/:urn failed', { error: msg });
+    res.status(status).json({ success: false, error: msg });
   }
 });
 

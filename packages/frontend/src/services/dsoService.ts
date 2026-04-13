@@ -103,19 +103,17 @@ export async function searchBegrippen(
 export async function getActiviteitenByOin(
   oin: string,
   env: DsoEnv = 'pre',
-  datumVanaf?: string
-): Promise<string[]> {
+  datum?: string
+): Promise<ActiviteitenResult> {
   const res = await fetch(`${API_BASE}/v1/dso/activiteiten/oin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Dso-Env': env },
-    body: JSON.stringify({ oin, datumVanaf }),
+    body: JSON.stringify({ oin, datum }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const envelope = (await res.json()) as { success: boolean; data: Record<string, unknown> };
   if (!envelope.success) throw new Error('DSO OIN request failed');
-  const embedded = (envelope.data as { _embedded?: { activiteiten?: { urn: string }[] } })
-    ._embedded;
-  return (embedded?.activiteiten ?? []).map((a) => a.urn);
+  return parseActiviteitenResult(envelope.data);
 }
 
 export async function zoekActiviteiten(
@@ -150,6 +148,91 @@ export async function zoekActiviteiten(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Zoekinterface — werkzaamheden
+// ---------------------------------------------------------------------------
+
+export interface DsoWerkzaamheid {
+  urn: string;
+  functioneleStructuurRef?: string;
+  omschrijving?: string;
+  trefwoorden?: string[];
+}
+
+export interface DsoWerkzaamheidVersie {
+  urn: string;
+  omschrijving: string;
+  beginDatum: string;
+  eindDatum?: string | null;
+  trefwoorden?: string[];
+  logischeRelaties?: { urn: string; omschrijving?: string }[];
+}
+
+export interface WerkzaamhedenZoekResult {
+  items: DsoWerkzaamheid[];
+  hasNext: boolean;
+  page: DsoPage;
+}
+
+export async function zoekWerkzaamheden(
+  zoekterm: string,
+  page = 1,
+  env: DsoEnv = 'pre'
+): Promise<WerkzaamhedenZoekResult> {
+  const res = await fetch(`${API_BASE}/v1/dso/werkzaamheden/zoek`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Dso-Env': env },
+    body: JSON.stringify({ zoekterm: zoekterm.trim() || undefined, page, pageSize: 20 }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const envelope = (await res.json()) as { success: boolean; data: Record<string, unknown> };
+  if (!envelope.success) throw new Error('DSO search failed');
+  const raw = envelope.data;
+  const embedded = (raw as { _embedded?: { werkzaamheden?: DsoWerkzaamheid[] } })._embedded;
+  const pageInfo = (raw as { page?: DsoPage }).page ?? { number: page, size: 20 };
+  const links = (raw as { _links?: { next?: { href?: string | null } } })._links;
+  return {
+    items: embedded?.werkzaamheden ?? [],
+    page: pageInfo,
+    hasNext: !!links?.next?.href,
+  };
+}
+
+export async function suggereerWerkzaamheden(
+  zoekterm: string,
+  env: DsoEnv = 'pre'
+): Promise<string[]> {
+  const res = await fetch(`${API_BASE}/v1/dso/werkzaamheden/suggereer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Dso-Env': env },
+    body: JSON.stringify({ zoekterm }),
+  });
+  if (!res.ok) return [];
+  const envelope = (await res.json()) as { success: boolean; data: unknown };
+  // Suggestions response is a flat array of strings
+  if (!envelope.success) return [];
+  return Array.isArray(envelope.data) ? (envelope.data as string[]) : [];
+}
+
+export async function getWerkzaamheidDetail(
+  urn: string,
+  env: DsoEnv = 'pre'
+): Promise<DsoWerkzaamheidVersie[]> {
+  const res = await fetch(`${API_BASE}/v1/dso/werkzaamheden/${encodeURIComponent(urn)}`, {
+    headers: { 'X-Dso-Env': env },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const envelope = (await res.json()) as { success: boolean; data: Record<string, unknown> };
+  if (!envelope.success) throw new Error('DSO request failed');
+  const raw = envelope.data;
+  const embedded = (
+    raw as {
+      _embedded?: { werkzaamheidversies?: DsoWerkzaamheidVersie[] };
+    }
+  )._embedded;
+  return embedded?.werkzaamheidversies ?? [];
+}
+
 export async function getActiviteitDetail(
   urn: string,
   datum?: string,
@@ -160,6 +243,17 @@ export async function getActiviteitDetail(
   return get<DsoActiviteitDetail>(`/v1/dso/activiteiten/${encodeURIComponent(urn)}?${params}`, env);
 }
 
+function parseActiviteitenResult(raw: Record<string, unknown>): ActiviteitenResult {
+  const embedded = (raw as { _embedded?: { activiteiten?: DsoActiviteit[] } })._embedded;
+  const pageInfo = (raw as { page?: DsoPage }).page ?? { number: 1, size: 20 };
+  const links = (raw as { _links?: { next?: { href?: string | null } } })._links;
+  return {
+    items: embedded?.activiteiten ?? [],
+    page: pageInfo,
+    hasNext: !!links?.next?.href,
+  };
+}
+
 export async function getActiviteiten(
   datum?: string,
   page = 1,
@@ -168,12 +262,5 @@ export async function getActiviteiten(
   const params = new URLSearchParams({ page: String(page), pageSize: '20' });
   if (datum) params.set('datum', datum);
   const raw = await get<Record<string, unknown>>(`/v1/dso/activiteiten?${params}`, env);
-  const embedded = (raw as { _embedded?: { activiteiten?: DsoActiviteit[] } })._embedded;
-  const pageInfo = (raw as { page?: DsoPage }).page ?? { number: page, size: 20 };
-  const links = (raw as { _links?: { next?: { href?: string | null } } })._links;
-  return {
-    items: embedded?.activiteiten ?? [],
-    page: pageInfo,
-    hasNext: !!links?.next?.href,
-  };
+  return parseActiviteitenResult(raw);
 }

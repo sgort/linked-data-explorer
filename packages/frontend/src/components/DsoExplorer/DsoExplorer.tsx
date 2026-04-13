@@ -11,15 +11,21 @@ import {
   DsoBegrip,
   DsoEnv,
   DsoRegelbeheerobject,
+  DsoWerkzaamheid,
+  DsoWerkzaamheidVersie,
   getActiviteitDetail,
   getActiviteiten,
   getActiviteitenByOin,
+  getWerkzaamheidDetail,
   searchBegrippen,
+  suggereerWerkzaamheden,
   urnFromHref,
+  WerkzaamhedenZoekResult,
   zoekActiviteiten,
+  zoekWerkzaamheden,
 } from '../../services/dsoService';
 
-type Tab = 'begrippen' | 'activiteiten';
+type Tab = 'begrippen' | 'werkzaamheden' | 'activiteiten';
 
 // ── Concepts tab ────────────────────────────────────────────────────────────
 
@@ -170,6 +176,313 @@ const BegrippenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   );
 };
 
+// ── Werkzaamheden tab ────────────────────────────────────────────────────────
+
+const WerkzaamheidDetailPanel: React.FC<{
+  urn: string;
+  env: DsoEnv;
+  onClose: () => void;
+}> = ({ urn, env, onClose }) => {
+  const [versies, setVersies] = useState<DsoWerkzaamheidVersie[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    getWerkzaamheidDetail(urn, env)
+      .then(setVersies)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .finally(() => setLoading(false));
+  }, [urn, env]);
+
+  // Show most recent version first
+  const current = versies.find((v) => !v.eindDatum) ?? versies[0];
+
+  return (
+    <div className="flex flex-col h-full border-l border-slate-200 bg-white w-1/3 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50 flex-shrink-0">
+        <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+          Werkzaamheid detail
+        </span>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors">
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        {loading && (
+          <div className="flex items-center justify-center py-16 text-slate-400">
+            <Loader2 size={18} className="animate-spin mr-2" />
+            <span className="text-sm">Loading…</span>
+          </div>
+        )}
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+            {error}
+          </div>
+        )}
+        {current && (
+          <>
+            <Section title="Werkzaamheid">
+              <p className="text-sm font-semibold text-slate-800 break-words">
+                {current.omschrijving}
+              </p>
+              <p className="text-[10px] text-slate-400 font-mono mt-1 break-all">{current.urn}</p>
+            </Section>
+
+            <Section title="Validity">
+              <div className="flex gap-3 text-xs text-slate-600">
+                <span>
+                  From: <strong>{current.beginDatum}</strong>
+                </span>
+                <span>
+                  Until: <strong>{current.eindDatum ?? '∞'}</strong>
+                </span>
+              </div>
+            </Section>
+
+            {current.trefwoorden && current.trefwoorden.length > 0 && (
+              <Section title="Keywords">
+                <div className="flex flex-wrap gap-1">
+                  {current.trefwoorden.map((t) => (
+                    <span
+                      key={t}
+                      className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {current.logischeRelaties && current.logischeRelaties.length > 0 && (
+              <Section title={`Related werkzaamheden (${current.logischeRelaties.length})`}>
+                <ul className="space-y-1">
+                  {current.logischeRelaties.map((r) => (
+                    <li key={r.urn} className="text-xs text-slate-600 break-all">
+                      {r.omschrijving ?? r.urn}
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            )}
+
+            {versies.length > 1 && (
+              <Section title={`Version history (${versies.length})`}>
+                <ul className="space-y-2">
+                  {versies.map((v, i) => (
+                    <li key={i} className="text-xs text-slate-600">
+                      <span className="font-medium">{v.beginDatum}</span>
+                      {v.eindDatum && <span className="text-slate-400"> → {v.eindDatum}</span>}
+                      {!v.eindDatum && (
+                        <span className="ml-1.5 px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] rounded">
+                          current
+                        </span>
+                      )}
+                      <p className="text-slate-500 mt-0.5">{v.omschrijving}</p>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const WerkzaamhedenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
+  const [query, setQuery] = useState('');
+  const [result, setResult] = useState<WerkzaamhedenZoekResult | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedUrn, setSelectedUrn] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const load = useCallback(
+    async (term: string, p: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        setResult(await zoekWerkzaamheden(term, p, env));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [env]
+  );
+
+  useEffect(() => {
+    setSelectedUrn(null);
+    setResult(null);
+    setQuery('');
+    load('', 1);
+  }, [load]);
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setQuery(val);
+    setShowSuggestions(false);
+    if (suggestTimer.current) clearTimeout(suggestTimer.current);
+    if (val.trim().length >= 2) {
+      suggestTimer.current = setTimeout(async () => {
+        const s = await suggereerWerkzaamheden(val.trim(), env);
+        setSuggestions(s);
+        setShowSuggestions(s.length > 0);
+      }, 300);
+    }
+  };
+
+  const handleSearch = () => {
+    setShowSuggestions(false);
+    setPage(1);
+    setSelectedUrn(null);
+    load(query, 1);
+  };
+
+  const handleSuggestion = (s: string) => {
+    setQuery(s);
+    setShowSuggestions(false);
+    setPage(1);
+    setSelectedUrn(null);
+    load(s, 1);
+  };
+
+  const goPage = (p: number) => {
+    setPage(p);
+    setSelectedUrn(null);
+    load(query, p);
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Search bar */}
+      <div className="p-3 border-b border-slate-200 bg-white flex-shrink-0 relative">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={handleQueryChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearch();
+                if (e.key === 'Escape') setShowSuggestions(false);
+              }}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              placeholder="Search werkzaamheden…"
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            {showSuggestions && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 max-h-48 overflow-y-auto">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    onMouseDown={() => handleSuggestion(s)}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleSearch}
+            disabled={loading}
+            className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            Search
+          </button>
+        </div>
+      </div>
+
+      {/* Master-detail body */}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-3 space-y-2 min-w-0">
+          {loading && (
+            <div className="flex items-center justify-center py-12 text-slate-400">
+              <Loader2 size={20} className="animate-spin mr-2" />
+              <span className="text-sm">Loading…</span>
+            </div>
+          )}
+          {error && !loading && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {error}
+            </div>
+          )}
+          {!loading && !error && result && result.items.length === 0 && (
+            <p className="text-center text-slate-400 text-sm py-12">No werkzaamheden found.</p>
+          )}
+          {!loading &&
+            !error &&
+            result?.items.map((w) => (
+              <button
+                key={w.urn}
+                onClick={() => setSelectedUrn(w.urn === selectedUrn ? null : w.urn)}
+                className={`w-full text-left bg-white border rounded-lg p-3 transition-colors ${
+                  selectedUrn === w.urn
+                    ? 'border-blue-400 ring-1 ring-blue-400'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <p className="text-sm font-medium text-slate-800">{w.omschrijving ?? w.urn}</p>
+                {w.functioneleStructuurRef && (
+                  <p className="text-[10px] text-slate-400 font-mono mt-1 truncate">
+                    ref: {w.functioneleStructuurRef}
+                  </p>
+                )}
+                <p className="text-[10px] text-slate-300 font-mono mt-0.5 truncate" title={w.urn}>
+                  {w.urn}
+                </p>
+              </button>
+            ))}
+        </div>
+
+        {selectedUrn && (
+          <WerkzaamheidDetailPanel
+            urn={selectedUrn}
+            env={env}
+            onClose={() => setSelectedUrn(null)}
+          />
+        )}
+      </div>
+
+      {/* Pagination */}
+      {result && (result.items.length > 0 || page > 1) && (
+        <div className="p-3 border-t border-slate-200 bg-white flex items-center justify-between flex-shrink-0">
+          <span className="text-xs text-slate-500">Page {page}</span>
+          <div className="flex gap-1">
+            <button
+              onClick={() => goPage(page - 1)}
+              disabled={page <= 1 || loading}
+              className="p-1.5 rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              onClick={() => goPage(page + 1)}
+              disabled={!result.hasNext || loading}
+              className="p-1.5 rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Activities tab ───────────────────────────────────────────────────────────
 
 const TYPERING_META: Record<DsoRegelbeheerobject['typering'], { label: string; color: string }> = {
@@ -210,7 +523,7 @@ const ActivityDetailPanel: React.FC<{
     setError(null);
     setDetail(null);
     setChildNames({});
-    getActiviteitDetail(urn, datum)
+    getActiviteitDetail(urn, datum, env)
       .then((d) => {
         setDetail(d as DsoActiviteitDetail);
         // Fetch child names in parallel after parent loads
@@ -243,7 +556,7 @@ const ActivityDetailPanel: React.FC<{
         );
       })
       .finally(() => setLoading(false));
-  }, [urn, datum]);
+  }, [urn, datum, env]);
 
   return (
     <div className="flex flex-col h-full border-l border-slate-200 bg-white w-1/3 flex-shrink-0">
@@ -453,7 +766,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   const [datum, setDatum] = useState('');
   const [activeDatum, setActiveDatum] = useState<string | undefined>(undefined);
   const [result, setResult] = useState<ActiviteitenResult | null>(null);
-  const [urnOnlyItems, setUrnOnlyItems] = useState<string[] | null>(null);
+  const [oinMode, setOinMode] = useState(false);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -471,7 +784,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
     async (d: string, p: number) => {
       setLoading(true);
       setError(null);
-      setUrnOnlyItems(null);
+      setOinMode(false);
       try {
         const dsoDate = toDsoDate(d);
         const res = await getActiviteiten(dsoDate, p, env);
@@ -490,10 +803,11 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
     async (oin: string, dsoDate?: string) => {
       setLoading(true);
       setError(null);
-      setResult(null);
       try {
-        const urns = await getActiviteitenByOin(oin, env, dsoDate);
-        setUrnOnlyItems(urns);
+        const res = await getActiviteitenByOin(oin, env, dsoDate);
+        setResult(res);
+        setActiveDatum(dsoDate);
+        setOinMode(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load');
       } finally {
@@ -506,7 +820,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   useEffect(() => {
     setSelectedUrn(null);
     setActivePreset(null);
-    setUrnOnlyItems(null);
+    setOinMode(false);
     load('', 1);
   }, [load]);
 
@@ -517,7 +831,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
       const preset = PRESETS.find((p) => p.label === activePreset);
       if (preset) loadByOin(preset.oin, toDsoDate(datum));
     } else {
-      setUrnOnlyItems(null);
+      setOinMode(false);
       load(datum, 1);
     }
   };
@@ -527,7 +841,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
     setActivePreset(isActive ? null : preset.label);
     setSelectedUrn(null);
     if (isActive) {
-      setUrnOnlyItems(null);
+      setOinMode(false);
       setDatum('');
       load('', 1);
     } else {
@@ -592,7 +906,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
               <button
                 onClick={() => {
                   setActivePreset(null);
-                  setUrnOnlyItems(null);
+                  setOinMode(false);
                   setSelectedUrn(null);
                   setDatum('');
                   load('', 1);
@@ -643,31 +957,14 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
             </div>
           )}
           {!loading && !error && result && result.items.length === 0 && (
-            <p className="text-center text-slate-400 text-sm py-12">No activities found.</p>
-          )}
-          {!loading && !error && urnOnlyItems && urnOnlyItems.length === 0 && (
             <p className="text-center text-slate-400 text-sm py-12">
-              No activities registered for this authority.
+              {oinMode
+                ? 'No activities found for this authority on the selected date.'
+                : 'No activities found.'}
             </p>
           )}
           {!loading &&
             !error &&
-            urnOnlyItems?.map((urn) => (
-              <button
-                key={urn}
-                onClick={() => setSelectedUrn(urn === selectedUrn ? null : urn)}
-                className={`w-full text-left bg-white border rounded-lg p-3 transition-colors ${
-                  selectedUrn === urn
-                    ? 'border-blue-400 ring-1 ring-blue-400'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <p className="text-[11px] text-blue-600 font-mono break-all">{urn}</p>
-              </button>
-            ))}
-          {!loading &&
-            !error &&
-            !urnOnlyItems &&
             result?.items.map((a) => (
               <ActiviteitRow
                 key={a.urn}
@@ -691,7 +988,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
       </div>
 
       {/* Pagination */}
-      {!urnOnlyItems && result && (result.items.length > 0 || page > 1) && (
+      {result && (result.items.length > 0 || page > 1) && (
         <div className="p-3 border-t border-slate-200 bg-white flex items-center justify-between flex-shrink-0">
           <span className="text-xs text-slate-500">
             Page {page} · {result.items.length} items
@@ -759,6 +1056,10 @@ const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
           <BookOpen size={14} />
           Concepts
         </button>
+        <button className={tabCls('werkzaamheden')} onClick={() => setTab('werkzaamheden')}>
+          <Search size={14} />
+          Works
+        </button>
         <button className={tabCls('activiteiten')} onClick={() => setTab('activiteiten')}>
           <TreePine size={14} />
           Activities
@@ -768,6 +1069,7 @@ const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
       {/* Content */}
       <div className="flex-1 overflow-hidden">
         {tab === 'begrippen' && <BegrippenTab env={env} />}
+        {tab === 'werkzaamheden' && <WerkzaamhedenTab env={env} />}
         {tab === 'activiteiten' && <ActiviteitenTab env={env} />}
       </div>
     </div>

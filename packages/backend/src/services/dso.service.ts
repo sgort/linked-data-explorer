@@ -55,7 +55,10 @@ export interface BegrippenOptions {
  * GET /begrippen — search or list concepts from the Stelselcatalogus.
  * Returns the raw HAL response (items live in _embedded.begrippen).
  */
-export async function getBegrippen(opts: BegrippenOptions = {}, env: DsoEnv = 'pre'): Promise<unknown> {
+export async function getBegrippen(
+  opts: BegrippenOptions = {},
+  env: DsoEnv = 'pre'
+): Promise<unknown> {
   const params = new URLSearchParams();
   if (opts.zoekTerm) params.set('zoekTerm', opts.zoekTerm);
   if (opts.geldigOp) params.set('geldigOp', opts.geldigOp);
@@ -85,17 +88,26 @@ export interface ZoekOptions {
   pageSize?: number;
 }
 
-export async function getActiviteitenByOin(oin: string, env: DsoEnv = 'pre', datumVanaf?: string): Promise<unknown> {
-  const url = `${getDsoConfig(env).rtrBaseUrl}/activiteiten/_wijzigingen`;
+export async function getActiviteitenByOin(
+  oin: string,
+  env: DsoEnv = 'pre',
+  datum?: string
+): Promise<unknown> {
+  const d = new Date();
+  const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+  const effectiveDatum = datum ?? today;
 
-  // Default to yesterday if no date provided — today returns empty due to DSO timing
-  if (!datumVanaf) {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    datumVanaf = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-  }
+  const params = new URLSearchParams();
+  params.set('page', '1');
+  params.set('pageSize', '100');
 
-  logger.info('[DSO] POST activiteiten/_wijzigingen', { env, oin, datumVanaf });
+  const body = {
+    datum: effectiveDatum,
+    bestuursorgaan: { oin },
+  };
+
+  const url = `${getDsoConfig(env).rtrBaseUrl}/activiteiten/_zoek?${params}`;
+  logger.info('[DSO] POST activiteiten/_zoek by OIN', { env, oin, datum: effectiveDatum });
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
@@ -107,7 +119,7 @@ export async function getActiviteitenByOin(oin: string, env: DsoEnv = 'pre', dat
         'Content-Type': 'application/json',
         Accept: 'application/hal+json',
       },
-      body: JSON.stringify({ oin, datumVanaf }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -120,7 +132,10 @@ export async function getActiviteitenByOin(oin: string, env: DsoEnv = 'pre', dat
   }
 }
 
-export async function zoekActiviteiten(opts: ZoekOptions = {}, env: DsoEnv = 'pre'): Promise<unknown> {
+export async function zoekActiviteiten(
+  opts: ZoekOptions = {},
+  env: DsoEnv = 'pre'
+): Promise<unknown> {
   const d = new Date();
   const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
   const datum = opts.datum ?? today;
@@ -173,7 +188,11 @@ export async function zoekActiviteiten(opts: ZoekOptions = {}, env: DsoEnv = 'pr
   }
 }
 
-export async function getActiviteit(urn: string, datum?: string, env: DsoEnv = 'pre'): Promise<unknown> {
+export async function getActiviteit(
+  urn: string,
+  datum?: string,
+  env: DsoEnv = 'pre'
+): Promise<unknown> {
   const d = new Date();
   const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
 
@@ -189,7 +208,10 @@ export async function getActiviteit(urn: string, datum?: string, env: DsoEnv = '
  * GET /activiteiten — all activities valid on a given date.
  * `datum` is required by DSO; we default to today when omitted.
  */
-export async function getActiviteiten(opts: ActiviteitenOptions = {}, env: DsoEnv = 'pre'): Promise<unknown> {
+export async function getActiviteiten(
+  opts: ActiviteitenOptions = {},
+  env: DsoEnv = 'pre'
+): Promise<unknown> {
   const d = new Date();
   const datum =
     opts.datum ??
@@ -203,4 +225,114 @@ export async function getActiviteiten(opts: ActiviteitenOptions = {}, env: DsoEn
   const url = `${getDsoConfig(env).rtrBaseUrl}/activiteiten?${params}`;
   logger.info('[DSO] GET activiteiten', { env, datum, page: opts.page });
   return dsoFetch(url, env);
+}
+
+// ---------------------------------------------------------------------------
+// Zoekinterface API
+// ---------------------------------------------------------------------------
+
+export interface ZoekWerkzaamhedenOptions {
+  zoekterm?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function zoekWerkzaamheden(
+  opts: ZoekWerkzaamhedenOptions = {},
+  env: DsoEnv = 'pre'
+): Promise<unknown> {
+  const params = new URLSearchParams();
+  params.set('page', String(opts.page ?? 1));
+  params.set('pageSize', String(opts.pageSize ?? 20));
+
+  const body: Record<string, unknown> = {};
+  if (opts.zoekterm) body.zoekterm = opts.zoekterm;
+
+  const url = `${getDsoConfig(env).zoekinterfaceBaseUrl}/werkzaamheden/_zoek?${params}`;
+  logger.info('[DSO] POST zoekinterface/werkzaamheden/_zoek', { env, zoekterm: opts.zoekterm });
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'x-api-key': getDsoConfig(env).apiKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/hal+json',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`DSO responded ${response.status}: ${text}`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+export async function suggereerWerkzaamheden(
+  zoekterm: string,
+  env: DsoEnv = 'pre'
+): Promise<unknown> {
+  const url = `${getDsoConfig(env).zoekinterfaceBaseUrl}/werkzaamheden/_suggereer`;
+  logger.info('[DSO] POST zoekinterface/werkzaamheden/_suggereer', { env, zoekterm });
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'x-api-key': getDsoConfig(env).apiKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ zoekterm }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`DSO responded ${response.status}: ${text}`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Opvragen Werkzaamheden API
+// ---------------------------------------------------------------------------
+
+export async function getWerkzaamheidDetail(urn: string, env: DsoEnv = 'pre'): Promise<unknown> {
+  // expand=true includes trefwoorden and logischeRelaties
+
+  const params = new URLSearchParams({
+    pageSize: '100',
+  });
+
+  const url = `${getDsoConfig(env).opvragenWerkzaamhedenBaseUrl}/werkzaamheden/${encodeURIComponent(urn)}?${params}`;
+  logger.info('[DSO] GET opvragen werkzaamheid detail request', { env, urn, url });
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
+  try {
+    const response = await fetch(url, {
+      headers: { 'x-api-key': getDsoConfig(env).apiKey, Accept: 'application/hal+json' },
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    logger.info('[DSO] GET opvragen werkzaamheid detail response', {
+      status: response.status,
+      body: text.substring(0, 500),
+    });
+    if (!response.ok) throw new Error(`DSO responded ${response.status}: ${text}`);
+    return JSON.parse(text);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
