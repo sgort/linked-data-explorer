@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-staffing",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Prepare staffing claim"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Fill in the Core Proposal for the Management Capacity Claim — staffing (fixed appointment) variant. The Management Board will decide on this claim in its next weekly meeting."
+    },
+    {
+      "id": "Field_Description",
+      "type": "textarea",
+      "label": "Description and rationale",
+      "key": "description",
+      "description": "Does the claim fit the organizational objective and annual programme? Purpose and necessity? Are there alternatives? Is the knowledge already in-house or must it come from outside? Does it fit within the financial assessment framework?",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_FunctionCode",
+      "type": "textfield",
+      "label": "Function code",
+      "key": "functionCode",
+      "description": "Staffing function codes typically contain \"C\" (e.g. \"12C03\").",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Job title",
+      "key": "jobTitle",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_AppointmentType",
+      "type": "radio",
+      "label": "Duration of appointment",
+      "key": "appointmentType",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Structural", "value": "structural" },
+        { "label": "Incidental (fixed term)", "value": "incidental" }
+      ]
+    },
+    {
+      "id": "Field_StartDate",
+      "type": "datetime",
+      "label": "Start date",
+      "key": "startDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_EndDate",
+      "type": "datetime",
+      "label": "End date (incidental only)",
+      "key": "endDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "description": "Leave empty for a structural appointment."
+    },
+    {
+      "id": "Field_HoursMin",
+      "type": "number",
+      "label": "Hours per week — lower bound",
+      "key": "hoursMin",
+      "validate": {
+        "required": true,
+        "min": 0,
+        "max": 36
+      }
+    },
+    {
+      "id": "Field_HoursMax",
+      "type": "number",
+      "label": "Hours per week — upper bound",
+      "key": "hoursMax",
+      "validate": {
+        "required": true,
+        "min": 0,
+        "max": 36
+      }
+    },
+    {
+      "id": "Field_FteMin",
+      "type": "number",
+      "label": "FTE — lower bound",
+      "key": "fteMin",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0,
+        "max": 1
+      }
+    },
+    {
+      "id": "Field_FteMax",
+      "type": "number",
+      "label": "FTE — upper bound",
+      "key": "fteMax",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0,
+        "max": 1
+      }
+    },
+    {
+      "id": "Field_Scale",
+      "type": "number",
+      "label": "Salary scale",
+      "key": "scale",
+      "validate": {
+        "required": true,
+        "min": 1,
+        "max": 18
+      }
+    },
+    {
+      "id": "Field_CostsYearToDate",
+      "type": "number",
+      "label": "Costs (year to date, €)",
+      "key": "costsYearToDate",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_AnnualCostsAfter",
+      "type": "number",
+      "label": "Annual costs (after year to date, €)",
+      "key": "annualCostsAfter",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_FundingSource",
+      "type": "textfield",
+      "label": "Funding source",
+      "key": "fundingSource",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_EmploymentConditionChanges",
+      "type": "textarea",
+      "label": "Changes to employment conditions",
+      "key": "employmentConditionChanges",
+      "description": "Describe any deviations from the standard terms of employment, or enter \"None\"."
+    },
+    {
+      "id": "Field_HrmAdvice",
+      "type": "textarea",
+      "label": "Advice from HRM unit",
+      "key": "hrmAdvice",
+      "description": "Summarise the HRM unit's advice on this claim.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit claim",
+      "action": "submit"
+    }
+  ]
+}

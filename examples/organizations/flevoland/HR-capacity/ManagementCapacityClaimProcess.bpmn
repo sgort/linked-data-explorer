@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:ronl="http://ronl.nl/schema/1.0" id="Definitions_ManagementCapacityClaimProcess" targetNamespace="http://example.com/hr-capacity" exporter="Camunda Modeler" exporterVersion="5.45.0">
+  <bpmn:process id="ManagementCapacityClaimProcess" name="Management Capacity Claim Process" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_CapacityClaim" name="Start capacity claim">
+      <bpmn:outgoing>Flow_Start_Intake</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_ConsultAndClassify" name="Consult and classify" camunda:formRef="capacity-claim-intake" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
+      <bpmn:incoming>Flow_Start_Intake</bpmn:incoming>
+      <bpmn:outgoing>Flow_Intake_RequestTypeGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_RequestType" name="Request type?">
+      <bpmn:incoming>Flow_Intake_RequestTypeGateway</bpmn:incoming>
+      <bpmn:incoming>Flow_Reconsider_BackToRequestType</bpmn:incoming>
+      <bpmn:outgoing>Flow_Gateway_Staffing</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Gateway_Hiring</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_PrepareStaffingClaim" name="Prepare staffing claim" camunda:formRef="capacity-claim-staffing" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
+      <bpmn:incoming>Flow_Gateway_Staffing</bpmn:incoming>
+      <bpmn:outgoing>Flow_Staffing_MergePrepare</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_PrepareHiringClaim" name="Prepare hiring claim" camunda:formRef="capacity-claim-hiring" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
+      <bpmn:incoming>Flow_Gateway_Hiring</bpmn:incoming>
+      <bpmn:outgoing>Flow_Hiring_MergePrepare</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_MergePrepare" name="">
+      <bpmn:incoming>Flow_Staffing_MergePrepare</bpmn:incoming>
+      <bpmn:incoming>Flow_Hiring_MergePrepare</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergePrepare_Routing</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:businessRuleTask id="Task_DetermineRouting" name="Determine routing" camunda:resultVariable="routingResult" camunda:decisionRef="CapacityClaimRouting" camunda:mapDecisionResult="singleResult">
+      <bpmn:incoming>Flow_MergePrepare_Routing</bpmn:incoming>
+      <bpmn:outgoing>Flow_Routing_MapOutputs</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:scriptTask id="Task_MapRoutingOutputs" name="Map routing outputs" scriptFormat="javascript">
+      <bpmn:incoming>Flow_Routing_MapOutputs</bpmn:incoming>
+      <bpmn:outgoing>Flow_MapOutputs_Submit</bpmn:outgoing>
+      <bpmn:script>
+        execution.setVariable("decisionRoute",   routingResult.get("decisionRoute"));
+        execution.setVariable("candidateGroups", routingResult.get("candidateGroups"));
+        execution.setVariable("advisoryGroup",   routingResult.get("advisoryGroup"));
+      </bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:userTask id="Task_SubmitToBoardAgenda" name="Submit to Board agenda" camunda:formRef="capacity-claim-submit" camunda:formRefBinding="latest" camunda:candidateGroups="board-secretary">
+      <bpmn:incoming>Flow_MapOutputs_Submit</bpmn:incoming>
+      <bpmn:outgoing>Flow_Submit_BoardDecision</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_BoardDecision" name="Board decision" camunda:formRef="capacity-claim-board-decision" camunda:formRefBinding="latest" camunda:candidateGroups="board-director" ronl:documentRef="board-decision-notification">
+      <bpmn:incoming>Flow_Submit_BoardDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_BoardDecision_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_BoardDecision" name="Approved?">
+      <bpmn:incoming>Flow_BoardDecision_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Gateway_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Gateway_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_ReconsiderationMeeting" name="Reconsideration meeting" camunda:formRef="capacity-claim-reconsideration" camunda:formRefBinding="latest" camunda:candidateGroups="manager,hr-business-partner,personnel-controller">
+      <bpmn:incoming>Flow_Gateway_Rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_Reconsider_OutcomeGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_ReconsiderationOutcome" name="Outcome?">
+      <bpmn:incoming>Flow_Reconsider_OutcomeGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Reconsider_BackToRequestType</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Reconsider_Withdraw</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_Withdrawn" name="Claim withdrawn">
+      <bpmn:incoming>Flow_Reconsider_Withdraw</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="Gateway_DecisionRoute" name="Route?">
+      <bpmn:incoming>Flow_Gateway_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_Route_Recruitment</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Route_Procurement</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_HandoverToRecruitment" name="Handover to Recruitment (HRM)" camunda:formRef="capacity-claim-handover" camunda:formRefBinding="latest" camunda:candidateGroups="hrm-unit" ronl:documentRef="capacity-claim-handover">
+      <bpmn:incoming>Flow_Route_Recruitment</bpmn:incoming>
+      <bpmn:outgoing>Flow_Recruitment_MergeHandover</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_HandoverToProcurement" name="Handover to Procurement" camunda:formRef="capacity-claim-handover" camunda:formRefBinding="latest" camunda:candidateGroups="procurement-unit,planning-control-officer" ronl:documentRef="capacity-claim-handover">
+      <bpmn:incoming>Flow_Route_Procurement</bpmn:incoming>
+      <bpmn:outgoing>Flow_Procurement_MergeHandover</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_MergeHandover" name="">
+      <bpmn:incoming>Flow_Recruitment_MergeHandover</bpmn:incoming>
+      <bpmn:incoming>Flow_Procurement_MergeHandover</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergeHandover_Reservation</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_RegisterReservation" name="Register financial reservation" camunda:formRef="capacity-claim-register-reservation" camunda:formRefBinding="latest" camunda:candidateGroups="financial-controller">
+      <bpmn:incoming>Flow_MergeHandover_Reservation</bpmn:incoming>
+      <bpmn:outgoing>Flow_Reservation_End</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_ClaimCompleted" name="Capacity claim completed">
+      <bpmn:incoming>Flow_Reservation_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Intake" sourceRef="StartEvent_CapacityClaim" targetRef="Task_ConsultAndClassify" />
+    <bpmn:sequenceFlow id="Flow_Intake_RequestTypeGateway" sourceRef="Task_ConsultAndClassify" targetRef="Gateway_RequestType" />
+    <bpmn:sequenceFlow id="Flow_Gateway_Staffing" name="staffing" sourceRef="Gateway_RequestType" targetRef="Task_PrepareStaffingClaim">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${requestType == "staffing"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Gateway_Hiring" name="hiring" sourceRef="Gateway_RequestType" targetRef="Task_PrepareHiringClaim">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${requestType == "hiring"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Staffing_MergePrepare" sourceRef="Task_PrepareStaffingClaim" targetRef="Gateway_MergePrepare" />
+    <bpmn:sequenceFlow id="Flow_Hiring_MergePrepare" sourceRef="Task_PrepareHiringClaim" targetRef="Gateway_MergePrepare" />
+    <bpmn:sequenceFlow id="Flow_MergePrepare_Routing" sourceRef="Gateway_MergePrepare" targetRef="Task_DetermineRouting" />
+    <bpmn:sequenceFlow id="Flow_Routing_MapOutputs" sourceRef="Task_DetermineRouting" targetRef="Task_MapRoutingOutputs" />
+    <bpmn:sequenceFlow id="Flow_MapOutputs_Submit" sourceRef="Task_MapRoutingOutputs" targetRef="Task_SubmitToBoardAgenda" />
+    <bpmn:sequenceFlow id="Flow_Submit_BoardDecision" sourceRef="Task_SubmitToBoardAgenda" targetRef="Task_BoardDecision" />
+    <bpmn:sequenceFlow id="Flow_BoardDecision_Gateway" sourceRef="Task_BoardDecision" targetRef="Gateway_BoardDecision" />
+    <bpmn:sequenceFlow id="Flow_Gateway_Approved" name="approved" sourceRef="Gateway_BoardDecision" targetRef="Gateway_DecisionRoute">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${boardDecision == "approved"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Gateway_Rejected" name="rejected" sourceRef="Gateway_BoardDecision" targetRef="Task_ReconsiderationMeeting">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${boardDecision == "rejected"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Reconsider_OutcomeGateway" sourceRef="Task_ReconsiderationMeeting" targetRef="Gateway_ReconsiderationOutcome" />
+    <bpmn:sequenceFlow id="Flow_Reconsider_BackToRequestType" name="proceed" sourceRef="Gateway_ReconsiderationOutcome" targetRef="Gateway_RequestType">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${reconsiderationOutcome == "proceed"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Reconsider_Withdraw" name="withdraw" sourceRef="Gateway_ReconsiderationOutcome" targetRef="EndEvent_Withdrawn">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${reconsiderationOutcome == "withdraw"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Route_Recruitment" name="recruitment" sourceRef="Gateway_DecisionRoute" targetRef="Task_HandoverToRecruitment">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decisionRoute == "recruitment"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Route_Procurement" name="procurement" sourceRef="Gateway_DecisionRoute" targetRef="Task_HandoverToProcurement">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decisionRoute == "procurement"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Recruitment_MergeHandover" sourceRef="Task_HandoverToRecruitment" targetRef="Gateway_MergeHandover" />
+    <bpmn:sequenceFlow id="Flow_Procurement_MergeHandover" sourceRef="Task_HandoverToProcurement" targetRef="Gateway_MergeHandover" />
+    <bpmn:sequenceFlow id="Flow_MergeHandover_Reservation" sourceRef="Gateway_MergeHandover" targetRef="Task_RegisterReservation" />
+    <bpmn:sequenceFlow id="Flow_Reservation_End" sourceRef="Task_RegisterReservation" targetRef="EndEvent_ClaimCompleted" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_ManagementCapacityClaim">
+    <bpmndi:BPMNPlane id="BPMNPlane_ManagementCapacityClaim" bpmnElement="ManagementCapacityClaimProcess">
+      <bpmndi:BPMNShape id="StartEvent_CapacityClaim_di" bpmnElement="StartEvent_CapacityClaim">
+        <dc:Bounds x="152" y="242" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="137" y="285" width="68" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ConsultAndClassify_di" bpmnElement="Task_ConsultAndClassify">
+        <dc:Bounds x="240" y="220" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_RequestType_di" bpmnElement="Gateway_RequestType" isMarkerVisible="true">
+        <dc:Bounds x="455" y="235" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="450" y="205" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PrepareStaffingClaim_di" bpmnElement="Task_PrepareStaffingClaim">
+        <dc:Bounds x="555" y="80" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PrepareHiringClaim_di" bpmnElement="Task_PrepareHiringClaim">
+        <dc:Bounds x="555" y="360" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MergePrepare_di" bpmnElement="Gateway_MergePrepare" isMarkerVisible="true">
+        <dc:Bounds x="775" y="235" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DetermineRouting_di" bpmnElement="Task_DetermineRouting">
+        <dc:Bounds x="875" y="220" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_MapRoutingOutputs_di" bpmnElement="Task_MapRoutingOutputs">
+        <dc:Bounds x="1095" y="220" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SubmitToBoardAgenda_di" bpmnElement="Task_SubmitToBoardAgenda">
+        <dc:Bounds x="1315" y="220" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BoardDecision_di" bpmnElement="Task_BoardDecision">
+        <dc:Bounds x="1535" y="220" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_BoardDecision_di" bpmnElement="Gateway_BoardDecision" isMarkerVisible="true">
+        <dc:Bounds x="1755" y="235" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1754" y="292" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReconsiderationMeeting_di" bpmnElement="Task_ReconsiderationMeeting">
+        <dc:Bounds x="1535" y="480" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ReconsiderationOutcome_di" bpmnElement="Gateway_ReconsiderationOutcome" isMarkerVisible="true">
+        <dc:Bounds x="1755" y="495" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1754" y="471" width="51" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Withdrawn_di" bpmnElement="EndEvent_Withdrawn">
+        <dc:Bounds x="1872" y="502" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1850" y="545" width="81" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_DecisionRoute_di" bpmnElement="Gateway_DecisionRoute" isMarkerVisible="true">
+        <dc:Bounds x="1855" y="235" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1863" y="205" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_HandoverToRecruitment_di" bpmnElement="Task_HandoverToRecruitment">
+        <dc:Bounds x="1955" y="80" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_HandoverToProcurement_di" bpmnElement="Task_HandoverToProcurement">
+        <dc:Bounds x="1955" y="360" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MergeHandover_di" bpmnElement="Gateway_MergeHandover" isMarkerVisible="true">
+        <dc:Bounds x="2175" y="235" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RegisterReservation_di" bpmnElement="Task_RegisterReservation">
+        <dc:Bounds x="2275" y="220" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_ClaimCompleted_di" bpmnElement="EndEvent_ClaimCompleted">
+        <dc:Bounds x="2495" y="242" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2477" y="285" width="72" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_Intake_di" bpmnElement="Flow_Start_Intake">
+        <di:waypoint x="188" y="260" />
+        <di:waypoint x="240" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Intake_RequestTypeGateway_di" bpmnElement="Flow_Intake_RequestTypeGateway">
+        <di:waypoint x="400" y="260" />
+        <di:waypoint x="455" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gateway_Staffing_di" bpmnElement="Flow_Gateway_Staffing">
+        <di:waypoint x="480" y="235" />
+        <di:waypoint x="480" y="120" />
+        <di:waypoint x="555" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="490" y="176" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gateway_Hiring_di" bpmnElement="Flow_Gateway_Hiring">
+        <di:waypoint x="480" y="285" />
+        <di:waypoint x="480" y="400" />
+        <di:waypoint x="555" y="400" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="493" y="340" width="27" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Staffing_MergePrepare_di" bpmnElement="Flow_Staffing_MergePrepare">
+        <di:waypoint x="715" y="120" />
+        <di:waypoint x="800" y="120" />
+        <di:waypoint x="800" y="235" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Hiring_MergePrepare_di" bpmnElement="Flow_Hiring_MergePrepare">
+        <di:waypoint x="715" y="400" />
+        <di:waypoint x="800" y="400" />
+        <di:waypoint x="800" y="285" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MergePrepare_Routing_di" bpmnElement="Flow_MergePrepare_Routing">
+        <di:waypoint x="825" y="260" />
+        <di:waypoint x="875" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Routing_MapOutputs_di" bpmnElement="Flow_Routing_MapOutputs">
+        <di:waypoint x="1035" y="260" />
+        <di:waypoint x="1095" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MapOutputs_Submit_di" bpmnElement="Flow_MapOutputs_Submit">
+        <di:waypoint x="1255" y="260" />
+        <di:waypoint x="1315" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Submit_BoardDecision_di" bpmnElement="Flow_Submit_BoardDecision">
+        <di:waypoint x="1475" y="260" />
+        <di:waypoint x="1535" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BoardDecision_Gateway_di" bpmnElement="Flow_BoardDecision_Gateway">
+        <di:waypoint x="1695" y="260" />
+        <di:waypoint x="1755" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gateway_Approved_di" bpmnElement="Flow_Gateway_Approved">
+        <di:waypoint x="1805" y="260" />
+        <di:waypoint x="1855" y="260" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1814" y="242" width="46" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gateway_Rejected_di" bpmnElement="Flow_Gateway_Rejected">
+        <di:waypoint x="1780" y="285" />
+        <di:waypoint x="1780" y="395" />
+        <di:waypoint x="1615" y="395" />
+        <di:waypoint x="1615" y="480" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1785" y="332" width="40" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Reconsider_OutcomeGateway_di" bpmnElement="Flow_Reconsider_OutcomeGateway">
+        <di:waypoint x="1695" y="520" />
+        <di:waypoint x="1755" y="520" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Reconsider_BackToRequestType_di" bpmnElement="Flow_Reconsider_BackToRequestType">
+        <di:waypoint x="1780" y="545" />
+        <di:waypoint x="1780" y="640" />
+        <di:waypoint x="480" y="640" />
+        <di:waypoint x="480" y="285" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1059" y="622" width="40" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Reconsider_Withdraw_di" bpmnElement="Flow_Reconsider_Withdraw">
+        <di:waypoint x="1805" y="520" />
+        <di:waypoint x="1872" y="520" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1817" y="502" width="44" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Route_Recruitment_di" bpmnElement="Flow_Route_Recruitment">
+        <di:waypoint x="1880" y="235" />
+        <di:waypoint x="1880" y="120" />
+        <di:waypoint x="1955" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1891" y="176" width="56" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Route_Procurement_di" bpmnElement="Flow_Route_Procurement">
+        <di:waypoint x="1880" y="285" />
+        <di:waypoint x="1880" y="400" />
+        <di:waypoint x="1955" y="400" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1889" y="340" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Recruitment_MergeHandover_di" bpmnElement="Flow_Recruitment_MergeHandover">
+        <di:waypoint x="2115" y="120" />
+        <di:waypoint x="2200" y="120" />
+        <di:waypoint x="2200" y="235" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Procurement_MergeHandover_di" bpmnElement="Flow_Procurement_MergeHandover">
+        <di:waypoint x="2115" y="400" />
+        <di:waypoint x="2200" y="400" />
+        <di:waypoint x="2200" y="285" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MergeHandover_Reservation_di" bpmnElement="Flow_MergeHandover_Reservation">
+        <di:waypoint x="2225" y="260" />
+        <di:waypoint x="2275" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Reservation_End_di" bpmnElement="Flow_Reservation_End">
+        <di:waypoint x="2435" y="260" />
+        <di:waypoint x="2495" y="260" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

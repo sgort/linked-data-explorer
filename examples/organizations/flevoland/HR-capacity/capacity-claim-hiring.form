@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-hiring",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Prepare hiring claim"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Fill in the Core Proposal for the Management Capacity Claim — hiring (external, incidental) variant. The Management Board will decide on this claim in its next weekly meeting. For hiring, the Planning and Control officer of the relevant unit will be engaged after approval."
+    },
+    {
+      "id": "Field_Description",
+      "type": "textarea",
+      "label": "Description and rationale",
+      "key": "description",
+      "description": "Does the claim fit the organizational objective and annual programme? Purpose and necessity? Are there alternatives? Is the knowledge already in-house or must it come from outside? Does it fit within the financial assessment framework?",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_FunctionCode",
+      "type": "textfield",
+      "label": "Function code",
+      "key": "functionCode",
+      "description": "Hiring function codes typically contain \"I\" (e.g. \"12I03\").",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Job title",
+      "key": "jobTitle",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_StartDate",
+      "type": "datetime",
+      "label": "Hire start date",
+      "key": "startDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_EndDate",
+      "type": "datetime",
+      "label": "Hire end date",
+      "key": "endDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_DurationMonths",
+      "type": "number",
+      "label": "Duration (months)",
+      "key": "durationMonths",
+      "validate": {
+        "required": true,
+        "min": 1
+      }
+    },
+    {
+      "id": "Field_ExtensionStartDate",
+      "type": "datetime",
+      "label": "Extension option — start date",
+      "key": "extensionStartDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "description": "Leave empty if no extension option is foreseen."
+    },
+    {
+      "id": "Field_ExtensionEndDate",
+      "type": "datetime",
+      "label": "Extension option — end date",
+      "key": "extensionEndDate",
+      "subtype": "date",
+      "dateLabel": "Date"
+    },
+    {
+      "id": "Field_ExtensionMonths",
+      "type": "number",
+      "label": "Extension duration (months)",
+      "key": "extensionMonths",
+      "validate": {
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_HoursMin",
+      "type": "number",
+      "label": "Hours per week — lower bound",
+      "key": "hoursMin",
+      "validate": {
+        "required": true,
+        "min": 0,
+        "max": 40
+      }
+    },
+    {
+      "id": "Field_HoursMax",
+      "type": "number",
+      "label": "Hours per week — upper bound",
+      "key": "hoursMax",
+      "validate": {
+        "required": true,
+        "min": 0,
+        "max": 40
+      }
+    },
+    {
+      "id": "Field_HourlyWageMin",
+      "type": "number",
+      "label": "Hourly wage — lower bound (€)",
+      "key": "hourlyWageMin",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_HourlyWageMax",
+      "type": "number",
+      "label": "Hourly wage — upper bound (€)",
+      "key": "hourlyWageMax",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_CostsYearToDate",
+      "type": "number",
+      "label": "Costs (year to date, €)",
+      "key": "costsYearToDate",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_AnnualCostsAfter",
+      "type": "number",
+      "label": "Annual costs (after year to date, €)",
+      "key": "annualCostsAfter",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_FundingSource",
+      "type": "textfield",
+      "label": "Funding source",
+      "key": "fundingSource",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ProcurementPolicyDeviationReason",
+      "type": "textarea",
+      "label": "Reason for deviation from procurement policy",
+      "key": "procurementPolicyDeviationReason",
+      "description": "If applicable, after consultation with procurement. Enter \"Not applicable\" otherwise."
+    },
+    {
+      "id": "Field_HrmAdvice",
+      "type": "textarea",
+      "label": "Advice from HRM unit",
+      "key": "hrmAdvice",
+      "description": "Summarise the HRM unit's advice on this claim.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit claim",
+      "action": "submit"
+    }
+  ]
+}

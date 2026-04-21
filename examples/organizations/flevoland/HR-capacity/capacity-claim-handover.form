@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-handover",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Capacity claim handover"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The Board has approved this capacity claim. Confirm receipt of the handover and provide the reference used in your downstream process (recruitment or procurement). A handover document is generated from this task."
+    },
+    {
+      "id": "Field_RequestType",
+      "type": "textfield",
+      "label": "Request type",
+      "key": "requestType",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_DecisionRoute",
+      "type": "textfield",
+      "label": "Route",
+      "key": "decisionRoute",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Job title",
+      "key": "jobTitle",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_OrganizationalUnit",
+      "type": "textfield",
+      "label": "Organizational unit",
+      "key": "organizationalUnit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_StartDate",
+      "type": "datetime",
+      "label": "Start date",
+      "key": "startDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_DecisionConditions",
+      "type": "textarea",
+      "label": "Conditions from the Board",
+      "key": "decisionConditions",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_HandoverConfirmed",
+      "type": "checkbox",
+      "label": "I confirm receipt of the handover and that processing has started",
+      "key": "handoverConfirmed",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_HandoverDate",
+      "type": "datetime",
+      "label": "Handover date",
+      "key": "handoverDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ReferenceNumber",
+      "type": "textfield",
+      "label": "Internal reference (vacancy ID / procurement case ID)",
+      "key": "referenceNumber",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_HandoverNotes",
+      "type": "textarea",
+      "label": "Handover notes",
+      "key": "handoverNotes",
+      "description": "Any relevant context for the downstream process."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Confirm handover",
+      "action": "submit"
+    }
+  ]
+}

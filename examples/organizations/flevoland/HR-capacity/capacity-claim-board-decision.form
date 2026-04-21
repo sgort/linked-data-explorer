@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-board-decision",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Board of Directors — capacity claim decision"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Review the capacity claim and record the Board's decision. A formal decision notification document will be generated from this task for the requesting manager."
+    },
+    {
+      "id": "Field_RequestType",
+      "type": "textfield",
+      "label": "Request type",
+      "key": "requestType",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Job title",
+      "key": "jobTitle",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_OrganizationalUnit",
+      "type": "textfield",
+      "label": "Organizational unit",
+      "key": "organizationalUnit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Description",
+      "type": "textarea",
+      "label": "Rationale",
+      "key": "description",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_AnnualCostsAfter",
+      "type": "number",
+      "label": "Annual costs (€)",
+      "key": "annualCostsAfter",
+      "decimalDigits": 2,
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_FundingSource",
+      "type": "textfield",
+      "label": "Funding source",
+      "key": "fundingSource",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_HrmAdvice",
+      "type": "textarea",
+      "label": "HRM advice",
+      "key": "hrmAdvice",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ScheduledMeetingDate",
+      "type": "datetime",
+      "label": "Board meeting date",
+      "key": "scheduledMeetingDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_BoardDecision",
+      "type": "radio",
+      "label": "Decision",
+      "key": "boardDecision",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Approved", "value": "approved" },
+        { "label": "Rejected", "value": "rejected" }
+      ]
+    },
+    {
+      "id": "Field_DecisionConditions",
+      "type": "textarea",
+      "label": "Conditions (if approved)",
+      "key": "decisionConditions",
+      "description": "Any conditions attached to the approval — scope, reporting, review dates."
+    },
+    {
+      "id": "Field_RejectionReason",
+      "type": "textarea",
+      "label": "Reason for rejection",
+      "key": "rejectionReason",
+      "description": "Required if the claim is rejected. Explain what must change for re-submission."
+    },
+    {
+      "id": "Field_DecisionDate",
+      "type": "datetime",
+      "label": "Decision date",
+      "key": "decisionDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_BoardMinuteReference",
+      "type": "textfield",
+      "label": "Board minute reference",
+      "key": "boardMinuteReference",
+      "description": "Reference of the meeting minutes (e.g. BoD-2026-W15-item-07).",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Record decision",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-reconsideration",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Reconsideration meeting"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The Board of Directors rejected the capacity claim. The Manager, the HR Business Partner, and the Personnel Controller meet to review the rejection and decide whether to revise and re-submit the claim or withdraw it."
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Job title",
+      "key": "jobTitle",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_RejectionReason",
+      "type": "textarea",
+      "label": "Reason given by the Board",
+      "key": "rejectionReason",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_BoardMinuteReference",
+      "type": "textfield",
+      "label": "Board minute reference",
+      "key": "boardMinuteReference",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ReconsiderationOutcome",
+      "type": "radio",
+      "label": "Outcome",
+      "key": "reconsiderationOutcome",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Proceed — revise and re-submit", "value": "proceed" },
+        { "label": "Withdraw the claim", "value": "withdraw" }
+      ]
+    },
+    {
+      "id": "Field_RevisionPlan",
+      "type": "textarea",
+      "label": "Revision plan",
+      "key": "revisionPlan",
+      "description": "If proceeding: describe what will change before re-submission. If withdrawing: summarise the reasoning and any follow-up actions."
+    },
+    {
+      "id": "Field_RevisedRequestType",
+      "type": "radio",
+      "label": "Revised request type",
+      "key": "revisedRequestType",
+      "description": "If proceeding: confirm whether the revised claim is still staffing or whether it switches to hiring (or vice versa).",
+      "values": [
+        { "label": "Staffing", "value": "staffing" },
+        { "label": "Hiring", "value": "hiring" }
+      ]
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Record outcome",
+      "action": "submit"
+    }
+  ]
+}
