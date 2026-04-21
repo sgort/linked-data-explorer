@@ -4,22 +4,19 @@
     <bpmn:startEvent id="StartEvent_CapacityClaim" name="Start capacity claim">
       <bpmn:outgoing>Flow_Start_Intake</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:userTask id="Task_ConsultAndClassify" name="Consult and classify" camunda:formRef="capacity-claim-intake" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
-      <bpmn:incoming>Flow_Start_Intake</bpmn:incoming>
+    <bpmn:userTask id="Task_ConsultAndClassify" name="Consult and classify" camunda:formRef="capacity-claim-intake" camunda:formRefBinding="latest" camunda:candidateGroups="manager" camunda:assignee="${initiatorUserId}">      <bpmn:incoming>Flow_Start_Intake</bpmn:incoming>
       <bpmn:outgoing>Flow_Intake_RequestTypeGateway</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:exclusiveGateway id="Gateway_RequestType" name="Request type?">
       <bpmn:incoming>Flow_Intake_RequestTypeGateway</bpmn:incoming>
-      <bpmn:incoming>Flow_Reconsider_BackToRequestType</bpmn:incoming>
+      <bpmn:incoming>Flow_ResetClaim_RequestTypeGateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Gateway_Staffing</bpmn:outgoing>
       <bpmn:outgoing>Flow_Gateway_Hiring</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Task_PrepareStaffingClaim" name="Prepare staffing claim" camunda:formRef="capacity-claim-staffing" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
-      <bpmn:incoming>Flow_Gateway_Staffing</bpmn:incoming>
+    <bpmn:userTask id="Task_PrepareStaffingClaim" name="Prepare staffing claim" camunda:formRef="capacity-claim-staffing" camunda:formRefBinding="latest" camunda:candidateGroups="manager" camunda:assignee="${initiatorUserId}">      <bpmn:incoming>Flow_Gateway_Staffing</bpmn:incoming>
       <bpmn:outgoing>Flow_Staffing_MergePrepare</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_PrepareHiringClaim" name="Prepare hiring claim" camunda:formRef="capacity-claim-hiring" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
-      <bpmn:incoming>Flow_Gateway_Hiring</bpmn:incoming>
+    <bpmn:userTask id="Task_PrepareHiringClaim" name="Prepare hiring claim" camunda:formRef="capacity-claim-hiring" camunda:formRefBinding="latest" camunda:candidateGroups="manager" camunda:assignee="${initiatorUserId}">      <bpmn:incoming>Flow_Gateway_Hiring</bpmn:incoming>
       <bpmn:outgoing>Flow_Hiring_MergePrepare</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:exclusiveGateway id="Gateway_MergePrepare" name="">
@@ -112,10 +109,45 @@
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${boardDecision == "rejected"}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Reconsider_OutcomeGateway" sourceRef="Task_ReconsiderationMeeting" targetRef="Gateway_ReconsiderationOutcome" />
-    <bpmn:sequenceFlow id="Flow_Reconsider_BackToRequestType" name="proceed" sourceRef="Gateway_ReconsiderationOutcome" targetRef="Gateway_RequestType">
+    <bpmn:sequenceFlow id="Flow_Reconsider_BackToRequestType" name="proceed" sourceRef="Gateway_ReconsiderationOutcome" targetRef="Task_ResetClaimFields">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${reconsiderationOutcome == "proceed"}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_Reconsider_Withdraw" name="withdraw" sourceRef="Gateway_ReconsiderationOutcome" targetRef="EndEvent_Withdrawn">
+    <bpmn:scriptTask id="Task_ResetClaimFields" name="Reset claim fields" scriptFormat="javascript">
+      <bpmn:incoming>Flow_Reconsider_BackToRequestType</bpmn:incoming>
+      <bpmn:outgoing>Flow_ResetClaim_RequestTypeGateway</bpmn:outgoing>
+      <bpmn:script>
+        // On the proceed-with-revision path, clear all claim-type-specific variables
+        // before re-entering Gateway_RequestType. This prevents ghost data (e.g. old
+        // staffing fields lingering when the manager switches to hiring) from ending
+        // up in process variables or in the capacity-claim-handover document.
+        var claimFields = [
+          // Shared claim details
+          "description", "functionCode", "jobTitle", "startDate", "endDate",
+          "hoursMin", "hoursMax", "costsYearToDate", "annualCostsAfter",
+          "fundingSource", "hrmAdvice",
+          // Staffing-only
+          "appointmentType", "fteMin", "fteMax", "scale", "employmentConditionChanges",
+          // Hiring-only
+          "durationMonths", "extensionStartDate", "extensionEndDate", "extensionMonths",
+          "hourlyWageMin", "hourlyWageMax", "procurementPolicyDeviationReason",
+          // Routing (hoisted DMN outputs — will be recomputed on the next pass)
+          "decisionRoute", "candidateGroups", "advisoryGroup",
+          // Board submission + decision
+          "scheduledMeetingDate", "submittedBy", "submissionNotes",
+          "boardDecision", "decisionConditions", "rejectionReason",
+          "decisionDate", "boardMinuteReference"
+        ];
+        for (var i = 0; i &lt; claimFields.length; i++) {
+          execution.removeVariable(claimFields[i]);
+        }
+        // Apply the revised request type chosen in the reconsideration meeting,
+        // so Gateway_RequestType routes to staffing or hiring correctly.
+        if (typeof revisedRequestType !== "undefined" &amp;&amp; revisedRequestType !== null) {
+          execution.setVariable("requestType", revisedRequestType);
+        }
+      </bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:sequenceFlow id="Flow_ResetClaim_RequestTypeGateway" sourceRef="Task_ResetClaimFields" targetRef="Gateway_RequestType" />    <bpmn:sequenceFlow id="Flow_Reconsider_Withdraw" name="withdraw" sourceRef="Gateway_ReconsiderationOutcome" targetRef="EndEvent_Withdrawn">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${reconsiderationOutcome == "withdraw"}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Route_Recruitment" name="recruitment" sourceRef="Gateway_DecisionRoute" targetRef="Task_HandoverToRecruitment">
@@ -286,15 +318,6 @@
         <di:waypoint x="1695" y="520" />
         <di:waypoint x="1755" y="520" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Reconsider_BackToRequestType_di" bpmnElement="Flow_Reconsider_BackToRequestType">
-        <di:waypoint x="1780" y="545" />
-        <di:waypoint x="1780" y="640" />
-        <di:waypoint x="480" y="640" />
-        <di:waypoint x="480" y="285" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1059" y="622" width="40" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Reconsider_Withdraw_di" bpmnElement="Flow_Reconsider_Withdraw">
         <di:waypoint x="1805" y="520" />
         <di:waypoint x="1872" y="520" />
@@ -332,9 +355,25 @@
         <di:waypoint x="2225" y="260" />
         <di:waypoint x="2275" y="260" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Reservation_End_di" bpmnElement="Flow_Reservation_End">
+<bpmndi:BPMNEdge id="Flow_Reservation_End_di" bpmnElement="Flow_Reservation_End">
         <di:waypoint x="2435" y="260" />
         <di:waypoint x="2495" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Task_ResetClaimFields_di" bpmnElement="Task_ResetClaimFields">
+        <dc:Bounds x="1100" y="600" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Reconsider_BackToRequestType_di" bpmnElement="Flow_Reconsider_BackToRequestType">
+        <di:waypoint x="1780" y="545" />
+        <di:waypoint x="1780" y="640" />
+        <di:waypoint x="1260" y="640" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1500" y="622" width="40" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ResetClaim_RequestTypeGateway_di" bpmnElement="Flow_ResetClaim_RequestTypeGateway">
+        <di:waypoint x="1100" y="640" />
+        <di:waypoint x="480" y="640" />
+        <di:waypoint x="480" y="285" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
