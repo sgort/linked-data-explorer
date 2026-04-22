@@ -77,6 +77,12 @@
       "type": "textarea",
       "label": "Additional meeting notes",
       "key": "intakeMeetingNotes"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit intake report",
+      "action": "submit"
     }
   ]
 }

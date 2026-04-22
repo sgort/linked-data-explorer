@@ -40,10 +40,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.claudesync
 
 # flatten script & dir
 flatten_directory.sh
 flattened
-
-# Claudesync
-.claudesync

@@ -50,6 +50,12 @@
       "label": "Project plan attached to invitation",
       "key": "intakeMeetingPlanAttached",
       "validate": { "required": true }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
     }
   ]
 }

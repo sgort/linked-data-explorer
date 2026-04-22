@@ -36,17 +36,19 @@ const ProcessList: React.FC<ProcessListProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const xml = ev.target?.result as string;
-      const match = xml.match(/<(?:bpmn:)?process[^>]+name="([^"]+)"/);
-      const name = match?.[1] ?? file.name.replace(/\.bpmn$/i, '');
-      onImportProcess(xml, name);
-    };
-    reader.readAsText(file);
-    // Reset so the same file can be re-imported if needed
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const xml = ev.target?.result as string;
+        const match = xml.match(/<(?:bpmn:)?process[^>]+name="([^"]+)"/);
+        const name = match?.[1] ?? file.name.replace(/\.bpmn$/i, '');
+        onImportProcess(xml, name);
+      };
+      reader.readAsText(file);
+    });
+    // Reset so the same files can be re-imported if needed
     e.target.value = '';
   };
 
@@ -72,6 +74,7 @@ const ProcessList: React.FC<ProcessListProps> = ({
             ref={fileInputRef}
             type="file"
             accept=".bpmn"
+            multiple
             className="hidden"
             onChange={handleFileChange}
           />

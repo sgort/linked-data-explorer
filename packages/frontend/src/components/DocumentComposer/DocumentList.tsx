@@ -27,24 +27,26 @@ const DocumentList: React.FC<DocumentListProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const template = JSON.parse(ev.target?.result as string) as DocumentTemplate;
-        onImportTemplate({
-          ...template,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          readonly: false,
-          status: 'wip',
-        });
-      } catch {
-        alert('Invalid .document file — could not parse JSON.');
-      }
-    };
-    reader.readAsText(file);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const template = JSON.parse(ev.target?.result as string) as DocumentTemplate;
+          onImportTemplate({
+            ...template,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            readonly: false,
+            status: 'wip',
+          });
+        } catch {
+          alert(`Invalid .document file — could not parse JSON: ${file.name}`);
+        }
+      };
+      reader.readAsText(file);
+    });
     e.target.value = '';
   };
 
@@ -71,6 +73,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
             ref={fileInputRef}
             type="file"
             accept=".document"
+            multiple
             className="hidden"
             onChange={handleFileChange}
           />

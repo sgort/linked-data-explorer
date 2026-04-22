@@ -27,19 +27,21 @@ const FormList: React.FC<FormListProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const schema = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
-        const name = (schema.id as string) ?? file.name.replace(/\.form$/i, '');
-        onImportForm(schema, name);
-      } catch {
-        alert('Invalid .form file — could not parse JSON.');
-      }
-    };
-    reader.readAsText(file);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const schema = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
+          const name = (schema.id as string) ?? file.name.replace(/\.form$/i, '');
+          onImportForm(schema, name);
+        } catch {
+          alert(`Invalid .form file — could not parse JSON: ${file.name}`);
+        }
+      };
+      reader.readAsText(file);
+    });
     e.target.value = '';
   };
 
@@ -67,6 +69,7 @@ const FormList: React.FC<FormListProps> = ({
               ref={fileInputRef}
               type="file"
               accept=".form"
+              multiple
               className="hidden"
               onChange={handleFileChange}
             />
