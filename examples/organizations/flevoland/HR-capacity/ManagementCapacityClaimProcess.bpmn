@@ -4,7 +4,8 @@
     <bpmn:startEvent id="StartEvent_CapacityClaim" name="Start capacity claim">
       <bpmn:outgoing>Flow_Start_Intake</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:userTask id="Task_ConsultAndClassify" name="Consult and classify" camunda:formRef="capacity-claim-intake" camunda:formRefBinding="latest" camunda:candidateGroups="manager" camunda:assignee="${initiatorUserId}">      <bpmn:incoming>Flow_Start_Intake</bpmn:incoming>
+    <bpmn:userTask id="Task_ConsultAndClassify" name="Consult and classify" camunda:formRef="capacity-claim-intake" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
+      <bpmn:incoming>Flow_Start_Intake</bpmn:incoming>
       <bpmn:outgoing>Flow_Intake_RequestTypeGateway</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:exclusiveGateway id="Gateway_RequestType" name="Request type?">
@@ -13,10 +14,12 @@
       <bpmn:outgoing>Flow_Gateway_Staffing</bpmn:outgoing>
       <bpmn:outgoing>Flow_Gateway_Hiring</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Task_PrepareStaffingClaim" name="Prepare staffing claim" camunda:formRef="capacity-claim-staffing" camunda:formRefBinding="latest" camunda:candidateGroups="manager" camunda:assignee="${initiatorUserId}">      <bpmn:incoming>Flow_Gateway_Staffing</bpmn:incoming>
+    <bpmn:userTask id="Task_PrepareStaffingClaim" name="Prepare staffing claim" camunda:formRef="capacity-claim-staffing" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
+      <bpmn:incoming>Flow_Gateway_Staffing</bpmn:incoming>
       <bpmn:outgoing>Flow_Staffing_MergePrepare</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_PrepareHiringClaim" name="Prepare hiring claim" camunda:formRef="capacity-claim-hiring" camunda:formRefBinding="latest" camunda:candidateGroups="manager" camunda:assignee="${initiatorUserId}">      <bpmn:incoming>Flow_Gateway_Hiring</bpmn:incoming>
+    <bpmn:userTask id="Task_PrepareHiringClaim" name="Prepare hiring claim" camunda:formRef="capacity-claim-hiring" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
+      <bpmn:incoming>Flow_Gateway_Hiring</bpmn:incoming>
       <bpmn:outgoing>Flow_Hiring_MergePrepare</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:exclusiveGateway id="Gateway_MergePrepare" name="">
