@@ -194,6 +194,8 @@ export interface BpmnProcess {
   bpmnProcessId?: string;
   processRole?: 'shell' | 'subprocess' | 'standalone';
   calledElement?: string;
+  language?: 'en' | 'nl' | 'de';
+  organization?: string;
 }
 
 export interface BpmnBusinessRuleTask {
@@ -264,4 +266,6 @@ export interface FormSchema {
   updatedAt: string;
   readonly?: boolean;
   status?: 'example' | 'wip';
+  language?: 'en' | 'nl' | 'de';
+  organization?: string;
 }

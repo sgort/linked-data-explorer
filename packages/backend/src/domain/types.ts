@@ -10,6 +10,8 @@ export type Bpmn = {
   status: string;
   readonly: boolean;
   schemaVersion: number;
+  language?: string;
+  organization?: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -20,6 +22,8 @@ export type Form = {
   description?: string;
   schema: Record<string, unknown>;
   status: string;
+  language?: string;
+  organization?: string;
   createdAt: Date;
   updatedAt: Date;
   readonly: boolean;
@@ -36,6 +40,8 @@ export type Document = {
   bindings: unknown;
   assets: unknown;
   status: string;
+  language?: string;
+  organization?: string;
   createdAt: Date;
   updatedAt: Date;
   readonly: boolean;

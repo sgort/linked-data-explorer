@@ -10,7 +10,8 @@ export async function listBpmn(): Promise<Bpmn[]> {
   const { rows } = await pool.query<BpmnRow>(
     `SELECT lde_id, bpmn_process_id, name, description, xml,
             process_role, called_element, linked_dmn_templates,
-            status, readonly, schema_version, created_at, updated_at
+            status, readonly, schema_version, language, organization,
+            created_at, updated_at
      FROM process_definitions ORDER BY updated_at DESC`
   );
   return rows.map(mapBpmn);
@@ -26,6 +27,8 @@ export async function upsertBpmn(p: {
   calledElement?: string;
   linkedDmnTemplates: string[];
   status?: string;
+  language?: string;
+  organization?: string;
   createdAt: string;
   updatedAt: string;
 }): Promise<void> {
@@ -33,8 +36,9 @@ export async function upsertBpmn(p: {
   await pool.query(
     `INSERT INTO process_definitions
        (lde_id, bpmn_process_id, name, description, xml, process_role,
-        called_element, linked_dmn_templates, status, created_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        called_element, linked_dmn_templates, status, language, organization,
+        created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
      ON CONFLICT (lde_id) DO UPDATE SET
        bpmn_process_id      = EXCLUDED.bpmn_process_id,
        name                 = EXCLUDED.name,
@@ -44,6 +48,8 @@ export async function upsertBpmn(p: {
        called_element       = EXCLUDED.called_element,
        linked_dmn_templates = EXCLUDED.linked_dmn_templates,
        status               = EXCLUDED.status,
+       language             = EXCLUDED.language,
+       organization         = EXCLUDED.organization,
        updated_at           = EXCLUDED.updated_at`,
     [
       p.id,
@@ -55,6 +61,8 @@ export async function upsertBpmn(p: {
       p.calledElement ?? null,
       p.linkedDmnTemplates,
       p.status ?? 'wip',
+      p.language ?? null,
+      p.organization ?? null,
       p.createdAt,
       p.updatedAt,
     ]
@@ -113,6 +121,8 @@ export async function listPublicBundles(): Promise<unknown[]> {
     operaton_deployment_id: string | null;
     deployed_forms: string[];
     deployed_documents: string[];
+    language: string | null;
+    organization: string | null;
     updated_at: Date;
   }>(
     `SELECT pd_shell.lde_id,
@@ -127,6 +137,8 @@ export async function listPublicBundles(): Promise<unknown[]> {
             pd_shell.operaton_deployment_id,
             pd_shell.deployed_forms,
             pd_shell.deployed_documents,
+            pd_shell.language,
+            pd_shell.organization,
             pd_shell.updated_at,
             COALESCE(
               json_agg(
@@ -169,6 +181,8 @@ export async function listPublicBundles(): Promise<unknown[]> {
               pd_shell.operaton_deployment_id,
               pd_shell.deployed_forms,
               pd_shell.deployed_documents,
+              pd_shell.language,
+              pd_shell.organization,
               pd_shell.updated_at
      ORDER BY pd_shell.deployed_at DESC`
   );
@@ -190,6 +204,8 @@ export async function listPublicBundles(): Promise<unknown[]> {
         subprocesses: { id: string; name: string; bpmnProcessId: string; status: string }[];
       }
     ).subprocesses,
+    language: r.language ?? undefined,
+    organization: r.organization ?? undefined,
     updatedAt: r.updated_at,
   }));
 }
@@ -200,7 +216,8 @@ export async function listForms(): Promise<Form[]> {
   if (!pool) return [];
 
   const { rows } = await pool.query<FormRow>(
-    `SELECT id, name, description, schema, status, created_at, updated_at
+    `SELECT id, name, description, schema, status, language, organization,
+            created_at, updated_at
      FROM form_schemas
      ORDER BY updated_at DESC`
   );
@@ -213,25 +230,32 @@ export async function upsertForm(f: {
   description?: string;
   schema: Record<string, unknown>;
   status?: string;
+  language?: string;
+  organization?: string;
   createdAt: string;
   updatedAt: string;
 }): Promise<void> {
   if (!pool) return;
   await pool.query(
-    `INSERT INTO form_schemas (id, name, description, schema, status, created_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)
+    `INSERT INTO form_schemas (id, name, description, schema, status,
+                                language, organization, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
      ON CONFLICT (id) DO UPDATE SET
-       name = EXCLUDED.name,
-       description = EXCLUDED.description,
-       schema = EXCLUDED.schema,
-       status = EXCLUDED.status,
-       updated_at = EXCLUDED.updated_at`,
+       name         = EXCLUDED.name,
+       description  = EXCLUDED.description,
+       schema       = EXCLUDED.schema,
+       status       = EXCLUDED.status,
+       language     = EXCLUDED.language,
+       organization = EXCLUDED.organization,
+       updated_at   = EXCLUDED.updated_at`,
     [
       f.id,
       f.name,
       f.description ?? null,
       JSON.stringify(f.schema),
       f.status ?? 'wip',
+      f.language ?? null,
+      f.organization ?? null,
       f.createdAt,
       f.updatedAt,
     ]
@@ -251,7 +275,7 @@ export async function listDocuments(): Promise<Document[]> {
   const { rows } = await pool.query<DocumentRow>(
     `SELECT id, name, description, process_key, service_id,
             schema_version, zones, bindings, assets, status,
-            created_at, updated_at
+            language, organization, created_at, updated_at
      FROM document_templates
      ORDER BY updated_at DESC`
   );
@@ -269,24 +293,28 @@ export async function upsertDocument(d: {
   bindings: unknown;
   assets: unknown;
   status?: string;
+  language?: string;
+  organization?: string;
   createdAt: string;
   updatedAt: string;
 }): Promise<void> {
   if (!pool) return;
   await pool.query(
-    `INSERT INTO document_templates (id, name, description, process_key, service_id, schema_version, zones, bindings, assets, status, created_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    `INSERT INTO document_templates (id, name, description, process_key, service_id, schema_version, zones, bindings, assets, status, language, organization, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
      ON CONFLICT (id) DO UPDATE SET
-       name = EXCLUDED.name,
-       description = EXCLUDED.description,
-       process_key = EXCLUDED.process_key,
-       service_id = EXCLUDED.service_id,
+       name           = EXCLUDED.name,
+       description    = EXCLUDED.description,
+       process_key    = EXCLUDED.process_key,
+       service_id     = EXCLUDED.service_id,
        schema_version = EXCLUDED.schema_version,
-       zones = EXCLUDED.zones,
-       bindings = EXCLUDED.bindings,
-       assets = EXCLUDED.assets,
-       status = EXCLUDED.status,
-       updated_at = EXCLUDED.updated_at`,
+       zones          = EXCLUDED.zones,
+       bindings       = EXCLUDED.bindings,
+       assets         = EXCLUDED.assets,
+       status         = EXCLUDED.status,
+       language       = EXCLUDED.language,
+       organization   = EXCLUDED.organization,
+       updated_at     = EXCLUDED.updated_at`,
     [
       d.id,
       d.name,
@@ -298,6 +326,8 @@ export async function upsertDocument(d: {
       JSON.stringify(d.bindings),
       JSON.stringify(d.assets),
       d.status ?? 'wip',
+      d.language ?? null,
+      d.organization ?? null,
       d.createdAt,
       d.updatedAt,
     ]

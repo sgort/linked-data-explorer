@@ -1,10 +1,17 @@
-import { FileText, Plus, Trash2, Upload } from 'lucide-react';
-import { useRef } from 'react';
+import { ChevronDown, ChevronRight, FileText, Plus, Trash2, Upload } from 'lucide-react';
+import { useMemo, useRef } from 'react';
 import React, { useState } from 'react';
 
 import { BpmnProcess } from '../../types';
+import ArtefactListToolbar, {
+  filterArtefacts,
+  LanguageFilter,
+} from '../common/ArtefactListToolbar';
 import DsoActiviteitSelector from './DsoActiviteitSelector';
 import RopaSelector from './RopaSelector';
+
+/** Organization key used when a process has no `organization` set. */
+const UNGROUPED = '__ungrouped__';
 
 interface ProcessListProps {
   processes: BpmnProcess[];
@@ -17,6 +24,8 @@ interface ProcessListProps {
   onUpdateProcessName: (processId: string, name: string) => void;
   onRopaRefChange: (ropaRef: string | undefined) => void;
   onDsoActiviteitUrnChange: (urn: string | undefined) => void;
+  onLanguageChange?: (language: string | undefined) => void;
+  onOrganizationChange?: (organization: string | undefined) => void;
 }
 
 const ProcessList: React.FC<ProcessListProps> = ({
@@ -30,10 +39,50 @@ const ProcessList: React.FC<ProcessListProps> = ({
   onUpdateProcessName,
   onRopaRefChange,
   onDsoActiviteitUrnChange,
+  onLanguageChange: _onLanguageChange,
+  onOrganizationChange: _onOrganizationChange,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [search, setSearch] = useState('');
+  const [languageFilter, setLanguageFilter] = useState<LanguageFilter>('all');
+  const [collapsedOrgs, setCollapsedOrgs] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /** Filter + group processes by organization. Memoised against full inputs. */
+  const { filtered, groups } = useMemo(() => {
+    const filteredProcesses = filterArtefacts(processes, search, languageFilter, (p) => [
+      p.bpmnProcessId ?? '',
+    ]);
+
+    // Group: key = organization || UNGROUPED
+    const map = new Map<string, BpmnProcess[]>();
+    for (const p of filteredProcesses) {
+      const key = p.organization || UNGROUPED;
+      const bucket = map.get(key);
+      if (bucket) bucket.push(p);
+      else map.set(key, [p]);
+    }
+
+    // Sort: real orgs alphabetically, ungrouped always last
+    const orderedKeys = [...map.keys()]
+      .filter((k) => k !== UNGROUPED)
+      .sort((a, b) => a.localeCompare(b));
+    if (map.has(UNGROUPED)) orderedKeys.push(UNGROUPED);
+
+    return {
+      filtered: filteredProcesses,
+      groups: orderedKeys.map((k) => ({ key: k, items: map.get(k) ?? [] })),
+    };
+  }, [processes, search, languageFilter]);
+
+  const toggleOrg = (key: string) =>
+    setCollapsedOrgs((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -94,6 +143,15 @@ const ProcessList: React.FC<ProcessListProps> = ({
           </button>
         </div>
       </div>
+      {/* Toolbar */}
+      <ArtefactListToolbar
+        search={search}
+        onSearchChange={setSearch}
+        languageFilter={languageFilter}
+        onLanguageFilterChange={setLanguageFilter}
+        matchCount={filtered.length}
+        totalCount={processes.length}
+      />
       {/* Process List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {(() => {
@@ -105,14 +163,17 @@ const ProcessList: React.FC<ProcessListProps> = ({
               </div>
             );
           }
+          if (filtered.length === 0) {
+            return (
+              <div className="text-center py-8">
+                <FileText size={48} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-sm text-slate-400">No processes match the current filters</p>
+              </div>
+            );
+          }
 
-          const shells = processes.filter((p) => p.processRole === 'shell');
-          const standaloneAndUnclassified = processes.filter(
-            (p) => !p.processRole || p.processRole === 'standalone'
-          );
-
-          const getSubprocesses = (shell: BpmnProcess) =>
-            processes.filter(
+          const getSubprocesses = (shell: BpmnProcess, bucket: BpmnProcess[]) =>
+            bucket.filter(
               (p) => p.processRole === 'subprocess' && p.calledElement === shell.bpmnProcessId
             );
 
@@ -185,19 +246,49 @@ const ProcessList: React.FC<ProcessListProps> = ({
             </div>
           );
           return (
-            <div className="space-y-2">
-              {shells.map((shell) => (
-                <div key={shell.id}>
-                  {renderCard(shell)}
-                  {getSubprocesses(shell).map((sub) => (
-                    <div key={sub.id} className="flex items-start gap-1 mt-1">
-                      <div className="mt-3 ml-2 text-slate-300 select-none">└</div>
-                      <div className="flex-1">{renderCard(sub, true)}</div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-              {standaloneAndUnclassified.map((p) => renderCard(p))}
+            <div className="space-y-3">
+              {groups.map(({ key, items }) => {
+                const isCollapsed = collapsedOrgs.has(key);
+                const label = key === UNGROUPED ? 'Ungrouped' : key;
+                const shells = items.filter((p) => p.processRole === 'shell');
+                const standaloneAndUnclassified = items.filter(
+                  (p) => !p.processRole || p.processRole === 'standalone'
+                );
+                return (
+                  <div key={key}>
+                    {/* Group header */}
+                    <button
+                      onClick={() => toggleOrg(key)}
+                      className="w-full flex items-center gap-1 px-1 py-1 mb-1
+                                 text-[10px] font-bold uppercase tracking-wide
+                                 text-slate-500 hover:text-slate-700"
+                    >
+                      {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                      <span>{label}</span>
+                      <span className="ml-auto font-mono text-slate-400 normal-case">
+                        {items.length}
+                      </span>
+                    </button>
+                    {/* Group body */}
+                    {!isCollapsed && (
+                      <div className="space-y-2">
+                        {shells.map((shell) => (
+                          <div key={shell.id}>
+                            {renderCard(shell)}
+                            {getSubprocesses(shell, items).map((sub) => (
+                              <div key={sub.id} className="flex items-start gap-1 mt-1">
+                                <div className="mt-3 ml-2 text-slate-300 select-none">└</div>
+                                <div className="flex-1">{renderCard(sub, true)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                        {standaloneAndUnclassified.map((p) => renderCard(p))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           );
         })()}

@@ -19,6 +19,16 @@
       "name": "DsoActiviteitMixin",
       "extends": ["bpmn:Process"],
       "properties": [{ "name": "dsoActiviteitUrn", "isAttr": true, "type": "String" }]
+    },
+    {
+      "name": "LanguageMixin",
+      "extends": ["bpmn:Process"],
+      "properties": [{ "name": "language", "isAttr": true, "type": "String" }]
+    },
+    {
+      "name": "OrganizationMixin",
+      "extends": ["bpmn:Process"],
+      "properties": [{ "name": "organization", "isAttr": true, "type": "String" }]
     }
   ]
 }

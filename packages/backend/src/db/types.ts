@@ -10,6 +10,8 @@ export type BpmnRow = {
   status: string;
   readonly: boolean;
   schema_version: number;
+  language: string | null;
+  organization: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -20,6 +22,8 @@ export type FormRow = {
   description: string | null;
   schema: string; // stored as JSON string
   status: string;
+  language: string | null;
+  organization: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -35,6 +39,8 @@ export type DocumentRow = {
   bindings: string;
   assets: string;
   status: string;
+  language: string | null;
+  organization: string | null;
   created_at: Date;
   updated_at: Date;
 };

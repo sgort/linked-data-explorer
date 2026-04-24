@@ -34,7 +34,9 @@ export async function migrate(): Promise<void> {
       ADD COLUMN IF NOT EXISTS operaton_url           TEXT,
       ADD COLUMN IF NOT EXISTS operaton_deployment_id TEXT,
       ADD COLUMN IF NOT EXISTS deployed_forms         TEXT[] NOT NULL DEFAULT '{}',
-      ADD COLUMN IF NOT EXISTS deployed_documents     TEXT[] NOT NULL DEFAULT '{}';
+      ADD COLUMN IF NOT EXISTS deployed_documents     TEXT[] NOT NULL DEFAULT '{}',
+      ADD COLUMN IF NOT EXISTS language               VARCHAR(2),
+      ADD COLUMN IF NOT EXISTS organization           VARCHAR(100);
 
       CREATE INDEX IF NOT EXISTS idx_pd_bpmn_process_id
         ON process_definitions (bpmn_process_id);
@@ -43,6 +45,12 @@ export async function migrate(): Promise<void> {
         WHERE called_element IS NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_pd_process_role
         ON process_definitions (process_role);
+      CREATE INDEX IF NOT EXISTS idx_pd_language
+        ON process_definitions (language)
+        WHERE language IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_pd_organization
+        ON process_definitions (organization)
+        WHERE organization IS NOT NULL;
 
       CREATE TABLE IF NOT EXISTS form_schemas (
         id             TEXT        PRIMARY KEY,
@@ -54,6 +62,17 @@ export async function migrate(): Promise<void> {
         created_at     TIMESTAMPTZ NOT NULL,
         updated_at     TIMESTAMPTZ NOT NULL
       );
+
+      ALTER TABLE form_schemas
+      ADD COLUMN IF NOT EXISTS language     VARCHAR(2),
+      ADD COLUMN IF NOT EXISTS organization VARCHAR(100);
+
+      CREATE INDEX IF NOT EXISTS idx_fs_language
+        ON form_schemas (language)
+        WHERE language IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_fs_organization
+        ON form_schemas (organization)
+        WHERE organization IS NOT NULL;
 
       CREATE TABLE IF NOT EXISTS document_templates (
         id             TEXT        PRIMARY KEY,
@@ -69,6 +88,17 @@ export async function migrate(): Promise<void> {
         created_at     TIMESTAMPTZ NOT NULL,
         updated_at     TIMESTAMPTZ NOT NULL
       );
+
+      ALTER TABLE document_templates
+      ADD COLUMN IF NOT EXISTS language     VARCHAR(2),
+      ADD COLUMN IF NOT EXISTS organization VARCHAR(100);
+
+      CREATE INDEX IF NOT EXISTS idx_dt_language
+        ON document_templates (language)
+        WHERE language IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_dt_organization
+        ON document_templates (organization)
+        WHERE organization IS NOT NULL;
 
       CREATE TABLE IF NOT EXISTS ropa_records (
         id                       UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
