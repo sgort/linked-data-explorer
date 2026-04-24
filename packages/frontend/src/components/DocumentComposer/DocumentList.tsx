@@ -6,6 +6,8 @@ import ArtefactListToolbar, {
   filterArtefacts,
   LanguageFilter,
 } from '../common/ArtefactListToolbar';
+import LanguageSelector, { LanguageCode } from '../common/LanguageSelector';
+import OrganizationSelector from '../common/OrganizationSelector';
 
 /** Organization key used when a document has no `organization` set. */
 const UNGROUPED = '__ungrouped__';
@@ -13,21 +15,27 @@ const UNGROUPED = '__ungrouped__';
 interface DocumentListProps {
   templates: DocumentTemplate[];
   activeTemplateId: string | null;
+  activeTemplate?: DocumentTemplate | null;
   onCreateTemplate: () => void;
   onImportTemplate: (template: DocumentTemplate) => void;
   onLoadTemplate: (id: string) => void;
   onDeleteTemplate: (id: string) => void;
   onUpdateTemplateName: (id: string, name: string) => void;
+  onLanguageChange?: (language: LanguageCode | undefined) => void;
+  onOrganizationChange?: (organization: string | undefined) => void;
 }
 
 const DocumentList: React.FC<DocumentListProps> = ({
   templates,
   activeTemplateId,
+  activeTemplate,
   onCreateTemplate,
   onImportTemplate,
   onLoadTemplate,
   onDeleteTemplate,
   onUpdateTemplateName,
+  onLanguageChange,
+  onOrganizationChange,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -69,6 +77,17 @@ const DocumentList: React.FC<DocumentListProps> = ({
       return next;
     });
 
+  /** Distinct organization keys across all templates, for datalist autocomplete. */
+  const organizationSuggestions = useMemo(
+    () =>
+      [
+        ...new Set(
+          templates.map((t) => t.organization).filter((o): o is string => !!o && o.trim() !== '')
+        ),
+      ].sort(),
+    [templates]
+  );
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
@@ -77,8 +96,17 @@ const DocumentList: React.FC<DocumentListProps> = ({
       reader.onload = (ev) => {
         try {
           const template = JSON.parse(ev.target?.result as string) as DocumentTemplate;
+
+          // Prefer language baked into the template JSON; else infer from filename.
+          const baseName = file.name.replace(/\.document$/i, '');
+          const langMatch = baseName.match(/\.(en|nl|de)$/i);
+          const inferredLanguage = langMatch?.[1].toLowerCase() as
+            | DocumentTemplate['language']
+            | undefined;
+
           onImportTemplate({
             ...template,
+            language: template.language ?? inferredLanguage,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             readonly: false,
@@ -255,6 +283,24 @@ const DocumentList: React.FC<DocumentListProps> = ({
           })
         )}
       </div>
+
+      {activeTemplate && (
+        <div className="border-t border-slate-200 bg-slate-50 shrink-0 max-h-[50vh] overflow-y-auto">
+          <LanguageSelector
+            currentLanguage={activeTemplate.language}
+            onLanguageChange={(lang) => onLanguageChange?.(lang)}
+            disabled={!onLanguageChange || activeTemplate.readonly}
+          />
+          <div className="border-t border-slate-200">
+            <OrganizationSelector
+              currentOrganization={activeTemplate.organization}
+              onOrganizationChange={(org) => onOrganizationChange?.(org)}
+              suggestions={organizationSuggestions}
+              disabled={!onOrganizationChange || activeTemplate.readonly}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

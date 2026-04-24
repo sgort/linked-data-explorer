@@ -138,7 +138,11 @@ const FormEditor: React.FC = () => {
     setActiveFormId(newForm.id);
   };
 
-  const handleImportForm = (schema: Record<string, unknown>, name: string) => {
+  const handleImportForm = (
+    schema: Record<string, unknown>,
+    name: string,
+    inferredLanguage?: string
+  ) => {
     const newForm: FormSchema = {
       id: `form_${Date.now()}`,
       name,
@@ -146,6 +150,7 @@ const FormEditor: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: 'wip',
+      language: inferredLanguage as FormSchema['language'] | undefined,
     };
     FormService.saveForm(newForm);
     setForms(FormService.getForms());
@@ -187,18 +192,36 @@ const FormEditor: React.FC = () => {
     }
   };
 
-  const handleCloseForm = () => setActiveFormId(null);
+  const handleLanguageChange = (language: FormSchema['language']) => {
+    if (!activeFormId) return;
+    const form = FormService.getForm(activeFormId);
+    if (!form) return;
+    FormService.saveForm({ ...form, language, updatedAt: new Date().toISOString() });
+    setForms(FormService.getForms());
+  };
 
+  const handleOrganizationChange = (organization: string | undefined) => {
+    if (!activeFormId) return;
+    const form = FormService.getForm(activeFormId);
+    if (!form) return;
+    FormService.saveForm({ ...form, organization, updatedAt: new Date().toISOString() });
+    setForms(FormService.getForms());
+  };
+
+  const handleCloseForm = () => setActiveFormId(null);
   return (
     <div className="flex h-full bg-slate-50">
       <FormList
         forms={forms}
         activeFormId={activeFormId}
+        activeForm={activeForm}
         onCreateForm={handleCreateForm}
         onImportForm={handleImportForm}
         onLoadForm={handleLoadForm}
         onDeleteForm={handleDeleteForm}
         onUpdateFormName={handleUpdateFormName}
+        onLanguageChange={handleLanguageChange}
+        onOrganizationChange={handleOrganizationChange}
       />
 
       <div className="flex-1 flex flex-col border-x border-slate-200">

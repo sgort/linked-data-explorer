@@ -143,6 +143,22 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
     refreshTemplates();
   };
 
+  const handleLanguageChange = (language: DocumentTemplate['language']) => {
+    if (!activeTemplateId) return;
+    const t = DocumentService.getTemplate(activeTemplateId);
+    if (!t) return;
+    DocumentService.saveTemplate({ ...t, language, updatedAt: new Date().toISOString() });
+    refreshTemplates();
+  };
+
+  const handleOrganizationChange = (organization: string | undefined) => {
+    if (!activeTemplateId) return;
+    const t = DocumentService.getTemplate(activeTemplateId);
+    if (!t) return;
+    DocumentService.saveTemplate({ ...t, organization, updatedAt: new Date().toISOString() });
+    refreshTemplates();
+  };
+
   const handleTemplateChange = (updated: DocumentTemplate) => {
     setHasChanges(true);
     // Optimistic UI — update in memory; only persist on explicit save
@@ -251,11 +267,14 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
         <DocumentList
           templates={templates}
           activeTemplateId={activeTemplateId}
+          activeTemplate={activeTemplate}
           onCreateTemplate={handleCreateTemplate}
           onImportTemplate={handleImportTemplate}
           onLoadTemplate={handleLoadTemplate}
           onDeleteTemplate={handleDeleteTemplate}
           onUpdateTemplateName={handleUpdateTemplateName}
+          onLanguageChange={handleLanguageChange}
+          onOrganizationChange={handleOrganizationChange}
         />
         {/* ── Left sub-panel: content / assets tabs ─────────────────── */}
         <div className="w-52 flex-shrink-0 flex flex-col border-r border-slate-200 bg-white">

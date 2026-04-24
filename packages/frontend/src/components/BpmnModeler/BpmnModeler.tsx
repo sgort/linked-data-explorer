@@ -242,7 +242,12 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     setCurrentXml(newProcess.xml);
   };
 
-  const handleImportProcess = (xml: string, name: string) => {
+  const handleImportProcess = (xml: string, name: string, inferredLanguage?: string) => {
+    // Prefer language embedded in the XML; fall back to filename-inferred value.
+    const xmlLanguage = xml.match(/ronl:language="([^"]+)"/)?.[1];
+    const language = (xmlLanguage ?? inferredLanguage) as BpmnProcess['language'] | undefined;
+    const organization = xml.match(/ronl:organization="([^"]+)"/)?.[1];
+
     const newProcess: BpmnProcess = {
       id: `process_${Date.now()}`,
       name,
@@ -253,6 +258,8 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       status: 'wip',
       bpmnProcessId: extractBpmnProcessId(xml),
       processRole: 'standalone',
+      language,
+      organization,
     };
     BpmnService.saveProcess(newProcess);
     setProcesses(BpmnService.getProcesses());

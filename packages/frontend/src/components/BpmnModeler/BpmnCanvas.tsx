@@ -473,6 +473,45 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       const processKey =
         doc.querySelector('process')?.getAttribute('id') ?? `process-${Date.now()}`;
 
+      // ─── Language consistency check ───────────────────────────────────
+      // Warn if the bundle mixes languages (e.g. English BPMN + Dutch form).
+      // DMNs are excluded because they are language-agnostic by design.
+      const languageSet = new Set<string>();
+
+      const extractBpmnLanguage = (bpmnXml: string): string | undefined =>
+        bpmnXml.match(/ronl:language="([^"]+)"/)?.[1];
+
+      const shellLang = extractBpmnLanguage(xml);
+      if (shellLang) languageSet.add(shellLang);
+
+      for (const sp of subProcessXmls) {
+        const spLang = extractBpmnLanguage(sp.xml);
+        if (spLang) languageSet.add(spLang);
+      }
+
+      for (const { id } of forms) {
+        const f = allForms.find((x) => (x.schema as Record<string, unknown>).id === id);
+        if (f?.language) languageSet.add(f.language);
+      }
+
+      for (const { template } of documents) {
+        if (template.language) languageSet.add(template.language);
+      }
+
+      if (languageSet.size > 1) {
+        const langs = [...languageSet].sort().join(', ');
+        const proceed = window.confirm(
+          `Bundle mixes languages: ${langs}. ` +
+            `This is usually a mistake — a deployed bundle should be a single language. ` +
+            `Continue anyway?`
+        );
+        if (!proceed) {
+          setIsDeploying(false);
+          return;
+        }
+      }
+      // ──────────────────────────────────────────────────────────────────
+
       const response = await fetch(`${API_BASE_URL}/api/dmns/process/deploy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

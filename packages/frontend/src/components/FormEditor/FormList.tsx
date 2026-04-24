@@ -6,6 +6,8 @@ import ArtefactListToolbar, {
   filterArtefacts,
   LanguageFilter,
 } from '../common/ArtefactListToolbar';
+import LanguageSelector, { LanguageCode } from '../common/LanguageSelector';
+import OrganizationSelector from '../common/OrganizationSelector';
 
 /** Organization key used when a form has no `organization` set. */
 const UNGROUPED = '__ungrouped__';
@@ -13,21 +15,27 @@ const UNGROUPED = '__ungrouped__';
 interface FormListProps {
   forms: FormSchema[];
   activeFormId: string | null;
+  activeForm?: FormSchema | null;
   onCreateForm: () => void;
-  onImportForm: (schema: Record<string, unknown>, name: string) => void;
+  onImportForm: (schema: Record<string, unknown>, name: string, inferredLanguage?: string) => void;
   onLoadForm: (formId: string) => void;
   onDeleteForm: (formId: string) => void;
   onUpdateFormName: (formId: string, name: string) => void;
+  onLanguageChange?: (language: LanguageCode | undefined) => void;
+  onOrganizationChange?: (organization: string | undefined) => void;
 }
 
 const FormList: React.FC<FormListProps> = ({
   forms,
   activeFormId,
+  activeForm,
   onCreateForm,
   onImportForm,
   onLoadForm,
   onDeleteForm,
   onUpdateFormName,
+  onLanguageChange,
+  onOrganizationChange,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -69,6 +77,17 @@ const FormList: React.FC<FormListProps> = ({
       return next;
     });
 
+  /** Distinct organization keys across all forms, for datalist autocomplete. */
+  const organizationSuggestions = useMemo(
+    () =>
+      [
+        ...new Set(
+          forms.map((f) => f.organization).filter((o): o is string => !!o && o.trim() !== '')
+        ),
+      ].sort(),
+    [forms]
+  );
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
@@ -77,8 +96,12 @@ const FormList: React.FC<FormListProps> = ({
       reader.onload = (ev) => {
         try {
           const schema = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
-          const name = (schema.id as string) ?? file.name.replace(/\.form$/i, '');
-          onImportForm(schema, name);
+          const baseName = file.name.replace(/\.form$/i, '');
+          const langMatch = baseName.match(/\.(en|nl|de)$/i);
+          const inferredLanguage = langMatch?.[1].toLowerCase();
+          const cleanName = langMatch ? baseName.slice(0, -langMatch[0].length) : baseName;
+          const name = (schema.id as string) ?? cleanName;
+          onImportForm(schema, name, inferredLanguage);
         } catch {
           alert(`Invalid .form file — could not parse JSON: ${file.name}`);
         }
@@ -243,6 +266,24 @@ const FormList: React.FC<FormListProps> = ({
           })
         )}
       </div>
+
+      {activeForm && (
+        <div className="border-t border-slate-200 bg-slate-50 shrink-0 max-h-[50vh] overflow-y-auto">
+          <LanguageSelector
+            currentLanguage={activeForm.language}
+            onLanguageChange={(lang) => onLanguageChange?.(lang)}
+            disabled={!onLanguageChange || activeForm.readonly}
+          />
+          <div className="border-t border-slate-200">
+            <OrganizationSelector
+              currentOrganization={activeForm.organization}
+              onOrganizationChange={(org) => onOrganizationChange?.(org)}
+              suggestions={organizationSuggestions}
+              disabled={!onOrganizationChange || activeForm.readonly}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

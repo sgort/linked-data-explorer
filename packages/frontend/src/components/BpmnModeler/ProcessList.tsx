@@ -7,6 +7,8 @@ import ArtefactListToolbar, {
   filterArtefacts,
   LanguageFilter,
 } from '../common/ArtefactListToolbar';
+import LanguageSelector, { LanguageCode } from '../common/LanguageSelector';
+import OrganizationSelector from '../common/OrganizationSelector';
 import DsoActiviteitSelector from './DsoActiviteitSelector';
 import RopaSelector from './RopaSelector';
 
@@ -18,7 +20,7 @@ interface ProcessListProps {
   activeProcessId: string | null;
   activeProcess: BpmnProcess | null;
   onCreateProcess: () => void;
-  onImportProcess: (xml: string, name: string) => void;
+  onImportProcess: (xml: string, name: string, inferredLanguage?: string) => void;
   onLoadProcess: (processId: string) => void;
   onDeleteProcess: (processId: string) => void;
   onUpdateProcessName: (processId: string, name: string) => void;
@@ -39,8 +41,8 @@ const ProcessList: React.FC<ProcessListProps> = ({
   onUpdateProcessName,
   onRopaRefChange,
   onDsoActiviteitUrnChange,
-  onLanguageChange: _onLanguageChange,
-  onOrganizationChange: _onOrganizationChange,
+  onLanguageChange,
+  onOrganizationChange,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -48,6 +50,17 @@ const ProcessList: React.FC<ProcessListProps> = ({
   const [languageFilter, setLanguageFilter] = useState<LanguageFilter>('all');
   const [collapsedOrgs, setCollapsedOrgs] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /** Distinct organization keys across all processes, for datalist autocomplete. */
+  const organizationSuggestions = useMemo(
+    () =>
+      [
+        ...new Set(
+          processes.map((p) => p.organization).filter((o): o is string => !!o && o.trim() !== '')
+        ),
+      ].sort(),
+    [processes]
+  );
 
   /** Filter + group processes by organization. Memoised against full inputs. */
   const { filtered, groups } = useMemo(() => {
@@ -91,13 +104,20 @@ const ProcessList: React.FC<ProcessListProps> = ({
       const reader = new FileReader();
       reader.onload = (ev) => {
         const xml = ev.target?.result as string;
-        const match = xml.match(/<(?:bpmn:)?process[^>]+name="([^"]+)"/);
-        const name = match?.[1] ?? file.name.replace(/\.bpmn$/i, '');
-        onImportProcess(xml, name);
+
+        // Strip trailing <code>.<ext> when inferring name
+        const baseName = file.name.replace(/\.bpmn$/i, '');
+        const langMatch = baseName.match(/\.(en|nl|de)$/i);
+        const inferredLanguage = langMatch?.[1].toLowerCase();
+        const cleanName = langMatch ? baseName.slice(0, -langMatch[0].length) : baseName;
+
+        const xmlNameMatch = xml.match(/<(?:bpmn:)?process[^>]+name="([^"]+)"/);
+        const name = xmlNameMatch?.[1] ?? cleanName;
+
+        onImportProcess(xml, name, inferredLanguage);
       };
       reader.readAsText(file);
     });
-    // Reset so the same files can be re-imported if needed
     e.target.value = '';
   };
 
@@ -294,12 +314,36 @@ const ProcessList: React.FC<ProcessListProps> = ({
         })()}
       </div>
       {activeProcess && (
-        <div className="border-t border-slate-200 bg-slate-50 shrink-0">
-          <RopaSelector
-            bpmnProcessId={activeProcess.bpmnProcessId ?? ''}
-            currentRopaRef={activeProcess.xml.match(/ronl:ropaRef="([^"]+)"/)?.[1]}
-            onRopaRefChange={onRopaRefChange}
+        <div className="border-t border-slate-200 bg-slate-50 shrink-0 max-h-[50vh] overflow-y-auto">
+          <LanguageSelector
+            currentLanguage={
+              activeProcess.language ??
+              (activeProcess.xml.match(/ronl:language="([^"]+)"/)?.[1] as
+                | LanguageCode
+                | undefined) ??
+              undefined
+            }
+            onLanguageChange={(lang) => onLanguageChange?.(lang)}
+            disabled={!onLanguageChange}
           />
+          <div className="border-t border-slate-200">
+            <OrganizationSelector
+              currentOrganization={
+                activeProcess.organization ??
+                activeProcess.xml.match(/ronl:organization="([^"]+)"/)?.[1]
+              }
+              onOrganizationChange={(org) => onOrganizationChange?.(org)}
+              suggestions={organizationSuggestions}
+              disabled={!onOrganizationChange}
+            />
+          </div>
+          <div className="border-t border-slate-200">
+            <RopaSelector
+              bpmnProcessId={activeProcess.bpmnProcessId ?? ''}
+              currentRopaRef={activeProcess.xml.match(/ronl:ropaRef="([^"]+)"/)?.[1]}
+              onRopaRefChange={onRopaRefChange}
+            />
+          </div>
           <div className="border-t border-slate-200">
             <DsoActiviteitSelector
               bpmnProcessId={activeProcess.bpmnProcessId ?? ''}
@@ -308,7 +352,7 @@ const ProcessList: React.FC<ProcessListProps> = ({
             />
           </div>
         </div>
-      )}{' '}
+      )}
     </div>
   );
 };
