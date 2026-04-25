@@ -19,6 +19,11 @@ interface ProcessListProps {
   processes: BpmnProcess[];
   activeProcessId: string | null;
   activeProcess: BpmnProcess | null;
+  /** Effective values for the footer (draft-aware, computed by parent). */
+  effectiveLanguage?: BpmnProcess['language'];
+  effectiveOrganization?: string;
+  effectiveRopaRef?: string;
+  effectiveDsoUrn?: string;
   onCreateProcess: () => void;
   onImportProcess: (xml: string, name: string, inferredLanguage?: string) => void;
   onLoadProcess: (processId: string) => void;
@@ -34,6 +39,10 @@ const ProcessList: React.FC<ProcessListProps> = ({
   processes,
   activeProcessId,
   activeProcess,
+  effectiveLanguage,
+  effectiveOrganization,
+  effectiveRopaRef,
+  effectiveDsoUrn,
   onCreateProcess,
   onImportProcess,
   onLoadProcess,
@@ -68,10 +77,20 @@ const ProcessList: React.FC<ProcessListProps> = ({
       p.bpmnProcessId ?? '',
     ]);
 
-    // Group: key = organization || UNGROUPED
+    // Group: subprocesses follow their shell's organization; everything else uses its own.
+    // Looking up the shell across ALL processes (not just the filtered set) means a subprocess
+    // can still be routed correctly even when its shell is hidden by the language filter.
     const map = new Map<string, BpmnProcess[]>();
     for (const p of filteredProcesses) {
-      const key = p.organization || UNGROUPED;
+      let key: string;
+      if (p.processRole === 'subprocess' && p.calledElement) {
+        const shell = processes.find(
+          (s) => s.processRole === 'shell' && s.bpmnProcessId === p.calledElement
+        );
+        key = shell?.organization || p.organization || UNGROUPED;
+      } else {
+        key = p.organization || UNGROUPED;
+      }
       const bucket = map.get(key);
       if (bucket) bucket.push(p);
       else map.set(key, [p]);
@@ -274,6 +293,15 @@ const ProcessList: React.FC<ProcessListProps> = ({
                 const standaloneAndUnclassified = items.filter(
                   (p) => !p.processRole || p.processRole === 'standalone'
                 );
+                // Subprocesses already shown indented under a shell card in this bucket.
+                const renderedSubIds = new Set(
+                  shells.flatMap((shell) => getSubprocesses(shell, items).map((s) => s.id))
+                );
+                // Orphans: subprocesses whose shell isn't in this bucket
+                // (deleted, or hidden by the active filter). Rendered flat at the bottom.
+                const orphanSubs = items.filter(
+                  (p) => p.processRole === 'subprocess' && !renderedSubIds.has(p.id)
+                );
                 return (
                   <div key={key}>
                     {/* Group header */}
@@ -304,6 +332,7 @@ const ProcessList: React.FC<ProcessListProps> = ({
                           </div>
                         ))}
                         {standaloneAndUnclassified.map((p) => renderCard(p))}
+                        {orphanSubs.map((sub) => renderCard(sub))}
                       </div>
                     )}
                   </div>
@@ -316,22 +345,13 @@ const ProcessList: React.FC<ProcessListProps> = ({
       {activeProcess && (
         <div className="border-t border-slate-200 bg-slate-50 shrink-0 max-h-[50vh] overflow-y-auto">
           <LanguageSelector
-            currentLanguage={
-              activeProcess.language ??
-              (activeProcess.xml.match(/ronl:language="([^"]+)"/)?.[1] as
-                | LanguageCode
-                | undefined) ??
-              undefined
-            }
+            currentLanguage={effectiveLanguage as LanguageCode | undefined}
             onLanguageChange={(lang) => onLanguageChange?.(lang)}
             disabled={!onLanguageChange}
           />
           <div className="border-t border-slate-200">
             <OrganizationSelector
-              currentOrganization={
-                activeProcess.organization ??
-                activeProcess.xml.match(/ronl:organization="([^"]+)"/)?.[1]
-              }
+              currentOrganization={effectiveOrganization}
               onOrganizationChange={(org) => onOrganizationChange?.(org)}
               suggestions={organizationSuggestions}
               disabled={!onOrganizationChange}
@@ -340,14 +360,14 @@ const ProcessList: React.FC<ProcessListProps> = ({
           <div className="border-t border-slate-200">
             <RopaSelector
               bpmnProcessId={activeProcess.bpmnProcessId ?? ''}
-              currentRopaRef={activeProcess.xml.match(/ronl:ropaRef="([^"]+)"/)?.[1]}
+              currentRopaRef={effectiveRopaRef}
               onRopaRefChange={onRopaRefChange}
             />
           </div>
           <div className="border-t border-slate-200">
             <DsoActiviteitSelector
               bpmnProcessId={activeProcess.bpmnProcessId ?? ''}
-              currentUrn={activeProcess.xml.match(/ronl:dsoActiviteitUrn="([^"]+)"/)?.[1]}
+              currentUrn={effectiveDsoUrn}
               onUrnChange={onDsoActiviteitUrnChange}
             />
           </div>

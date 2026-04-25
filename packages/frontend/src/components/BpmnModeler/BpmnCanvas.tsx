@@ -29,6 +29,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001
 interface BpmnCanvasProps {
   xml: string;
   endpoint: string;
+  /** True when the parent has pending footer (metadata) edits — enables the Save button. */
+  hasFooterChanges?: boolean;
+  /** Called when the canvas dirty state changes, so the parent can guard navigation. */
+  onDirtyChange?: (dirty: boolean) => void;
   onSave: (xml: string) => void;
   onElementSelect: (element: unknown) => void;
   onClose: () => void;
@@ -37,6 +41,8 @@ interface BpmnCanvasProps {
 const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   xml,
   endpoint,
+  hasFooterChanges = false,
+  onDirtyChange,
   onSave,
   onElementSelect,
   onClose,
@@ -69,13 +75,19 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
   const [selectedElement, setSelectedElement] = useState<any>(null);
 
-  const handleElementSelect = useCallback(
-    (element: unknown) => {
-      setSelectedElement(element);
-      onElementSelect(element);
-    },
-    [onElementSelect]
-  );
+  // Keep latest onElementSelect in a ref so handleElementSelect can stay stable
+  // across renders. Without this, an inline arrow at the parent (e.g. onElementSelect={() => {}})
+  // would change identity every render and re-trigger the modeler-init effect below,
+  // resetting the canvas on every keystroke that re-renders the parent.
+  const onElementSelectRef = useRef(onElementSelect);
+  useEffect(() => {
+    onElementSelectRef.current = onElementSelect;
+  }, [onElementSelect]);
+
+  const handleElementSelect = useCallback((element: unknown) => {
+    setSelectedElement(element);
+    onElementSelectRef.current(element);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || !propertiesPanelRef.current) return;
@@ -120,6 +132,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     const eventBus = modeler.get('eventBus') as any;
     const handleChange = () => {
       setHasChanges(true);
+      onDirtyChange?.(true);
       refreshDmnOverlays();
     };
     eventBus.on('commandStack.changed', handleChange);
@@ -152,7 +165,8 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       propertiesPanel.detach();
       modeler.destroy();
     };
-  }, [xml, handleElementSelect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [xml, onDirtyChange]);
 
   // Render DMN Template Selector when BusinessRuleTask is selected
   useEffect(() => {
@@ -324,6 +338,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       const { xml: savedXml } = await modelerRef.current.saveXML({ format: true });
       onSave(savedXml);
       setHasChanges(false);
+      onDirtyChange?.(false);
     } catch (err) {
       console.error('Failed to save BPMN:', err);
     }
@@ -582,11 +597,11 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={handleSave}
-            disabled={!hasChanges}
+            disabled={!hasChanges && !hasFooterChanges}
             className={`
               flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
               ${
-                hasChanges
+                hasChanges || hasFooterChanges
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               }

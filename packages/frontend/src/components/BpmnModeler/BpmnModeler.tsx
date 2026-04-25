@@ -17,12 +17,71 @@ const extractBpmnProcessId = (xml: string): string => {
   return match?.[1] ?? 'unknown';
 };
 
+type FooterDraft = {
+  language?: BpmnProcess['language'];
+  organization?: string;
+  ropaRef?: string;
+  dsoActiviteitUrn?: string;
+};
+
+/** Rewrites a single ronl:* attribute on the <bpmn:process> tag. */
+function applyRonlAttr(xml: string, attr: string, value: string | undefined): string {
+  let out = xml;
+  if (!out.includes('xmlns:ronl=')) {
+    out = out.replace(/(<(?:bpmn:)?definitions\b)/, '$1 xmlns:ronl="http://ronl.nl/schema/1.0"');
+  }
+  if (value) {
+    if (out.includes(`ronl:${attr}=`)) {
+      out = out.replace(new RegExp(`ronl:${attr}="[^"]*"`), `ronl:${attr}="${value}"`);
+    } else {
+      out = out.replace(/(<(?:bpmn:)?process\b[^>]*?)(\/?>)/, `$1 ronl:${attr}="${value}"$2`);
+    }
+  } else {
+    out = out.replace(new RegExp(`\\s*ronl:${attr}="[^"]*"`), '');
+  }
+  return out;
+}
+
 const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   const [processes, setProcesses] = useState<BpmnProcess[]>(BpmnService.getProcesses());
   const [activeProcessId, setActiveProcessId] = useState<string | null>(null);
   const [currentXml, setCurrentXml] = useState<string>(DEFAULT_BPMN_XML);
+  const [draft, setDraft] = useState<FooterDraft>({});
+  const [hasFooterChanges, setHasFooterChanges] = useState(false);
+  const [hasCanvasChanges, setHasCanvasChanges] = useState(false);
 
   const activeProcess = processes.find((p) => p.id === activeProcessId) || null;
+
+  /** Read the effective value for a footer field: draft wins, then process field, then XML. */
+  const readEffective = <K extends keyof FooterDraft>(
+    key: K,
+    xmlAttr: string
+  ): FooterDraft[K] | undefined => {
+    if (key in draft) return draft[key];
+    if (key === 'language' || key === 'organization') {
+      const v = activeProcess?.[key as 'language' | 'organization'];
+      if (v) return v as FooterDraft[K];
+    }
+    const m = currentXml.match(new RegExp(`ronl:${xmlAttr}="([^"]+)"`));
+    return (m?.[1] as FooterDraft[K]) ?? undefined;
+  };
+
+  /** True when the user has unsaved canvas edits or unsaved footer edits. */
+  const hasUnsavedChanges = hasCanvasChanges || hasFooterChanges;
+
+  /** Confirm with the user before discarding unsaved changes. Returns true to proceed. */
+  const confirmDiscardIfDirty = (): boolean => {
+    if (!hasUnsavedChanges) return true;
+    return window.confirm(
+      'You have unsaved changes on this process.\n\nDiscard them and continue?'
+    );
+  };
+
+  const resetEditState = () => {
+    setDraft({});
+    setHasFooterChanges(false);
+    setHasCanvasChanges(false);
+  };
 
   /**
    * Seed / refresh versioned example processes on mount.
@@ -226,6 +285,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   }, []);
 
   const handleCreateProcess = () => {
+    if (!confirmDiscardIfDirty()) return;
     const newProcess: BpmnProcess = {
       id: `process_${Date.now()}`,
       name: 'New Process',
@@ -240,6 +300,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     setProcesses(BpmnService.getProcesses());
     setActiveProcessId(newProcess.id);
     setCurrentXml(newProcess.xml);
+    resetEditState();
   };
 
   const handleImportProcess = (xml: string, name: string, inferredLanguage?: string) => {
@@ -265,24 +326,46 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     setProcesses(BpmnService.getProcesses());
     setActiveProcessId(newProcess.id);
     setCurrentXml(xml);
+    resetEditState();
   };
 
   const handleLoadProcess = (processId: string) => {
+    if (processId === activeProcessId) return;
+    if (!confirmDiscardIfDirty()) return;
     const process = BpmnService.getProcess(processId);
     if (process) {
       setActiveProcessId(process.id);
       setCurrentXml(process.xml);
+      resetEditState();
     }
   };
 
   const handleSaveProcess = (xml: string) => {
     if (!activeProcessId) return;
     const process = BpmnService.getProcess(activeProcessId);
-    if (process) {
-      BpmnService.saveProcess({ ...process, xml, updatedAt: new Date().toISOString() });
-      setProcesses(BpmnService.getProcesses());
-      setCurrentXml(xml);
-    }
+    if (!process) return;
+
+    // Apply pending footer edits to the XML.
+    let mergedXml = xml;
+    if ('language' in draft) mergedXml = applyRonlAttr(mergedXml, 'language', draft.language);
+    if ('organization' in draft)
+      mergedXml = applyRonlAttr(mergedXml, 'organization', draft.organization);
+    if ('ropaRef' in draft) mergedXml = applyRonlAttr(mergedXml, 'ropaRef', draft.ropaRef);
+    if ('dsoActiviteitUrn' in draft)
+      mergedXml = applyRonlAttr(mergedXml, 'dsoActiviteitUrn', draft.dsoActiviteitUrn);
+
+    const merged: BpmnProcess = {
+      ...process,
+      xml: mergedXml,
+      language: 'language' in draft ? draft.language : process.language,
+      organization: 'organization' in draft ? draft.organization : process.organization,
+      updatedAt: new Date().toISOString(),
+    };
+
+    BpmnService.saveProcess(merged);
+    setProcesses(BpmnService.getProcesses());
+    setCurrentXml(mergedXml);
+    resetEditState();
   };
 
   const handleDeleteProcess = (processId: string) => {
@@ -310,130 +393,34 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   };
 
   const handleCloseProcess = () => {
+    if (!confirmDiscardIfDirty()) return;
     setActiveProcessId(null);
     setCurrentXml(DEFAULT_BPMN_XML);
+    resetEditState();
   };
 
   const handleRopaRefChange = (ropaRef: string | undefined) => {
     if (!activeProcessId) return;
-    const process = BpmnService.getProcess(activeProcessId);
-    if (!process) return;
-
-    let xml = process.xml;
-
-    // Ensure the ronl namespace is declared on the definitions element
-    if (!xml.includes('xmlns:ronl=')) {
-      xml = xml.replace(/(<(?:bpmn:)?definitions\b)/, '$1 xmlns:ronl="http://ronl.nl/schema/1.0"');
-    }
-
-    if (ropaRef) {
-      if (xml.includes('ronl:ropaRef=')) {
-        xml = xml.replace(/ronl:ropaRef="[^"]*"/, `ronl:ropaRef="${ropaRef}"`);
-      } else {
-        // Inject into the <bpmn:process> opening tag before its closing > or />
-        xml = xml.replace(/(<(?:bpmn:)?process\b[^>]*?)(\/?>)/, `$1 ronl:ropaRef="${ropaRef}"$2`);
-      }
-    } else {
-      xml = xml.replace(/\s*ronl:ropaRef="[^"]*"/, '');
-    }
-
-    BpmnService.saveProcess({ ...process, xml, updatedAt: new Date().toISOString() });
-    setProcesses(BpmnService.getProcesses());
-    setCurrentXml(xml);
+    setDraft((d) => ({ ...d, ropaRef }));
+    setHasFooterChanges(true);
   };
 
-  const handleDsoActiviteitUrnChange = (urn: string | undefined) => {
+  const handleDsoActiviteitUrnChange = (dsoActiviteitUrn: string | undefined) => {
     if (!activeProcessId) return;
-    const process = BpmnService.getProcess(activeProcessId);
-    if (!process) return;
-
-    let xml = process.xml;
-
-    if (!xml.includes('xmlns:ronl=')) {
-      xml = xml.replace(/(<(?:bpmn:)?definitions\b)/, '$1 xmlns:ronl="http://ronl.nl/schema/1.0"');
-    }
-
-    if (urn) {
-      if (xml.includes('ronl:dsoActiviteitUrn=')) {
-        xml = xml.replace(/ronl:dsoActiviteitUrn="[^"]*"/, `ronl:dsoActiviteitUrn="${urn}"`);
-      } else {
-        xml = xml.replace(
-          /(<(?:bpmn:)?process\b[^>]*?)(\/?>)/,
-          `$1 ronl:dsoActiviteitUrn="${urn}"$2`
-        );
-      }
-    } else {
-      xml = xml.replace(/\s*ronl:dsoActiviteitUrn="[^"]*"/, '');
-    }
-
-    BpmnService.saveProcess({ ...process, xml, updatedAt: new Date().toISOString() });
-    setProcesses(BpmnService.getProcesses());
-    setCurrentXml(xml);
+    setDraft((d) => ({ ...d, dsoActiviteitUrn }));
+    setHasFooterChanges(true);
   };
 
   const handleLanguageChange = (language: string | undefined) => {
     if (!activeProcessId) return;
-    const process = BpmnService.getProcess(activeProcessId);
-    if (!process) return;
-
-    let xml = process.xml;
-
-    if (!xml.includes('xmlns:ronl=')) {
-      xml = xml.replace(/(<(?:bpmn:)?definitions\b)/, '$1 xmlns:ronl="http://ronl.nl/schema/1.0"');
-    }
-
-    if (language) {
-      if (xml.includes('ronl:language=')) {
-        xml = xml.replace(/ronl:language="[^"]*"/, `ronl:language="${language}"`);
-      } else {
-        xml = xml.replace(/(<(?:bpmn:)?process\b[^>]*?)(\/?>)/, `$1 ronl:language="${language}"$2`);
-      }
-    } else {
-      xml = xml.replace(/\s*ronl:language="[^"]*"/, '');
-    }
-
-    BpmnService.saveProcess({
-      ...process,
-      xml,
-      language: language as BpmnProcess['language'],
-      updatedAt: new Date().toISOString(),
-    });
-    setProcesses(BpmnService.getProcesses());
-    setCurrentXml(xml);
+    setDraft((d) => ({ ...d, language: language as BpmnProcess['language'] }));
+    setHasFooterChanges(true);
   };
 
   const handleOrganizationChange = (organization: string | undefined) => {
     if (!activeProcessId) return;
-    const process = BpmnService.getProcess(activeProcessId);
-    if (!process) return;
-
-    let xml = process.xml;
-
-    if (!xml.includes('xmlns:ronl=')) {
-      xml = xml.replace(/(<(?:bpmn:)?definitions\b)/, '$1 xmlns:ronl="http://ronl.nl/schema/1.0"');
-    }
-
-    if (organization) {
-      if (xml.includes('ronl:organization=')) {
-        xml = xml.replace(/ronl:organization="[^"]*"/, `ronl:organization="${organization}"`);
-      } else {
-        xml = xml.replace(
-          /(<(?:bpmn:)?process\b[^>]*?)(\/?>)/,
-          `$1 ronl:organization="${organization}"$2`
-        );
-      }
-    } else {
-      xml = xml.replace(/\s*ronl:organization="[^"]*"/, '');
-    }
-
-    BpmnService.saveProcess({
-      ...process,
-      xml,
-      organization,
-      updatedAt: new Date().toISOString(),
-    });
-    setProcesses(BpmnService.getProcesses());
-    setCurrentXml(xml);
+    setDraft((d) => ({ ...d, organization }));
+    setHasFooterChanges(true);
   };
 
   return (
@@ -442,6 +429,10 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         processes={processes}
         activeProcessId={activeProcessId}
         activeProcess={activeProcess}
+        effectiveLanguage={readEffective('language', 'language')}
+        effectiveOrganization={readEffective('organization', 'organization')}
+        effectiveRopaRef={readEffective('ropaRef', 'ropaRef')}
+        effectiveDsoUrn={readEffective('dsoActiviteitUrn', 'dsoActiviteitUrn')}
         onCreateProcess={handleCreateProcess}
         onImportProcess={handleImportProcess}
         onLoadProcess={handleLoadProcess}
@@ -457,6 +448,8 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           <BpmnCanvas
             xml={currentXml}
             endpoint={endpoint}
+            hasFooterChanges={hasFooterChanges}
+            onDirtyChange={setHasCanvasChanges}
             onSave={handleSaveProcess}
             onElementSelect={() => {}}
             onClose={handleCloseProcess}

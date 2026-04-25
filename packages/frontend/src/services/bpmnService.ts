@@ -30,6 +30,8 @@ export class BpmnService {
           calledElement: process.calledElement,
           linkedDmnTemplates: process.linkedDmnTemplates,
           status: process.status,
+          language: process.language,
+          organization: process.organization,
           createdAt: process.createdAt,
           updatedAt: process.updatedAt,
         }),

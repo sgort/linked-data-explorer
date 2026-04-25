@@ -21,9 +21,8 @@ const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
 }) => {
   const listId = useId();
 
-  const handleBlur = (value: string) => {
-    const trimmed = value.trim();
-    onOrganizationChange(trimmed === '' ? undefined : trimmed);
+  const handleChange = (value: string) => {
+    onOrganizationChange(value === '' ? undefined : value);
   };
 
   return (
@@ -38,13 +37,8 @@ const OrganizationSelector: React.FC<OrganizationSelectorProps> = ({
       <input
         type="text"
         list={listId}
-        defaultValue={currentOrganization ?? ''}
-        onBlur={(e) => handleBlur(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            (e.target as HTMLInputElement).blur();
-          }
-        }}
+        value={currentOrganization ?? ''}
+        onChange={(e) => handleChange(e.target.value)}
         disabled={disabled}
         placeholder="e.g. flevoland"
         className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs
