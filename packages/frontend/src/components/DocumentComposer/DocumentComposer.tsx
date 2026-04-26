@@ -86,7 +86,6 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
     } else if (existing.length > 0) {
       setTemplates(existing);
     }
-     
   }, []);
 
   const activeTemplate = templates.find((t) => t.id === activeTemplateId) ?? null;
