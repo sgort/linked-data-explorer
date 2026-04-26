@@ -16,6 +16,9 @@ interface FormListProps {
   forms: FormSchema[];
   activeFormId: string | null;
   activeForm?: FormSchema | null;
+  /** Effective values for the footer (draft-aware, computed by parent). */
+  effectiveLanguage?: FormSchema['language'];
+  effectiveOrganization?: string;
   onCreateForm: () => void;
   onImportForm: (schema: Record<string, unknown>, name: string, inferredLanguage?: string) => void;
   onLoadForm: (formId: string) => void;
@@ -29,6 +32,8 @@ const FormList: React.FC<FormListProps> = ({
   forms,
   activeFormId,
   activeForm,
+  effectiveLanguage,
+  effectiveOrganization,
   onCreateForm,
   onImportForm,
   onLoadForm,
@@ -270,13 +275,13 @@ const FormList: React.FC<FormListProps> = ({
       {activeForm && (
         <div className="border-t border-slate-200 bg-slate-50 shrink-0 max-h-[50vh] overflow-y-auto">
           <LanguageSelector
-            currentLanguage={activeForm.language}
+            currentLanguage={effectiveLanguage as LanguageCode | undefined}
             onLanguageChange={(lang) => onLanguageChange?.(lang)}
             disabled={!onLanguageChange || activeForm.readonly}
           />
           <div className="border-t border-slate-200">
             <OrganizationSelector
-              currentOrganization={activeForm.organization}
+              currentOrganization={effectiveOrganization}
               onOrganizationChange={(org) => onOrganizationChange?.(org)}
               suggestions={organizationSuggestions}
               disabled={!onOrganizationChange || activeForm.readonly}

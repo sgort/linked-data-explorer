@@ -70,11 +70,39 @@ const EXAMPLE_FORMS = [
   },
 ];
 
+type FooterDraft = {
+  language?: FormSchema['language'];
+  organization?: string;
+};
+
 const FormEditor: React.FC = () => {
   const [forms, setForms] = useState<FormSchema[]>(FormService.getForms());
   const [activeFormId, setActiveFormId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<FooterDraft>({});
+  const [hasFooterChanges, setHasFooterChanges] = useState(false);
+  const [hasCanvasChanges, setHasCanvasChanges] = useState(false);
 
   const activeForm = forms.find((f) => f.id === activeFormId) || null;
+
+  /** True when the user has unsaved canvas edits or unsaved footer edits. */
+  const hasUnsavedChanges = hasCanvasChanges || hasFooterChanges;
+
+  /** Confirm with the user before discarding unsaved changes. Returns true to proceed. */
+  const confirmDiscardIfDirty = (): boolean => {
+    if (!hasUnsavedChanges) return true;
+    return window.confirm('You have unsaved changes on this form.\n\nDiscard them and continue?');
+  };
+
+  const resetEditState = () => {
+    setDraft({});
+    setHasFooterChanges(false);
+    setHasCanvasChanges(false);
+  };
+
+  /** Effective footer value: draft wins when user has touched the field, else committed value. */
+  const effectiveLanguage = 'language' in draft ? draft.language : activeForm?.language;
+  const effectiveOrganization =
+    'organization' in draft ? draft.organization : activeForm?.organization;
 
   /**
    * Seed / refresh versioned example forms on mount.
@@ -118,6 +146,7 @@ const FormEditor: React.FC = () => {
   }, []);
 
   const handleCreateForm = () => {
+    if (!confirmDiscardIfDirty()) return;
     const newForm: FormSchema = {
       id: `form_${Date.now()}`,
       name: 'New Form',
@@ -136,6 +165,7 @@ const FormEditor: React.FC = () => {
     FormService.saveForm(newForm);
     setForms(FormService.getForms());
     setActiveFormId(newForm.id);
+    resetEditState();
   };
 
   const handleImportForm = (
@@ -155,20 +185,34 @@ const FormEditor: React.FC = () => {
     FormService.saveForm(newForm);
     setForms(FormService.getForms());
     setActiveFormId(newForm.id);
+    resetEditState();
   };
 
   const handleLoadForm = (formId: string) => {
+    if (formId === activeFormId) return;
+    if (!confirmDiscardIfDirty()) return;
     const form = FormService.getForm(formId);
-    if (form) setActiveFormId(form.id);
+    if (form) {
+      setActiveFormId(form.id);
+      resetEditState();
+    }
   };
 
   const handleSaveForm = (schema: Record<string, unknown>) => {
     if (!activeFormId) return;
     const form = FormService.getForm(activeFormId);
-    if (form) {
-      FormService.saveForm({ ...form, schema, updatedAt: new Date().toISOString() });
-      setForms(FormService.getForms());
-    }
+    if (!form) return;
+
+    const merged: FormSchema = {
+      ...form,
+      schema,
+      language: 'language' in draft ? draft.language : form.language,
+      organization: 'organization' in draft ? draft.organization : form.organization,
+      updatedAt: new Date().toISOString(),
+    };
+    FormService.saveForm(merged);
+    setForms(FormService.getForms());
+    resetEditState();
   };
 
   const handleDeleteForm = (formId: string) => {
@@ -180,7 +224,10 @@ const FormEditor: React.FC = () => {
     if (confirm('Delete this form?')) {
       FormService.deleteForm(formId);
       setForms(FormService.getForms());
-      if (activeFormId === formId) setActiveFormId(null);
+      if (activeFormId === formId) {
+        setActiveFormId(null);
+        resetEditState();
+      }
     }
   };
 
@@ -194,27 +241,30 @@ const FormEditor: React.FC = () => {
 
   const handleLanguageChange = (language: FormSchema['language']) => {
     if (!activeFormId) return;
-    const form = FormService.getForm(activeFormId);
-    if (!form) return;
-    FormService.saveForm({ ...form, language, updatedAt: new Date().toISOString() });
-    setForms(FormService.getForms());
+    setDraft((d) => ({ ...d, language }));
+    setHasFooterChanges(true);
   };
 
   const handleOrganizationChange = (organization: string | undefined) => {
     if (!activeFormId) return;
-    const form = FormService.getForm(activeFormId);
-    if (!form) return;
-    FormService.saveForm({ ...form, organization, updatedAt: new Date().toISOString() });
-    setForms(FormService.getForms());
+    setDraft((d) => ({ ...d, organization }));
+    setHasFooterChanges(true);
   };
 
-  const handleCloseForm = () => setActiveFormId(null);
+  const handleCloseForm = () => {
+    if (!confirmDiscardIfDirty()) return;
+    setActiveFormId(null);
+    resetEditState();
+  };
+
   return (
     <div className="flex h-full bg-slate-50">
       <FormList
         forms={forms}
         activeFormId={activeFormId}
         activeForm={activeForm}
+        effectiveLanguage={effectiveLanguage}
+        effectiveOrganization={effectiveOrganization}
         onCreateForm={handleCreateForm}
         onImportForm={handleImportForm}
         onLoadForm={handleLoadForm}
@@ -229,6 +279,8 @@ const FormEditor: React.FC = () => {
           <FormCanvas
             key={activeFormId}
             schema={activeForm.schema}
+            hasFooterChanges={hasFooterChanges}
+            onDirtyChange={setHasCanvasChanges}
             onSave={handleSaveForm}
             onClose={handleCloseForm}
           />

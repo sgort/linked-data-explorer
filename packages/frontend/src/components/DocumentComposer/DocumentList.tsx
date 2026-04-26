@@ -16,6 +16,9 @@ interface DocumentListProps {
   templates: DocumentTemplate[];
   activeTemplateId: string | null;
   activeTemplate?: DocumentTemplate | null;
+  /** Effective values for the footer (draft-aware, computed by parent). */
+  effectiveLanguage?: DocumentTemplate['language'];
+  effectiveOrganization?: string;
   onCreateTemplate: () => void;
   onImportTemplate: (template: DocumentTemplate) => void;
   onLoadTemplate: (id: string) => void;
@@ -29,6 +32,8 @@ const DocumentList: React.FC<DocumentListProps> = ({
   templates,
   activeTemplateId,
   activeTemplate,
+  effectiveLanguage,
+  effectiveOrganization,
   onCreateTemplate,
   onImportTemplate,
   onLoadTemplate,
@@ -287,13 +292,13 @@ const DocumentList: React.FC<DocumentListProps> = ({
       {activeTemplate && (
         <div className="border-t border-slate-200 bg-slate-50 shrink-0 max-h-[50vh] overflow-y-auto">
           <LanguageSelector
-            currentLanguage={activeTemplate.language}
+            currentLanguage={effectiveLanguage as LanguageCode | undefined}
             onLanguageChange={(lang) => onLanguageChange?.(lang)}
             disabled={!onLanguageChange || activeTemplate.readonly}
           />
           <div className="border-t border-slate-200">
             <OrganizationSelector
-              currentOrganization={activeTemplate.organization}
+              currentOrganization={effectiveOrganization}
               onOrganizationChange={(org) => onOrganizationChange?.(org)}
               suggestions={organizationSuggestions}
               disabled={!onOrganizationChange || activeTemplate.readonly}

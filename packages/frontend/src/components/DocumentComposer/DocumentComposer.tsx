@@ -24,7 +24,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { FileText, Image as ImageIcon, Layers } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { DocumentService } from '../../services/documentService';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -40,11 +40,23 @@ interface DocumentComposerProps {
   endpoint: string;
 }
 
+type FooterDraft = {
+  language?: DocumentTemplate['language'];
+  organization?: string;
+};
+
 const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
   const [templates, setTemplates] = useState<DocumentTemplate[]>(DocumentService.getTemplates());
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [footerDraft, setFooterDraft] = useState<FooterDraft>({});
+  const [hasFooterChanges, setHasFooterChanges] = useState(false);
   const [activeDragData, setActiveDragData] = useState<unknown>(null);
+
+  // Suppresses dirty-flag during template load. Children (TipTap, etc.) may fire
+  // synthetic update events during mount/prop-change — we mark the load window
+  // and ignore those, then clear the flag on the next macrotask.
+  const isLoadingRef = useRef(false);
 
   // Drag events forwarded to DocumentCanvas
   const [lastDragEnd, setLastDragEnd] = useState<DragEndEvent | null>(null);
@@ -69,14 +81,12 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
     if (seeded) {
       const all = DocumentService.getTemplates();
       setTemplates(all);
+      beginLoadWindow();
       setActiveTemplateId(DEFAULT_TEMPLATES[0].id);
     } else if (existing.length > 0) {
       setTemplates(existing);
     }
-  }, []);
-
-  useEffect(() => {
-    DocumentService.hydrateFromServer().then(setTemplates);
+     
   }, []);
 
   const activeTemplate = templates.find((t) => t.id === activeTemplateId) ?? null;
@@ -85,7 +95,25 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
 
   const refreshTemplates = () => setTemplates(DocumentService.getTemplates());
 
+  /** True when canvas content OR footer metadata has unsaved edits. */
+  const hasUnsavedChanges = hasChanges || hasFooterChanges;
+
+  /** Confirm with the user before discarding unsaved changes. Returns true to proceed. */
+  const confirmDiscardIfDirty = (): boolean => {
+    if (!hasUnsavedChanges) return true;
+    return window.confirm(
+      'You have unsaved changes on this document.\n\nDiscard them and continue?'
+    );
+  };
+
+  const resetEditState = () => {
+    setHasChanges(false);
+    setFooterDraft({});
+    setHasFooterChanges(false);
+  };
+
   const handleCreateTemplate = () => {
+    if (!confirmDiscardIfDirty()) return;
     const now = new Date().toISOString();
     const newTemplate: DocumentTemplate = {
       id: `doc_${Date.now()}`,
@@ -108,20 +136,26 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
     };
     DocumentService.saveTemplate(newTemplate);
     refreshTemplates();
+    beginLoadWindow();
     setActiveTemplateId(newTemplate.id);
-    setHasChanges(false);
+    resetEditState();
   };
 
   const handleImportTemplate = (template: DocumentTemplate) => {
+    if (!confirmDiscardIfDirty()) return;
     DocumentService.saveTemplate(template);
     refreshTemplates();
+    beginLoadWindow();
     setActiveTemplateId(template.id);
-    setHasChanges(false);
+    resetEditState();
   };
 
   const handleLoadTemplate = (id: string) => {
+    if (id === activeTemplateId) return;
+    if (!confirmDiscardIfDirty()) return;
+    beginLoadWindow();
     setActiveTemplateId(id);
-    setHasChanges(false);
+    resetEditState();
   };
 
   const handleDeleteTemplate = (id: string) => {
@@ -145,31 +179,51 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
 
   const handleLanguageChange = (language: DocumentTemplate['language']) => {
     if (!activeTemplateId) return;
-    const t = DocumentService.getTemplate(activeTemplateId);
-    if (!t) return;
-    DocumentService.saveTemplate({ ...t, language, updatedAt: new Date().toISOString() });
-    refreshTemplates();
+    setFooterDraft((d) => ({ ...d, language }));
+    setHasFooterChanges(true);
   };
 
   const handleOrganizationChange = (organization: string | undefined) => {
     if (!activeTemplateId) return;
-    const t = DocumentService.getTemplate(activeTemplateId);
-    if (!t) return;
-    DocumentService.saveTemplate({ ...t, organization, updatedAt: new Date().toISOString() });
-    refreshTemplates();
+    setFooterDraft((d) => ({ ...d, organization }));
+    setHasFooterChanges(true);
   };
 
   const handleTemplateChange = (updated: DocumentTemplate) => {
-    setHasChanges(true);
-    // Optimistic UI — update in memory; only persist on explicit save
+    // Optimistic UI — update in memory; only persist on explicit save.
+    // Always apply the in-memory change so the canvas stays in sync, but only
+    // flip the dirty flag for genuine user edits (not for synthetic onUpdate
+    // events fired by child editors during template load).
     setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    if (!isLoadingRef.current) {
+      setHasChanges(true);
+    }
+  };
+
+  /** Open a load window: subsequent template-change events are ignored for dirty-flag
+   *  purposes. The window closes on the next macrotask, after React has flushed
+   *  the synchronous render cascade triggered by setActiveTemplateId / setTemplates. */
+  const beginLoadWindow = () => {
+    isLoadingRef.current = true;
+    // setTimeout(0) closes the window after React's render + microtasks have settled.
+    // requestAnimationFrame would also work but is unnecessarily delayed.
+    setTimeout(() => {
+      isLoadingRef.current = false;
+    }, 0);
   };
 
   const handleSave = () => {
     if (!activeTemplate || activeTemplate.readonly) return;
-    DocumentService.saveTemplate({ ...activeTemplate, updatedAt: new Date().toISOString() });
+    const merged: DocumentTemplate = {
+      ...activeTemplate,
+      language: 'language' in footerDraft ? footerDraft.language : activeTemplate.language,
+      organization:
+        'organization' in footerDraft ? footerDraft.organization : activeTemplate.organization,
+      updatedAt: new Date().toISOString(),
+    };
+    DocumentService.saveTemplate(merged);
     refreshTemplates();
-    setHasChanges(false);
+    resetEditState();
   };
 
   const handleSaveAs = () => {
@@ -181,6 +235,10 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
       ...activeTemplate,
       id: `doc_${Date.now()}`,
       name: name.trim(),
+      // Save As also captures any pending draft footer values.
+      language: 'language' in footerDraft ? footerDraft.language : activeTemplate.language,
+      organization:
+        'organization' in footerDraft ? footerDraft.organization : activeTemplate.organization,
       readonly: false,
       status: 'wip',
       createdAt: now,
@@ -189,7 +247,7 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
     DocumentService.saveTemplate(newTemplate);
     refreshTemplates();
     setActiveTemplateId(newTemplate.id);
-    setHasChanges(false);
+    resetEditState();
   };
 
   const handleExport = () => {
@@ -207,7 +265,17 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
     URL.revokeObjectURL(url);
   };
 
-  const handleClose = () => setActiveTemplateId(null);
+  const handleClose = () => {
+    if (!confirmDiscardIfDirty()) return;
+    setActiveTemplateId(null);
+    resetEditState();
+  };
+
+  /** Effective footer values: draft wins when touched, else committed. */
+  const effectiveLanguage =
+    'language' in footerDraft ? footerDraft.language : activeTemplate?.language;
+  const effectiveOrganization =
+    'organization' in footerDraft ? footerDraft.organization : activeTemplate?.organization;
 
   // ─── Binding panel callbacks ───────────────────────────────────────────
 
@@ -268,6 +336,8 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
           templates={templates}
           activeTemplateId={activeTemplateId}
           activeTemplate={activeTemplate}
+          effectiveLanguage={effectiveLanguage}
+          effectiveOrganization={effectiveOrganization}
           onCreateTemplate={handleCreateTemplate}
           onImportTemplate={handleImportTemplate}
           onLoadTemplate={handleLoadTemplate}
@@ -298,7 +368,7 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
           {activeTemplate ? (
             <DocumentCanvas
               template={activeTemplate}
-              hasChanges={hasChanges}
+              hasChanges={hasUnsavedChanges}
               onTemplateChange={handleTemplateChange}
               onSave={handleSave}
               onSaveAs={handleSaveAs}
