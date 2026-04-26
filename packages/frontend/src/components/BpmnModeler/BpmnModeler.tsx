@@ -363,6 +363,48 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     };
 
     BpmnService.saveProcess(merged);
+
+    // ─── Shell → subprocess propagation ─────────────────────────────────────
+    // When saving a shell, push the shell's CURRENT language and organization down
+    // to every linked subprocess. Shell wins unconditionally — a deployed bundle
+    // is one logical unit and should be coherent on those two fields, regardless
+    // of whether the user touched language/organization this session. RoPA and
+    // DSO are NOT propagated (each subprocess has its own RoPA and DSO context).
+    //
+    // Skip propagation only when both fields are unset on the shell — there's
+    // nothing to enforce, and we'd needlessly bump subprocess updatedAt timestamps.
+    if (
+      merged.processRole === 'shell' &&
+      merged.bpmnProcessId &&
+      (merged.language || merged.organization)
+    ) {
+      const linkedSubs = BpmnService.getProcesses().filter(
+        (p) =>
+          p.processRole === 'subprocess' &&
+          p.calledElement === merged.bpmnProcessId &&
+          !p.readonly &&
+          p.id !== merged.id
+      );
+      const nowIso = new Date().toISOString();
+      for (const sub of linkedSubs) {
+        // Skip if subprocess is already aligned with the shell on both fields.
+        if (sub.language === merged.language && sub.organization === merged.organization) continue;
+
+        let subXml = sub.xml;
+        subXml = applyRonlAttr(subXml, 'language', merged.language);
+        subXml = applyRonlAttr(subXml, 'organization', merged.organization);
+        const subMerged: BpmnProcess = {
+          ...sub,
+          xml: subXml,
+          language: merged.language,
+          organization: merged.organization,
+          updatedAt: nowIso,
+        };
+        BpmnService.saveProcess(subMerged);
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     setProcesses(BpmnService.getProcesses());
     setCurrentXml(mergedXml);
     resetEditState();
