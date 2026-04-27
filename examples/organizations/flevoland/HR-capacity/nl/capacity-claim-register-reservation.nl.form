@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-register-reservation-nl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Financiële reservering registreren"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Leg de door de Directie goedgekeurde capaciteitsclaim vast als reservering in het financiële systeem. Bij formatie kan de reservering ongeveer een maand na de startdatum van de medewerker worden verwijderd (salaris wordt dan als feitelijke uitgave geboekt). Bij inhuur kan de reservering worden omgezet in een verplichting op het moment dat de feitelijke verplichting wordt aangegaan."
+    },
+    {
+      "id": "Field_RequestType",
+      "type": "textfield",
+      "label": "Type aanvraag",
+      "key": "requestType",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_OrganizationalUnit",
+      "type": "textfield",
+      "label": "Organisatieonderdeel",
+      "key": "organizationalUnit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_AnnualCostsAfter",
+      "type": "number",
+      "label": "Jaarkosten uit claim (€)",
+      "key": "annualCostsAfter",
+      "decimalDigits": 2,
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_FundingSource",
+      "type": "textfield",
+      "label": "Dekkingsbron",
+      "key": "fundingSource",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ReservationType",
+      "type": "select",
+      "label": "Type reservering",
+      "key": "reservationType",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Formatie — salarisreservering", "value": "staffing-salary" },
+        { "label": "Inhuur — verplichtingenreservering", "value": "hiring-obligation" }
+      ]
+    },
+    {
+      "id": "Field_ReservationId",
+      "type": "textfield",
+      "label": "Reserverings-id",
+      "key": "reservationId",
+      "description": "Identificatie uit het financiële softwarepakket.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ReservationAmount",
+      "type": "number",
+      "label": "Reserveringsbedrag (€)",
+      "key": "reservationAmount",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_ReservationDate",
+      "type": "datetime",
+      "label": "Datum reservering",
+      "key": "reservationDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_PlannedRemovalDate",
+      "type": "datetime",
+      "label": "Geplande verwijderings-/omzettingsdatum",
+      "key": "plannedRemovalDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "description": "Bij formatie: ongeveer één maand na de startdatum. Bij inhuur: wanneer de verplichting naar verwachting wordt aangegaan."
+    },
+    {
+      "id": "Field_RegisteredBy",
+      "type": "textfield",
+      "label": "Reservering vastgelegd door",
+      "key": "registeredBy",
+      "description": "Naam van de financieel controller.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Reservering vastleggen",
+      "action": "submit"
+    }
+  ]
+}

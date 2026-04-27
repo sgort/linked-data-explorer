@@ -7,66 +7,157 @@ import { EXAMPLE_VERSIONS, getStoredVersion, setStoredVersion } from '../../util
 import FormCanvas from './FormCanvas';
 import FormList from './FormList';
 
-const EXAMPLE_FORMS = [
+const EXAMPLE_FORMS: ReadonlyArray<{
+  id: string;
+  name: string;
+  description: string;
+  path: string;
+  language?: 'en' | 'nl' | 'de';
+  organization?: string;
+}> = [
   {
     id: 'example_kapvergunning_start',
     name: 'Kapvergunning Start (Example)',
     description: 'Citizen-facing start form for the AWB Tree Felling Permit process',
     path: '/examples/flevoland/kapvergunning-start.form',
+    language: 'en',
+    organization: 'Flevoland',
   },
   {
     id: 'example_tree_felling_review',
     name: 'Tree Felling Review (Example)',
     description: 'Caseworker review form for the Tree Felling Permit subprocess',
     path: '/examples/flevoland/tree-felling-review.form',
+    language: 'en',
+    organization: 'Flevoland',
   },
   {
     id: 'example_awb_notify_applicant',
     name: 'AWB Notify Applicant (Example)',
     description: 'Phase 6 notification form for the AWB Shell process (Awb 3:6)',
     path: '/examples/flevoland/awb-notify-applicant.form',
+    language: 'en',
+    organization: 'Flevoland',
   },
   {
     id: 'example_zorgtoeslag_notify_applicant',
     name: 'Zorgtoeslag Notify Applicant (Example)',
     description: 'Phase 6 notification form for the AWB Zorgtoeslag process (Awb 3:6)',
     path: '/examples/toeslagen/zorgtoeslag-notify-applicant.form',
+    language: 'en',
+    organization: 'Toeslagen',
   },
   {
     id: 'example_zorgtoeslag_provisional_start',
     name: 'Zorgtoeslag Provisional Start (Example)',
     description: 'Citizen-facing start form for the Zorgtoeslag Provisional Entitlement process',
     path: '/examples/toeslagen/zorgtoeslag-provisional-start.form',
+    language: 'en',
+    organization: 'Toeslagen',
   },
   {
     id: 'example_zorgtoeslag_provisional_review',
     name: 'Zorgtoeslag Provisional Review (Example)',
     description: 'Caseworker review form for the Zorgtoeslag Provisional Entitlement subprocess',
     path: '/examples/toeslagen/zorgtoeslag-provisional-review.form',
+    language: 'en',
+    organization: 'Toeslagen',
   },
   {
     id: 'example_zorgtoeslag_final_review',
     name: 'Zorgtoeslag Final Settlement Review (Example)',
     description: 'Caseworker review form for the Zorgtoeslag Final Settlement subprocess',
     path: '/examples/toeslagen/zorgtoeslag-final-review.form',
+    language: 'en',
+    organization: 'Toeslagen',
   },
   {
     id: 'example_dvtp_consent_start',
     name: 'DvTP Consent Start (Example)',
     description: 'Citizen start form for the DvTP consent-granting process (Flow A)',
     path: '/examples/dvtp/dvtp-consent-start.form',
+    language: 'nl',
+    organization: 'BZK',
   },
   {
     id: 'example_dvtp_consent_info',
     name: 'DvTP Consent Info (Example)',
     description: 'Pre-consent information screen — force-read (FR-05/06/07/08)',
     path: '/examples/dvtp/dvtp-consent-info.form',
+    language: 'nl',
+    organization: 'BZK',
   },
   {
     id: 'example_dvtp_consent_decision',
     name: 'DvTP Consent Decision (Example)',
     description: 'Citizen consent decision form — binary grant or refuse (FR-09/10)',
     path: '/examples/dvtp/dvtp-consent-decision.form',
+    language: 'nl',
+    organization: 'BZK',
+  },
+  {
+    id: 'example_hr_capacity_intake_nl',
+    name: 'HR — Overleggen en classificeren (Voorbeeld, NL)',
+    description: 'Dutch sibling of the capacity claim intake form.',
+    path: '/examples/flevoland/HR-capacity/nl/capacity-claim-intake.nl.form',
+    language: 'nl',
+    organization: 'Flevoland',
+  },
+  {
+    id: 'example_hr_capacity_staffing_nl',
+    name: 'HR — Formatieclaim opstellen (Voorbeeld, NL)',
+    description: 'Dutch sibling of the staffing claim form.',
+    path: '/examples/flevoland/HR-capacity/nl/capacity-claim-staffing.nl.form',
+    language: 'nl',
+    organization: 'Flevoland',
+  },
+  {
+    id: 'example_hr_capacity_hiring_nl',
+    name: 'HR — Inhuurclaim opstellen (Voorbeeld, NL)',
+    description: 'Dutch sibling of the hiring claim form.',
+    path: '/examples/flevoland/HR-capacity/nl/capacity-claim-hiring.nl.form',
+    language: 'nl',
+    organization: 'Flevoland',
+  },
+  {
+    id: 'example_hr_capacity_submit_nl',
+    name: 'HR — Agenderen Directievergadering (Voorbeeld, NL)',
+    description: 'Dutch sibling of the submit-to-board form.',
+    path: '/examples/flevoland/HR-capacity/nl/capacity-claim-submit.nl.form',
+    language: 'nl',
+    organization: 'Flevoland',
+  },
+  {
+    id: 'example_hr_capacity_board_decision_nl',
+    name: 'HR — Directiebesluit (Voorbeeld, NL)',
+    description: 'Dutch sibling of the board decision form.',
+    path: '/examples/flevoland/HR-capacity/nl/capacity-claim-board-decision.nl.form',
+    language: 'nl',
+    organization: 'Flevoland',
+  },
+  {
+    id: 'example_hr_capacity_reconsideration_nl',
+    name: 'HR — Heroverwegingsoverleg (Voorbeeld, NL)',
+    description: 'Dutch sibling of the reconsideration form.',
+    path: '/examples/flevoland/HR-capacity/nl/capacity-claim-reconsideration.nl.form',
+    language: 'nl',
+    organization: 'Flevoland',
+  },
+  {
+    id: 'example_hr_capacity_handover_nl',
+    name: 'HR — Overdracht capaciteitsclaim (Voorbeeld, NL)',
+    description: 'Dutch sibling of the handover form.',
+    path: '/examples/flevoland/HR-capacity/nl/capacity-claim-handover.nl.form',
+    language: 'nl',
+    organization: 'Flevoland',
+  },
+  {
+    id: 'example_hr_capacity_register_reservation_nl',
+    name: 'HR — Financiële reservering registreren (Voorbeeld, NL)',
+    description: 'Dutch sibling of the register reservation form.',
+    path: '/examples/flevoland/HR-capacity/nl/capacity-claim-register-reservation.nl.form',
+    language: 'nl',
+    organization: 'Flevoland',
   },
 ];
 
@@ -126,6 +217,8 @@ const FormEditor: React.FC = () => {
           updatedAt: new Date().toISOString(),
           readonly: false,
           status: 'example',
+          language: def.language,
+          organization: def.organization,
         };
         FormService.saveForm(form);
         setStoredVersion(def.id, EXAMPLE_VERSIONS[def.id]);

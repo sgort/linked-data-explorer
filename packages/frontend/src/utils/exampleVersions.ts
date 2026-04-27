@@ -17,26 +17,41 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 3,
-  example_tree_felling: 4,
-  example_awb_zorgtoeslag: 2,
-  example_zorgtoeslag_provisional: 3,
-  example_zorgtoeslag_final: 3,
+  example_awb_process: 4, // v4: organization=flevoland tagging
+  example_tree_felling: 5, // v5: organization=flevoland tagging
+  example_awb_zorgtoeslag: 3, // v3: organization=toeslagen tagging
+  example_zorgtoeslag_provisional: 4, // v4: organization=toeslagen tagging
+  example_zorgtoeslag_final: 4, // v4: organization=toeslagen tagging
+  example_hr_capacity_nl: 1, // v1: HR-capacity Dutch BPMN sibling (multilingualism release)
 
   // Camunda Forms
-  example_kapvergunning_start: 2,
-  example_tree_felling_review: 2,
-  example_awb_notify_applicant: 2,
-  example_zorgtoeslag_notify_applicant: 2,
-  example_zorgtoeslag_provisional_start: 2,
-  example_zorgtoeslag_provisional_review: 2,
-  example_zorgtoeslag_final_review: 2,
+  example_kapvergunning_start: 3, // v3: organization=flevoland tagging
+  example_tree_felling_review: 3, // v3: organization=flevoland tagging
+  example_awb_notify_applicant: 3, // v3: organization=flevoland tagging
+  example_zorgtoeslag_notify_applicant: 3, // v3: organization=toeslagen tagging
+  example_zorgtoeslag_provisional_start: 3, // v3: organization=toeslagen tagging
+  example_zorgtoeslag_provisional_review: 3, // v3: organization=toeslagen tagging
+  example_zorgtoeslag_final_review: 3, // v3: organization=toeslagen tagging
+
+  // HR-capacity Dutch forms (multilingualism release)
+  example_hr_capacity_intake_nl: 1,
+  example_hr_capacity_staffing_nl: 1,
+  example_hr_capacity_hiring_nl: 1,
+  example_hr_capacity_submit_nl: 1,
+  example_hr_capacity_board_decision_nl: 1,
+  example_hr_capacity_reconsideration_nl: 1,
+  example_hr_capacity_handover_nl: 1,
+  example_hr_capacity_register_reservation_nl: 1,
+
+  // HR-capacity Dutch documents (multilingualism release)
+  example_hr_capacity_board_doc_nl: 1,
+  example_hr_capacity_handover_doc_nl: 1,
 
   // DvTP consent bundle
-  example_dvtp_toestemming: 1, // v1: initial release — DvTP Flow A standalone process
-  example_dvtp_consent_start: 1, // v1: citizen start form for DvtpToestemmingGevenProcess
-  example_dvtp_consent_info: 1, // v1: pre-consent info screen (FR-05/06/07/08)
-  example_dvtp_consent_decision: 1, // v1: consent decision form (FR-09/10)
+  example_dvtp_toestemming: 2, // v2: organization=bzk tagging
+  example_dvtp_consent_start: 2, // v2: organization=bzk tagging
+  example_dvtp_consent_info: 2, // v2: organization=bzk tagging
+  example_dvtp_consent_decision: 2, // v2: organization=bzk tagging
 };
 
 const STORAGE_KEY = 'linkedDataExplorer_exampleVersions';

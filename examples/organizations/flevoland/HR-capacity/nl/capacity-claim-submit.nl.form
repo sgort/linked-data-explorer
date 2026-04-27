@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-submit-nl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Agenderen Directievergadering"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Bekijk de samenvatting van de capaciteitsclaim hieronder en agendeer deze op de eerstvolgende Directievergadering. Claims die na vrijdag 12:00 worden ingediend schuiven door naar de week erna."
+    },
+    {
+      "id": "Field_RequestType",
+      "type": "textfield",
+      "label": "Type aanvraag",
+      "key": "requestType",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Functietitel",
+      "key": "jobTitle",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_OrganizationalUnit",
+      "type": "textfield",
+      "label": "Organisatieonderdeel",
+      "key": "organizationalUnit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_AnnualCostsAfter",
+      "type": "number",
+      "label": "Jaarkosten (€)",
+      "key": "annualCostsAfter",
+      "decimalDigits": 2,
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_FundingSource",
+      "type": "textfield",
+      "label": "Dekkingsbron",
+      "key": "fundingSource",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_AdvisoryGroup",
+      "type": "textfield",
+      "label": "Adviesgroep (routering)",
+      "key": "advisoryGroup",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ScheduledMeetingDate",
+      "type": "datetime",
+      "label": "Geplande Directievergadering",
+      "key": "scheduledMeetingDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_SubmittedBy",
+      "type": "textfield",
+      "label": "Ingediend door",
+      "key": "submittedBy",
+      "description": "Naam van de directiesecretaris die deze claim agendeert.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_SubmissionNotes",
+      "type": "textarea",
+      "label": "Toelichting bij indiening",
+      "key": "submissionNotes",
+      "description": "Optioneel — bijvoorbeeld urgentie, samenhangende besluiten, rondgestuurde stukken."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Op de agenda zetten",
+      "action": "submit"
+    }
+  ]
+}

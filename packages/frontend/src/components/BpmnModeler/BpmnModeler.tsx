@@ -110,6 +110,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'AwbShellProcess',
           processRole: 'shell',
+          organization: 'Flevoland',
         };
         BpmnService.saveProcess(awbExample);
         setStoredVersion(awbId, EXAMPLE_VERSIONS[awbId]);
@@ -134,6 +135,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'TreeFellingPermitSubProcess',
           processRole: 'subprocess',
+          organization: 'Flevoland',
           calledElement: 'AwbShellProcess',
         };
         BpmnService.saveProcess(treeFellingExample);
@@ -164,6 +166,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'AwbZorgtoeslagProcess',
           processRole: 'shell',
+          organization: 'Toeslagen',
         };
         BpmnService.saveProcess(awbZorgExample);
         setStoredVersion(awbZorgId, EXAMPLE_VERSIONS[awbZorgId]);
@@ -189,6 +192,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'ZorgtoeslagProvisionalSubProcess',
           processRole: 'subprocess',
+          organization: 'Toeslagen',
           calledElement: 'AwbZorgtoeslagProcess',
         };
         BpmnService.saveProcess(zorgProvisionalExample);
@@ -215,6 +219,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'ZorgtoeslagFinalSubProcess',
           processRole: 'subprocess',
+          organization: 'Toeslagen',
           calledElement: 'AwbZorgtoeslagProcess',
         };
         BpmnService.saveProcess(zorgFinalExample);
@@ -241,10 +246,38 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'DvtpToestemmingGevenProcess',
           processRole: 'standalone',
+          organization: 'BZK',
         };
         BpmnService.saveProcess(dvtpExample);
         setStoredVersion(dvtpId, EXAMPLE_VERSIONS[dvtpId]);
         updated.push(dvtpExample);
+      }
+
+      // --- HR-capacity Dutch BPMN sibling (multilingualism release) ---
+      const hrCapacityNlId = 'example_hr_capacity_nl';
+      if (getStoredVersion(hrCapacityNlId) < EXAMPLE_VERSIONS[hrCapacityNlId]) {
+        const xml = await fetch(
+          '/examples/flevoland/HR-capacity/nl/ManagementCapacityClaimProcess.nl.bpmn'
+        ).then((r) => r.text());
+        const hrCapacityNlExample: BpmnProcess = {
+          id: hrCapacityNlId,
+          name: 'Beheer capaciteitsclaim — proces (Voorbeeld, NL)',
+          description:
+            'Dutch sibling of the HR-capacity Management Capacity Claim Process. Demonstrates the multilingualism feature: same DMN keys, translated labels, English variable values.',
+          xml,
+          createdAt: '2026-04-26T12:00:00.000Z',
+          updatedAt: new Date().toISOString(),
+          linkedDmnTemplates: ['CapacityClaimRouting'],
+          readonly: false,
+          status: 'example',
+          bpmnProcessId: 'ManagementCapacityClaimProcess',
+          processRole: 'standalone',
+          language: 'nl',
+          organization: 'Flevoland',
+        };
+        BpmnService.saveProcess(hrCapacityNlExample);
+        setStoredVersion(hrCapacityNlId, EXAMPLE_VERSIONS[hrCapacityNlId]);
+        updated.push(hrCapacityNlExample);
       }
 
       // --- Asylum Migration (inline WIP, no version tracking needed) ---
@@ -262,6 +295,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'wip',
           bpmnProcessId: 'Process_Migratie_en_Asiel',
           processRole: 'standalone',
+          organization: 'IND',
         };
         BpmnService.saveProcess(asylumMigration);
         updated.push(asylumMigration);

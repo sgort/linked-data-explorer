@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-board-decision-nl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Directie — besluit capaciteitsclaim"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Beoordeel de capaciteitsclaim en leg het besluit van de Directie vast. Een formele besluitnotificatie wordt vanuit deze taak gegenereerd voor de aanvragende manager."
+    },
+    {
+      "id": "Field_RequestType",
+      "type": "textfield",
+      "label": "Type aanvraag",
+      "key": "requestType",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Functietitel",
+      "key": "jobTitle",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_OrganizationalUnit",
+      "type": "textfield",
+      "label": "Organisatieonderdeel",
+      "key": "organizationalUnit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Description",
+      "type": "textarea",
+      "label": "Onderbouwing",
+      "key": "description",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_AnnualCostsAfter",
+      "type": "number",
+      "label": "Jaarkosten (€)",
+      "key": "annualCostsAfter",
+      "decimalDigits": 2,
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_FundingSource",
+      "type": "textfield",
+      "label": "Dekkingsbron",
+      "key": "fundingSource",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_HrmAdvice",
+      "type": "textarea",
+      "label": "Advies HRM",
+      "key": "hrmAdvice",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ScheduledMeetingDate",
+      "type": "datetime",
+      "label": "Datum Directievergadering",
+      "key": "scheduledMeetingDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_BoardDecision",
+      "type": "radio",
+      "label": "Besluit",
+      "key": "boardDecision",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Akkoord", "value": "approved" },
+        { "label": "Afgewezen", "value": "rejected" }
+      ]
+    },
+    {
+      "id": "Field_DecisionConditions",
+      "type": "textarea",
+      "label": "Voorwaarden (bij akkoord)",
+      "key": "decisionConditions",
+      "description": "Eventuele voorwaarden bij het akkoord — scope, rapportage, evaluatiemomenten."
+    },
+    {
+      "id": "Field_RejectionReason",
+      "type": "textarea",
+      "label": "Reden van afwijzing",
+      "key": "rejectionReason",
+      "description": "Verplicht bij afwijzing. Leg uit wat moet veranderen voor een nieuwe indiening."
+    },
+    {
+      "id": "Field_BoardMinuteReference",
+      "type": "textfield",
+      "label": "Referentie directiebesluit",
+      "key": "boardMinuteReference",
+      "description": "Bijv. notulennummer of agendapunt-id.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_DecidedBy",
+      "type": "textfield",
+      "label": "Besluit vastgelegd door",
+      "key": "decidedBy",
+      "description": "Naam van de directiesecretaris.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Besluit vastleggen",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-hiring-nl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Inhuurclaim opstellen"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Vul het Kernvoorstel voor de capaciteitsclaim in — inhuurvariant (extern, incidenteel). De Directie beslist over deze claim in haar volgende wekelijkse vergadering. Bij inhuur wordt na akkoord de planning- en controlmedewerker van het betreffende organisatieonderdeel betrokken."
+    },
+    {
+      "id": "Field_Description",
+      "type": "textarea",
+      "label": "Beschrijving en onderbouwing",
+      "key": "description",
+      "description": "Past de claim binnen het organisatiedoel en jaarprogramma? Doel en noodzaak? Zijn er alternatieven? Is de kennis al in huis of moet die van buiten komen? Past het binnen het financiële afwegingskader?",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_FunctionCode",
+      "type": "textfield",
+      "label": "Functiecode",
+      "key": "functionCode",
+      "description": "Inhuur-functiecodes bevatten doorgaans een \"I\" (bijv. \"12I03\").",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Functietitel",
+      "key": "jobTitle",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_StartDate",
+      "type": "datetime",
+      "label": "Startdatum inhuur",
+      "key": "startDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_EndDate",
+      "type": "datetime",
+      "label": "Einddatum inhuur",
+      "key": "endDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_DurationMonths",
+      "type": "number",
+      "label": "Duur (maanden)",
+      "key": "durationMonths",
+      "validate": {
+        "required": true,
+        "min": 1
+      }
+    },
+    {
+      "id": "Field_ExtensionStartDate",
+      "type": "datetime",
+      "label": "Verlengingsoptie — startdatum",
+      "key": "extensionStartDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "description": "Laat leeg als geen verlengingsoptie wordt voorzien."
+    },
+    {
+      "id": "Field_ExtensionEndDate",
+      "type": "datetime",
+      "label": "Verlengingsoptie — einddatum",
+      "key": "extensionEndDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "description": "Laat leeg als geen verlengingsoptie wordt voorzien."
+    },
+    {
+      "id": "Field_ExtensionDurationMonths",
+      "type": "number",
+      "label": "Verlengingsduur (maanden)",
+      "key": "extensionDurationMonths",
+      "description": "Laat leeg als geen verlengingsoptie wordt voorzien.",
+      "validate": {
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_HoursPerWeek",
+      "type": "number",
+      "label": "Uren per week",
+      "key": "hoursPerWeek",
+      "validate": {
+        "required": true,
+        "min": 1,
+        "max": 40
+      }
+    },
+    {
+      "id": "Field_HourlyRateMin",
+      "type": "number",
+      "label": "Uurtarief — minimum (€)",
+      "key": "hourlyRateMin",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_HourlyRateMax",
+      "type": "number",
+      "label": "Uurtarief — maximum (€)",
+      "key": "hourlyRateMax",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_AnnualCostsAfter",
+      "type": "number",
+      "label": "Jaarkosten (€)",
+      "key": "annualCostsAfter",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_FundingSource",
+      "type": "textfield",
+      "label": "Dekkingsbron",
+      "key": "fundingSource",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ProcurementDeviationReason",
+      "type": "textarea",
+      "label": "Reden voor afwijking inkoopbeleid",
+      "key": "procurementDeviationReason",
+      "description": "Indien van toepassing — na afstemming met inkoop."
+    },
+    {
+      "id": "Field_HrmAdvice",
+      "type": "textarea",
+      "label": "Advies HRM-eenheid",
+      "key": "hrmAdvice",
+      "description": "Optioneel — wordt doorgaans toegevoegd door de HR-businesspartner."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Claim opslaan",
+      "action": "submit"
+    }
+  ]
+}
