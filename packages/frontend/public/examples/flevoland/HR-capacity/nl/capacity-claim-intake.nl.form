@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-intake-nl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Capaciteitsclaim — overleg en classificatie"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Voordat u een capaciteitsclaim indient bij de Directie, overlegt u met de HR-businesspartner en de personeelscontroller. Bevestig die overleggen hier, classificeer het type aanvraag en geef de organisatorische context op. De routering en kandidaatgroepen voor het goedkeuringspad worden automatisch bepaald."
+    },
+    {
+      "id": "Field_RequestType",
+      "type": "radio",
+      "label": "Type aanvraag",
+      "key": "requestType",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Formatie (interne/externe vaste aanstelling)", "value": "staffing" },
+        { "label": "Inhuur (extern, incidenteel — via inkoop)", "value": "hiring" }
+      ]
+    },
+    {
+      "id": "Field_OrganizationalUnit",
+      "type": "textfield",
+      "label": "Organisatieonderdeel",
+      "key": "organizationalUnit",
+      "description": "Bijv. \"INH 12 - Vergunningen Omgevingswet\"",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Department",
+      "type": "select",
+      "label": "Afdeling",
+      "key": "department",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Vergunningen", "value": "vergunningen" },
+        { "label": "Infrastructuur", "value": "infrastructuur" },
+        { "label": "HR", "value": "hr" }
+      ]
+    },
+    {
+      "id": "Field_ConsultedHrbp",
+      "type": "checkbox",
+      "label": "Ik heb overlegd met de HR-businesspartner",
+      "key": "consultedHrbp",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ConsultedPersonnelController",
+      "type": "checkbox",
+      "label": "Ik heb overlegd met de personeelscontroller",
+      "key": "consultedPersonnelController",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ConsultationDate",
+      "type": "datetime",
+      "label": "Datum van overleg",
+      "key": "consultationDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_IntakeNotes",
+      "type": "textarea",
+      "label": "Notities overleg",
+      "key": "intakeNotes",
+      "description": "Vat samen welk advies u heeft ontvangen en welke afspraken zijn gemaakt."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Doorgaan",
+      "action": "submit"
+    }
+  ]
+}

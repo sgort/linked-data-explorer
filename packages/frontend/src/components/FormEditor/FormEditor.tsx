@@ -21,7 +21,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Citizen-facing start form for the AWB Tree Felling Permit process',
     path: '/examples/flevoland/kapvergunning-start.form',
     language: 'en',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
   {
     id: 'example_tree_felling_review',
@@ -29,7 +29,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Caseworker review form for the Tree Felling Permit subprocess',
     path: '/examples/flevoland/tree-felling-review.form',
     language: 'en',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
   {
     id: 'example_awb_notify_applicant',
@@ -37,7 +37,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Phase 6 notification form for the AWB Shell process (Awb 3:6)',
     path: '/examples/flevoland/awb-notify-applicant.form',
     language: 'en',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
   {
     id: 'example_zorgtoeslag_notify_applicant',
@@ -45,7 +45,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Phase 6 notification form for the AWB Zorgtoeslag process (Awb 3:6)',
     path: '/examples/toeslagen/zorgtoeslag-notify-applicant.form',
     language: 'en',
-    organization: 'Toeslagen',
+    organization: 'toeslagen',
   },
   {
     id: 'example_zorgtoeslag_provisional_start',
@@ -53,7 +53,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Citizen-facing start form for the Zorgtoeslag Provisional Entitlement process',
     path: '/examples/toeslagen/zorgtoeslag-provisional-start.form',
     language: 'en',
-    organization: 'Toeslagen',
+    organization: 'toeslagen',
   },
   {
     id: 'example_zorgtoeslag_provisional_review',
@@ -61,7 +61,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Caseworker review form for the Zorgtoeslag Provisional Entitlement subprocess',
     path: '/examples/toeslagen/zorgtoeslag-provisional-review.form',
     language: 'en',
-    organization: 'Toeslagen',
+    organization: 'toeslagen',
   },
   {
     id: 'example_zorgtoeslag_final_review',
@@ -69,7 +69,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Caseworker review form for the Zorgtoeslag Final Settlement subprocess',
     path: '/examples/toeslagen/zorgtoeslag-final-review.form',
     language: 'en',
-    organization: 'Toeslagen',
+    organization: 'toeslagen',
   },
   {
     id: 'example_dvtp_consent_start',
@@ -77,7 +77,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Citizen start form for the DvTP consent-granting process (Flow A)',
     path: '/examples/dvtp/dvtp-consent-start.form',
     language: 'nl',
-    organization: 'BZK',
+    organization: 'bzk',
   },
   {
     id: 'example_dvtp_consent_info',
@@ -85,7 +85,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Pre-consent information screen — force-read (FR-05/06/07/08)',
     path: '/examples/dvtp/dvtp-consent-info.form',
     language: 'nl',
-    organization: 'BZK',
+    organization: 'bzk',
   },
   {
     id: 'example_dvtp_consent_decision',
@@ -93,7 +93,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Citizen consent decision form — binary grant or refuse (FR-09/10)',
     path: '/examples/dvtp/dvtp-consent-decision.form',
     language: 'nl',
-    organization: 'BZK',
+    organization: 'bzk',
   },
   {
     id: 'example_hr_capacity_intake_nl',
@@ -101,7 +101,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Dutch sibling of the capacity claim intake form.',
     path: '/examples/flevoland/HR-capacity/nl/capacity-claim-intake.nl.form',
     language: 'nl',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
   {
     id: 'example_hr_capacity_staffing_nl',
@@ -109,7 +109,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Dutch sibling of the staffing claim form.',
     path: '/examples/flevoland/HR-capacity/nl/capacity-claim-staffing.nl.form',
     language: 'nl',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
   {
     id: 'example_hr_capacity_hiring_nl',
@@ -117,7 +117,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Dutch sibling of the hiring claim form.',
     path: '/examples/flevoland/HR-capacity/nl/capacity-claim-hiring.nl.form',
     language: 'nl',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
   {
     id: 'example_hr_capacity_submit_nl',
@@ -125,7 +125,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Dutch sibling of the submit-to-board form.',
     path: '/examples/flevoland/HR-capacity/nl/capacity-claim-submit.nl.form',
     language: 'nl',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
   {
     id: 'example_hr_capacity_board_decision_nl',
@@ -133,7 +133,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Dutch sibling of the board decision form.',
     path: '/examples/flevoland/HR-capacity/nl/capacity-claim-board-decision.nl.form',
     language: 'nl',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
   {
     id: 'example_hr_capacity_reconsideration_nl',
@@ -141,7 +141,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Dutch sibling of the reconsideration form.',
     path: '/examples/flevoland/HR-capacity/nl/capacity-claim-reconsideration.nl.form',
     language: 'nl',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
   {
     id: 'example_hr_capacity_handover_nl',
@@ -149,7 +149,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Dutch sibling of the handover form.',
     path: '/examples/flevoland/HR-capacity/nl/capacity-claim-handover.nl.form',
     language: 'nl',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
   {
     id: 'example_hr_capacity_register_reservation_nl',
@@ -157,7 +157,7 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     description: 'Dutch sibling of the register reservation form.',
     path: '/examples/flevoland/HR-capacity/nl/capacity-claim-register-reservation.nl.form',
     language: 'nl',
-    organization: 'Flevoland',
+    organization: 'flevoland',
   },
 ];
 

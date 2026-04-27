@@ -110,7 +110,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'AwbShellProcess',
           processRole: 'shell',
-          organization: 'Flevoland',
+          organization: 'flevoland',
         };
         BpmnService.saveProcess(awbExample);
         setStoredVersion(awbId, EXAMPLE_VERSIONS[awbId]);
@@ -135,7 +135,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'TreeFellingPermitSubProcess',
           processRole: 'subprocess',
-          organization: 'Flevoland',
+          organization: 'flevoland',
           calledElement: 'AwbShellProcess',
         };
         BpmnService.saveProcess(treeFellingExample);
@@ -166,7 +166,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'AwbZorgtoeslagProcess',
           processRole: 'shell',
-          organization: 'Toeslagen',
+          organization: 'toeslagen',
         };
         BpmnService.saveProcess(awbZorgExample);
         setStoredVersion(awbZorgId, EXAMPLE_VERSIONS[awbZorgId]);
@@ -192,7 +192,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'ZorgtoeslagProvisionalSubProcess',
           processRole: 'subprocess',
-          organization: 'Toeslagen',
+          organization: 'toeslagen',
           calledElement: 'AwbZorgtoeslagProcess',
         };
         BpmnService.saveProcess(zorgProvisionalExample);
@@ -219,7 +219,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'ZorgtoeslagFinalSubProcess',
           processRole: 'subprocess',
-          organization: 'Toeslagen',
+          organization: 'toeslagen',
           calledElement: 'AwbZorgtoeslagProcess',
         };
         BpmnService.saveProcess(zorgFinalExample);
@@ -246,7 +246,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'example',
           bpmnProcessId: 'DvtpToestemmingGevenProcess',
           processRole: 'standalone',
-          organization: 'BZK',
+          organization: 'bzk',
         };
         BpmnService.saveProcess(dvtpExample);
         setStoredVersion(dvtpId, EXAMPLE_VERSIONS[dvtpId]);
@@ -273,7 +273,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           bpmnProcessId: 'ManagementCapacityClaimProcess',
           processRole: 'standalone',
           language: 'nl',
-          organization: 'Flevoland',
+          organization: 'flevoland',
         };
         BpmnService.saveProcess(hrCapacityNlExample);
         setStoredVersion(hrCapacityNlId, EXAMPLE_VERSIONS[hrCapacityNlId]);
@@ -295,7 +295,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           status: 'wip',
           bpmnProcessId: 'Process_Migratie_en_Asiel',
           processRole: 'standalone',
-          organization: 'IND',
+          organization: 'ind',
         };
         BpmnService.saveProcess(asylumMigration);
         updated.push(asylumMigration);
