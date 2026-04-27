@@ -20,7 +20,12 @@ interface FormListProps {
   effectiveLanguage?: FormSchema['language'];
   effectiveOrganization?: string;
   onCreateForm: () => void;
-  onImportForm: (schema: Record<string, unknown>, name: string, inferredLanguage?: string) => void;
+  onImportForm: (
+    schema: Record<string, unknown>,
+    name: string,
+    inferredLanguage?: string,
+    inferredOrganization?: string
+  ) => void;
   onLoadForm: (formId: string) => void;
   onDeleteForm: (formId: string) => void;
   onUpdateFormName: (formId: string, name: string) => void;
@@ -100,13 +105,26 @@ const FormList: React.FC<FormListProps> = ({
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
-          const schema = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
+          const parsed = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
+          // Strip LDE wrapper keys before handing the schema to form-js — they
+          // aren't part of the form-js spec. They flow back via the inferred
+          // language / organization params.
+          const { language: jsonLang, organization: jsonOrg, ...schema } = parsed;
+
           const baseName = file.name.replace(/\.form$/i, '');
           const langMatch = baseName.match(/\.(en|nl|de)$/i);
-          const inferredLanguage = langMatch?.[1].toLowerCase();
+          const filenameLang = langMatch?.[1].toLowerCase();
           const cleanName = langMatch ? baseName.slice(0, -langMatch[0].length) : baseName;
+
+          // Prefer the language baked into the JSON over filename inference.
+          const inferredLanguage = (jsonLang as string | undefined) ?? filenameLang;
           const name = (schema.id as string) ?? cleanName;
-          onImportForm(schema, name, inferredLanguage);
+          onImportForm(
+            schema as Record<string, unknown>,
+            name,
+            inferredLanguage,
+            jsonOrg as string | undefined
+          );
         } catch {
           alert(`Invalid .form file — could not parse JSON: ${file.name}`);
         }

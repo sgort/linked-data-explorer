@@ -264,7 +264,8 @@ const FormEditor: React.FC = () => {
   const handleImportForm = (
     schema: Record<string, unknown>,
     name: string,
-    inferredLanguage?: string
+    inferredLanguage?: string,
+    inferredOrganization?: string
   ) => {
     const newForm: FormSchema = {
       id: `form_${Date.now()}`,
@@ -274,6 +275,7 @@ const FormEditor: React.FC = () => {
       updatedAt: new Date().toISOString(),
       status: 'wip',
       language: inferredLanguage as FormSchema['language'] | undefined,
+      organization: inferredOrganization,
     };
     FormService.saveForm(newForm);
     setForms(FormService.getForms());
@@ -372,6 +374,8 @@ const FormEditor: React.FC = () => {
           <FormCanvas
             key={activeFormId}
             schema={activeForm.schema}
+            effectiveLanguage={effectiveLanguage}
+            effectiveOrganization={effectiveOrganization}
             hasFooterChanges={hasFooterChanges}
             onDirtyChange={setHasCanvasChanges}
             onSave={handleSaveForm}

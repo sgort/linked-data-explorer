@@ -7,6 +7,10 @@ import React, { useEffect, useRef, useState } from 'react';
 
 interface FormCanvasProps {
   schema: Record<string, unknown>;
+  /** Effective language (draft-aware) for inclusion in export. */
+  effectiveLanguage?: 'en' | 'nl' | 'de';
+  /** Effective organization (draft-aware) for inclusion in export. */
+  effectiveOrganization?: string;
   /** True when the parent has pending footer (metadata) edits — enables the Save button. */
   hasFooterChanges?: boolean;
   /** Called when the canvas dirty state changes, so the parent can guard navigation. */
@@ -17,6 +21,8 @@ interface FormCanvasProps {
 
 const FormCanvas: React.FC<FormCanvasProps> = ({
   schema,
+  effectiveLanguage,
+  effectiveOrganization,
   hasFooterChanges = false,
   onDirtyChange,
   onSave,
@@ -98,15 +104,23 @@ const FormCanvas: React.FC<FormCanvasProps> = ({
 
   const handleExport = async () => {
     if (!editorRef.current) return;
-    const exportSchema = await editorRef.current.saveSchema();
-    const blob = new Blob([JSON.stringify(exportSchema, null, 2)], {
+    const exportSchema = (await editorRef.current.saveSchema()) as Record<string, unknown>;
+
+    // Include LDE wrapper metadata as top-level keys. form-js ignores unknown
+    // top-level keys on import (they're not in its schema spec), and LDE's
+    // own .form import in FormList picks `language` / `organization` up.
+    const wrapped: Record<string, unknown> = { ...exportSchema };
+    if (effectiveLanguage) wrapped.language = effectiveLanguage;
+    if (effectiveOrganization) wrapped.organization = effectiveOrganization;
+
+    const blob = new Blob([JSON.stringify(wrapped, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const formId = (exportSchema as Record<string, unknown>).id ?? 'form';
-    a.download = `${formId}.form`;
+    const formId = exportSchema.id ?? 'form';
+    a.download = effectiveLanguage ? `${formId}.${effectiveLanguage}.form` : `${formId}.form`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
