@@ -1,6 +1,81 @@
 {
   "versions": [
     {
+      "version": "1.6.0",
+      "date": "April 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "🌍",
+          "title": "Multilingualism — new",
+          "iconColor": "blue",
+          "items": [
+            "Language metadata on BPMN, Form, and Document artefacts (ISO 639-1: en, nl, de) — set via the editor footer panel; persisted to PostgreSQL and to BPMN XML as ronl:language; round-trips through export and import",
+            "Organization metadata on the same three artefact types — set via the editor footer with autocomplete from existing organizations; drives list-panel grouping",
+            "Language filter and free-text search across all three list panels (Processes, Forms, Documents)",
+            "Collapsible organization groups in all three list panels — subprocesses follow their shell's organization regardless of their own tag; orphan subprocesses (shell hidden by filter) render flat",
+            "Filename-based language inference on import — drop a capacity-claim-intake.nl.form into the form import and the language tag is applied automatically; XML and JSON wrapper values take precedence over filename inference",
+            "Form export now includes language and organization at the top of the JSON, plus a language-suffixed filename — round-trip integrity for all three artefact types",
+            "Deploy-time language consistency check — amber warning surfaces inline in the deploy modal when a bundle mixes languages, listing the offending codes; same UX as the existing RoPA-missing warning"
+          ]
+        },
+        {
+          "icon": "🇳🇱",
+          "title": "HR-capacity Dutch reference bundle — new",
+          "iconColor": "orange",
+          "items": [
+            "Beheer capaciteitsclaim — proces (Voorbeeld, NL): 1 BPMN, 8 forms, 2 documents, all tagged language=nl, organization=flevoland",
+            "Demonstrates stable English DMN keys with translated form labels — the same CapacityClaimRouting DMN serves both the English and Dutch siblings without duplication",
+            "All formRef and documentRef values in the Dutch BPMN suffixed -nl; flow labels (formatie, inhuur, akkoord, afgewezen, doorgaan, intrekken, werving, inkoop) translated; gateway condition expressions unchanged"
+          ]
+        },
+        {
+          "icon": "💾",
+          "title": "Pending-until-Save editing model",
+          "iconColor": "purple",
+          "items": [
+            "Footer edits across BPMN, Forms, and Documents (language, organization, RoPA, DSO activiteit) no longer persist immediately — they accumulate in a draft and flush atomically on Save",
+            "Navigation guard with confirm prompt when leaving an artefact with unsaved changes (Create / Load another / Close)",
+            "Shell → subprocess atomic save — saving a shell propagates language and organization to all linked subprocesses in one write; idempotent (skips subprocesses already aligned); shell wins unconditionally",
+            "Save buttons now correctly reflect dirty state — Form Save was previously always-enabled (regression); now disables on load and after Save, enables on first edit"
+          ]
+        },
+        {
+          "icon": "🐛",
+          "title": "Bug fixes",
+          "iconColor": "red",
+          "items": [
+            "BPMN persistence: language and organization fields are now included in the BpmnService POST payload — previously dropped silently on the API call, causing values to vanish on hydration",
+            "OrganizationSelector input is now controlled (value/onChange) rather than uncontrolled (defaultValue/onBlur) — switching between artefacts now refreshes the input correctly; previous value no longer leaks across selections",
+            "BpmnCanvas no longer resets on every parent re-render — handleElementSelect stabilized via a ref, modeler-init effect deps narrowed to xml only",
+            "DocumentComposer no longer flips hasChanges spuriously on document load — TipTap and other child editors emit synthetic onUpdate events during mount that previously dirtied the parent; a load-window guard now suppresses those for the macrotask following load"
+          ]
+        },
+        {
+          "icon": "⚙️",
+          "title": "Backend & technical",
+          "iconColor": "gray",
+          "items": [
+            "Database — language VARCHAR(2) and organization VARCHAR(100) columns added to process_definitions, form_schemas, and document_templates with partial indexes; nullable, existing rows coexist as NULL",
+            "BPMN moddle descriptor extended with LanguageMixin and OrganizationMixin on bpmn:Process — custom attributes survive saveXML round-trip via the existing ronl namespace",
+            "New shared components under packages/frontend/src/components/common/: LanguageSelector, OrganizationSelector, ArtefactListToolbar (with filterArtefacts helper)",
+            "Editor architecture — footer state lifted to the editor parent (BpmnModeler / FormEditor / DocumentComposer); children receive effective values via props and report changes via callbacks; Save is the single point of persistence",
+            "EXAMPLE_VERSIONS bumped for all existing examples to trigger one-time re-seed with organization tags; eleven new HR-capacity Dutch entries added at v1; organization keys standardized to lowercase (flevoland, toeslagen, bzk)"
+          ]
+        },
+        {
+          "icon": "ℹ️",
+          "title": "Known limitations",
+          "iconColor": "amber",
+          "items": [
+            "form-js properties panel loses input focus when typing pauses (Field label, Description, Key) — upstream form-js issue #86, marked wontfix by bpmn-io; not LDE-caused, not fixable from React without forking form-js; workaround: edit .form JSON in a code editor and re-import — filename inference handles language tagging on import"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.5.3",
       "date": "April 2026",
       "status": "Released",

@@ -418,14 +418,46 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       allDocumentTemplates.some((d) => d.id === ref)
     );
 
+    // ─── Language consistency check ─────────────────────────────────────
+    // Collect all distinct non-null language codes across the bundle.
+    // DMNs are excluded by design (language-agnostic; stable English keys).
+    const extractBpmnLanguage = (bpmnXml: string): string | undefined =>
+      bpmnXml.match(/ronl:language="([^"]+)"/)?.[1];
+
+    const languageSet = new Set<string>();
+    const shellLang = extractBpmnLanguage(xml);
+    if (shellLang) languageSet.add(shellLang);
+    for (const sp of subProcessXmls) {
+      const spLang = extractBpmnLanguage(sp.xml);
+      if (spLang) languageSet.add(spLang);
+    }
+    for (const ref of matchedForms) {
+      const f = allForms.find((x) => (x.schema as Record<string, unknown>).id === ref);
+      if (f?.language) languageSet.add(f.language);
+    }
+    for (const ref of matchedDocuments) {
+      const d = allDocumentTemplates.find((t) => t.id === ref);
+      if (d?.language) languageSet.add(d.language);
+    }
+    const languageMismatch = languageSet.size > 1;
+    const languageList = [...languageSet].sort();
+    // ────────────────────────────────────────────────────────────────────
+
     setDeployResources({
       processKey,
       bpmnFiles: [`${processKey}.bpmn`, ...subProcessXmls.map((sp) => sp.filename)],
       formFiles: matchedForms.map((ref) => `${ref}.form`),
       documentFiles: matchedDocuments.map((ref) => `${ref}.document`),
       ...(unmatchedForms.length ? { unmatchedForms } : {}),
-      ropaRefMissing, // ← new field
-    } as typeof deployResources & { unmatchedForms?: string[]; ropaRefMissing?: boolean });
+      ropaRefMissing,
+      languageMismatch,
+      languageList,
+    } as typeof deployResources & {
+      unmatchedForms?: string[];
+      ropaRefMissing?: boolean;
+      languageMismatch?: boolean;
+      languageList?: string[];
+    });
     setDeployResult(null);
     setShowDeployModal(true);
   };
@@ -487,45 +519,6 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       const doc = parser.parseFromString(xml, 'text/xml');
       const processKey =
         doc.querySelector('process')?.getAttribute('id') ?? `process-${Date.now()}`;
-
-      // ─── Language consistency check ───────────────────────────────────
-      // Warn if the bundle mixes languages (e.g. English BPMN + Dutch form).
-      // DMNs are excluded because they are language-agnostic by design.
-      const languageSet = new Set<string>();
-
-      const extractBpmnLanguage = (bpmnXml: string): string | undefined =>
-        bpmnXml.match(/ronl:language="([^"]+)"/)?.[1];
-
-      const shellLang = extractBpmnLanguage(xml);
-      if (shellLang) languageSet.add(shellLang);
-
-      for (const sp of subProcessXmls) {
-        const spLang = extractBpmnLanguage(sp.xml);
-        if (spLang) languageSet.add(spLang);
-      }
-
-      for (const { id } of forms) {
-        const f = allForms.find((x) => (x.schema as Record<string, unknown>).id === id);
-        if (f?.language) languageSet.add(f.language);
-      }
-
-      for (const { template } of documents) {
-        if (template.language) languageSet.add(template.language);
-      }
-
-      if (languageSet.size > 1) {
-        const langs = [...languageSet].sort().join(', ');
-        const proceed = window.confirm(
-          `Bundle mixes languages: ${langs}. ` +
-            `This is usually a mistake — a deployed bundle should be a single language. ` +
-            `Continue anyway?`
-        );
-        if (!proceed) {
-          setIsDeploying(false);
-          return;
-        }
-      }
-      // ──────────────────────────────────────────────────────────────────
 
       const response = await fetch(`${API_BASE_URL}/api/dmns/process/deploy`, {
         method: 'POST',
@@ -719,6 +712,16 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                   ⚠️ No <code className="font-mono">ronl:ropaRef</code> found on the process
                   element. Link a RoPA record in the BPMN properties panel before deploying to
                   production.
+                </div>
+              )}
+              {(deployResources as any).languageMismatch && (
+                <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                  ⚠️ Bundle mixes languages:{' '}
+                  <span className="font-mono">
+                    {((deployResources as any).languageList as string[]).join(', ')}
+                  </span>
+                  . A deployed bundle should be a single language. Untag or retag the mismatched
+                  artefact(s) before deploying.
                 </div>
               )}
               <div className="mt-2 text-xs text-slate-500">
