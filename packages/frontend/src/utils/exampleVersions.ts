@@ -25,13 +25,13 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_hr_capacity_nl: 1, // v1: HR-capacity Dutch BPMN sibling (multilingualism release)
 
   // Camunda Forms
-  example_kapvergunning_start: 3, // v3: organization=flevoland tagging
-  example_tree_felling_review: 3, // v3: organization=flevoland tagging
-  example_awb_notify_applicant: 3, // v3: organization=flevoland tagging
-  example_zorgtoeslag_notify_applicant: 3, // v3: organization=toeslagen tagging
-  example_zorgtoeslag_provisional_start: 3, // v3: organization=toeslagen tagging
-  example_zorgtoeslag_provisional_review: 3, // v3: organization=toeslagen tagging
-  example_zorgtoeslag_final_review: 3, // v3: organization=toeslagen tagging
+  example_kapvergunning_start: 4, // v4: force re-seed for ACC users with stale localStorage from v1.6.0 testing
+  example_tree_felling_review: 4, // v4: force re-seed (see above)
+  example_awb_notify_applicant: 4, // v4: force re-seed (see above)
+  example_zorgtoeslag_notify_applicant: 4, // v4: force re-seed (see above)
+  example_zorgtoeslag_provisional_start: 4, // v4: force re-seed (see above)
+  example_zorgtoeslag_provisional_review: 4, // v4: force re-seed (see above)
+  example_zorgtoeslag_final_review: 4, // v4: force re-seed (see above)
 
   // HR-capacity Dutch forms (multilingualism release)
   example_hr_capacity_intake_nl: 1,
