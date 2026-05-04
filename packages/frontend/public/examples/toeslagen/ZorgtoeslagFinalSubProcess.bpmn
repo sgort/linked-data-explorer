@@ -43,7 +43,7 @@
       - chainProcessRequired (Boolean) : always false — settlement is the end of the chain
 
     Caseworker review:
-      Sub_CaseReview is a userTask assigned to candidateGroups="case-workers".
+      Sub_CaseReview is a userTask assigned to candidateGroups="caseworker".
       The caseworker must claim the task before acting on it.
       On completion the form submits:
         - reviewAction          (String) : "confirm" or "change"
@@ -93,7 +93,7 @@
                    name="Case review: final settlement decision"
                    camunda:formRef="zorgtoeslag-final-review"
                    camunda:formRefBinding="latest"
-                   camunda:candidateGroups="case-workers">
+                   camunda:candidateGroups="caseworker">
       <bpmn:incoming>Flow_Sub_Calc_Review</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Review_Resolve</bpmn:outgoing>
     </bpmn:userTask>
