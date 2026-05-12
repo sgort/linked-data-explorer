@@ -13,7 +13,6 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "moduleResolution": "node10",
-    "ignoreDeprecations": "6.0",
     "allowSyntheticDefaultImports": true,
     "declaration": true,
     "declarationMap": true,
