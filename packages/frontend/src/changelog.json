@@ -1,6 +1,45 @@
 {
   "versions": [
     {
+      "version": "1.6.1",
+      "date": "May 12, 2026",
+      "status": "Released",
+      "statusColor": "teal",
+      "borderColor": "teal",
+      "sections": [
+        {
+          "icon": "📡",
+          "iconColor": "teal",
+          "title": "New /v1/norms endpoint",
+          "items": [
+            "New backend route GET /v1/norms exposing all cprmv:Rule paths and norms in the publish format consumed by the SPARQL editor's norm publisher",
+            "Response mirrors the cprmv-example.json shape exactly: fully-qualified RDF/CPRMV keys for type/id/definition/contains, short keys for situatie/norm/per/rulesetid/applicable_date/rule_id_path",
+            "Parent rules and their cprmv:contains children are aggregated into nested objects in a single response, with deterministic key ordering preserved across runs",
+            "Optional ?endpoint= query parameter overrides the default TriplyDB endpoint, matching the pattern already used by /v1/dmns"
+          ]
+        },
+        {
+          "icon": "🔍",
+          "iconColor": "blue",
+          "title": "Filtering by ruleset and applicable date",
+          "items": [
+            "New applicable_date attribute derived from the _YYYY-MM-DD_ segment embedded in rule_id_path; null when no date is present in the path",
+            "Filter by ?rulesetid= (e.g. BWBR0015703) and/or ?applicable_date= (e.g. 2026-01-01); both parameters can be combined",
+            "Strict input validation against /^[A-Za-z0-9_-]+$/ (rulesetid) and /^\\d{4}-\\d{2}-\\d{2}$/ (applicable_date) returns 400 INVALID_PARAM before any SPARQL fires",
+            "Validated filters are applied as SPARQL FILTER clauses (exact-match on rulesetId, CONTAINS on the dated segment of ruleIdPath) for server-side selection"
+          ]
+        },
+        {
+          "icon": "🛠️",
+          "iconColor": "gray",
+          "title": "Maintenance",
+          "items": [
+            "Silenced TypeScript 5.x deprecation warning on moduleResolution: \"node10\" via \"ignoreDeprecations\": \"6.0\" in packages/backend/tsconfig.json; full migration to nodenext deferred until ESM-on-Node maturity warrants the per-file .js extension changes"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.6.0",
       "date": "April 2026",
       "status": "Released",
