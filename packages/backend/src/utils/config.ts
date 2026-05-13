@@ -16,10 +16,50 @@ const getNestedProperty = (obj: Record<string, unknown>, path: string): unknown 
 };
 
 /**
+ * Deployment tier display label. NODE_ENV alone can't distinguish ACC from PROD
+ * because both deployments run with NODE_ENV=production; the dedicated
+ * DEPLOYMENT_ENV variable carries the tier signal, set per Azure App Service:
+ *   az webapp config appsettings set -g rg-... -n ronl-linkeddata-backend-acc  --settings DEPLOYMENT_ENV=acc
+ *   az webapp config appsettings set -g rg-... -n ronl-linkeddata-backend-prod --settings DEPLOYMENT_ENV=prod
+ * Falls back to NODE_ENV when unset so local development stays zero-config.
+ */
+const rawDeploymentEnv = (
+  process.env.DEPLOYMENT_ENV ||
+  process.env.NODE_ENV ||
+  'development'
+)
+  .toLowerCase()
+  .trim();
+
+const formatDeploymentEnv = (env: string): string => {
+  switch (env) {
+    case 'prod':
+    case 'production':
+      return 'PROD';
+    case 'acc':
+    case 'acceptance':
+    case 'staging':
+      return 'ACC';
+    case 'dev':
+    case 'development':
+    case 'local':
+      return 'development';
+    case 'test':
+      return 'test';
+    default:
+      return env;
+  }
+};
+
+/**
  * Application configuration
  */
 export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
+  /** Raw deployment tier value: 'dev' | 'acc' | 'prod' | 'test' | ... */
+  deploymentEnv: rawDeploymentEnv,
+  /** Display label for the deployment tier; used by the root page and /v1/health. */
+  displayEnv: formatDeploymentEnv(rawDeploymentEnv),
   port: parseInt(process.env.PORT || '3001', 10),
   host: process.env.HOST || 'localhost',
 

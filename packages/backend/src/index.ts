@@ -9,7 +9,7 @@ import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { versionMiddleware } from './middleware/version.middleware';
 import { externalTaskWorker } from './services/externalTaskWorker.service';
 import { migrate } from './db/migrate';
-import packageJson from '../package.json';
+import { rootHandler } from './utils/rootViews';
 
 const app: Express = express();
 
@@ -86,32 +86,11 @@ app.use(versionMiddleware);
 // Mount API routes (routes already include /api and /v1 prefixes)
 app.use(routes);
 
-// Root endpoint - FIXED: Point to v1 endpoints
-app.get('/', (req, res) => {
-  res.json({
-    name: 'Linked Data Explorer Backend',
-    version: packageJson.version,
-    status: 'running',
-    environment: config.nodeEnv,
-    documentation: '/v1/openapi.json',
-    health: '/v1/health',
-    endpoints: {
-      health: '/v1/health',
-      dmns: '/v1/dmns',
-      validate: '/v1/dmns/validate',
-      chains: '/v1/chains',
-      triplydb: '/v1/triplydb',
-      vendors: '/v1/vendors',
-    },
-    legacy: {
-      health: '/api/health (deprecated)',
-      dmns: '/api/dmns (deprecated)',
-      chains: '/api/chains (deprecated)',
-      triplydb: '/api/triplydb (deprecated)',
-      vendors: '/api/vendors (deprecated)',
-    },
-  });
-});
+// Root endpoint — content-negotiated. Browsers (Accept: text/html) get a
+// rendered HTML landing page; programmatic clients get JSON. Both views are
+// derived from the shared route registry. See src/utils/rootView.ts and
+// src/routes/registry.ts.
+app.get('/', rootHandler);
 
 // 404 handler (must be after all routes)
 app.use(notFoundHandler);

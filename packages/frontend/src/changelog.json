@@ -1,6 +1,47 @@
 {
   "versions": [
     {
+      "version": "1.6.2",
+      "date": "May 13, 2026",
+      "status": "Released",
+      "statusColor": "indigo",
+      "borderColor": "indigo",
+      "sections": [
+        {
+          "icon": "🗺️",
+          "iconColor": "indigo",
+          "title": "Single source of truth for v1 routes",
+          "items": [
+            "New backend module packages/backend/src/routes/registry.ts: every v1 route's mount path, router, summary and category lives in one array; adding a route is a one-line entry that both registration and the root page pick up automatically",
+            "Refactored packages/backend/src/routes/index.ts to iterate the registry for v1 mounting; legacy /api/* deprecation aliases stay hand-mounted (deprecated routes are intentionally excluded from the registry to steer consumers towards /v1/*)",
+            "Mount-order semantics preserved: more specific paths still precede their parents (/v1/chains/templates before /v1/chains) so Express route precedence behaves exactly as before"
+          ]
+        },
+        {
+          "icon": "🌐",
+          "iconColor": "blue",
+          "title": "Content-negotiated root page",
+          "items": [
+            "GET / now serves HTML when Accept includes text/html (browsers) and JSON otherwise (curl, fetch with default Accept, programmatic pollers); both views are derived from the shared route registry so they cannot drift",
+            "HTML view groups endpoints by category (Health & monitoring, Discovery, Execution, Assets, Integrations) and badges public-CORS endpoints; styling is inline with no external dependencies",
+            "JSON payload preserves backwards compatibility: same top-level keys as before (name, version, environment, status, documentation, health, endpoints, legacy); existing programmatic clients see no breaking change",
+            "Closes the drift gap that was missing /v1/dso, /v1/norms, /v1/assets/*, /v1/cache, /v1/edocs, /v1/ropa, /v1/process and /v1/chains/templates from the previous hand-coded listing"
+          ]
+        },
+        {
+          "icon": "🏷️",
+          "iconColor": "teal",
+          "title": "Deployment tier display label",
+          "items": [
+            "New DEPLOYMENT_ENV environment variable distinguishes ACC from PROD when NODE_ENV is 'production' for both; falls back to NODE_ENV when unset so local development needs no change",
+            "Added config.displayEnv (string) and config.deploymentEnv (raw value) to packages/backend/src/utils/config.ts with mappings: prod/production → PROD, acc/acceptance/staging → ACC, dev/development/local → development, test → test, unknown values pass through",
+            "Used consistently by the HTML root page and the /v1/health response so the displayed environment stays in sync across surfaces",
+            "Configuration is per Azure App Service: az webapp config appsettings set ... --settings DEPLOYMENT_ENV=acc (or prod)"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.6.1",
       "date": "May 12, 2026",
       "status": "Released",
