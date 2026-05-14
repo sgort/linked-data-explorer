@@ -29,7 +29,15 @@ const APPLICABLE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  * Each rule object is emitted in the publish format defined by
  * cprmv-example.json — fully-qualified URI keys for type/id/definition/
  * contains, short keys for situatie/norm/per/rulesetid/applicable_date/
- * rule_id_path.
+ * rulesetid_index/rule_id_path/rule_id_path_key.
+ *
+ * Three fields are derived from rule_id_path and rendered as JSON `null`
+ * when the path does not match the canonical
+ * `<rulesetid>_<YYYY-MM-DD>_<index>[, <rest>]` shape:
+ *   - applicable_date   "2025-07-01"
+ *   - rulesetid_index    0  (integer index after the date)
+ *   - rule_id_path_key  "BWBR0002471, Artikel 2, lid 6"
+ *                       (path with date+index stripped; stable across versions)
  *
  * Query parameters (all optional, may be combined):
  *   endpoint          — SPARQL endpoint URL. Defaults to
@@ -49,9 +57,16 @@ const APPLICABLE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  * - API-20: GET for read
  * - API-57: API-Version header
  *
- * Response shape: ApiResponse<{ total: number; rules: PublishedRule[] }>
+ * Response shape:
+ *   ApiResponse<{
+ *     total: number;
+ *     aggregations: { norms_per_rulesetid: Record<string, number> };
+ *     rules: PublishedRule[];
+ *   }>
+ *
  * The editor extracts response.data.rules to obtain the array in
- * publish-ready form. `total` reflects the filtered count.
+ * publish-ready form. `total` reflects the filtered count and equals
+ * the sum of `aggregations.norms_per_rulesetid` values.
  *
  * Examples:
  *   GET /v1/norms
@@ -98,7 +113,7 @@ router.get('/', async (req: Request, res: Response) => {
       ...(applicableDate && { applicableDate }),
     });
 
-    const rules = await getAllNorms(requestedEndpoint, {
+    const result = await getAllNorms(requestedEndpoint, {
       rulesetid,
       applicableDate,
     });
@@ -106,8 +121,14 @@ router.get('/', async (req: Request, res: Response) => {
     res.json({
       success: true,
       data: {
-        total: rules.length,
-        rules,
+        total: result.rules.length,
+        // camelCase -> snake_case translation at the JSON envelope boundary,
+        // matching the existing applicableDate -> applicable_date convention
+        // for per-rule fields.
+        aggregations: {
+          norms_per_rulesetid: result.aggregations.normsPerRulesetid,
+        },
+        rules: result.rules,
       },
       timestamp: new Date().toISOString(),
     } as ApiResponse);

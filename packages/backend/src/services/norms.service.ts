@@ -18,12 +18,15 @@ const CPRMV_CONTAINS = `${CPRMV_NS}contains`;
 
 /**
  * Child rule inside a `contains` map. Carries only type/id/definition —
- * matches the shape of nested rules in cprmv-example.json.
+ * matches the shape of nested rules in cprmv-example.json. Sub-rules
+ * intentionally do not get the per-rule metadata fields (rulesetid,
+ * applicable_date, rulesetid_index, rule_id_path, rule_id_path_key) — those
+ * apply to top-level rules only.
  */
 interface ChildRule {
-    [RDF_TYPE]: string;
-    [CPRMV_ID]: string;
-    [CPRMV_DEFINITION]: string;
+  [RDF_TYPE]: string;
+  [CPRMV_ID]: string;
+  [CPRMV_DEFINITION]: string;
 }
 
 /**
@@ -32,14 +35,19 @@ interface ChildRule {
  * strict interface would force a constructor-then-overwrite pattern that
  * breaks the order JS publishers rely on.
  *
- * The constructor in getAllNorms below inserts keys in the exact order
- * shown in cprmv-example.json, with `applicable_date` inserted between
- * `rulesetid` and `rule_id_path`: type, id, definition, contains?,
- * situatie?, norm?, per?, rulesetid, applicable_date, rule_id_path.
+ * The constructor in getAllNorms below inserts keys in this order:
+ *   type, id, definition, contains?, situatie?, norm?, per?,
+ *   rulesetid, applicable_date, rulesetid_index,
+ *   rule_id_path, rule_id_path_key
  *
- * `applicable_date` is parsed from the `_YYYY-MM-DD_` segment embedded
- * in `rule_id_path` (e.g. "BWBR0015703_2026-01-01_0, Artikel 20, ..."
- * yields "2026-01-01"). It is `null` when no date matches the pattern.
+ * Fields derived from rule_id_path:
+ * - applicable_date  — `2025-07-01` from `BWBR..._2025-07-01_0, ...`
+ * - rulesetid_index  — `0` (the integer after the date)
+ * - rule_id_path_key — `BWBR0002471, Artikel 2, lid 6` (path with date+index
+ *                      removed; stable across versions of the same ruleset)
+ *
+ * All three are `null` when rule_id_path doesn't match the canonical
+ * `<rulesetid>_<YYYY-MM-DD>_<index>[, <rest>]` pattern.
  */
 export type PublishedRule = Record<string, unknown>;
 
@@ -50,17 +58,57 @@ export type PublishedRule = Record<string, unknown>;
  * so direct string interpolation into SPARQL is safe here.
  */
 export interface NormsFilter {
-    rulesetid?: string;
-    applicableDate?: string;
+  rulesetid?: string;
+  applicableDate?: string;
 }
 
-// Extracts "2026-01-01" from "BWBR0015703_2026-01-01_0, Artikel 20, ...".
-// Returns null if the path does not contain a dated segment.
-const APPLICABLE_DATE_PATTERN = /_(\d{4}-\d{2}-\d{2})_/;
+/**
+ * Result envelope returned by getAllNorms. Fields use camelCase internally;
+ * the route layer translates to snake_case when serialising to JSON
+ * (matching the existing applicableDate -> applicable_date convention).
+ */
+export interface NormsResult {
+  rules: PublishedRule[];
+  aggregations: {
+    /** Count of top-level rules per cprmv:rulesetId in the filtered result
+     *  set. Sum of values equals rules.length. */
+    normsPerRulesetid: Record<string, number>;
+  };
+}
 
-function extractApplicableDate(ruleIdPath: string): string | null {
-    const match = ruleIdPath.match(APPLICABLE_DATE_PATTERN);
-    return match ? match[1] : null;
+// Canonical rule_id_path shape:
+//   <rulesetid>_<YYYY-MM-DD>_<index>[, <rest>]
+// Capture groups: 1=rulesetid, 2=date, 3=index, 4=rest (optional)
+const RULE_ID_PATH_PATTERN = /^([^_]+)_(\d{4}-\d{2}-\d{2})_(\d+)(?:,\s*(.+))?$/;
+
+interface RulePathParts {
+  applicableDate: string | null;
+  rulesetIdIndex: number | null;
+  ruleIdPathKey: string | null;
+}
+
+/**
+ * Extract derived fields from a rule_id_path. Returns all-null when the path
+ * does not match the canonical shape — the caller renders these as JSON
+ * `null` so downstream consumers can detect non-conforming data explicitly.
+ *
+ * Note: the rulesetid component is parsed from the path itself (group 1)
+ * rather than substituted from the explicit cprmv:rulesetId field. In normal
+ * data they agree; using the path-prefix here makes rule_id_path_key a pure
+ * string transformation of rule_id_path with no cross-field dependency.
+ */
+function extractRulePathParts(ruleIdPath: string): RulePathParts {
+  const match = ruleIdPath.match(RULE_ID_PATH_PATTERN);
+  if (!match) {
+    return { applicableDate: null, rulesetIdIndex: null, ruleIdPathKey: null };
+  }
+  const [, rulesetIdPart, date, indexStr, rest] = match;
+  const ruleIdPathKey = rest ? `${rulesetIdPart}, ${rest}` : rulesetIdPart;
+  return {
+    applicableDate: date,
+    rulesetIdIndex: parseInt(indexStr, 10),
+    ruleIdPathKey,
+  };
 }
 
 // SPARQL query mirrors the "All Rule Paths and Norms by Ruleset" sample in
@@ -68,34 +116,26 @@ function extractApplicableDate(ruleIdPath: string): string | null {
 // publish format needs (id, definition, situatie, norm, per) plus the
 // optional cprmv:contains relationship to first-level child rules.
 //
-// Children are joined via OPTIONAL — when a parent has multiple children
-// the result set carries one row per (parent, child) pair, with the
-// parent's scalar fields repeated. The aggregation step in getAllNorms
-// collapses these rows back into a single object per parent.
-//
-// Filter clauses (rulesetid and/or applicable_date) are injected after
-// the mandatory triple patterns so the SPARQL optimiser can apply them
-// before resolving the OPTIONAL branches. The filter values are
-// validated upstream in norms.routes.ts against strict character-class
-// regexes, so direct string interpolation is safe.
+// Filter clauses (rulesetid and/or applicable_date) are injected after the
+// mandatory triple patterns so the SPARQL optimiser can apply them before
+// resolving the OPTIONAL branches. The filter values are validated upstream
+// in norms.routes.ts against strict character-class regexes, so direct
+// string interpolation is safe.
 function buildNormsQuery(filter?: NormsFilter): string {
-    const filterClauses: string[] = [];
+  const filterClauses: string[] = [];
 
-    if (filter?.rulesetid) {
-        filterClauses.push(`  FILTER(STR(?rulesetId) = "${filter.rulesetid}")`);
-    }
-    if (filter?.applicableDate) {
-        // CONTAINS on the dated segment: matches e.g. "_2026-01-01_" inside
-        // "BWBR0015703_2026-01-01_0, Artikel 20, ...". Underscores on both
-        // sides of the date prevent prefix collisions.
-        filterClauses.push(
-            `  FILTER(CONTAINS(STR(?ruleIdPath), "_${filter.applicableDate}_"))`
-        );
-    }
+  if (filter?.rulesetid) {
+    filterClauses.push(`  FILTER(STR(?rulesetId) = "${filter.rulesetid}")`);
+  }
+  if (filter?.applicableDate) {
+    filterClauses.push(
+      `  FILTER(CONTAINS(STR(?ruleIdPath), "_${filter.applicableDate}_"))`
+    );
+  }
 
-    const filterBlock = filterClauses.length > 0 ? `\n${filterClauses.join('\n')}\n` : '';
+  const filterBlock = filterClauses.length > 0 ? `\n${filterClauses.join('\n')}\n` : '';
 
-    return `
+  return `
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX cprmv: <${CPRMV_NS}>
 
@@ -127,132 +167,142 @@ ORDER BY ?rulesetId ?ruleIdPath ?containedId
 
 /**
  * Fetch all cprmv:Rule records (with optional contained sub-rules) and
- * return them in the publish format defined by cprmv-example.json.
+ * return them in the publish format defined by cprmv-example.json, plus
+ * a per-rulesetid aggregation over the filtered result set.
  *
  * Aggregation rule: the first SPARQL row seen for a parent rule URI fills
- * the scalar fields (id, definition, rulesetId, ruleIdPath, situatie,
- * norm, per). Every subsequent row for the same parent only contributes
- * an entry to the `contains` map. SPARQL DISTINCT plus the deterministic
- * ORDER BY makes this stable across runs.
+ * the scalar fields. Every subsequent row for the same parent only
+ * contributes an entry to the `contains` map. SPARQL DISTINCT plus the
+ * deterministic ORDER BY makes this stable across runs.
  *
- * `applicable_date` is derived once per parent by parsing the
- * `_YYYY-MM-DD_` segment out of `ruleIdPath` (see extractApplicableDate).
- *
- * @param endpoint - Optional SPARQL endpoint URL. Falls back to
- *                   config.triplydb.endpoint (TRIPLYDB_ENDPOINT) when
- *                   omitted, matching the pattern used by dmn.routes.
- * @param filter   - Optional rulesetid / applicableDate filter. Values
- *                   must already be validated against the regexes
- *                   documented on NormsFilter — the route layer is
- *                   responsible for that.
+ * The three rule_id_path-derived fields (applicable_date, rulesetid_index,
+ * rule_id_path_key) are computed once per parent by parsing the canonical
+ * path shape via extractRulePathParts.
  */
 export async function getAllNorms(
-    endpoint?: string,
-    filter?: NormsFilter
-): Promise<PublishedRule[]> {
-    const targetEndpoint = endpoint || config.triplydb.endpoint;
+  endpoint?: string,
+  filter?: NormsFilter
+): Promise<NormsResult> {
+  const targetEndpoint = endpoint || config.triplydb.endpoint;
 
-    if (!targetEndpoint) {
-        throw new Error(
-            'No SPARQL endpoint configured — set TRIPLYDB_ENDPOINT or pass ?endpoint='
-        );
+  if (!targetEndpoint) {
+    throw new Error(
+      'No SPARQL endpoint configured — set TRIPLYDB_ENDPOINT or pass ?endpoint='
+    );
+  }
+
+  logger.info('[Norms Service] Fetching all rule paths and norms', {
+    endpoint: targetEndpoint,
+    ...(filter?.rulesetid && { rulesetid: filter.rulesetid }),
+    ...(filter?.applicableDate && { applicableDate: filter.applicableDate }),
+  });
+
+  const query = buildNormsQuery(filter);
+  const data = await triplydbService.executeQuery(targetEndpoint, query);
+  const bindings = data.results?.bindings || [];
+
+  logger.info('[Norms Service] SPARQL returned bindings', {
+    rowCount: bindings.length,
+  });
+
+  // Intermediate accumulator keyed by parent rule URI. We collect scalar
+  // fields plus a children map, then build the final ordered object once
+  // per parent after the loop so property insertion order matches the
+  // publish format exactly.
+  interface Accumulator {
+    id: string;
+    definition: string;
+    rulesetId: string;
+    ruleIdPath: string;
+    applicableDate: string | null;
+    rulesetIdIndex: number | null;
+    ruleIdPathKey: string | null;
+    situatie?: string;
+    norm?: string;
+    per?: string;
+    children: Map<string, ChildRule>;
+  }
+
+  const acc = new Map<string, Accumulator>();
+
+  for (const b of bindings) {
+    const ruleUri = b.rule?.value;
+    if (!ruleUri) continue;
+
+    let entry = acc.get(ruleUri);
+    if (!entry) {
+      const ruleIdPath = b.ruleIdPath?.value ?? '';
+      const parts = extractRulePathParts(ruleIdPath);
+      entry = {
+        id: b.id?.value ?? '',
+        definition: b.definition?.value ?? '',
+        rulesetId: b.rulesetId?.value ?? '',
+        ruleIdPath,
+        applicableDate: parts.applicableDate,
+        rulesetIdIndex: parts.rulesetIdIndex,
+        ruleIdPathKey: parts.ruleIdPathKey,
+        situatie: b.situatie?.value,
+        norm: b.norm?.value,
+        per: b.per?.value,
+        children: new Map(),
+      };
+      acc.set(ruleUri, entry);
     }
 
-    logger.info('[Norms Service] Fetching all rule paths and norms', {
-        endpoint: targetEndpoint,
-        ...(filter?.rulesetid && { rulesetid: filter.rulesetid }),
-        ...(filter?.applicableDate && { applicableDate: filter.applicableDate }),
-    });
-
-    const query = buildNormsQuery(filter);
-    const data = await triplydbService.executeQuery(targetEndpoint, query);
-    const bindings = data.results?.bindings || [];
-
-    logger.info('[Norms Service] SPARQL returned bindings', {
-        rowCount: bindings.length,
-    });
-
-    // Intermediate accumulator keyed by parent rule URI. We collect scalar
-    // fields plus a children map, then build the final ordered object once
-    // per parent after the loop so property insertion order matches the
-    // example exactly.
-    interface Accumulator {
-        id: string;
-        definition: string;
-        rulesetId: string;
-        ruleIdPath: string;
-        applicableDate: string | null;
-        situatie?: string;
-        norm?: string;
-        per?: string;
-        children: Map<string, ChildRule>;
+    // Add contained child if present. SPARQL may yield duplicate
+    // (parent, child) pairs across runs; keying by child id makes the
+    // operation idempotent (values are identical anyway).
+    if (b.contained?.value && b.containedId?.value && b.containedDefinition?.value) {
+      entry.children.set(b.containedId.value, {
+        [RDF_TYPE]: CPRMV_RULE_TYPE,
+        [CPRMV_ID]: b.containedId.value,
+        [CPRMV_DEFINITION]: b.containedDefinition.value,
+      });
     }
+  }
 
-    const acc = new Map<string, Accumulator>();
+  // Materialise objects in the publish-format key order. Conditional spreads
+  // keep optional keys omitted entirely (rather than set to undefined) when
+  // absent. The three path-derived fields are always present — `null` when
+  // the path carries no parseable shape.
+  const rules: PublishedRule[] = [];
+  const normsPerRulesetid: Record<string, number> = {};
 
-    for (const b of bindings) {
-        const ruleUri = b.rule?.value;
-        if (!ruleUri) continue;
+  for (const entry of acc.values()) {
+    const rule: PublishedRule = {
+      [RDF_TYPE]: CPRMV_RULE_TYPE,
+      [CPRMV_ID]: entry.id,
+      [CPRMV_DEFINITION]: entry.definition,
+      ...(entry.children.size > 0 && {
+        [CPRMV_CONTAINS]: Object.fromEntries(entry.children),
+      }),
+      ...(entry.situatie !== undefined && { situatie: entry.situatie }),
+      ...(entry.norm !== undefined && { norm: entry.norm }),
+      ...(entry.per !== undefined && { per: entry.per }),
+      rulesetid: entry.rulesetId,
+      applicable_date: entry.applicableDate,
+      rulesetid_index: entry.rulesetIdIndex,
+      rule_id_path: entry.ruleIdPath,
+      rule_id_path_key: entry.ruleIdPathKey,
+    };
 
-        let entry = acc.get(ruleUri);
-        if (!entry) {
-            const ruleIdPath = b.ruleIdPath?.value ?? '';
-            entry = {
-                id: b.id?.value ?? '',
-                definition: b.definition?.value ?? '',
-                rulesetId: b.rulesetId?.value ?? '',
-                ruleIdPath,
-                applicableDate: extractApplicableDate(ruleIdPath),
-                situatie: b.situatie?.value,
-                norm: b.norm?.value,
-                per: b.per?.value,
-                children: new Map(),
-            };
-            acc.set(ruleUri, entry);
-        }
+    rules.push(rule);
 
-        // Add contained child if present. SPARQL may yield duplicate
-        // (parent, child) pairs across runs; keying by child id makes the
-        // operation idempotent (values are identical anyway).
-        if (b.contained?.value && b.containedId?.value && b.containedDefinition?.value) {
-            entry.children.set(b.containedId.value, {
-                [RDF_TYPE]: CPRMV_RULE_TYPE,
-                [CPRMV_ID]: b.containedId.value,
-                [CPRMV_DEFINITION]: b.containedDefinition.value,
-            });
-        }
-    }
+    // Per-rulesetid aggregation. We use the explicit cprmv:rulesetId here
+    // (not the parsed path-prefix) so the counts always key by the
+    // authoritative value — even if a stray rule has a non-conforming path.
+    normsPerRulesetid[entry.rulesetId] = (normsPerRulesetid[entry.rulesetId] || 0) + 1;
+  }
 
-    // Materialise objects in the exact key order shown in cprmv-example.json,
-    // with `applicable_date` inserted between `rulesetid` and `rule_id_path`.
-    // Order: type, id, definition, contains?, situatie?, norm?, per?,
-    // rulesetid, applicable_date, rule_id_path. Conditional spreads keep
-    // optional keys omitted entirely (rather than set to undefined) when
-    // absent. `applicable_date` is always present — `null` when the path
-    // carries no parseable date.
-    const rules: PublishedRule[] = [];
-    for (const entry of acc.values()) {
-        const rule: PublishedRule = {
-            [RDF_TYPE]: CPRMV_RULE_TYPE,
-            [CPRMV_ID]: entry.id,
-            [CPRMV_DEFINITION]: entry.definition,
-            ...(entry.children.size > 0 && {
-                [CPRMV_CONTAINS]: Object.fromEntries(entry.children),
-            }),
-            ...(entry.situatie !== undefined && { situatie: entry.situatie }),
-            ...(entry.norm !== undefined && { norm: entry.norm }),
-            ...(entry.per !== undefined && { per: entry.per }),
-            rulesetid: entry.rulesetId,
-            applicable_date: entry.applicableDate,
-            rule_id_path: entry.ruleIdPath,
-        };
+  logger.info('[Norms Service] Aggregated published rules', {
+    count: rules.length,
+    rulesets: Object.keys(normsPerRulesetid).length,
+  });
 
-        rules.push(rule);
-    }
-
-    logger.info('[Norms Service] Aggregated published rules', {
-        count: rules.length,
-    });
-
-    return rules;
+  return {
+    rules,
+    aggregations: {
+      normsPerRulesetid,
+    },
+  };
 }

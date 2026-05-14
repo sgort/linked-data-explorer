@@ -1,6 +1,37 @@
 {
   "versions": [
     {
+      "version": "1.6.3",
+      "date": "May 14, 2026",
+      "status": "Released",
+      "statusColor": "amber",
+      "borderColor": "amber",
+      "sections": [
+        {
+          "icon": "🔑",
+          "iconColor": "amber",
+          "title": "Stable keys and version indices on /v1/norms",
+          "items": [
+            "New rule_id_path_key field: rule_id_path with the date and index segments removed, e.g. \"BWBR0002471_2025-01-01_0, Artikel 2, lid 6\" → \"BWBR0002471, Artikel 2, lid 6\"; stable across versions of the same ruleset, suitable as a deduplication key when aggregating norms across applicable_date values",
+            "New rulesetid_index field: the integer index segment after the date in rule_id_path (e.g. the _0 in BWBR..._2025-01-01_0); distinguishes multiple versions published on the same date",
+            "Both new fields, together with applicable_date, are derived from a single regex pass over rule_id_path; all three emit JSON null when the path does not match the canonical <rulesetid>_<YYYY-MM-DD>_<index>[, <rest>] shape",
+            "Key insertion order extended: rulesetid, applicable_date, rulesetid_index, rule_id_path, rule_id_path_key — identifier metadata grouped first, then the path and its derived stable key together"
+          ]
+        },
+        {
+          "icon": "📊",
+          "iconColor": "blue",
+          "title": "Per-rulesetid aggregation",
+          "items": [
+            "Response envelope now carries an aggregations.norms_per_rulesetid map alongside rules, listing the count of top-level rules per cprmv:rulesetId in the filtered result set",
+            "Counts are keyed by the authoritative cprmv:rulesetId value (not parsed from the path), so non-conforming rule_id_path values still aggregate correctly",
+            "Sum of values equals data.total, letting clients render ruleset-level summaries without a second pass over rules",
+            "Additive change — existing readers of data.rules and data.total see no breaking change"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.6.2",
       "date": "May 13, 2026",
       "status": "Released",
