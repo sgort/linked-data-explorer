@@ -1,6 +1,52 @@
 {
   "versions": [
     {
+      "version": "1.7.0",
+      "date": "May 14, 2026",
+      "status": "Released",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "sections": [
+        {
+          "icon": "📦",
+          "iconColor": "purple",
+          "title": "Per-rulesetid dataset versioning on /v1/norms",
+          "items": [
+            "New envelope field: dataset_versions — a per-rulesetid map keyed by cprmv:rulesetId, each entry carrying { version, published_at } for the latest cprmv:Dataset record of that ruleset",
+            "Each BWB ruleset (BWBR0002471, BWBR0004044, ...) is published as a distinct cprmv:Dataset resource in TriplyDB, on its own publication cadence; a single /v1/norms response can span multiple rulesets at different versions",
+            "Backend picks the latest cprmv:Dataset per cprmv:rulesetId via a FILTER NOT EXISTS subpattern — historical versions remain queryable in TriplyDB but consumers see only the latest",
+            "New envelope field: cprmv_version — backend constant extracted from the CPRMV namespace URI, describes which vocabulary the backend speaks independently of which data is published",
+            "Internal 60-second cache on the dataset metadata SPARQL query — biannual data tolerates this happily and keeps the metadata lookup off the hot path"
+          ]
+        },
+        {
+          "icon": "⚡",
+          "iconColor": "amber",
+          "title": "HTTP cache headers for G2G consumers",
+          "items": [
+            "ETag header: opaque 8-hex strong validator hashed over the sorted dataset_versions map plus all request parameters affecting the response shape",
+            "Last-Modified header: max(published_at) across the response's datasets in RFC 7231 format — If-Modified-Since returns 304 only when nothing in the consumer's query has been republished since their last fetch",
+            "Cache-Control: public, max-age=3600 set only when every rulesetid in the response has dataset metadata; falls back to no-cache otherwise",
+            "Safe-by-default partial-coverage policy: if any rulesetid in the response is missing a cprmv:Dataset record, all three cache headers degrade to no-cache so consumers can't be misled into serving stale data for an unversioned ruleset",
+            "Single-rulesetid queries get a fast 304 path: the cheap (cached) metadata lookup decides freshness BEFORE the expensive rules SPARQL query runs",
+            "New utility module packages/backend/src/utils/etag.ts with computeNormsEtag() and computeLastModified(): key-order-independent and undefined-tolerant serialisation"
+          ]
+        },
+        {
+          "icon": "📜",
+          "iconColor": "blue",
+          "title": "API stability contract published",
+          "items": [
+            "New IOU documentation page at /linked-data-explorer/reference/api-stability — binding contract for G2G consumers covering the four versioning layers, PK semantics, additive evolution promise, per-rulesetid publication detection, partial-coverage behaviour, breaking-change criteria, and 24-month deprecation policy when v2 eventually arrives",
+            "Documents the immutability guarantee for the (rulesetid, applicable_date, rulesetid_index) tuple as the eternal primary key — consumers can cache permanently and never invalidate",
+            "Documents the rule_id_path_key field as the logical identifier for querying 'the current value of this rule' across its lifetime",
+            "Documents the cprmv:Dataset publication model: each BWB ruleset is a distinct dataset on its own cadence; rollout is from scratch with no retroactive backfill of existing rulesets",
+            "Quick-reference table at the bottom covering the questions a new G2G consumer is most likely to ask first"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.6.3",
       "date": "May 14, 2026",
       "status": "Released",

@@ -1,79 +1,68 @@
 // packages/backend/src/routes/norms.routes.ts
 // Exposes the cprmv:Rule publish format consumed by the SPARQL editor's
-// norm publisher. The shape returned by getAllNorms matches
-// cprmv-example.json verbatim, with one addition: `applicable_date`
-// (parsed from the dated segment of `rule_id_path`) inserted between
-// `rulesetid` and `rule_id_path`.
+// norm publisher, with HTTP cache headers for efficient G2G consumption.
 
 import { Router, Request, Response } from 'express';
-import { getAllNorms } from '../services/norms.service';
+import {
+  getAllNorms,
+  getDatasetVersionsByRulesetid,
+} from '../services/norms.service';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
+import { computeNormsEtag, computeLastModified } from '../utils/etag';
 import logger from '../utils/logger';
 import packageJson from '../../package.json';
 
 const router = Router();
 
-// Strict validation patterns for filter query parameters. Filter values
-// are interpolated directly into a SPARQL FILTER clause downstream, so
-// rejecting anything outside these character classes upfront is the
-// injection-prevention contract — the service layer assumes pre-validated
-// input. A bad value short-circuits with a 400 before any SPARQL fires.
+// Strict validation patterns for filter query parameters. Filter values are
+// interpolated directly into a SPARQL FILTER clause downstream, so rejecting
+// anything outside these character classes upfront is the injection-prevention
+// contract — the service layer assumes pre-validated input.
 const RULESETID_PATTERN = /^[A-Za-z0-9_-]+$/;
 const APPLICABLE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// Cache-Control max-age. Biannual data tolerates generous caching; 1 hour is
+// conservative. Could be longer (12-24h) once the publication cadence is
+// observed in production.
+const CACHE_MAX_AGE_SECONDS = 3600;
 
 /**
  * GET /v1/norms
  * List all cprmv:Rule paths and norms in the configured TriplyDB dataset.
  *
- * Each rule object is emitted in the publish format defined by
- * cprmv-example.json — fully-qualified URI keys for type/id/definition/
- * contains, short keys for situatie/norm/per/rulesetid/applicable_date/
- * rulesetid_index/rule_id_path/rule_id_path_key.
+ * Response envelope fields (under `data`):
+ *   total                number of rules in the filtered result set
+ *   dataset_versions     per-rulesetid map: { "<id>": { version, published_at } }
+ *                        Only contains entries for rulesetids that have a
+ *                        cprmv:Dataset record in TriplyDB.
+ *   cprmv_version        CPRMV vocabulary version, e.g. "0.3.0"
+ *   aggregations         { norms_per_rulesetid: { <id>: <count> } }
+ *   rules                array of PublishedRule objects
  *
- * Three fields are derived from rule_id_path and rendered as JSON `null`
- * when the path does not match the canonical
- * `<rulesetid>_<YYYY-MM-DD>_<index>[, <rest>]` shape:
- *   - applicable_date   "2025-07-01"
- *   - rulesetid_index    0  (integer index after the date)
- *   - rule_id_path_key  "BWBR0002471, Artikel 2, lid 6"
- *                       (path with date+index stripped; stable across versions)
+ * HTTP cache headers (set only when every rulesetid in the response has a
+ * dataset_versions entry):
+ *   ETag           opaque 8-hex hash over dataset_versions + filter params
+ *   Last-Modified  RFC 7231 date — max(published_at) across the response
+ *   Cache-Control  public, max-age=<CACHE_MAX_AGE_SECONDS>
+ *
+ * Conditional requests honoured: If-None-Match against ETag and
+ * If-Modified-Since against Last-Modified → 304 Not Modified.
+ *
+ * When any rulesetid in the response is missing dataset metadata,
+ * Cache-Control falls back to `no-cache` and ETag/Last-Modified are omitted.
+ * Safe-by-default during rollout: caching kicks in progressively as
+ * cprmv:Dataset records are published.
  *
  * Query parameters (all optional, may be combined):
- *   endpoint          — SPARQL endpoint URL. Defaults to
- *                       config.triplydb.endpoint (TRIPLYDB_ENDPOINT) when
- *                       omitted, matching the pattern used by /v1/dmns.
- *   rulesetid         — Exact-match filter on cprmv:rulesetId
- *                       (e.g. "BWBR0015703"). Must match
- *                       /^[A-Za-z0-9_-]+$/ or the request is rejected
- *                       with 400.
- *   applicable_date   — Filter on the dated segment of cprmv:ruleIdPath
- *                       (e.g. "2026-01-01" matches paths containing
- *                       "_2026-01-01_"). Must match /^\d{4}-\d{2}-\d{2}$/
- *                       or the request is rejected with 400.
+ *   endpoint          SPARQL endpoint URL override
+ *   rulesetid         exact-match filter, /^[A-Za-z0-9_-]+$/ or 400
+ *   applicable_date   YYYY-MM-DD or 400
  *
  * Compliance notes:
  * - API-05: noun-based resource name "norms"
  * - API-20: GET for read
  * - API-57: API-Version header
- *
- * Response shape:
- *   ApiResponse<{
- *     total: number;
- *     aggregations: { norms_per_rulesetid: Record<string, number> };
- *     rules: PublishedRule[];
- *   }>
- *
- * The editor extracts response.data.rules to obtain the array in
- * publish-ready form. `total` reflects the filtered count and equals
- * the sum of `aggregations.norms_per_rulesetid` values.
- *
- * Examples:
- *   GET /v1/norms
- *   GET /v1/norms?rulesetid=BWBR0015703
- *   GET /v1/norms?applicable_date=2026-01-01
- *   GET /v1/norms?rulesetid=BWBR0015703&applicable_date=2026-01-01
- *   GET /v1/norms?endpoint=https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql
  */
 router.get('/', async (req: Request, res: Response) => {
   res.set('API-Version', packageJson.version);
@@ -107,24 +96,106 @@ router.get('/', async (req: Request, res: Response) => {
   }
 
   try {
+    // ETag short-circuit: when the request is filtered to a single rulesetid,
+    // we can decide freshness from the (cached) metadata map alone — no need
+    // to run the expensive rules query just to find out it would 304.
+    //
+    // For unfiltered requests we don't know which rulesetids would appear
+    // until we run the rules query, so we have to do the full work first
+    // and rely on application-level cache on subsequent requests.
+    if (rulesetid) {
+      const allDatasetVersions = await getDatasetVersionsByRulesetid(requestedEndpoint);
+      const info = allDatasetVersions[rulesetid];
+
+      if (info) {
+        const datasetVersionsForEtag = { [rulesetid]: info };
+        const etag = computeNormsEtag({
+          datasetVersions: datasetVersionsForEtag,
+          filterSignature: {
+            endpoint: requestedEndpoint,
+            rulesetid,
+            applicable_date: applicableDate,
+          },
+        });
+        const lastModified = computeLastModified(datasetVersionsForEtag);
+
+        res.set('ETag', etag);
+        if (lastModified) res.set('Last-Modified', lastModified);
+        res.set('Cache-Control', `public, max-age=${CACHE_MAX_AGE_SECONDS}`);
+
+        if (req.fresh) {
+          return res.status(304).end();
+        }
+      }
+      // If `info` is missing, the rulesetid has no Dataset metadata yet.
+      // We fall through to the full query without setting cache headers;
+      // Cache-Control is set below after we have the full response.
+    }
+
     logger.info('Norms list request', {
       endpoint: requestedEndpoint || 'default',
       ...(rulesetid && { rulesetid }),
       ...(applicableDate && { applicableDate }),
     });
 
+    // Full rules query + aggregation + scoped dataset metadata
     const result = await getAllNorms(requestedEndpoint, {
       rulesetid,
       applicableDate,
     });
 
+    // Cache headers when EVERY rulesetid in the response has dataset metadata.
+    // Partial coverage falls back to no-cache: we can't reliably detect a
+    // change in an unversioned ruleset, so consumers must always refetch.
+    const rulesetIdsInResponse = Object.keys(result.aggregations.normsPerRulesetid);
+    const allHaveMetadata =
+      rulesetIdsInResponse.length > 0 &&
+      rulesetIdsInResponse.every((id) => result.metadata.datasetVersions[id]);
+
+    if (allHaveMetadata) {
+      const etag = computeNormsEtag({
+        datasetVersions: result.metadata.datasetVersions,
+        filterSignature: {
+          endpoint: requestedEndpoint,
+          rulesetid,
+          applicable_date: applicableDate,
+        },
+      });
+      const lastModified = computeLastModified(result.metadata.datasetVersions);
+
+      res.set('ETag', etag);
+      if (lastModified) res.set('Last-Modified', lastModified);
+      res.set('Cache-Control', `public, max-age=${CACHE_MAX_AGE_SECONDS}`);
+
+      // Honour conditional request on the post-query path too. req.fresh
+      // compares the headers we just set against If-None-Match /
+      // If-Modified-Since. Unlikely to hit here (we'd have caught it in
+      // the short-circuit above for single-rulesetid requests) but covers
+      // the multi-rulesetid case where the consumer's cache is still valid.
+      if (req.fresh) {
+        return res.status(304).end();
+      }
+    } else {
+      res.set('Cache-Control', 'no-cache');
+    }
+
+    // Serialise to envelope. Internal camelCase translates to snake_case at
+    // the JSON boundary, matching the existing convention for per-rule fields
+    // (applicableDate → applicable_date, normsPerRulesetid → norms_per_rulesetid).
+    const datasetVersionsForJson: Record<string, { version: string; published_at: string }> = {};
+    for (const [k, v] of Object.entries(result.metadata.datasetVersions)) {
+      datasetVersionsForJson[k] = {
+        version: v.version,
+        published_at: v.publishedAt,
+      };
+    }
+
     res.json({
       success: true,
       data: {
         total: result.rules.length,
-        // camelCase -> snake_case translation at the JSON envelope boundary,
-        // matching the existing applicableDate -> applicable_date convention
-        // for per-rule fields.
+        dataset_versions: datasetVersionsForJson,
+        cprmv_version: result.metadata.cprmvVersion,
         aggregations: {
           norms_per_rulesetid: result.aggregations.normsPerRulesetid,
         },
@@ -145,5 +216,8 @@ router.get('/', async (req: Request, res: Response) => {
     } as ApiResponse);
   }
 });
+
+// getCprmvVersion is exported by the service (norms.service.ts) for potential
+// reuse in other routes — e.g. /v1/health could surface it.
 
 export default router;

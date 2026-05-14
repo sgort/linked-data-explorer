@@ -1,7 +1,20 @@
 // packages/backend/src/services/norms.service.ts
 // Service for fetching cprmv:Rule paths and norms from a TriplyDB SPARQL
 // endpoint and emitting them in the publish format defined by
-// cprmv-example.json.
+// cprmv-example.json. Also fetches per-rulesetid dataset metadata (version,
+// publication date) used for the dataset_versions envelope field and HTTP
+// cache headers.
+//
+// Data model assumption (TTL example):
+//
+//   <.../datasets/BWBR0015703_2026-01-01> a cprmv:Dataset ;
+//     cprmv:rulesetId "BWBR0015703" ;
+//     cprmv:version "2026.1.0" ;
+//     cprmv:datePublished "2026-01-15T00:00:00Z"^^xsd:dateTime .
+//
+// Multiple Dataset resources may share a cprmv:rulesetId over time
+// (historical versions). The query picks the latest per rulesetid via a
+// FILTER NOT EXISTS subpattern.
 
 import * as triplydbService from './triplydb.service';
 import { config } from '../utils/config';
@@ -16,69 +29,59 @@ const CPRMV_ID = `${CPRMV_NS}id`;
 const CPRMV_DEFINITION = `${CPRMV_NS}definition`;
 const CPRMV_CONTAINS = `${CPRMV_NS}contains`;
 
-/**
- * Child rule inside a `contains` map. Carries only type/id/definition —
- * matches the shape of nested rules in cprmv-example.json. Sub-rules
- * intentionally do not get the per-rule metadata fields (rulesetid,
- * applicable_date, rulesetid_index, rule_id_path, rule_id_path_key) — those
- * apply to top-level rules only.
- */
+// CPRMV vocabulary version — extracted from the namespace URI so the constant
+// stays self-consistent with CPRMV_NS. Surfaced via cprmv_version envelope
+// field; describes which vocabulary this BACKEND speaks (independent of
+// which data has been published).
+const CPRMV_VERSION_MATCH = CPRMV_NS.match(/\/(\d+\.\d+\.\d+)\/?$/);
+const CPRMV_VERSION = CPRMV_VERSION_MATCH ? CPRMV_VERSION_MATCH[1] : 'unknown';
+
+// Dataset metadata cache TTL. Biannual data tolerates this happily; the cache
+// keeps the metadata SPARQL query off the hot path while still picking up new
+// publications within a minute or two.
+const META_CACHE_TTL_MS = 60_000;
+
 interface ChildRule {
   [RDF_TYPE]: string;
   [CPRMV_ID]: string;
   [CPRMV_DEFINITION]: string;
 }
 
-/**
- * Top-level published rule. Returned as Record<string, unknown> because
- * TypeScript can't enforce insertion order at the type level, and a
- * strict interface would force a constructor-then-overwrite pattern that
- * breaks the order JS publishers rely on.
- *
- * The constructor in getAllNorms below inserts keys in this order:
- *   type, id, definition, contains?, situatie?, norm?, per?,
- *   rulesetid, applicable_date, rulesetid_index,
- *   rule_id_path, rule_id_path_key
- *
- * Fields derived from rule_id_path:
- * - applicable_date  — `2025-07-01` from `BWBR..._2025-07-01_0, ...`
- * - rulesetid_index  — `0` (the integer after the date)
- * - rule_id_path_key — `BWBR0002471, Artikel 2, lid 6` (path with date+index
- *                      removed; stable across versions of the same ruleset)
- *
- * All three are `null` when rule_id_path doesn't match the canonical
- * `<rulesetid>_<YYYY-MM-DD>_<index>[, <rest>]` pattern.
- */
 export type PublishedRule = Record<string, unknown>;
 
-/**
- * Filter parameters accepted by getAllNorms. Both fields are pre-validated
- * by the calling route (norms.routes.ts) — rulesetid against
- * /^[A-Za-z0-9_-]+$/ and applicableDate against /^\d{4}-\d{2}-\d{2}$/ —
- * so direct string interpolation into SPARQL is safe here.
- */
 export interface NormsFilter {
   rulesetid?: string;
   applicableDate?: string;
 }
 
 /**
- * Result envelope returned by getAllNorms. Fields use camelCase internally;
- * the route layer translates to snake_case when serialising to JSON
- * (matching the existing applicableDate -> applicable_date convention).
+ * Version metadata for a single ruleset's Dataset record. publishedAt is
+ * ISO 8601 (as returned by SPARQL).
+ */
+export interface DatasetVersionInfo {
+  version: string;
+  publishedAt: string;
+}
+
+/**
+ * Snapshot metadata returned alongside rules. `datasetVersions` only
+ * contains entries for rulesetids that have a cprmv:Dataset resource
+ * in TriplyDB — during rollout this may be a subset of the rulesetids
+ * present in `rules`. cprmvVersion is always set.
  */
 export interface NormsResult {
   rules: PublishedRule[];
   aggregations: {
-    /** Count of top-level rules per cprmv:rulesetId in the filtered result
-     *  set. Sum of values equals rules.length. */
     normsPerRulesetid: Record<string, number>;
+  };
+  metadata: {
+    datasetVersions: Record<string, DatasetVersionInfo>;
+    cprmvVersion: string;
   };
 }
 
 // Canonical rule_id_path shape:
 //   <rulesetid>_<YYYY-MM-DD>_<index>[, <rest>]
-// Capture groups: 1=rulesetid, 2=date, 3=index, 4=rest (optional)
 const RULE_ID_PATH_PATTERN = /^([^_]+)_(\d{4}-\d{2}-\d{2})_(\d+)(?:,\s*(.+))?$/;
 
 interface RulePathParts {
@@ -87,16 +90,6 @@ interface RulePathParts {
   ruleIdPathKey: string | null;
 }
 
-/**
- * Extract derived fields from a rule_id_path. Returns all-null when the path
- * does not match the canonical shape — the caller renders these as JSON
- * `null` so downstream consumers can detect non-conforming data explicitly.
- *
- * Note: the rulesetid component is parsed from the path itself (group 1)
- * rather than substituted from the explicit cprmv:rulesetId field. In normal
- * data they agree; using the path-prefix here makes rule_id_path_key a pure
- * string transformation of rule_id_path with no cross-field dependency.
- */
 function extractRulePathParts(ruleIdPath: string): RulePathParts {
   const match = ruleIdPath.match(RULE_ID_PATH_PATTERN);
   if (!match) {
@@ -111,16 +104,114 @@ function extractRulePathParts(ruleIdPath: string): RulePathParts {
   };
 }
 
-// SPARQL query mirrors the "All Rule Paths and Norms by Ruleset" sample in
-// packages/frontend/src/utils/constants.ts but pulls every attribute the
-// publish format needs (id, definition, situatie, norm, per) plus the
-// optional cprmv:contains relationship to first-level child rules.
-//
-// Filter clauses (rulesetid and/or applicable_date) are injected after the
-// mandatory triple patterns so the SPARQL optimiser can apply them before
-// resolving the OPTIONAL branches. The filter values are validated upstream
-// in norms.routes.ts against strict character-class regexes, so direct
-// string interpolation is safe.
+// =====================================================================
+// Dataset metadata (per rulesetid)
+// =====================================================================
+
+// Fetches ALL cprmv:Dataset records, picking the latest per rulesetid via
+// FILTER NOT EXISTS. The NOT EXISTS pattern is generally more efficient than
+// a MAX subquery on TriplyDB-hosted Virtuoso/Comunica engines.
+const DATASET_METADATA_QUERY = `
+PREFIX cprmv: <${CPRMV_NS}>
+
+SELECT ?rulesetId ?version ?published
+WHERE {
+  ?ds a cprmv:Dataset ;
+      cprmv:rulesetId ?rulesetId ;
+      cprmv:version ?version ;
+      cprmv:datePublished ?published .
+
+  FILTER NOT EXISTS {
+    ?other a cprmv:Dataset ;
+           cprmv:rulesetId ?rulesetId ;
+           cprmv:datePublished ?otherPublished .
+    FILTER(?otherPublished > ?published)
+  }
+}
+ORDER BY ?rulesetId
+`;
+
+interface MetadataCacheEntry {
+  /** Per-rulesetid latest version info. */
+  byRulesetid: Record<string, DatasetVersionInfo>;
+  expires: number;
+}
+
+// Cache keyed by endpoint URL so different SPARQL endpoints don't share
+// metadata. In-memory module-level state — the Azure App Service runs a
+// single Node process; the cache is purely an optimisation.
+const metaCache = new Map<string, MetadataCacheEntry>();
+
+/**
+ * Fetch the latest cprmv:Dataset record per rulesetid from the configured
+ * TriplyDB endpoint. Returns a map keyed by rulesetid; rulesetids without
+ * a Dataset resource are simply absent from the map.
+ *
+ * Cached for META_CACHE_TTL_MS per endpoint URL. Network or query errors
+ * are logged and return an empty map — /v1/norms still serves data, but
+ * with degraded cache headers.
+ */
+export async function getDatasetVersionsByRulesetid(
+  endpoint?: string
+): Promise<Record<string, DatasetVersionInfo>> {
+  const targetEndpoint = endpoint || config.triplydb.endpoint;
+
+  if (!targetEndpoint) return {};
+
+  // Cache hit
+  const cached = metaCache.get(targetEndpoint);
+  if (cached && cached.expires > Date.now()) {
+    return cached.byRulesetid;
+  }
+
+  // Cache miss — query SPARQL
+  try {
+    const data = await triplydbService.executeQuery(targetEndpoint, DATASET_METADATA_QUERY);
+    const bindings = data.results?.bindings || [];
+
+    const byRulesetid: Record<string, DatasetVersionInfo> = {};
+    for (const b of bindings) {
+      const rulesetId = b.rulesetId?.value;
+      const version = b.version?.value;
+      const published = b.published?.value;
+      if (rulesetId && version && published) {
+        byRulesetid[rulesetId] = { version, publishedAt: published };
+      }
+    }
+
+    metaCache.set(targetEndpoint, {
+      byRulesetid,
+      expires: Date.now() + META_CACHE_TTL_MS,
+    });
+
+    logger.info('[Norms Service] Dataset metadata fetched', {
+      endpoint: targetEndpoint,
+      rulesetCount: Object.keys(byRulesetid).length,
+    });
+
+    return byRulesetid;
+  } catch (error: unknown) {
+    logger.warn('[Norms Service] Dataset metadata query failed; serving without cache headers', {
+      endpoint: targetEndpoint,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {};
+  }
+}
+
+/**
+ * Backend constant accessor for the CPRMV vocabulary version.
+ * Exposed for the route layer so it can populate `cprmv_version` even
+ * when there are no datasets at all.
+ */
+export function getCprmvVersion(): string {
+  return CPRMV_VERSION;
+}
+
+// =====================================================================
+// Norms query
+// =====================================================================
+
 function buildNormsQuery(filter?: NormsFilter): string {
   const filterClauses: string[] = [];
 
@@ -166,18 +257,11 @@ ORDER BY ?rulesetId ?ruleIdPath ?containedId
 }
 
 /**
- * Fetch all cprmv:Rule records (with optional contained sub-rules) and
- * return them in the publish format defined by cprmv-example.json, plus
- * a per-rulesetid aggregation over the filtered result set.
- *
- * Aggregation rule: the first SPARQL row seen for a parent rule URI fills
- * the scalar fields. Every subsequent row for the same parent only
- * contributes an entry to the `contains` map. SPARQL DISTINCT plus the
- * deterministic ORDER BY makes this stable across runs.
- *
- * The three rule_id_path-derived fields (applicable_date, rulesetid_index,
- * rule_id_path_key) are computed once per parent by parsing the canonical
- * path shape via extractRulePathParts.
+ * Fetch all cprmv:Rule records, the per-rulesetid aggregation, and the
+ * per-rulesetid dataset metadata for any ruleset present in the result.
+ * Metadata for rulesetids without a cprmv:Dataset record is simply absent
+ * from the returned map; the route layer treats missing entries as a
+ * "do not cache" signal.
  */
 export async function getAllNorms(
   endpoint?: string,
@@ -197,6 +281,10 @@ export async function getAllNorms(
     ...(filter?.applicableDate && { applicableDate: filter.applicableDate }),
   });
 
+  // Dataset metadata first — cached, cheap. Failures degrade to empty map;
+  // we still serve rules data below.
+  const allDatasetVersions = await getDatasetVersionsByRulesetid(targetEndpoint);
+
   const query = buildNormsQuery(filter);
   const data = await triplydbService.executeQuery(targetEndpoint, query);
   const bindings = data.results?.bindings || [];
@@ -205,10 +293,6 @@ export async function getAllNorms(
     rowCount: bindings.length,
   });
 
-  // Intermediate accumulator keyed by parent rule URI. We collect scalar
-  // fields plus a children map, then build the final ordered object once
-  // per parent after the loop so property insertion order matches the
-  // publish format exactly.
   interface Accumulator {
     id: string;
     definition: string;
@@ -249,9 +333,6 @@ export async function getAllNorms(
       acc.set(ruleUri, entry);
     }
 
-    // Add contained child if present. SPARQL may yield duplicate
-    // (parent, child) pairs across runs; keying by child id makes the
-    // operation idempotent (values are identical anyway).
     if (b.contained?.value && b.containedId?.value && b.containedDefinition?.value) {
       entry.children.set(b.containedId.value, {
         [RDF_TYPE]: CPRMV_RULE_TYPE,
@@ -261,12 +342,15 @@ export async function getAllNorms(
     }
   }
 
-  // Materialise objects in the publish-format key order. Conditional spreads
-  // keep optional keys omitted entirely (rather than set to undefined) when
-  // absent. The three path-derived fields are always present — `null` when
-  // the path carries no parseable shape.
   const rules: PublishedRule[] = [];
   const normsPerRulesetid: Record<string, number> = {};
+  // Dataset versions scoped to JUST the rulesetids present in this response —
+  // we don't want to leak metadata for unrelated datasets the consumer didn't
+  // query. Sorted on serialisation by key (route layer uses Object.keys
+  // ordering, which preserves insertion order; we insert in rulesetId-sorted
+  // order below).
+  const datasetVersions: Record<string, DatasetVersionInfo> = {};
+  const rulesetIdsInResponse = new Set<string>();
 
   for (const entry of acc.values()) {
     const rule: PublishedRule = {
@@ -287,22 +371,31 @@ export async function getAllNorms(
     };
 
     rules.push(rule);
-
-    // Per-rulesetid aggregation. We use the explicit cprmv:rulesetId here
-    // (not the parsed path-prefix) so the counts always key by the
-    // authoritative value — even if a stray rule has a non-conforming path.
     normsPerRulesetid[entry.rulesetId] = (normsPerRulesetid[entry.rulesetId] || 0) + 1;
+    rulesetIdsInResponse.add(entry.rulesetId);
+  }
+
+  // Insert dataset metadata for the rulesetids present in the response, in
+  // sorted order. Rulesetids without a cprmv:Dataset record are absent.
+  for (const rulesetId of Array.from(rulesetIdsInResponse).sort()) {
+    const info = allDatasetVersions[rulesetId];
+    if (info) {
+      datasetVersions[rulesetId] = info;
+    }
   }
 
   logger.info('[Norms Service] Aggregated published rules', {
     count: rules.length,
     rulesets: Object.keys(normsPerRulesetid).length,
+    versionedRulesets: Object.keys(datasetVersions).length,
   });
 
   return {
     rules,
-    aggregations: {
-      normsPerRulesetid,
+    aggregations: { normsPerRulesetid },
+    metadata: {
+      datasetVersions,
+      cprmvVersion: CPRMV_VERSION,
     },
   };
 }
