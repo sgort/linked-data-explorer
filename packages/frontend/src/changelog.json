@@ -1,6 +1,27 @@
 {
   "versions": [
     {
+      "version": "1.7.1",
+      "date": "May 14, 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "🔍",
+          "iconColor": "blue",
+          "title": "Graph-name traceability on /v1/triplydb/update-service",
+          "items": [
+            "New optional graphName field in the POST /v1/triplydb/update-service request body — accepts the IRI of the graph that triggered the sync (e.g. https://regels.overheid.nl/graphs/Sociale_Verzekeringsbank/aow-leeftijd); requests that omit it continue to work unchanged",
+            "graphName threaded through to the route logger as graphName and to the service logger as triggeredByGraph — multi-publish flows landing in distinct per-service graphs are now traceable end-to-end without inspecting TriplyDB internals",
+            "updateService() in packages/backend/src/services/triplydb.service.ts extended with a fourth optional parameter graphName?: string; existing graphNames?: string[] parameter unchanged for backward compatibility",
+            "Response envelope from /v1/triplydb/update-service now echoes graphName when it was supplied in the request, omitted otherwise — additive shape change with no breaking impact on existing clients",
+            "The underlying TriplyDB sync call (POST /datasets/{account}/{dataset}/services/{serviceName} with body {\"sync\":\"true\"}) is unchanged — graphName is purely observability metadata, since the TriplyDB sync endpoint has no graph-scoping mechanism of its own"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.7.0",
       "date": "May 14, 2026",
       "status": "Released",
