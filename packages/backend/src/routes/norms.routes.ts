@@ -3,10 +3,7 @@
 // norm publisher, with HTTP cache headers for efficient G2G consumption.
 
 import { Router, Request, Response } from 'express';
-import {
-  getAllNorms,
-  getDatasetVersionsByRulesetid,
-} from '../services/norms.service';
+import { getAllNorms, getDatasetVersionsByRulesetid } from '../services/norms.service';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { computeNormsEtag, computeLastModified } from '../utils/etag';
@@ -105,10 +102,10 @@ router.get('/', async (req: Request, res: Response) => {
     // and rely on application-level cache on subsequent requests.
     if (rulesetid) {
       const allDatasetVersions = await getDatasetVersionsByRulesetid(requestedEndpoint);
-      const info = allDatasetVersions[rulesetid];
+      const list = allDatasetVersions[rulesetid];
 
-      if (info) {
-        const datasetVersionsForEtag = { [rulesetid]: info };
+      if (list && list.length > 0) {
+        const datasetVersionsForEtag = { [rulesetid]: list };
         const etag = computeNormsEtag({
           datasetVersions: datasetVersionsForEtag,
           filterSignature: {
@@ -127,7 +124,7 @@ router.get('/', async (req: Request, res: Response) => {
           return res.status(304).end();
         }
       }
-      // If `info` is missing, the rulesetid has no Dataset metadata yet.
+      // If `list` is missing, the rulesetid has no Dataset metadata yet.
       // We fall through to the full query without setting cache headers;
       // Cache-Control is set below after we have the full response.
     }
@@ -150,7 +147,7 @@ router.get('/', async (req: Request, res: Response) => {
     const rulesetIdsInResponse = Object.keys(result.aggregations.normsPerRulesetid);
     const allHaveMetadata =
       rulesetIdsInResponse.length > 0 &&
-      rulesetIdsInResponse.every((id) => result.metadata.datasetVersions[id]);
+      rulesetIdsInResponse.every((id) => result.metadata.datasetVersions[id]?.length > 0);
 
     if (allHaveMetadata) {
       const etag = computeNormsEtag({
@@ -182,12 +179,21 @@ router.get('/', async (req: Request, res: Response) => {
     // Serialise to envelope. Internal camelCase translates to snake_case at
     // the JSON boundary, matching the existing convention for per-rule fields
     // (applicableDate → applicable_date, normsPerRulesetid → norms_per_rulesetid).
-    const datasetVersionsForJson: Record<string, { version: string; published_at: string }> = {};
-    for (const [k, v] of Object.entries(result.metadata.datasetVersions)) {
-      datasetVersionsForJson[k] = {
+    // `version` and `title` are nullable — primary ruleset only.
+    //
+    // Each rulesetid maps to a LIST of records (one per applicable period),
+    // pre-sorted by the service: version desc, nulls last, publishedAt desc
+    // tie-break. Consumers wanting "the latest applicable version" take [0].
+    const datasetVersionsForJson: Record<
+      string,
+      Array<{ version: string | null; published_at: string; title: string | null }>
+    > = {};
+    for (const [k, list] of Object.entries(result.metadata.datasetVersions)) {
+      datasetVersionsForJson[k] = list.map((v) => ({
         version: v.version,
         published_at: v.publishedAt,
-      };
+        title: v.title,
+      }));
     }
 
     res.json({

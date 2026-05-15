@@ -4,15 +4,26 @@
 import crypto from 'crypto';
 
 export interface DatasetVersionInfo {
-  version: string;
-  publishedAt: string; // ISO 8601
+  /** BWB's own version, e.g. "2026-01-01". Null for non-primary rulesets
+   *  whose version the publisher doesn't know (only the service's primary
+   *  legalResource carries a known version; other rulesets entering via
+   *  cprmv:Rule references are version-unknown by construction). */
+  version: string | null;
+  /** dct:issued — when this Dataset record was published. Always present.
+   *  ISO 8601. This is the meaningful signal for cache validity. */
+  publishedAt: string;
+  /** dct:title — human-readable name like "Participatiewet". Null for
+   *  non-primary rulesets (same reason as version). */
+  title: string | null;
 }
 
 export interface EtagInputs {
-  /** Per-rulesetid dataset metadata for every rulesetid present in the
-   *  response. Order-independent — entries are sorted by rulesetid before
-   *  hashing so the ETag is stable regardless of insertion order. */
-  datasetVersions: Record<string, DatasetVersionInfo>;
+  /** Per-rulesetid list of dataset metadata entries. Each rulesetid can carry
+   *  multiple cprmv:Dataset records — different applicable periods of the
+   *  same law are concurrent, not competing. The list is hashed in caller-
+   *  provided order; the route layer pre-sorts (version desc, nulls last,
+   *  published_at desc tie-break). */
+  datasetVersions: Record<string, DatasetVersionInfo[]>;
   /** All request parameters that affect the response shape. Anything that
    *  changes the rules array must be included. */
   filterSignature: Record<string, string | undefined>;
@@ -38,12 +49,19 @@ export interface EtagInputs {
  * to avoid collision via separator choice.
  */
 export function computeNormsEtag(inputs: EtagInputs): string {
-  // Dataset versions: sorted rulesetid → "<id>:<version>:<publishedAt>".
+  // Dataset versions: sorted by rulesetid; within each rulesetid the list
+  // order is preserved (caller-provided sort by version desc, nulls last).
+  // Format per entry: "<version|null>:<publishedAt>". Title is intentionally
+  // excluded — informational metadata, not part of cache identity. Any
+  // title-only update arrives as a new dct:issued anyway, so publishedAt
+  // covers it.
   const datasetPart = Object.keys(inputs.datasetVersions)
     .sort()
     .map((k) => {
-      const v = inputs.datasetVersions[k];
-      return `${k}:${v.version}:${v.publishedAt}`;
+      const entries = inputs.datasetVersions[k]
+        .map((v) => `${v.version ?? 'null'}:${v.publishedAt}`)
+        .join(',');
+      return `${k}=${entries}`;
     })
     .join(';');
 
@@ -73,11 +91,14 @@ export function computeNormsEtag(inputs: EtagInputs): string {
  * when the input map is empty.
  */
 export function computeLastModified(
-  datasetVersions: Record<string, DatasetVersionInfo>
+  datasetVersions: Record<string, DatasetVersionInfo[]>
 ): string | null {
-  const timestamps = Object.values(datasetVersions).map((v) =>
-    new Date(v.publishedAt).getTime()
-  );
+  const timestamps: number[] = [];
+  for (const entries of Object.values(datasetVersions)) {
+    for (const v of entries) {
+      timestamps.push(new Date(v.publishedAt).getTime());
+    }
+  }
   if (timestamps.length === 0) return null;
 
   const latest = Math.max(...timestamps);

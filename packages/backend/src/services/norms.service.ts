@@ -5,16 +5,22 @@
 // publication date) used for the dataset_versions envelope field and HTTP
 // cache headers.
 //
-// Data model assumption (TTL example):
+// Data model assumption (TTL example, as emitted by the CPSV editor —
+// see cprmv-dataset-generation.md in the CPSV editor docs):
 //
-//   <.../datasets/BWBR0015703_2026-01-01> a cprmv:Dataset ;
+//   <.../datasets/BWBR0015703_2026-01-01> a cprmv:Dataset, dcat:Dataset ;
+//     dct:identifier "BWBR0015703_2026-01-01" ;
+//     dct:title "Participatiewet"@nl ;
 //     cprmv:rulesetId "BWBR0015703" ;
-//     cprmv:version "2026.1.0" ;
-//     cprmv:datePublished "2026-01-15T00:00:00Z"^^xsd:dateTime .
+//     cprmv:implements <https://wetten.overheid.nl/BWBR0015703/2026-01-01> ;
+//     dcat:version "2026-01-01" ;
+//     dct:issued "2026-05-15T06:57:11Z"^^xsd:dateTime ;
+//     dcat:landingPage <https://wetten.overheid.nl/BWBR0015703/2026-01-01> .
 //
-// Multiple Dataset resources may share a cprmv:rulesetId over time
-// (historical versions). The query picks the latest per rulesetid via a
-// FILTER NOT EXISTS subpattern.
+// Non-primary rulesets (those entering a service via cprmv:Rule references
+// rather than as the primary legalResource) omit dct:title and dcat:version
+// because the editor doesn't know their values. dct:issued is always
+// present and drives latest-pick + cache validity.
 
 import * as triplydbService from './triplydb.service';
 import { config } from '../utils/config';
@@ -55,19 +61,37 @@ export interface NormsFilter {
 }
 
 /**
- * Version metadata for a single ruleset's Dataset record. publishedAt is
- * ISO 8601 (as returned by SPARQL).
+ * Version metadata for a single ruleset's cprmv:Dataset record.
+ *
+ * - `version`: dcat:version. Present only for the primary ruleset (the one
+ *   matching the service's legalResource.bwbId in the CPSV editor). Null for
+ *   non-primary rulesets — the editor doesn't know their versions.
+ * - `publishedAt`: dct:issued. Always present. ISO 8601. The meaningful
+ *   signal for cache validity — it changes on every (re-)publication.
+ * - `title`: dct:title. Like version, present only for the primary ruleset.
  */
 export interface DatasetVersionInfo {
-  version: string;
+  version: string | null;
   publishedAt: string;
+  title: string | null;
 }
 
 /**
- * Snapshot metadata returned alongside rules. `datasetVersions` only
- * contains entries for rulesetids that have a cprmv:Dataset resource
- * in TriplyDB — during rollout this may be a subset of the rulesetids
- * present in `rules`. cprmvVersion is always set.
+ * Snapshot metadata returned alongside rules.
+ *
+ * `datasetVersions` is keyed by `cprmv:rulesetId`; each value is a LIST of
+ * cprmv:Dataset records, because different applicable periods of the same
+ * law are concurrent rather than competing (e.g. BWBR0015703 has separate
+ * Datasets for the 2025-01-01 and 2026-01-01 applicable periods, both
+ * authoritative for rules with the matching applicable_date).
+ *
+ * The list is sorted by version descending with nulls at the end, ties
+ * broken by publishedAt descending — `[0]` is the most-recent applicable
+ * version of that ruleset. Non-primary rulesets have null versions and
+ * sort by publication time only.
+ *
+ * Only contains entries for rulesetids that have at least one cprmv:Dataset
+ * resource in TriplyDB. cprmvVersion is always set.
  */
 export interface NormsResult {
   rules: PublishedRule[];
@@ -75,7 +99,7 @@ export interface NormsResult {
     normsPerRulesetid: Record<string, number>;
   };
   metadata: {
-    datasetVersions: Record<string, DatasetVersionInfo>;
+    datasetVersions: Record<string, DatasetVersionInfo[]>;
     cprmvVersion: string;
   };
 }
@@ -108,32 +132,37 @@ function extractRulePathParts(ruleIdPath: string): RulePathParts {
 // Dataset metadata (per rulesetid)
 // =====================================================================
 
-// Fetches ALL cprmv:Dataset records, picking the latest per rulesetid via
-// FILTER NOT EXISTS. The NOT EXISTS pattern is generally more efficient than
-// a MAX subquery on TriplyDB-hosted Virtuoso/Comunica engines.
+// Fetches ALL cprmv:Dataset records. Each cprmv:rulesetId may have multiple
+// records — different applicable periods of the same law (e.g. 2025-01-01
+// and 2026-01-01 of BWBR0015703) are concurrent and authoritative. The
+// caller groups by rulesetId and sorts by version desc (nulls last),
+// publishedAt desc tie-break.
+//
+// The CPSV editor's publish format (see cprmv-dataset-generation.md):
+//   - dct:issued     — always present, publication timestamp (xsd:dateTime)
+//   - dcat:version   — primary ruleset only (the service's legalResource)
+//   - dct:title      — primary ruleset only
 const DATASET_METADATA_QUERY = `
 PREFIX cprmv: <${CPRMV_NS}>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
 
-SELECT ?rulesetId ?version ?published
+SELECT ?rulesetId ?version ?issued ?title
 WHERE {
   ?ds a cprmv:Dataset ;
       cprmv:rulesetId ?rulesetId ;
-      cprmv:version ?version ;
-      cprmv:datePublished ?published .
+      dct:issued ?issued .
 
-  FILTER NOT EXISTS {
-    ?other a cprmv:Dataset ;
-           cprmv:rulesetId ?rulesetId ;
-           cprmv:datePublished ?otherPublished .
-    FILTER(?otherPublished > ?published)
-  }
+  OPTIONAL { ?ds dcat:version ?version }
+  OPTIONAL { ?ds dct:title ?title }
 }
-ORDER BY ?rulesetId
+ORDER BY ?rulesetId DESC(?issued)
 `;
 
 interface MetadataCacheEntry {
-  /** Per-rulesetid latest version info. */
-  byRulesetid: Record<string, DatasetVersionInfo>;
+  /** Per-rulesetid list of dataset records (one per applicable period).
+   *  Sorted by version desc, nulls last, publishedAt desc tie-break. */
+  byRulesetid: Record<string, DatasetVersionInfo[]>;
   expires: number;
 }
 
@@ -153,7 +182,7 @@ const metaCache = new Map<string, MetadataCacheEntry>();
  */
 export async function getDatasetVersionsByRulesetid(
   endpoint?: string
-): Promise<Record<string, DatasetVersionInfo>> {
+): Promise<Record<string, DatasetVersionInfo[]>> {
   const targetEndpoint = endpoint || config.triplydb.endpoint;
 
   if (!targetEndpoint) return {};
@@ -169,14 +198,42 @@ export async function getDatasetVersionsByRulesetid(
     const data = await triplydbService.executeQuery(targetEndpoint, DATASET_METADATA_QUERY);
     const bindings = data.results?.bindings || [];
 
-    const byRulesetid: Record<string, DatasetVersionInfo> = {};
+    const byRulesetid: Record<string, DatasetVersionInfo[]> = {};
     for (const b of bindings) {
+      // Required: rulesetId and dct:issued. Optional: dcat:version, dct:title.
+      // A Dataset without dct:issued is malformed and silently skipped.
       const rulesetId = b.rulesetId?.value;
-      const version = b.version?.value;
-      const published = b.published?.value;
-      if (rulesetId && version && published) {
-        byRulesetid[rulesetId] = { version, publishedAt: published };
-      }
+      const issued = b.issued?.value;
+      if (!rulesetId || !issued) continue;
+
+      const entry: DatasetVersionInfo = {
+        version: b.version?.value ?? null,
+        publishedAt: issued,
+        title: b.title?.value ?? null,
+      };
+      (byRulesetid[rulesetId] ||= []).push(entry);
+    }
+
+    // Sort each ruleset's list: version desc with nulls at the end, ties
+    // broken by publishedAt desc. `[0]` is the most-recent applicable
+    // version of that ruleset; non-primary rulesets (all nulls) end up in
+    // pure publication-time order.
+    //
+    // Comparator: a sorts BEFORE b when the function returns a negative
+    // number. We want "version desc, nulls last" → null values must always
+    // sort AFTER non-null ones; among non-nulls, lexically-greater strings
+    // (e.g. "2026-01-01" > "2025-01-01") come first; on equal versions
+    // (including both null), publishedAt desc.
+    for (const list of Object.values(byRulesetid)) {
+      list.sort((a, b) => {
+        if (a.version !== b.version) {
+          if (a.version === null) return 1;
+          if (b.version === null) return -1;
+          return a.version < b.version ? 1 : -1;
+        }
+        // version equal (both strings or both null) → publishedAt desc
+        return a.publishedAt < b.publishedAt ? 1 : -1;
+      });
     }
 
     metaCache.set(targetEndpoint, {
@@ -219,9 +276,7 @@ function buildNormsQuery(filter?: NormsFilter): string {
     filterClauses.push(`  FILTER(STR(?rulesetId) = "${filter.rulesetid}")`);
   }
   if (filter?.applicableDate) {
-    filterClauses.push(
-      `  FILTER(CONTAINS(STR(?ruleIdPath), "_${filter.applicableDate}_"))`
-    );
+    filterClauses.push(`  FILTER(CONTAINS(STR(?ruleIdPath), "_${filter.applicableDate}_"))`);
   }
 
   const filterBlock = filterClauses.length > 0 ? `\n${filterClauses.join('\n')}\n` : '';
@@ -263,16 +318,11 @@ ORDER BY ?rulesetId ?ruleIdPath ?containedId
  * from the returned map; the route layer treats missing entries as a
  * "do not cache" signal.
  */
-export async function getAllNorms(
-  endpoint?: string,
-  filter?: NormsFilter
-): Promise<NormsResult> {
+export async function getAllNorms(endpoint?: string, filter?: NormsFilter): Promise<NormsResult> {
   const targetEndpoint = endpoint || config.triplydb.endpoint;
 
   if (!targetEndpoint) {
-    throw new Error(
-      'No SPARQL endpoint configured — set TRIPLYDB_ENDPOINT or pass ?endpoint='
-    );
+    throw new Error('No SPARQL endpoint configured — set TRIPLYDB_ENDPOINT or pass ?endpoint=');
   }
 
   logger.info('[Norms Service] Fetching all rule paths and norms', {
@@ -346,10 +396,9 @@ export async function getAllNorms(
   const normsPerRulesetid: Record<string, number> = {};
   // Dataset versions scoped to JUST the rulesetids present in this response —
   // we don't want to leak metadata for unrelated datasets the consumer didn't
-  // query. Sorted on serialisation by key (route layer uses Object.keys
-  // ordering, which preserves insertion order; we insert in rulesetId-sorted
-  // order below).
-  const datasetVersions: Record<string, DatasetVersionInfo> = {};
+  // query. Each entry is a list (one record per applicable period of that
+  // ruleset), pre-sorted by getDatasetVersionsByRulesetid.
+  const datasetVersions: Record<string, DatasetVersionInfo[]> = {};
   const rulesetIdsInResponse = new Set<string>();
 
   for (const entry of acc.values()) {
@@ -376,11 +425,12 @@ export async function getAllNorms(
   }
 
   // Insert dataset metadata for the rulesetids present in the response, in
-  // sorted order. Rulesetids without a cprmv:Dataset record are absent.
+  // sorted order. Rulesetids without any cprmv:Dataset record are absent
+  // (the source map only contains entries we actually retrieved).
   for (const rulesetId of Array.from(rulesetIdsInResponse).sort()) {
-    const info = allDatasetVersions[rulesetId];
-    if (info) {
-      datasetVersions[rulesetId] = info;
+    const list = allDatasetVersions[rulesetId];
+    if (list && list.length > 0) {
+      datasetVersions[rulesetId] = list;
     }
   }
 
@@ -388,6 +438,7 @@ export async function getAllNorms(
     count: rules.length,
     rulesets: Object.keys(normsPerRulesetid).length,
     versionedRulesets: Object.keys(datasetVersions).length,
+    totalDatasetRecords: Object.values(datasetVersions).reduce((n, l) => n + l.length, 0),
   });
 
   return {

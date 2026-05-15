@@ -1,6 +1,36 @@
 {
   "versions": [
     {
+      "version": "1.8.0",
+      "date": "May 15, 2026",
+      "status": "Released",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "sections": [
+        {
+          "icon": "🗂️",
+          "iconColor": "purple",
+          "title": "Concurrent applicable periods per ruleset on /v1/norms",
+          "items": [
+            "A single BWB ruleset can have multiple cprmv:Dataset records — different applicable periods of the same law (e.g. the 2025-01-01 and 2026-01-01 editions of the Participatiewet) are concurrent and equally authoritative, not competing versions. The v1.7 design hid all but the latest; v1.8 surfaces them all.",
+            "Breaking shape change: dataset_versions[<rulesetid>] is now a list of { version, published_at, title } records, not a single object. Replaces v1.7.0 (which was never used externally — API stability contract hadn't been promised at that release).",
+            "List is pre-sorted: version descending with nulls at the end, ties broken by published_at descending. Element [0] is the most-recent applicable version of that ruleset.",
+            "SPARQL query simplified: dropped the FILTER NOT EXISTS subpattern and now fetches all cprmv:Dataset records. Grouping and sort live in the service layer."
+          ]
+        },
+        {
+          "icon": "⚡",
+          "iconColor": "amber",
+          "title": "Cache header semantics preserved across the shape change",
+          "items": [
+            "ETag now hashes every (version, published_at) pair in dataset_versions — a new applicable period being added to any ruleset changes the ETag",
+            "Last-Modified is max(published_at) across all records in the response (not just the first per ruleset)",
+            "Cache-Control semantics unchanged: full headers when every rulesetid has metadata; no-cache otherwise"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.7.1",
       "date": "May 14, 2026",
       "status": "Released",
