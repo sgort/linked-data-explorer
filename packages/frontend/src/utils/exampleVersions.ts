@@ -17,20 +17,41 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 2, // v2: removed camunda:assignee="demo", added candidateGroups="caseworker"
-  example_tree_felling: 2, // v2: extracted from bpmnTemplates.ts, no logic changes
-  example_awb_zorgtoeslag: 1, // v1: initial release — AWB shell wired for zorgtoeslag provisional
-  example_zorgtoeslag_provisional: 1, // v1: initial release — provisional entitlement subprocess
-  example_zorgtoeslag_final: 1, // v1: initial release — final settlement subprocess (message start)
+  example_awb_process: 4, // v4: organization=flevoland tagging
+  example_tree_felling: 5, // v5: organization=flevoland tagging
+  example_awb_zorgtoeslag: 3, // v3: organization=toeslagen tagging
+  example_zorgtoeslag_provisional: 4, // v4: organization=toeslagen tagging
+  example_zorgtoeslag_final: 4, // v4: organization=toeslagen tagging
+  example_hr_capacity_nl: 1, // v1: HR-capacity Dutch BPMN sibling (multilingualism release)
 
   // Camunda Forms
-  example_kapvergunning_start: 1,
-  example_tree_felling_review: 1,
-  example_awb_notify_applicant: 1,
-  example_zorgtoeslag_notify_applicant: 1, // v1: Phase 6 notify form for AwbZorgtoeslagProcess
-  example_zorgtoeslag_provisional_start: 1, // v1: citizen start form for ZorgtoeslagProvisionalSubProcess
-  example_zorgtoeslag_provisional_review: 1, // v1: Sub_CaseReview form for ZorgtoeslagProvisionalSubProcess
-  example_zorgtoeslag_final_review: 1, // v1: Sub_CaseReview form for ZorgtoeslagFinalSubProcess
+  example_kapvergunning_start: 4, // v4: force re-seed for ACC users with stale localStorage from v1.6.0 testing
+  example_tree_felling_review: 4, // v4: force re-seed (see above)
+  example_awb_notify_applicant: 4, // v4: force re-seed (see above)
+  example_zorgtoeslag_notify_applicant: 4, // v4: force re-seed (see above)
+  example_zorgtoeslag_provisional_start: 4, // v4: force re-seed (see above)
+  example_zorgtoeslag_provisional_review: 4, // v4: force re-seed (see above)
+  example_zorgtoeslag_final_review: 4, // v4: force re-seed (see above)
+
+  // HR-capacity Dutch forms (multilingualism release)
+  example_hr_capacity_intake_nl: 1,
+  example_hr_capacity_staffing_nl: 1,
+  example_hr_capacity_hiring_nl: 1,
+  example_hr_capacity_submit_nl: 1,
+  example_hr_capacity_board_decision_nl: 1,
+  example_hr_capacity_reconsideration_nl: 1,
+  example_hr_capacity_handover_nl: 1,
+  example_hr_capacity_register_reservation_nl: 1,
+
+  // HR-capacity Dutch documents (multilingualism release)
+  example_hr_capacity_board_doc_nl: 1,
+  example_hr_capacity_handover_doc_nl: 1,
+
+  // DvTP consent bundle
+  example_dvtp_toestemming: 2, // v2: organization=bzk tagging
+  example_dvtp_consent_start: 2, // v2: organization=bzk tagging
+  example_dvtp_consent_info: 2, // v2: organization=bzk tagging
+  example_dvtp_consent_decision: 2, // v2: organization=bzk tagging
 };
 
 const STORAGE_KEY = 'linkedDataExplorer_exampleVersions';

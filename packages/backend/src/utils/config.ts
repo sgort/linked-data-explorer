@@ -16,10 +16,50 @@ const getNestedProperty = (obj: Record<string, unknown>, path: string): unknown 
 };
 
 /**
+ * Deployment tier display label. NODE_ENV alone can't distinguish ACC from PROD
+ * because both deployments run with NODE_ENV=production; the dedicated
+ * DEPLOYMENT_ENV variable carries the tier signal, set per Azure App Service:
+ *   az webapp config appsettings set -g rg-... -n ronl-linkeddata-backend-acc  --settings DEPLOYMENT_ENV=acc
+ *   az webapp config appsettings set -g rg-... -n ronl-linkeddata-backend-prod --settings DEPLOYMENT_ENV=prod
+ * Falls back to NODE_ENV when unset so local development stays zero-config.
+ */
+const rawDeploymentEnv = (
+  process.env.DEPLOYMENT_ENV ||
+  process.env.NODE_ENV ||
+  'development'
+)
+  .toLowerCase()
+  .trim();
+
+const formatDeploymentEnv = (env: string): string => {
+  switch (env) {
+    case 'prod':
+    case 'production':
+      return 'PROD';
+    case 'acc':
+    case 'acceptance':
+    case 'staging':
+      return 'ACC';
+    case 'dev':
+    case 'development':
+    case 'local':
+      return 'development';
+    case 'test':
+      return 'test';
+    default:
+      return env;
+  }
+};
+
+/**
  * Application configuration
  */
 export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
+  /** Raw deployment tier value: 'dev' | 'acc' | 'prod' | 'test' | ... */
+  deploymentEnv: rawDeploymentEnv,
+  /** Display label for the deployment tier; used by the root page and /v1/health. */
+  displayEnv: formatDeploymentEnv(rawDeploymentEnv),
   port: parseInt(process.env.PORT || '3001', 10),
   host: process.env.HOST || 'localhost',
 
@@ -36,12 +76,49 @@ export const config = {
     apiKey: process.env.OPERATON_API_KEY,
   },
 
+  dso: {
+    catalogueBaseUrl:
+      process.env.DSO_CATALOGUE_BASE_URL ||
+      'https://service.pre.omgevingswet.overheid.nl/publiek/catalogus/api/opvragen/v3',
+    rtrBaseUrl:
+      process.env.DSO_RTR_BASE_URL ||
+      'https://service.pre.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/rtrgegevens/v2',
+    zoekinterfaceBaseUrl:
+      process.env.DSO_ZOEKINTERFACE_BASE_URL ||
+      'https://service.pre.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/zoekinterface/v2',
+    opvragenWerkzaamhedenBaseUrl:
+      process.env.DSO_OPVRAGEN_WERKZAAMHEDEN_BASE_URL ||
+      'https://service.pre.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/opvragenwerkzaamheden/v1',
+    apiKey: process.env.DSO_API_KEY || '',
+    timeout: parseInt(process.env.DSO_TIMEOUT || '15000', 10),
+  },
+
+  dsoProd: {
+    catalogueBaseUrl:
+      process.env.DSO_CATALOGUE_BASE_URL_PROD ||
+      'https://service.omgevingswet.overheid.nl/publiek/catalogus/api/opvragen/v3',
+    rtrBaseUrl:
+      process.env.DSO_RTR_BASE_URL_PROD ||
+      'https://service.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/rtrgegevens/v2',
+    zoekinterfaceBaseUrl:
+      process.env.DSO_ZOEKINTERFACE_BASE_URL_PROD ||
+      'https://service.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/zoekinterface/v2',
+    opvragenWerkzaamhedenBaseUrl:
+      process.env.DSO_OPVRAGEN_WERKZAAMHEDEN_BASE_URL_PROD ||
+      'https://service.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/opvragenwerkzaamheden/v1',
+    apiKey: process.env.DSO_API_KEY_PROD || '',
+  },
+
   edocs: {
     baseUrl: process.env.EDOCS_BASE_URL || '',
     library: process.env.EDOCS_LIBRARY || '',
     userId: process.env.EDOCS_USER_ID || '',
     password: process.env.EDOCS_PASSWORD || '',
     stubMode: process.env.EDOCS_STUB_MODE !== 'false', // defaults to true for safety
+  },
+
+  database: {
+    url: process.env.DATABASE_URL || '',
   },
 
   logging: {

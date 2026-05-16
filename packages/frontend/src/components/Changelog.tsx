@@ -28,6 +28,7 @@ const Changelog: React.FC = () => {
       red: 'bg-red-100 text-red-700 border-red-300',
       yellow: 'bg-yellow-100 text-yellow-700 border-yellow-300',
       gray: 'bg-gray-100 text-gray-700 border-gray-300',
+      teal: 'bg-teal-100 text-teal-700 border-teal-300',
     };
     return colors[color] || colors.gray;
   };
@@ -42,6 +43,7 @@ const Changelog: React.FC = () => {
       red: 'text-red-600',
       yellow: 'text-yellow-600',
       gray: 'text-gray-600',
+      teal: 'text-teal-600',
     };
     return colors[color] || colors.gray;
   };
@@ -56,6 +58,7 @@ const Changelog: React.FC = () => {
       red: 'border-red-200',
       yellow: 'border-yellow-200',
       gray: 'border-gray-200',
+      teal: 'border-teal-200',
     };
     return colors[color] || colors.gray;
   };

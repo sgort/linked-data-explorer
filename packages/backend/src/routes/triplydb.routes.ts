@@ -114,7 +114,8 @@ router.post('/query', async (req: Request, res: Response) => {
  *     "dataset": "PublishTest",
  *     "apiToken": "your-token"
  *   },
- *   "serviceName": "PublishTest"
+ *   "serviceName": "PublishTest",
+ *   "graphName": "https://regels.overheid.nl/graphs/svb/aow-leeftijd"  // optional, for traceability
  * }
  *
  * Response:
@@ -130,7 +131,7 @@ router.post('/update-service', async (req: Request, res: Response) => {
   res.set('Content-Type', 'application/json');
 
   try {
-    const { config, serviceName } = req.body;
+    const { config, serviceName, graphName } = req.body;
 
     // Validate request
     if (!config || !serviceName) {
@@ -165,11 +166,12 @@ router.post('/update-service', async (req: Request, res: Response) => {
       account: config.account,
       dataset: config.dataset,
       serviceName: serviceName,
+      graphName: graphName || '(not specified)',
     });
 
     // Call service to update
     const startTime = Date.now();
-    const result = await triplydbService.updateService(config, serviceName);
+    const result = await triplydbService.updateService(config, serviceName, undefined, graphName);
     const duration = Date.now() - startTime;
 
     logger.info('[TriplyDB Routes] Service update successful', {

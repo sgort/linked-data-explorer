@@ -7,11 +7,13 @@ import {
   FileOutput,
   GitBranch,
   HelpCircle,
+  Landmark,
   LayoutTemplate,
   Loader2,
   Play,
   Plus,
   RefreshCw,
+  ScrollText,
   Settings,
   Share2,
   ShieldCheck,
@@ -25,9 +27,11 @@ import ChainBuilder from './components/ChainBuilder/ChainBuilder';
 import Changelog from './components/Changelog';
 import DmnValidator from './components/DmnValidator';
 import DocumentComposer from './components/DocumentComposer/DocumentComposer';
+import DsoExplorer from './components/DsoExplorer/DsoExplorer';
 import FormEditor from './components/FormEditor/FormEditor';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
+import RopaEditor from './components/RopaEditor/RopaEditor';
 import Tutorial from './components/Tutorial/Tutorial';
 import { executeSparqlQuery } from './services/sparqlService';
 import { SparqlResponse, ViewMode } from './types';
@@ -53,6 +57,9 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [dsoEnv, setDsoEnv] = useState<'pre' | 'prod'>(() => {
+    return (localStorage.getItem('lde_dso_env') as 'pre' | 'prod') || 'pre';
+  });
   const [newEndpointName, setNewEndpointName] = useState('');
   const [newEndpointUrl, setNewEndpointUrl] = useState('');
   const [selectedLibraryQuery, setSelectedLibraryQuery] = useState<string | null>(null);
@@ -73,6 +80,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(VIEWMODE_STORAGE_KEY, viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem('lde_dso_env', dsoEnv);
+  }, [dsoEnv]);
 
   const handleRunQuery = async () => {
     setIsLoading(true);
@@ -268,6 +279,22 @@ const App: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setViewMode(ViewMode.ROPA)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.ROPA ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="RoPA Records"
+          >
+            <ScrollText size={24} />
+          </button>
+
+          <button
+            onClick={() => setViewMode(ViewMode.DSO)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.DSO ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="DSO Explorer"
+          >
+            <Landmark size={24} />
+          </button>
+
+          <button
             onClick={() => setViewMode(ViewMode.VALIDATE)}
             className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.VALIDATE ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
             title="DMN Validator"
@@ -326,7 +353,9 @@ const App: React.FC = () => {
             viewMode !== ViewMode.TUTORIAL &&
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
-            viewMode !== ViewMode.VALIDATE && (
+            viewMode !== ViewMode.VALIDATE &&
+            viewMode !== ViewMode.ROPA &&
+            viewMode !== ViewMode.DSO && (
               <div className="flex items-center gap-3">
                 <div className="hidden lg:flex items-center bg-slate-100 rounded-md px-3 py-1.5 border border-slate-200 relative group">
                   <span className="text-xs text-slate-500 mr-2 font-semibold uppercase tracking-tight">
@@ -427,6 +456,18 @@ const App: React.FC = () => {
           {viewMode === ViewMode.DOCUMENT && (
             <div className="flex-1 overflow-hidden">
               <DocumentComposer endpoint={endpoint} />
+            </div>
+          )}
+
+          {viewMode === ViewMode.ROPA && (
+            <div className="flex-1 overflow-hidden">
+              <RopaEditor />
+            </div>
+          )}
+
+          {viewMode === ViewMode.DSO && (
+            <div className="flex-1 overflow-hidden">
+              <DsoExplorer env={dsoEnv} />
             </div>
           )}
 
@@ -604,6 +645,39 @@ const App: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  <hr className="border-slate-100" />
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wider">
+                      DSO Environment
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setDsoEnv('pre')}
+                        className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                          dsoEnv === 'pre'
+                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                            : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                        }`}
+                      >
+                        Pre-production
+                      </button>
+                      <button
+                        onClick={() => setDsoEnv('prod')}
+                        className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                          dsoEnv === 'prod'
+                            ? 'bg-green-100 text-green-800 border-green-300'
+                            : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                        }`}
+                      >
+                        Production
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Independent of the LDE environment. Persisted across sessions.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -616,6 +690,8 @@ const App: React.FC = () => {
             viewMode !== ViewMode.BPMN &&
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
+            viewMode !== ViewMode.ROPA &&
+            viewMode !== ViewMode.DSO &&
             viewMode !== ViewMode.VALIDATE && (
               <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
                 <div className="flex-1 flex flex-col min-h-0">
@@ -674,6 +750,8 @@ const App: React.FC = () => {
             viewMode !== ViewMode.BPMN &&
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
+            viewMode !== ViewMode.ROPA &&
+            viewMode !== ViewMode.DSO &&
             viewMode !== ViewMode.VALIDATE && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
                 {/* Error Overlay */}

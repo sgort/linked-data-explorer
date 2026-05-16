@@ -29,6 +29,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001
 interface BpmnCanvasProps {
   xml: string;
   endpoint: string;
+  /** True when the parent has pending footer (metadata) edits — enables the Save button. */
+  hasFooterChanges?: boolean;
+  /** Called when the canvas dirty state changes, so the parent can guard navigation. */
+  onDirtyChange?: (dirty: boolean) => void;
   onSave: (xml: string) => void;
   onElementSelect: (element: unknown) => void;
   onClose: () => void;
@@ -37,6 +41,8 @@ interface BpmnCanvasProps {
 const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   xml,
   endpoint,
+  hasFooterChanges = false,
+  onDirtyChange,
   onSave,
   onElementSelect,
   onClose,
@@ -69,13 +75,19 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
   const [selectedElement, setSelectedElement] = useState<any>(null);
 
-  const handleElementSelect = useCallback(
-    (element: unknown) => {
-      setSelectedElement(element);
-      onElementSelect(element);
-    },
-    [onElementSelect]
-  );
+  // Keep latest onElementSelect in a ref so handleElementSelect can stay stable
+  // across renders. Without this, an inline arrow at the parent (e.g. onElementSelect={() => {}})
+  // would change identity every render and re-trigger the modeler-init effect below,
+  // resetting the canvas on every keystroke that re-renders the parent.
+  const onElementSelectRef = useRef(onElementSelect);
+  useEffect(() => {
+    onElementSelectRef.current = onElementSelect;
+  }, [onElementSelect]);
+
+  const handleElementSelect = useCallback((element: unknown) => {
+    setSelectedElement(element);
+    onElementSelectRef.current(element);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || !propertiesPanelRef.current) return;
@@ -120,6 +132,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     const eventBus = modeler.get('eventBus') as any;
     const handleChange = () => {
       setHasChanges(true);
+      onDirtyChange?.(true);
       refreshDmnOverlays();
     };
     eventBus.on('commandStack.changed', handleChange);
@@ -152,7 +165,8 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       propertiesPanel.detach();
       modeler.destroy();
     };
-  }, [xml, handleElementSelect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [xml, onDirtyChange]);
 
   // Render DMN Template Selector when BusinessRuleTask is selected
   useEffect(() => {
@@ -324,6 +338,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       const { xml: savedXml } = await modelerRef.current.saveXML({ format: true });
       onSave(savedXml);
       setHasChanges(false);
+      onDirtyChange?.(false);
     } catch (err) {
       console.error('Failed to save BPMN:', err);
     }
@@ -392,6 +407,8 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       (ref) => !allForms.some((f) => (f.schema as Record<string, unknown>).id === ref)
     );
 
+    const ropaRefMissing = !xml.includes('ronl:ropaRef=');
+
     const allDocumentRefs = new Set([
       ...extractDocumentRefs(xml),
       ...subProcessXmls.flatMap((sp) => extractDocumentRefs(sp.xml)),
@@ -401,14 +418,46 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       allDocumentTemplates.some((d) => d.id === ref)
     );
 
+    // ─── Language consistency check ─────────────────────────────────────
+    // Collect all distinct non-null language codes across the bundle.
+    // DMNs are excluded by design (language-agnostic; stable English keys).
+    const extractBpmnLanguage = (bpmnXml: string): string | undefined =>
+      bpmnXml.match(/ronl:language="([^"]+)"/)?.[1];
+
+    const languageSet = new Set<string>();
+    const shellLang = extractBpmnLanguage(xml);
+    if (shellLang) languageSet.add(shellLang);
+    for (const sp of subProcessXmls) {
+      const spLang = extractBpmnLanguage(sp.xml);
+      if (spLang) languageSet.add(spLang);
+    }
+    for (const ref of matchedForms) {
+      const f = allForms.find((x) => (x.schema as Record<string, unknown>).id === ref);
+      if (f?.language) languageSet.add(f.language);
+    }
+    for (const ref of matchedDocuments) {
+      const d = allDocumentTemplates.find((t) => t.id === ref);
+      if (d?.language) languageSet.add(d.language);
+    }
+    const languageMismatch = languageSet.size > 1;
+    const languageList = [...languageSet].sort();
+    // ────────────────────────────────────────────────────────────────────
+
     setDeployResources({
       processKey,
       bpmnFiles: [`${processKey}.bpmn`, ...subProcessXmls.map((sp) => sp.filename)],
       formFiles: matchedForms.map((ref) => `${ref}.form`),
       documentFiles: matchedDocuments.map((ref) => `${ref}.document`),
       ...(unmatchedForms.length ? { unmatchedForms } : {}),
-    } as typeof deployResources & { unmatchedForms?: string[] });
-
+      ropaRefMissing,
+      languageMismatch,
+      languageList,
+    } as typeof deployResources & {
+      unmatchedForms?: string[];
+      ropaRefMissing?: boolean;
+      languageMismatch?: boolean;
+      languageList?: string[];
+    });
     setDeployResult(null);
     setShowDeployModal(true);
   };
@@ -486,11 +535,26 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
       const data = await response.json();
 
-      setDeployResult(
-        data.success
-          ? { success: true, message: `Deployment ID: ${data.data.deploymentId}` }
-          : { success: false, message: data.error?.message ?? 'Deployment failed' }
-      );
+      if (data.success) {
+        setDeployResult({ success: true, message: `Deployment ID: ${data.data.deploymentId}` });
+
+        // Write deployment metadata back to the process_definitions record
+        const ldeId = BpmnService.getProcesses().find((p) => p.bpmnProcessId === processKey)?.id;
+        if (ldeId) {
+          fetch(`${API_BASE_URL}/v1/assets/bpmn/${ldeId}/deploy`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              deploymentId: data.data.deploymentId,
+              operatonUrl: operatonUrl.trim() || undefined,
+              formIds: forms.map((f) => f.id),
+              documentIds: documents.map((d) => d.id),
+            }),
+          }).catch((err) => console.warn('[BpmnCanvas] Deploy record update failed:', err));
+        }
+      } else {
+        setDeployResult({ success: false, message: data.error?.message ?? 'Deployment failed' });
+      }
     } catch (err) {
       setDeployResult({
         success: false,
@@ -526,11 +590,11 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={handleSave}
-            disabled={!hasChanges}
+            disabled={!hasChanges && !hasFooterChanges}
             className={`
               flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
               ${
-                hasChanges
+                hasChanges || hasFooterChanges
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               }
@@ -643,6 +707,23 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                   </li>
                 ))}
               </ul>
+              {(deployResources as any).ropaRefMissing && (
+                <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                  ⚠️ No <code className="font-mono">ronl:ropaRef</code> found on the process
+                  element. Link a RoPA record in the BPMN properties panel before deploying to
+                  production.
+                </div>
+              )}
+              {(deployResources as any).languageMismatch && (
+                <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                  ⚠️ Bundle mixes languages:{' '}
+                  <span className="font-mono">
+                    {((deployResources as any).languageList as string[]).join(', ')}
+                  </span>
+                  . A deployed bundle should be a single language. Untag or retag the mismatched
+                  artefact(s) before deploying.
+                </div>
+              )}
               <div className="mt-2 text-xs text-slate-500">
                 {deployResources.bpmnFiles.length + deployResources.formFiles.length} resource(s) ·
                 {deployResources.bpmnFiles.length +

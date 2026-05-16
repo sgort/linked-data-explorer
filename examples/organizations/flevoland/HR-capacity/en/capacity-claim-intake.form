@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-intake",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Capacity claim — consultation and classification"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Before submitting a capacity claim to the Board of Directors, consult the HR Business Partner and the Personnel Controller. Confirm those consultations here, classify the request type, and provide the organizational context. The routing and candidate groups for the approval path will be determined automatically."
+    },
+    {
+      "id": "Field_RequestType",
+      "type": "radio",
+      "label": "Request type",
+      "key": "requestType",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Staffing (fixed appointment — internal or external candidate)", "value": "staffing" },
+        { "label": "Hiring (external, incidental — via procurement)", "value": "hiring" }
+      ]
+    },
+    {
+      "id": "Field_OrganizationalUnit",
+      "type": "textfield",
+      "label": "Organizational unit",
+      "key": "organizationalUnit",
+      "description": "E.g. \"INH 12 - Vergunningen Omgevingswet\"",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Department",
+      "type": "select",
+      "label": "Department",
+      "key": "department",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Vergunningen", "value": "vergunningen" },
+        { "label": "Infrastructuur", "value": "infrastructuur" },
+        { "label": "HR", "value": "hr" }
+      ]
+    },
+    {
+      "id": "Field_ConsultedHrbp",
+      "type": "checkbox",
+      "label": "I have consulted the HR Business Partner",
+      "key": "consultedHrbp",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ConsultedPersonnelController",
+      "type": "checkbox",
+      "label": "I have consulted the Personnel Controller",
+      "key": "consultedPersonnelController",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ConsultationDate",
+      "type": "datetime",
+      "label": "Date of consultation",
+      "key": "consultationDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_IntakeNotes",
+      "type": "textarea",
+      "label": "Consultation notes",
+      "key": "intakeNotes",
+      "description": "Summarise the advice received and any agreed constraints."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Continue",
+      "action": "submit"
+    }
+  ]
+}

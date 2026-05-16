@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-handover-nl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Overdracht capaciteitsclaim"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "De Directie heeft deze capaciteitsclaim goedgekeurd. Bevestig ontvangst van de overdracht en geef de referentie op die in uw vervolgproces wordt gebruikt (werving of inkoop). Vanuit deze taak wordt een overdrachtsdocument gegenereerd."
+    },
+    {
+      "id": "Field_RequestType",
+      "type": "textfield",
+      "label": "Type aanvraag",
+      "key": "requestType",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_DecisionRoute",
+      "type": "textfield",
+      "label": "Route",
+      "key": "decisionRoute",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Functietitel",
+      "key": "jobTitle",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_OrganizationalUnit",
+      "type": "textfield",
+      "label": "Organisatieonderdeel",
+      "key": "organizationalUnit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_StartDate",
+      "type": "datetime",
+      "label": "Startdatum",
+      "key": "startDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_DecisionConditions",
+      "type": "textarea",
+      "label": "Voorwaarden van de Directie",
+      "key": "decisionConditions",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_HandoverConfirmed",
+      "type": "checkbox",
+      "label": "Ik bevestig ontvangst van de overdracht en dat de verwerking is gestart",
+      "key": "handoverConfirmed",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_HandoverDate",
+      "type": "datetime",
+      "label": "Overdrachtsdatum",
+      "key": "handoverDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ReferenceNumber",
+      "type": "textfield",
+      "label": "Interne referentie (vacature-id / inkoopdossier-id)",
+      "key": "referenceNumber",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_HandoverNotes",
+      "type": "textarea",
+      "label": "Notities overdracht",
+      "key": "handoverNotes",
+      "description": "Eventuele context die relevant is voor het vervolgproces."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Overdracht bevestigen",
+      "action": "submit"
+    }
+  ]
+}

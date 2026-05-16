@@ -50,6 +50,12 @@
       "label": "Calendar invitation sent with project plan attached",
       "key": "psInviteSent",
       "validate": { "required": true }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
     }
   ]
 }

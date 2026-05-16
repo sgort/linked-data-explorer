@@ -32,6 +32,12 @@
       "label": "Remarks",
       "key": "approvalRemarks",
       "description": "Required when rejecting. Optional when approving."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit decision",
+      "action": "submit"
     }
   ]
 }

@@ -1,6 +1,600 @@
 {
   "versions": [
     {
+      "version": "1.8.0",
+      "date": "May 15, 2026",
+      "status": "Released",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "sections": [
+        {
+          "icon": "🗂️",
+          "iconColor": "purple",
+          "title": "Concurrent applicable periods per ruleset on /v1/norms",
+          "items": [
+            "A single BWB ruleset can have multiple cprmv:Dataset records — different applicable periods of the same law (e.g. the 2025-01-01 and 2026-01-01 editions of the Participatiewet) are concurrent and equally authoritative, not competing versions. The v1.7 design hid all but the latest; v1.8 surfaces them all.",
+            "Breaking shape change: dataset_versions[<rulesetid>] is now a list of { version, published_at, title } records, not a single object. Replaces v1.7.0 (which was never used externally — API stability contract hadn't been promised at that release).",
+            "List is pre-sorted: version descending with nulls at the end, ties broken by published_at descending. Element [0] is the most-recent applicable version of that ruleset.",
+            "SPARQL query simplified: dropped the FILTER NOT EXISTS subpattern and now fetches all cprmv:Dataset records. Grouping and sort live in the service layer."
+          ]
+        },
+        {
+          "icon": "⚡",
+          "iconColor": "amber",
+          "title": "Cache header semantics preserved across the shape change",
+          "items": [
+            "ETag now hashes every (version, published_at) pair in dataset_versions — a new applicable period being added to any ruleset changes the ETag",
+            "Last-Modified is max(published_at) across all records in the response (not just the first per ruleset)",
+            "Cache-Control semantics unchanged: full headers when every rulesetid has metadata; no-cache otherwise"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.7.1",
+      "date": "May 14, 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "🔍",
+          "iconColor": "blue",
+          "title": "Graph-name traceability on /v1/triplydb/update-service",
+          "items": [
+            "New optional graphName field in the POST /v1/triplydb/update-service request body — accepts the IRI of the graph that triggered the sync (e.g. https://regels.overheid.nl/graphs/Sociale_Verzekeringsbank/aow-leeftijd); requests that omit it continue to work unchanged",
+            "graphName threaded through to the route logger as graphName and to the service logger as triggeredByGraph — multi-publish flows landing in distinct per-service graphs are now traceable end-to-end without inspecting TriplyDB internals",
+            "updateService() in packages/backend/src/services/triplydb.service.ts extended with a fourth optional parameter graphName?: string; existing graphNames?: string[] parameter unchanged for backward compatibility",
+            "Response envelope from /v1/triplydb/update-service now echoes graphName when it was supplied in the request, omitted otherwise — additive shape change with no breaking impact on existing clients",
+            "The underlying TriplyDB sync call (POST /datasets/{account}/{dataset}/services/{serviceName} with body {\"sync\":\"true\"}) is unchanged — graphName is purely observability metadata, since the TriplyDB sync endpoint has no graph-scoping mechanism of its own"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.7.0",
+      "date": "May 14, 2026",
+      "status": "Released",
+      "statusColor": "purple",
+      "borderColor": "purple",
+      "sections": [
+        {
+          "icon": "📦",
+          "iconColor": "purple",
+          "title": "Per-rulesetid dataset versioning on /v1/norms",
+          "items": [
+            "New envelope field: dataset_versions — a per-rulesetid map keyed by cprmv:rulesetId, each entry carrying { version, published_at } for the latest cprmv:Dataset record of that ruleset",
+            "Each BWB ruleset (BWBR0002471, BWBR0004044, ...) is published as a distinct cprmv:Dataset resource in TriplyDB, on its own publication cadence; a single /v1/norms response can span multiple rulesets at different versions",
+            "Backend picks the latest cprmv:Dataset per cprmv:rulesetId via a FILTER NOT EXISTS subpattern — historical versions remain queryable in TriplyDB but consumers see only the latest",
+            "New envelope field: cprmv_version — backend constant extracted from the CPRMV namespace URI, describes which vocabulary the backend speaks independently of which data is published",
+            "Internal 60-second cache on the dataset metadata SPARQL query — biannual data tolerates this happily and keeps the metadata lookup off the hot path"
+          ]
+        },
+        {
+          "icon": "⚡",
+          "iconColor": "amber",
+          "title": "HTTP cache headers for G2G consumers",
+          "items": [
+            "ETag header: opaque 8-hex strong validator hashed over the sorted dataset_versions map plus all request parameters affecting the response shape",
+            "Last-Modified header: max(published_at) across the response's datasets in RFC 7231 format — If-Modified-Since returns 304 only when nothing in the consumer's query has been republished since their last fetch",
+            "Cache-Control: public, max-age=3600 set only when every rulesetid in the response has dataset metadata; falls back to no-cache otherwise",
+            "Safe-by-default partial-coverage policy: if any rulesetid in the response is missing a cprmv:Dataset record, all three cache headers degrade to no-cache so consumers can't be misled into serving stale data for an unversioned ruleset",
+            "Single-rulesetid queries get a fast 304 path: the cheap (cached) metadata lookup decides freshness BEFORE the expensive rules SPARQL query runs",
+            "New utility module packages/backend/src/utils/etag.ts with computeNormsEtag() and computeLastModified(): key-order-independent and undefined-tolerant serialisation"
+          ]
+        },
+        {
+          "icon": "📜",
+          "iconColor": "blue",
+          "title": "API stability contract published",
+          "items": [
+            "New IOU documentation page at /linked-data-explorer/reference/api-stability — binding contract for G2G consumers covering the four versioning layers, PK semantics, additive evolution promise, per-rulesetid publication detection, partial-coverage behaviour, breaking-change criteria, and 24-month deprecation policy when v2 eventually arrives",
+            "Documents the immutability guarantee for the (rulesetid, applicable_date, rulesetid_index) tuple as the eternal primary key — consumers can cache permanently and never invalidate",
+            "Documents the rule_id_path_key field as the logical identifier for querying 'the current value of this rule' across its lifetime",
+            "Documents the cprmv:Dataset publication model: each BWB ruleset is a distinct dataset on its own cadence; rollout is from scratch with no retroactive backfill of existing rulesets",
+            "Quick-reference table at the bottom covering the questions a new G2G consumer is most likely to ask first"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.6.3",
+      "date": "May 14, 2026",
+      "status": "Released",
+      "statusColor": "amber",
+      "borderColor": "amber",
+      "sections": [
+        {
+          "icon": "🔑",
+          "iconColor": "amber",
+          "title": "Stable keys and version indices on /v1/norms",
+          "items": [
+            "New rule_id_path_key field: rule_id_path with the date and index segments removed, e.g. \"BWBR0002471_2025-01-01_0, Artikel 2, lid 6\" → \"BWBR0002471, Artikel 2, lid 6\"; stable across versions of the same ruleset, suitable as a deduplication key when aggregating norms across applicable_date values",
+            "New rulesetid_index field: the integer index segment after the date in rule_id_path (e.g. the _0 in BWBR..._2025-01-01_0); distinguishes multiple versions published on the same date",
+            "Both new fields, together with applicable_date, are derived from a single regex pass over rule_id_path; all three emit JSON null when the path does not match the canonical <rulesetid>_<YYYY-MM-DD>_<index>[, <rest>] shape",
+            "Key insertion order extended: rulesetid, applicable_date, rulesetid_index, rule_id_path, rule_id_path_key — identifier metadata grouped first, then the path and its derived stable key together"
+          ]
+        },
+        {
+          "icon": "📊",
+          "iconColor": "blue",
+          "title": "Per-rulesetid aggregation",
+          "items": [
+            "Response envelope now carries an aggregations.norms_per_rulesetid map alongside rules, listing the count of top-level rules per cprmv:rulesetId in the filtered result set",
+            "Counts are keyed by the authoritative cprmv:rulesetId value (not parsed from the path), so non-conforming rule_id_path values still aggregate correctly",
+            "Sum of values equals data.total, letting clients render ruleset-level summaries without a second pass over rules",
+            "Additive change — existing readers of data.rules and data.total see no breaking change"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.6.2",
+      "date": "May 13, 2026",
+      "status": "Released",
+      "statusColor": "indigo",
+      "borderColor": "indigo",
+      "sections": [
+        {
+          "icon": "🗺️",
+          "iconColor": "indigo",
+          "title": "Single source of truth for v1 routes",
+          "items": [
+            "New backend module packages/backend/src/routes/registry.ts: every v1 route's mount path, router, summary and category lives in one array; adding a route is a one-line entry that both registration and the root page pick up automatically",
+            "Refactored packages/backend/src/routes/index.ts to iterate the registry for v1 mounting; legacy /api/* deprecation aliases stay hand-mounted (deprecated routes are intentionally excluded from the registry to steer consumers towards /v1/*)",
+            "Mount-order semantics preserved: more specific paths still precede their parents (/v1/chains/templates before /v1/chains) so Express route precedence behaves exactly as before"
+          ]
+        },
+        {
+          "icon": "🌐",
+          "iconColor": "blue",
+          "title": "Content-negotiated root page",
+          "items": [
+            "GET / now serves HTML when Accept includes text/html (browsers) and JSON otherwise (curl, fetch with default Accept, programmatic pollers); both views are derived from the shared route registry so they cannot drift",
+            "HTML view groups endpoints by category (Health & monitoring, Discovery, Execution, Assets, Integrations) and badges public-CORS endpoints; styling is inline with no external dependencies",
+            "JSON payload preserves backwards compatibility: same top-level keys as before (name, version, environment, status, documentation, health, endpoints, legacy); existing programmatic clients see no breaking change",
+            "Closes the drift gap that was missing /v1/dso, /v1/norms, /v1/assets/*, /v1/cache, /v1/edocs, /v1/ropa, /v1/process and /v1/chains/templates from the previous hand-coded listing"
+          ]
+        },
+        {
+          "icon": "🏷️",
+          "iconColor": "teal",
+          "title": "Deployment tier display label",
+          "items": [
+            "New DEPLOYMENT_ENV environment variable distinguishes ACC from PROD when NODE_ENV is 'production' for both; falls back to NODE_ENV when unset so local development needs no change",
+            "Added config.displayEnv (string) and config.deploymentEnv (raw value) to packages/backend/src/utils/config.ts with mappings: prod/production → PROD, acc/acceptance/staging → ACC, dev/development/local → development, test → test, unknown values pass through",
+            "Used consistently by the HTML root page and the /v1/health response so the displayed environment stays in sync across surfaces",
+            "Configuration is per Azure App Service: az webapp config appsettings set ... --settings DEPLOYMENT_ENV=acc (or prod)"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.6.1",
+      "date": "May 12, 2026",
+      "status": "Released",
+      "statusColor": "teal",
+      "borderColor": "teal",
+      "sections": [
+        {
+          "icon": "📡",
+          "iconColor": "teal",
+          "title": "New /v1/norms endpoint",
+          "items": [
+            "New backend route GET /v1/norms exposing all cprmv:Rule paths and norms in the publish format consumed by the SPARQL editor's norm publisher",
+            "Response mirrors the cprmv-example.json shape exactly: fully-qualified RDF/CPRMV keys for type/id/definition/contains, short keys for situatie/norm/per/rulesetid/applicable_date/rule_id_path",
+            "Parent rules and their cprmv:contains children are aggregated into nested objects in a single response, with deterministic key ordering preserved across runs",
+            "Optional ?endpoint= query parameter overrides the default TriplyDB endpoint, matching the pattern already used by /v1/dmns"
+          ]
+        },
+        {
+          "icon": "🔍",
+          "iconColor": "blue",
+          "title": "Filtering by ruleset and applicable date",
+          "items": [
+            "New applicable_date attribute derived from the _YYYY-MM-DD_ segment embedded in rule_id_path; null when no date is present in the path",
+            "Filter by ?rulesetid= (e.g. BWBR0015703) and/or ?applicable_date= (e.g. 2026-01-01); both parameters can be combined",
+            "Strict input validation against /^[A-Za-z0-9_-]+$/ (rulesetid) and /^\\d{4}-\\d{2}-\\d{2}$/ (applicable_date) returns 400 INVALID_PARAM before any SPARQL fires",
+            "Validated filters are applied as SPARQL FILTER clauses (exact-match on rulesetId, CONTAINS on the dated segment of ruleIdPath) for server-side selection"
+          ]
+        },
+        {
+          "icon": "🛠️",
+          "iconColor": "gray",
+          "title": "Maintenance",
+          "items": [
+            "Silenced TypeScript 5.x deprecation warning on moduleResolution: \"node10\" via \"ignoreDeprecations\": \"6.0\" in packages/backend/tsconfig.json; full migration to nodenext deferred until ESM-on-Node maturity warrants the per-file .js extension changes"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.6.0",
+      "date": "April 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "🌍",
+          "title": "Multilingualism — new",
+          "iconColor": "blue",
+          "items": [
+            "Language metadata on BPMN, Form, and Document artefacts (ISO 639-1: en, nl, de) — set via the editor footer panel; persisted to PostgreSQL and to BPMN XML as ronl:language; round-trips through export and import",
+            "Organization metadata on the same three artefact types — set via the editor footer with autocomplete from existing organizations; drives list-panel grouping",
+            "Language filter and free-text search across all three list panels (Processes, Forms, Documents)",
+            "Collapsible organization groups in all three list panels — subprocesses follow their shell's organization regardless of their own tag; orphan subprocesses (shell hidden by filter) render flat",
+            "Filename-based language inference on import — drop a capacity-claim-intake.nl.form into the form import and the language tag is applied automatically; XML and JSON wrapper values take precedence over filename inference",
+            "Form export now includes language and organization at the top of the JSON, plus a language-suffixed filename — round-trip integrity for all three artefact types",
+            "Deploy-time language consistency check — amber warning surfaces inline in the deploy modal when a bundle mixes languages, listing the offending codes; same UX as the existing RoPA-missing warning"
+          ]
+        },
+        {
+          "icon": "🇳🇱",
+          "title": "HR-capacity Dutch reference bundle — new",
+          "iconColor": "orange",
+          "items": [
+            "Beheer capaciteitsclaim — proces (Voorbeeld, NL): 1 BPMN, 8 forms, 2 documents, all tagged language=nl, organization=flevoland",
+            "Demonstrates stable English DMN keys with translated form labels — the same CapacityClaimRouting DMN serves both the English and Dutch siblings without duplication",
+            "All formRef and documentRef values in the Dutch BPMN suffixed -nl; flow labels (formatie, inhuur, akkoord, afgewezen, doorgaan, intrekken, werving, inkoop) translated; gateway condition expressions unchanged"
+          ]
+        },
+        {
+          "icon": "💾",
+          "title": "Pending-until-Save editing model",
+          "iconColor": "purple",
+          "items": [
+            "Footer edits across BPMN, Forms, and Documents (language, organization, RoPA, DSO activiteit) no longer persist immediately — they accumulate in a draft and flush atomically on Save",
+            "Navigation guard with confirm prompt when leaving an artefact with unsaved changes (Create / Load another / Close)",
+            "Shell → subprocess atomic save — saving a shell propagates language and organization to all linked subprocesses in one write; idempotent (skips subprocesses already aligned); shell wins unconditionally",
+            "Save buttons now correctly reflect dirty state — Form Save was previously always-enabled (regression); now disables on load and after Save, enables on first edit"
+          ]
+        },
+        {
+          "icon": "🐛",
+          "title": "Bug fixes",
+          "iconColor": "red",
+          "items": [
+            "BPMN persistence: language and organization fields are now included in the BpmnService POST payload — previously dropped silently on the API call, causing values to vanish on hydration",
+            "OrganizationSelector input is now controlled (value/onChange) rather than uncontrolled (defaultValue/onBlur) — switching between artefacts now refreshes the input correctly; previous value no longer leaks across selections",
+            "BpmnCanvas no longer resets on every parent re-render — handleElementSelect stabilized via a ref, modeler-init effect deps narrowed to xml only",
+            "DocumentComposer no longer flips hasChanges spuriously on document load — TipTap and other child editors emit synthetic onUpdate events during mount that previously dirtied the parent; a load-window guard now suppresses those for the macrotask following load"
+          ]
+        },
+        {
+          "icon": "⚙️",
+          "title": "Backend & technical",
+          "iconColor": "gray",
+          "items": [
+            "Database — language VARCHAR(2) and organization VARCHAR(100) columns added to process_definitions, form_schemas, and document_templates with partial indexes; nullable, existing rows coexist as NULL",
+            "BPMN moddle descriptor extended with LanguageMixin and OrganizationMixin on bpmn:Process — custom attributes survive saveXML round-trip via the existing ronl namespace",
+            "New shared components under packages/frontend/src/components/common/: LanguageSelector, OrganizationSelector, ArtefactListToolbar (with filterArtefacts helper)",
+            "Editor architecture — footer state lifted to the editor parent (BpmnModeler / FormEditor / DocumentComposer); children receive effective values via props and report changes via callbacks; Save is the single point of persistence",
+            "EXAMPLE_VERSIONS bumped for all existing examples to trigger one-time re-seed with organization tags; eleven new HR-capacity Dutch entries added at v1; organization keys standardized to lowercase (flevoland, toeslagen, bzk)"
+          ]
+        },
+        {
+          "icon": "ℹ️",
+          "title": "Known limitations",
+          "iconColor": "amber",
+          "items": [
+            "form-js properties panel loses input focus when typing pauses (Field label, Description, Key) — upstream form-js issue #86, marked wontfix by bpmn-io; not LDE-caused, not fixable from React without forking form-js; workaround: edit .form JSON in a code editor and re-import — filename inference handles language tagging on import"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.5.3",
+      "date": "April 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "🔍",
+          "title": "Works tab — new",
+          "iconColor": "blue",
+          "items": [
+            "New Works tab in the DSO Explorer (between Concepts and Activities) backed by the Zoekinterface API — search werkzaamheden by user intent (e.g. 'boom kappen') with autocomplete suggestions after 2 characters",
+            "Each result shows the human-readable omschrijving, the functioneleStructuurRef (full concept URI — the Phase 4 pivot to STTR files), and the short werkzaamheid URN",
+            "Selecting a result opens a detail panel showing the current version's omschrijving, validity period, and full version history with start/end dates and a 'current' badge",
+            "Autocomplete uses POST /werkzaamheden/_suggereer with 300ms debounce; selecting a suggestion immediately fires the search",
+            "Reloads on DSO environment switch with the same clean-slate behaviour as the other tabs"
+          ]
+        },
+        {
+          "icon": "📍",
+          "title": "Activities tab — OIN preset fix",
+          "iconColor": "emerald",
+          "items": [
+            "Lelystad and Flevoland presets now use POST /activiteiten/_zoek with bestuursorgaan.oin filter instead of _wijzigingen — returns activities valid on a given date rather than a delta sync of changed activities",
+            "Activities now appear in the list with their full omschrijving visible immediately, without requiring parallel detail fetches",
+            "Date field now defaults to today for OIN presets (yesterday offset removed — no longer needed with _zoek)",
+            "Pagination works correctly in OIN mode — Load button reloads the authority list for the selected date",
+            "Empty state message distinguishes between no activities found in general vs no activities found for the selected authority on the selected date"
+          ]
+        },
+        {
+          "icon": "🐛",
+          "title": "Bug fixes",
+          "iconColor": "red",
+          "items": [
+            "Fixed Activity Detail panel always using pre-production DSO when opened from the Activities list — env was missing from the getActiviteitDetail call, causing 404 for production-only activities",
+            "Fixed Activity Detail panel not re-fetching when DSO environment is switched while a URN is already selected — env added to the useEffect dependency array",
+            "Fixed Activity Detail panel showing stale date context in OIN preset mode — activeDatum now set correctly by loadByOin alongside the result",
+            "Fixed _wijzigingen datumVanaf returning empty for dates within the last two weeks — root cause was that _wijzigingen is a delta sync endpoint, not a browse endpoint; replaced entirely with _zoek + OIN filter"
+          ]
+        },
+        {
+          "icon": "⚙️",
+          "title": "Backend — DSO service",
+          "iconColor": "gray",
+          "items": [
+            "zoekinterfaceBaseUrl and opvragenWerkzaamhedenBaseUrl added to both dso and dsoProd config blocks — defaults baked in, no new env vars required",
+            "POST /v1/dso/werkzaamheden/zoek — proxies Zoekinterface /werkzaamheden/_zoek",
+            "POST /v1/dso/werkzaamheden/suggereer — proxies Zoekinterface /werkzaamheden/_suggereer",
+            "GET /v1/dso/werkzaamheden/:urn — proxies Opvragen Werkzaamheden /werkzaamheden/{urn} (version history, without expand — _expandScope enum value not yet resolved)",
+            "POST /v1/dso/activiteiten/oin now uses /activiteiten/_zoek with bestuursorgaan.oin body field and datum instead of _wijzigingen with datumVanaf"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.5.2",
+      "date": "April 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "✨",
+          "title": "DSO Explorer — improvements",
+          "iconColor": "blue",
+          "items": [
+            "DSO environment selector added to the Settings panel (gear icon): switch between pre-production and production DSO independently of the LDE environment, persisted across sessions in localStorage",
+            "Environment badge in the DSO Explorer header updates to reflect the active DSO environment (amber for pre-production, green for production)",
+            "Both DSO environments (pre-production and production) use separate API keys configured via DSO_API_KEY and DSO_API_KEY_PROD environment variables",
+            "Location presets (Lelystad, Flevoland) now filter by authority OIN via POST /activiteiten/_wijzigingen instead of geometry — shows only that authority's registered activities rather than all activities geographically intersecting the area",
+            "datumVanaf flows from the Valid on date field through to the _wijzigingen call — changing the date while a preset is active and pressing Load reloads that authority's list for the new date",
+            "Pressing Load while a preset is active reloads the authority list for the selected date instead of deselecting the preset and reverting to the default list",
+            "Clear button added next to active preset label to explicitly reset to the default list",
+            "Yesterday used as the default datumVanaf for authority presets",
+            "Child activities in the detail panel now show human-readable names fetched in parallel after the parent detail loads",
+            "Graceful 404 handling in the detail panel: activities not available in the active DSO environment show a clear message instead of a raw error",
+            "Pagination unified to 20 items per page across both Concepts and Activities tabs"
+          ]
+        },
+        {
+          "icon": "⚙️",
+          "title": "Backend — DSO service",
+          "iconColor": "gray",
+          "items": [
+            "POST /v1/dso/activiteiten/oin — new endpoint wrapping _wijzigingen, accepts oin and optional datumVanaf, defaults to yesterday",
+            "X-Dso-Env request header added to all DSO frontend calls; backend reads it to select pre-production or production DSO config",
+            "X-Dso-Env added to CORS allowedHeaders to resolve preflight errors",
+            "dsoProd config block in config.ts: DSO_CATALOGUE_BASE_URL_PROD, DSO_RTR_BASE_URL_PROD, DSO_API_KEY_PROD environment variables",
+            "getDsoConfig() helper selects the correct base URL and API key per request",
+            "env parameter threaded through all dso.service.ts exported functions and logged with each DSO request"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.5.1",
+      "date": "April 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "✨",
+          "title": "Improvements",
+          "iconColor": "emerald",
+          "items": [
+            "Child activities in the detail panel now show human-readable names instead of raw URNs — names are fetched in parallel after the parent detail loads and swap in progressively as requests resolve",
+            "Activities without an omschrijving in DSO gracefully fall back to their URN in both the list and the detail panel child links"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.5.0",
+      "date": "April 2026",
+      "status": "Released",
+      "statusColor": "blue",
+      "borderColor": "blue",
+      "sections": [
+        {
+          "icon": "🏛️",
+          "title": "DSO Explorer",
+          "iconColor": "blue",
+          "items": [
+            "New DSO Explorer panel (Landmark icon in sidebar) connecting LDE to the Digitaal Stelsel Omgevingswet pre-production environment",
+            "Concepts tab: full-text search across the Stelselcatalogus /begrippen endpoint — returns definitions, explanations, validity dates, and concept URIs",
+            "Activities tab: paginated list of RTR activiteiten valid on any selected date, defaulting to today with manual dd-MM-yyyy formatting (Azure App Service Intl-safe)",
+            "Location presets for Lelystad and Flevoland filter the activity list via POST /activiteiten/_zoek with GeoJSON Point geometry",
+            "URN paste-to-inspect input: paste any activiteit URN directly to open its detail panel without navigating the list",
+            "Activity Detail panel (1/3 width): shows omschrijving, authority (bestuurslaag, organisatieType, organisatieCode, OIN), parent activity, validity window, refinable flag, rule types present (conclusie / indieningsvereisten / maatregelen), child activities, and location identifiers",
+            "Parent and child activity links are navigable — clicking navigates the detail panel without returning to the list",
+            "DSO Explorer header shows environment label (pre-production) to make the data context explicit"
+          ]
+        },
+        {
+          "icon": "🔗",
+          "title": "DSO ↔ BPMN Linking",
+          "iconColor": "indigo",
+          "items": [
+            "New ronl:dsoActiviteitUrn moddleExtension on bpmn:Process — persisted in the BPMN XML alongside ronl:ropaRef",
+            "DsoActiviteitSelector footer panel in the BPMN Modeler (below RopaSelector): paste a URN, verify it live against the DSO RTR, and save it to the active process",
+            "Verification call fetches the activity detail and confirms omschrijving and authority before saving — prevents storing invalid URNs",
+            "Direct link to the activity in the production RTR viewer (omgevingswet.overheid.nl) shown after successful verification",
+            "TreeFellingPermitSubProcess can now be formally grounded in its DSO activiteit (boom kappen / nl.imow-gm0014) as the first Phase 3 example"
+          ]
+        },
+        {
+          "icon": "⚙️",
+          "title": "Backend — DSO Service",
+          "iconColor": "gray",
+          "items": [
+            "New dso.service.ts with shared dsoFetch helper: x-api-key header, configurable timeout, clean error propagation",
+            "GET /v1/dso/begrippen — proxies Catalogus /begrippen with zoekTerm, geldigOp, page, pageSize forwarding",
+            "GET /v1/dso/activiteiten — proxies RTR /activiteiten with today-default datum (manual dd-MM-yyyy format, no Intl dependency)",
+            "GET /v1/dso/activiteiten/:urn — fetches a single activity by URN with today-default datum",
+            "POST /v1/dso/activiteiten/zoek — proxies RTR /activiteiten/_zoek with GeoJSON geometrie body and crs=epsg:4326 query param",
+            "DSO config block in config.ts: DSO_CATALOGUE_BASE_URL, DSO_RTR_BASE_URL, DSO_API_KEY, DSO_TIMEOUT environment variables"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.4.1",
+      "status": "New Feature",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "April 2, 2026",
+      "sections": [
+        {
+          "title": "Public Bundle Library",
+          "icon": "📚",
+          "iconColor": "emerald",
+          "items": [
+            "New public endpoint GET /v1/bundles/public serves deployed bundle records with no authentication required and fully open CORS — consumable by the RONL Business API caseworker dashboard",
+            "A bundle is recorded at deploy time: shell or standalone BPMN process, Operaton deployment ID, Operaton URL, resolved form IDs, and resolved document template IDs are written to process_definitions",
+            "Forms and documents are expanded by name in the response — forms joined via schema JSON id field, documents joined via document_templates.id",
+            "Subprocesses linked to a shell via calledElement are resolved and included as a nested array",
+            "New PATCH /v1/assets/bpmn/:id/deploy endpoint writes deployment metadata back to the process_definitions row immediately after a successful Operaton deploy",
+            "To cover example bundles removed `readonly: true` from the seed records entirely, kept the EXAMPLE badge, and protect deletion by checking status === 'example' instead of readonly",
+            "PATCH method added to the backend CORS allowed methods list"
+          ]
+        },
+        {
+          "title": "Deploy Write-back",
+          "icon": "🔗",
+          "iconColor": "blue",
+          "items": [
+            "BpmnCanvas fires a background PATCH to /v1/assets/bpmn/:id/deploy after every successful deploy — no spinner, no blocking UX change",
+            "Write-back carries: Operaton deployment ID, Operaton URL, form IDs resolved from camunda:formRef, document IDs resolved from ronl:documentRef",
+            "LDE process ID is resolved by matching the active process bpmnProcessId against the deployment processKey — only user-authored (non-readonly) processes are written",
+            "Redeploying a bundle updates the existing row — deployed_at is always the most recent successful deploy"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.4.0",
+      "status": "New Feature",
+      "statusColor": "teal",
+      "borderColor": "teal",
+      "date": "March 28, 2026",
+      "sections": [
+        {
+          "title": "RoPA Records — PostgreSQL",
+          "icon": "🔒",
+          "iconColor": "teal",
+          "items": [
+            "Two new PostgreSQL tables: ropa_records (one record per process) and ropa_personal_data_fields (one row per personal data field collected by the linked forms)",
+            "ropa_records keyed by bpmn_process_id with a unique index — re-running the seed updates records in place rather than inserting duplicates",
+            "ropa_personal_data_fields cascade-deleted when the parent record is removed, ensuring referential integrity",
+            "New backend service ropa.service.ts with transactional upsert: record header and all field rows committed atomically or rolled back together",
+            "Seeded with four active records covering the AWB Shell (Flevoland), Tree Felling Permit subprocess, AWB Shell (Zorgtoeslag), and Zorgtoeslag Provisional Entitlement subprocess"
+          ]
+        },
+        {
+          "title": "RoPA Records — API",
+          "icon": "🌐",
+          "iconColor": "teal",
+          "items": [
+            "Authenticated asset routes: GET/POST /v1/assets/ropa and DELETE /v1/assets/ropa/:id, GET /v1/assets/ropa/by-bpmn-id/:bpmnProcessId",
+            "Public read-only route GET /v1/ropa/public?organisation= with open CORS — serves only active records and strips internal contact details before returning",
+            "Public route bypasses the global CORS origin whitelist via path-aware middleware in index.ts, enabling consumption from any external domain including ropa.flevoland.nl"
+          ]
+        },
+        {
+          "title": "RoPA Editor — LDE UI",
+          "icon": "📋",
+          "iconColor": "teal",
+          "items": [
+            "New RoPA Records view in the LDE sidebar (ScrollText icon), using the same three-panel layout as BPMN Modeler and Document Composer",
+            "Left panel: record list grouped as shells first then subprocesses, with DRAFT / ACTIVE / ARCHIVED status badges and delete controls",
+            "Record tab: all GDPR Art. 30 mandatory fields — controller, purpose, GDPR article, legal basis, data subjects, recipients, third-country transfers, retention period, security measures",
+            "Legal basis Lookup button queries the TriplyDB SPARQL endpoint for eli:LegalResource resources and presents a pick-list — selected URI and label populate both fields automatically",
+            "Personal Data Fields tab: hydrates field rows from the form schemas linked to the process via camunda:formRef — Product Owner classifies each field with a data category and Art. 9/10 flag",
+            "BPMN Link tab: reads and writes ronl:ropaRef directly into the process XML via BpmnService, with status indicator showing whether the current record ID matches the value in the BPMN",
+            "Status tab: three lifecycle buttons (Draft / Active / Archived) with confirmation dialog before activation — activating a record makes it publicly visible"
+          ]
+        },
+        {
+          "title": "RoPA Selector — BPMN Modeler",
+          "icon": "🔗",
+          "iconColor": "teal",
+          "items": [
+            "RoPA record selector rendered as a fixed footer panel at the bottom of the ProcessList when a process is active — no canvas element selection required",
+            "Selecting a record writes ronl:ropaRef into the process XML and persists via BpmnService.saveProcess, including automatic xmlns:ronl namespace injection if absent",
+            "ronl:ropaRef added to ronlModdleDescriptor.json as a bpmn:Process-level attribute alongside the existing ronl:documentRef UserTask extension",
+            "Deploy modal shows an amber warning when no ronl:ropaRef is found on the process element — non-blocking but visible before production deployment"
+          ]
+        },
+        {
+          "title": "RoPA Public Site — MVP",
+          "icon": "🏛️",
+          "iconColor": "teal",
+          "items": [
+            "New package packages/ropa-site — a zero-dependency static HTML/CSS/JS site deployable as an Azure Static Web Apps resource isolated from the LDE stack",
+            "Fetches active RoPA records from GET /v1/ropa/public and renders them as collapsible cards with Provincie Flevoland house style (dark green accent)",
+            "Each card shows controller, GDPR article, legal basis (linked to eli:LegalResource URI), purpose, data subjects, recipients, retention period, security measures, and a personal data fields table",
+            "Personal data fields table colour-codes data categories and flags Art. 9/10 special categories in red",
+            "Shells rendered first, subprocesses second — matching the AWB two-level process hierarchy",
+            "staticwebapp.config.json included for Azure Static Web Apps deployment with no-cache headers"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.3.0",
+      "status": "Infrastructure",
+      "statusColor": "indigo",
+      "borderColor": "indigo",
+      "date": "March 24, 2026",
+      "sections": [
+        {
+          "title": "PostgreSQL Asset Storage",
+          "icon": "🗄️",
+          "iconColor": "indigo",
+          "items": [
+            "BPMN processes, form schemas, and document templates now persist to PostgreSQL via the LDE backend — assets survive localStorage clearing and are shared across browsers and devices",
+            "Write-through cache strategy: saves update localStorage immediately for zero-latency UI, then POST to /v1/assets/ in the background",
+            "Async hydration on editor mount: GET /v1/assets/ replaces non-readonly localStorage entries with authoritative server state on each page load",
+            "Graceful degradation: if the backend is unreachable, localStorage is used as fallback without any error surfaced to the user",
+            "Example assets (readonly: true) are excluded from server writes — they remain seeded from public/examples/ as before",
+            "New backend routes: GET/POST /v1/assets/bpmn, GET/POST /v1/assets/forms, GET/POST /v1/assets/documents, DELETE /v1/assets/{type}/:id",
+            "New backend route GET /v1/assets/bpmn/by-bpmn-id/:bpmnProcessId for bundle assembly lookup by BPMN process id"
+          ]
+        },
+        {
+          "title": "AWB Shell / Subprocess Hierarchy",
+          "icon": "🏗️",
+          "iconColor": "violet",
+          "items": [
+            "BpmnProcess type extended with bpmnProcessId, processRole ('shell' | 'subprocess' | 'standalone'), and calledElement fields",
+            "All seeded example processes carry explicit role and relationship metadata: AwbShellProcess and AwbZorgtoeslagProcess as shells, TreeFellingPermitSubProcess, ZorgtoeslagProvisionalSubProcess, and ZorgtoeslagFinalSubProcess as subprocesses",
+            "Imported and user-created processes default to standalone with bpmnProcessId derived from the BPMN <process id=\"...\"> attribute",
+            "Process library renders a grouped hierarchical view: shell processes are top-level entries, their subprocesses are indented beneath with a tree connector",
+            "SHELL and SUB role badges displayed on process cards for at-a-glance orientation",
+            "PostgreSQL process_definitions table stores process_role, called_element, and bpmn_process_id as indexed columns enabling server-side hierarchy queries"
+          ]
+        },
+        {
+          "title": "Schema Versioning",
+          "icon": "🔢",
+          "iconColor": "blue",
+          "items": [
+            "schema_version column added to all three PostgreSQL tables (process_definitions, form_schemas, document_templates)",
+            "Enables server-side re-seeding of example assets when source files change — all users on all devices receive updates automatically on next connect, without requiring a localStorage reset"
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.2.0",
       "status": "New Feature",
       "statusColor": "purple",

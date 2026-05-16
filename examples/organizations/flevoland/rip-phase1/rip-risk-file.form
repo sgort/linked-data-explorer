@@ -51,6 +51,12 @@
       "label": "Risk file recorded in Relatics",
       "key": "riskFileComplete",
       "validate": { "required": true }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
     }
   ]
 }

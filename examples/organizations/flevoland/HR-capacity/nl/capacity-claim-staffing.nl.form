@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-staffing-nl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Formatieclaim opstellen"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Vul het Kernvoorstel voor de capaciteitsclaim in — formatievariant (vaste aanstelling). De Directie beslist over deze claim in haar volgende wekelijkse vergadering."
+    },
+    {
+      "id": "Field_Description",
+      "type": "textarea",
+      "label": "Beschrijving en onderbouwing",
+      "key": "description",
+      "description": "Past de claim binnen het organisatiedoel en jaarprogramma? Doel en noodzaak? Zijn er alternatieven? Is de kennis al in huis of moet die van buiten komen? Past het binnen het financiële afwegingskader?",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_FunctionCode",
+      "type": "textfield",
+      "label": "Functiecode",
+      "key": "functionCode",
+      "description": "Formatie-functiecodes bevatten doorgaans een \"C\" (bijv. \"12C03\").",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Functietitel",
+      "key": "jobTitle",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_AppointmentType",
+      "type": "radio",
+      "label": "Duur van de aanstelling",
+      "key": "appointmentType",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Structureel", "value": "structural" },
+        { "label": "Incidenteel (bepaalde tijd)", "value": "incidental" }
+      ]
+    },
+    {
+      "id": "Field_StartDate",
+      "type": "datetime",
+      "label": "Startdatum",
+      "key": "startDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_EndDate",
+      "type": "datetime",
+      "label": "Einddatum (alleen incidenteel)",
+      "key": "endDate",
+      "subtype": "date",
+      "dateLabel": "Datum",
+      "description": "Laat leeg voor een structurele aanstelling."
+    },
+    {
+      "id": "Field_HoursPerWeek",
+      "type": "number",
+      "label": "Uren per week",
+      "key": "hoursPerWeek",
+      "validate": {
+        "required": true,
+        "min": 1,
+        "max": 40
+      }
+    },
+    {
+      "id": "Field_Fte",
+      "type": "number",
+      "label": "FTE",
+      "key": "fte",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0.01,
+        "max": 1
+      }
+    },
+    {
+      "id": "Field_Scale",
+      "type": "textfield",
+      "label": "Schaal",
+      "key": "scale",
+      "description": "Bijv. \"10\" of \"11\".",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_AnnualCostsAfter",
+      "type": "number",
+      "label": "Jaarkosten (€)",
+      "key": "annualCostsAfter",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_FundingSource",
+      "type": "textfield",
+      "label": "Dekkingsbron",
+      "key": "fundingSource",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_EmploymentConditionChanges",
+      "type": "textarea",
+      "label": "Wijzigingen arbeidsvoorwaarden",
+      "key": "employmentConditionChanges",
+      "description": "Optioneel — beschrijf eventuele afwijkingen van de standaard arbeidsvoorwaarden."
+    },
+    {
+      "id": "Field_HrmAdvice",
+      "type": "textarea",
+      "label": "Advies HRM-eenheid",
+      "key": "hrmAdvice",
+      "description": "Optioneel — wordt doorgaans toegevoegd door de HR-businesspartner.",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Claim opslaan",
+      "action": "submit"
+    }
+  ]
+}

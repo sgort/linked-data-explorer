@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-register-reservation",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Register financial reservation"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the Board's approved capacity claim as a reservation in the financial system. For staffing, the reservation can be removed one month after the employee starts (salary then books as actual expense). For hiring, the reservation can be converted to an obligation when the actual obligation is incurred."
+    },
+    {
+      "id": "Field_RequestType",
+      "type": "textfield",
+      "label": "Request type",
+      "key": "requestType",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_OrganizationalUnit",
+      "type": "textfield",
+      "label": "Organizational unit",
+      "key": "organizationalUnit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_AnnualCostsAfter",
+      "type": "number",
+      "label": "Annual costs from claim (€)",
+      "key": "annualCostsAfter",
+      "decimalDigits": 2,
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_FundingSource",
+      "type": "textfield",
+      "label": "Funding source",
+      "key": "fundingSource",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ReservationType",
+      "type": "select",
+      "label": "Reservation type",
+      "key": "reservationType",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Staffing — salary reservation", "value": "staffing-salary" },
+        { "label": "Hiring — obligation reservation", "value": "hiring-obligation" }
+      ]
+    },
+    {
+      "id": "Field_ReservationId",
+      "type": "textfield",
+      "label": "Reservation ID",
+      "key": "reservationId",
+      "description": "Identifier from the financial software package.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ReservationAmount",
+      "type": "number",
+      "label": "Reservation amount (€)",
+      "key": "reservationAmount",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_ReservationDate",
+      "type": "datetime",
+      "label": "Reservation date",
+      "key": "reservationDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_PlannedRemovalDate",
+      "type": "datetime",
+      "label": "Planned removal / conversion date",
+      "key": "plannedRemovalDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "description": "For staffing: approximately one month after start date. For hiring: when the obligation is expected to be incurred."
+    },
+    {
+      "id": "Field_RegisteredBy",
+      "type": "textfield",
+      "label": "Registered by",
+      "key": "registeredBy",
+      "description": "Name of the financial controller.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ReservationNotes",
+      "type": "textarea",
+      "label": "Notes",
+      "key": "reservationNotes"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Complete reservation",
+      "action": "submit"
+    }
+  ]
+}

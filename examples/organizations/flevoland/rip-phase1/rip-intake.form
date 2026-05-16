@@ -107,6 +107,12 @@
       "key": "projectTimeline",
       "validate": { "required": true },
       "description": "Expected start and end date, e.g. Q2 2025 – Q4 2026."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit intake",
+      "action": "submit"
     }
   ]
 }

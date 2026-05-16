@@ -3,17 +3,44 @@ import '@bpmn-io/form-js/dist/assets/form-js-editor.css';
 
 import { FormEditor as FormJsEditor } from '@bpmn-io/form-js';
 import { Download, Save } from 'lucide-react';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface FormCanvasProps {
   schema: Record<string, unknown>;
+  /** Effective language (draft-aware) for inclusion in export. */
+  effectiveLanguage?: 'en' | 'nl' | 'de';
+  /** Effective organization (draft-aware) for inclusion in export. */
+  effectiveOrganization?: string;
+  /** True when the parent has pending footer (metadata) edits — enables the Save button. */
+  hasFooterChanges?: boolean;
+  /** Called when the canvas dirty state changes, so the parent can guard navigation. */
+  onDirtyChange?: (dirty: boolean) => void;
   onSave: (schema: Record<string, unknown>) => void;
   onClose: () => void;
 }
 
-const FormCanvas: React.FC<FormCanvasProps> = ({ schema, onSave, onClose }) => {
+const FormCanvas: React.FC<FormCanvasProps> = ({
+  schema,
+  effectiveLanguage,
+  effectiveOrganization,
+  hasFooterChanges = false,
+  onDirtyChange,
+  onSave,
+  onClose,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<FormJsEditor | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Keep latest onDirtyChange in a ref so the change listener stays stable across renders.
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  }, [onDirtyChange]);
+
+  // Tracks whether we've already fired the dirty signal for the current edit session.
+  // Reset on save so a subsequent edit can re-trigger it.
+  const alreadyDirtyRef = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -21,11 +48,45 @@ const FormCanvas: React.FC<FormCanvasProps> = ({ schema, onSave, onClose }) => {
     const editor = new FormJsEditor({ container: containerRef.current });
     editorRef.current = editor;
 
-    editor.importSchema(schema).catch((err: unknown) => {
-      console.error('Failed to import form schema:', err);
-    });
+    // Track dirty state via form-js's `changed` event. Listener is registered
+    // AFTER importSchema completes so the import itself doesn't appear as a user edit.
+    //
+    // Once-true guard: only flip dirty on the first event; subsequent events
+    // are no-ops. React would bail out anyway when setting the same value,
+    // but this is explicit about intent.
+    //
+    // Note: form-js's properties panel loses input focus on its own debounced
+    // commit (form-js issue #86, "wontfix"). That focus loss is independent of
+    // our React state — it's form-js rebuilding its panel from schema on idle.
+    // We can't fix it from this side without forking form-js.
+    const handleChange = () => {
+      if (alreadyDirtyRef.current) return;
+      alreadyDirtyRef.current = true;
+      setHasChanges(true);
+      onDirtyChangeRef.current?.(true);
+    };
+
+    editor
+      .importSchema(schema)
+      .then(() => {
+        (editor as unknown as { on: (e: string, cb: () => void) => void }).on(
+          'changed',
+          handleChange
+        );
+      })
+      .catch((err: unknown) => {
+        console.error('Failed to import form schema:', err);
+      });
 
     return () => {
+      try {
+        (editor as unknown as { off?: (e: string, cb: () => void) => void }).off?.(
+          'changed',
+          handleChange
+        );
+      } catch {
+        /* editor may already be destroyed */
+      }
       editor.destroy();
       editorRef.current = null;
     };
@@ -35,19 +96,31 @@ const FormCanvas: React.FC<FormCanvasProps> = ({ schema, onSave, onClose }) => {
     if (!editorRef.current) return;
     const savedSchema = await editorRef.current.saveSchema();
     onSave(savedSchema as Record<string, unknown>);
+    setHasChanges(false);
+    onDirtyChangeRef.current?.(false);
+    // Resetting allows the next form-js `changed` event to re-trigger dirty.
+    alreadyDirtyRef.current = false;
   };
 
   const handleExport = async () => {
     if (!editorRef.current) return;
-    const exportSchema = await editorRef.current.saveSchema();
-    const blob = new Blob([JSON.stringify(exportSchema, null, 2)], {
+    const exportSchema = (await editorRef.current.saveSchema()) as Record<string, unknown>;
+
+    // Include LDE wrapper metadata as top-level keys. form-js ignores unknown
+    // top-level keys on import (they're not in its schema spec), and LDE's
+    // own .form import in FormList picks `language` / `organization` up.
+    const wrapped: Record<string, unknown> = { ...exportSchema };
+    if (effectiveLanguage) wrapped.language = effectiveLanguage;
+    if (effectiveOrganization) wrapped.organization = effectiveOrganization;
+
+    const blob = new Blob([JSON.stringify(wrapped, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const formId = (exportSchema as Record<string, unknown>).id ?? 'form';
-    a.download = `${formId}.form`;
+    const formId = exportSchema.id ?? 'form';
+    a.download = effectiveLanguage ? `${formId}.${effectiveLanguage}.form` : `${formId}.form`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -61,7 +134,12 @@ const FormCanvas: React.FC<FormCanvasProps> = ({ schema, onSave, onClose }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
+            disabled={!hasChanges && !hasFooterChanges}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              hasChanges || hasFooterChanges
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+            }`}
           >
             <Save size={16} />
             Save

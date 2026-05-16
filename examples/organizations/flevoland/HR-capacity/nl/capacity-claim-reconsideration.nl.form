@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-reconsideration-nl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Heroverwegingsoverleg"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "De Directie heeft de capaciteitsclaim afgewezen. De manager, de HR-businesspartner en de personeelscontroller komen samen om de afwijzing te bespreken en te bepalen of de claim wordt herzien en opnieuw ingediend, of wordt ingetrokken."
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Functietitel",
+      "key": "jobTitle",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_RejectionReason",
+      "type": "textarea",
+      "label": "Reden gegeven door de Directie",
+      "key": "rejectionReason",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_BoardMinuteReference",
+      "type": "textfield",
+      "label": "Referentie directiebesluit",
+      "key": "boardMinuteReference",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ReconsiderationOutcome",
+      "type": "radio",
+      "label": "Uitkomst",
+      "key": "reconsiderationOutcome",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Doorgaan — herzien en opnieuw indienen", "value": "proceed" },
+        { "label": "Claim intrekken", "value": "withdraw" }
+      ]
+    },
+    {
+      "id": "Field_RevisionPlan",
+      "type": "textarea",
+      "label": "Herzieningsplan",
+      "key": "revisionPlan",
+      "description": "Bij doorgaan: beschrijf wat er verandert vóór de nieuwe indiening. Bij intrekken: vat de overwegingen en eventuele vervolgacties samen."
+    },
+    {
+      "id": "Field_RevisedRequestType",
+      "type": "radio",
+      "label": "Herzien type aanvraag",
+      "key": "revisedRequestType",
+      "description": "Bij doorgaan: bevestig of de herziene claim nog steeds formatie betreft of overgaat naar inhuur (of andersom).",
+      "values": [
+        { "label": "Formatie", "value": "staffing" },
+        { "label": "Inhuur", "value": "hiring" }
+      ]
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Uitkomst vastleggen",
+      "action": "submit"
+    }
+  ]
+}

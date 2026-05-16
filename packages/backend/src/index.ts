@@ -8,7 +8,8 @@ import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { versionMiddleware } from './middleware/version.middleware';
 import { externalTaskWorker } from './services/externalTaskWorker.service';
-import packageJson from '../package.json';
+import { migrate } from './db/migrate';
+import { rootHandler } from './utils/rootViews';
 
 const app: Express = express();
 
@@ -32,16 +33,31 @@ const corsOptions: cors.CorsOptions = {
     callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Dso-Env'],
 };
 
 // Security middleware
 app.use(helmet());
 
 // apply CORS to both normal requests and preflight
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+const isPublicPath = (path: string) =>
+  path.startsWith('/v1/ropa/public') || path.startsWith('/v1/bundles/public');
+
+app.use((req, res, next) => {
+  if (isPublicPath(req.path)) {
+    cors({ origin: '*', methods: ['GET', 'OPTIONS'] })(req, res, next);
+  } else {
+    cors(corsOptions)(req, res, next);
+  }
+});
+app.options('*', (req, res, next) => {
+  if (isPublicPath(req.path)) {
+    cors({ origin: '*', methods: ['GET', 'OPTIONS'] })(req, res, next);
+  } else {
+    cors(corsOptions)(req, res, next);
+  }
+});
 
 // Register /api/dmns XML route BEFORE body-parsing middleware.
 // dmnXmlRoutes streams raw XML (Content-Type: application/xml), so it must not
@@ -70,32 +86,11 @@ app.use(versionMiddleware);
 // Mount API routes (routes already include /api and /v1 prefixes)
 app.use(routes);
 
-// Root endpoint - FIXED: Point to v1 endpoints
-app.get('/', (req, res) => {
-  res.json({
-    name: 'Linked Data Explorer Backend',
-    version: packageJson.version,
-    status: 'running',
-    environment: config.nodeEnv,
-    documentation: '/v1/openapi.json',
-    health: '/v1/health',
-    endpoints: {
-      health: '/v1/health',
-      dmns: '/v1/dmns',
-      validate: '/v1/dmns/validate',
-      chains: '/v1/chains',
-      triplydb: '/v1/triplydb',
-      vendors: '/v1/vendors',
-    },
-    legacy: {
-      health: '/api/health (deprecated)',
-      dmns: '/api/dmns (deprecated)',
-      chains: '/api/chains (deprecated)',
-      triplydb: '/api/triplydb (deprecated)',
-      vendors: '/api/vendors (deprecated)',
-    },
-  });
-});
+// Root endpoint — content-negotiated. Browsers (Accept: text/html) get a
+// rendered HTML landing page; programmatic clients get JSON. Both views are
+// derived from the shared route registry. See src/utils/rootView.ts and
+// src/routes/registry.ts.
+app.get('/', rootHandler);
 
 // 404 handler (must be after all routes)
 app.use(notFoundHandler);
@@ -104,7 +99,8 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start server
-const startServer = () => {
+const startServer = async () => {
+  await migrate();
   const port = config.port;
   const host = config.host;
 

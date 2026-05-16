@@ -8,13 +8,27 @@
     {
       "name": "DocumentRefMixin",
       "extends": ["bpmn:UserTask"],
-      "properties": [
-        {
-          "name": "documentRef",
-          "isAttr": true,
-          "type": "String"
-        }
-      ]
+      "properties": [{ "name": "documentRef", "isAttr": true, "type": "String" }]
+    },
+    {
+      "name": "RopaRefMixin",
+      "extends": ["bpmn:Process"],
+      "properties": [{ "name": "ropaRef", "isAttr": true, "type": "String" }]
+    },
+    {
+      "name": "DsoActiviteitMixin",
+      "extends": ["bpmn:Process"],
+      "properties": [{ "name": "dsoActiviteitUrn", "isAttr": true, "type": "String" }]
+    },
+    {
+      "name": "LanguageMixin",
+      "extends": ["bpmn:Process"],
+      "properties": [{ "name": "language", "isAttr": true, "type": "String" }]
+    },
+    {
+      "name": "OrganizationMixin",
+      "extends": ["bpmn:Process"],
+      "properties": [{ "name": "organization", "isAttr": true, "type": "String" }]
     }
   ]
 }

@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "capacity-claim-submit",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Submit to Board agenda"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Review the capacity claim summary below and schedule it on the next Board of Directors meeting agenda. Claims submitted after Friday 12:00 will slip to the following week."
+    },
+    {
+      "id": "Field_RequestType",
+      "type": "textfield",
+      "label": "Request type",
+      "key": "requestType",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_JobTitle",
+      "type": "textfield",
+      "label": "Job title",
+      "key": "jobTitle",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_OrganizationalUnit",
+      "type": "textfield",
+      "label": "Organizational unit",
+      "key": "organizationalUnit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_AnnualCostsAfter",
+      "type": "number",
+      "label": "Annual costs (€)",
+      "key": "annualCostsAfter",
+      "decimalDigits": 2,
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_FundingSource",
+      "type": "textfield",
+      "label": "Funding source",
+      "key": "fundingSource",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_AdvisoryGroup",
+      "type": "textfield",
+      "label": "Advisory group (routing)",
+      "key": "advisoryGroup",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ScheduledMeetingDate",
+      "type": "datetime",
+      "label": "Scheduled Board meeting date",
+      "key": "scheduledMeetingDate",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_SubmittedBy",
+      "type": "textfield",
+      "label": "Submitted by",
+      "key": "submittedBy",
+      "description": "Name of the Board Secretary scheduling this claim.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_SubmissionNotes",
+      "type": "textarea",
+      "label": "Submission notes",
+      "key": "submissionNotes",
+      "description": "Optional — e.g. urgency, co-decisions, documents circulated."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Schedule on agenda",
+      "action": "submit"
+    }
+  ]
+}

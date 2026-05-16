@@ -133,16 +133,28 @@ export async function listGraphs(config: TriplyDBConfig): Promise<string[]> {
  * Uses the correct sync API from TriplyDB documentation:
  * POST /datasets/{account}/{dataset}/services/{serviceName}
  * Body: {"sync": "true"}
+ *
+ * @param config       - TriplyDB configuration
+ * @param serviceName  - Name of the service to sync
+ * @param graphNames   - Optional pre-fetched graph list (used only for the response count)
+ * @param graphName    - Optional graph IRI that triggered this sync (for traceability)
  */
 export async function updateService(
   config: TriplyDBConfig,
   serviceName: string,
-  graphNames?: string[]
-): Promise<{ success: boolean; message: string; graphCount: number }> {
+  graphNames?: string[],
+  graphName?: string
+): Promise<{
+  success: boolean;
+  message: string;
+  graphCount: number;
+  graphName?: string;
+}> {
   logger.info('[TriplyDB Service] Synchronizing service', {
     serviceName: serviceName,
     account: config.account,
     dataset: config.dataset,
+    triggeredByGraph: graphName || '(not specified)',
   });
 
   // Fetch all graphs to get count (for response message)
@@ -208,12 +220,14 @@ export async function updateService(
     logger.info('[TriplyDB Service] Service synchronized successfully', {
       serviceName: serviceName,
       graphCount: graphNames.length,
+      triggeredByGraph: graphName || '(not specified)',
     });
 
     return {
       success: true,
       message: `Service ${serviceName} updated to include ${graphNames.length} graphs`,
       graphCount: graphNames.length,
+      ...(graphName ? { graphName } : {}),
     };
   } catch (error) {
     logger.error('[TriplyDB Service] Error synchronizing service', {

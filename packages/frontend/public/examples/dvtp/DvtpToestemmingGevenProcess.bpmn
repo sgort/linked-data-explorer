@@ -1,0 +1,443 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:ronl="http://ronl.nl/schema/1.0"
+  id="Definitions_DvtpToestemming"
+  targetNamespace="http://example.com/dvtp"
+  exporter="Camunda Modeler"
+  exporterVersion="5.43.1">
+
+  <!--
+    DvtpToestemmingGevenProcess — Flow A: Toestemming geven
+    =======================================================
+    Standalone citizen consent process implementing the DvTP (Delen via
+    Toestemming met Private partijen) Flow A functional requirements.
+
+    Legal basis: AVG artikel 6 lid 1 sub a (toestemming) + DvTP-specificatie FR-01 t/m FR-32.
+
+    Inputs (from start form dvtp-consent-start):
+      - initiatorId            (String)  : identifier of the private service requesting consent
+      - returnUrl              (String)  : URL to redirect citizen after the flow
+      - serviceName            (String)  : human-readable name of the private service
+      - serviceDoel            (String)  : purpose of the data sharing
+      - serviceScope           (String)  : what data is shared
+      - serviceParties         (String)  : parties receiving the data
+      - serviceIntegrator      (String)  : technical integrator
+      - machtigingAanwezig     (Boolean) : whether a machtiging (mandate) was detected
+      - delegatieUitgesloten   (Boolean) : whether delegation is excluded for this service
+
+    Key process variables set during execution:
+      - applicantId            (String)  : citizen identifier (BSN stub)
+      - consentDate            (String)  : ISO timestamp of process start
+      - initiatorAllowed       (Boolean) : result of DvtpConfigCheck DMN
+      - configTtlDays          (Integer) : TTL in days from DMN
+      - configTtlLabel         (String)  : human-readable TTL from DMN
+      - delegatieGeblokkeerd   (Boolean) : result of DvtpDelegationCheck DMN
+      - consentGiven           (String)  : "granted" or "refused"
+      - consentReference       (String)  : unique consent registration ID
+      - consentStatus          (String)  : "Active", "Refused", or "Blocked"
+      - consentExpiry          (String)  : ISO timestamp of consent expiry
+  -->
+
+  <bpmn:process id="DvtpToestemmingGevenProcess"
+                name="DvTP — Flow A: Toestemming geven"
+                isExecutable="true"
+                camunda:historyTimeToLive="365">
+
+    <!-- Start: private dienstverlener redirects citizen with context -->
+    <bpmn:startEvent id="StartEvent_Dvtp" name="Toestemming aangevraagd"
+                     camunda:formRef="dvtp-consent-start"
+                     camunda:formRefBinding="latest">
+      <bpmn:outgoing>Flow_Start_Identity</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- Stel identiteit vast — DigiD stub (FR-01) -->
+    <bpmn:scriptTask id="Task_Identity" name="Stel identiteit vast (DigiD stub, FR-01)"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Start_Identity</bpmn:incoming>
+      <bpmn:outgoing>Flow_Identity_Config</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        var now = new Date().toISOString();
+        execution.setVariable("consentDate", now);
+        execution.setVariable("consentYear", new Date().getFullYear());
+        if (!execution.getVariable("applicantId")) {
+          execution.setVariable("applicantId", "BSN-" + Date.now().toString().slice(-9));
+        }
+        execution.setVariable("authenticationMethod", "DigiD");
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <!-- Lees dienstconfiguratie (FR-30/32) -->
+    <bpmn:businessRuleTask id="BR_ConfigCheck"
+                           name="Lees dienstconfiguratie (FR-30/32)"
+                           camunda:decisionRef="DvtpConfigCheck"
+                           camunda:resultVariable="configResult"
+                           camunda:mapDecisionResult="singleResult">
+      <bpmn:incoming>Flow_Identity_Config</bpmn:incoming>
+      <bpmn:outgoing>Flow_Config_Extract</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+
+    <!-- Extraheer DMN-resultaat configuratie -->
+    <bpmn:scriptTask id="Task_ExtractConfig" name="Extraheer configuratieresultaat"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Config_Extract</bpmn:incoming>
+      <bpmn:outgoing>Flow_Extract_GatewayAllowed</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        var result = execution.getVariable("configResult");
+        var allowed = result.get("initiatorAllowed");
+        execution.setVariable("initiatorAllowed", allowed == true);
+        var ttlDays = result.get("configTtlDays");
+        execution.setVariable("configTtlDays", ttlDays != null ? Number(ttlDays) : 365);
+        var ttlLabel = result.get("configTtlLabel");
+        execution.setVariable("configTtlLabel", ttlLabel != null ? String(ttlLabel) : "1 jaar (standaard)");
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <!-- Validatie initiator/return-URL (FR-30) -->
+    <bpmn:exclusiveGateway id="Gateway_InitiatorAllowed" name="Initiator/return-URL toegestaan? (FR-30)">
+      <bpmn:incoming>Flow_Extract_GatewayAllowed</bpmn:incoming>
+      <bpmn:outgoing>Flow_Allowed_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Allowed_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Weiger — onbekende initiator -->
+    <bpmn:scriptTask id="Task_RejectInitiator" name="Weiger initiator — toon melding (FR-30)"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Allowed_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_RejectInit_End</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        execution.setVariable("consentStatus", "Refused");
+        execution.setVariable("refusalReason", "Initiator of return-URL is niet geregistreerd in de DvTP-dienstconfiguratie (FR-30).");
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <bpmn:endEvent id="EndEvent_Refused" name="Geweigerd — onbekende initiator">
+      <bpmn:incoming>Flow_RejectInit_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Authenticeer burger via DigiD (FR-01) — stub -->
+    <bpmn:scriptTask id="Task_DigiDStub" name="Authenticeer burger via DigiD (FR-01)"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Allowed_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_DigiD_Delegation</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        // Stub — in productie: DigiD-authenticatie via SAML/OpenID Connect.
+        execution.setVariable("digidAuthenticated", true);
+        execution.setVariable("authTimestamp", new Date().toISOString());
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <!-- Delegatiecheck (FR-02) -->
+    <bpmn:businessRuleTask id="BR_DelegationCheck"
+                           name="Controleer machtiging en delegatie (FR-02)"
+                           camunda:decisionRef="DvtpDelegationCheck"
+                           camunda:resultVariable="delegationResult"
+                           camunda:mapDecisionResult="singleResult">
+      <bpmn:incoming>Flow_DigiD_Delegation</bpmn:incoming>
+      <bpmn:outgoing>Flow_Delegation_Extract</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+
+    <!-- Extraheer DMN-resultaat delegatie -->
+    <bpmn:scriptTask id="Task_ExtractDelegation" name="Extraheer delegatieresultaat"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Delegation_Extract</bpmn:incoming>
+      <bpmn:outgoing>Flow_ExtractDeleg_Gateway</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        var result = execution.getVariable("delegationResult");
+        var blocked = result.get("delegatieGeblokkeerd");
+        execution.setVariable("delegatieGeblokkeerd", blocked == true);
+        var reden = result.get("delegatieReden");
+        execution.setVariable("delegatieReden", reden != null ? String(reden) : "");
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <!-- Delegatiecheck gateway (FR-02) -->
+    <bpmn:exclusiveGateway id="Gateway_DelegationBlocked" name="Machtiging gedetecteerd EN delegatie uitgesloten? (FR-02)">
+      <bpmn:incoming>Flow_ExtractDeleg_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Deleg_Blocked</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Deleg_OK</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Toon foutmelding delegatie (FR-02) -->
+    <bpmn:scriptTask id="Task_DelegationError" name="Toon foutmelding delegatie (FR-02)"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Deleg_Blocked</bpmn:incoming>
+      <bpmn:outgoing>Flow_DelegError_End</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        execution.setVariable("consentStatus", "Blocked");
+        var reden = execution.getVariable("delegatieReden");
+        execution.setVariable("refusalReason", reden != null ? String(reden) : "Delegatie geblokkeerd (FR-02).");
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <bpmn:endEvent id="EndEvent_Blocked" name="Geblokkeerd — delegatie uitgesloten">
+      <bpmn:incoming>Flow_DelegError_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Pre-consent informatiescherm (FR-05/06/07/08) -->
+    <bpmn:userTask id="UT_ConsentInfo"
+                   name="Toon dienstinformatie (FR-05/06/07/08)"
+                   camunda:formRef="dvtp-consent-info"
+                   camunda:formRefBinding="latest">
+      <bpmn:incoming>Flow_Deleg_OK</bpmn:incoming>
+      <bpmn:outgoing>Flow_ConsentInfo_Decision</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Toestemmingsvraag — binair (FR-09/10) -->
+    <bpmn:userTask id="UT_ConsentDecision"
+                   name="Vraag toestemming (FR-09/10)"
+                   camunda:formRef="dvtp-consent-decision"
+                   camunda:formRefBinding="latest"
+                   ronl:documentRef="example_dvtp_consent_receipt">
+      <bpmn:incoming>Flow_ConsentInfo_Decision</bpmn:incoming>
+      <bpmn:outgoing>Flow_Decision_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Toestemming gegeven? -->
+    <bpmn:exclusiveGateway id="Gateway_ConsentGiven" name="Toestemming gegeven?">
+      <bpmn:incoming>Flow_Decision_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Consent_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Consent_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Registreer weigering -->
+    <bpmn:scriptTask id="Task_RegisterRefusal" name="Registreer weigering"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Consent_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_RegisterRefusal_End</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        execution.setVariable("consentStatus", "Refused");
+        execution.setVariable("refusalTimestamp", new Date().toISOString());
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <bpmn:endEvent id="EndEvent_ConsentRefused" name="Toestemming geweigerd">
+      <bpmn:incoming>Flow_RegisterRefusal_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Registreer toestemming + TTL (FR-09/11) -->
+    <bpmn:scriptTask id="Task_RegisterConsent" name="Registreer toestemming + TTL (FR-09/11)"
+                     scriptFormat="javascript">
+      <bpmn:incoming>Flow_Consent_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_RegisterConsent_End</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        var ref = "CONSENT-" + Date.now().toString().slice(-9);
+        execution.setVariable("consentReference", ref);
+        execution.setVariable("consentStatus", "Active");
+        var ttlDays = execution.getVariable("configTtlDays");
+        if (!ttlDays) ttlDays = 365;
+        var expiry = new Date();
+        expiry.setDate(expiry.getDate() + Number(ttlDays));
+        execution.setVariable("consentExpiry", expiry.toISOString());
+        execution.setVariable("consentRegistrationTimestamp", new Date().toISOString());
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+
+    <bpmn:endEvent id="EndEvent_ConsentRegistered" name="Toestemming geregistreerd">
+      <bpmn:incoming>Flow_RegisterConsent_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_Start_Identity"        sourceRef="StartEvent_Dvtp"          targetRef="Task_Identity" />
+    <bpmn:sequenceFlow id="Flow_Identity_Config"       sourceRef="Task_Identity"             targetRef="BR_ConfigCheck" />
+    <bpmn:sequenceFlow id="Flow_Config_Extract"        sourceRef="BR_ConfigCheck"            targetRef="Task_ExtractConfig" />
+    <bpmn:sequenceFlow id="Flow_Extract_GatewayAllowed" sourceRef="Task_ExtractConfig"       targetRef="Gateway_InitiatorAllowed" />
+
+    <bpmn:sequenceFlow id="Flow_Allowed_Yes" sourceRef="Gateway_InitiatorAllowed" targetRef="Task_DigiDStub">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${initiatorAllowed == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Allowed_No" sourceRef="Gateway_InitiatorAllowed" targetRef="Task_RejectInitiator">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${initiatorAllowed != true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_RejectInit_End"        sourceRef="Task_RejectInitiator"      targetRef="EndEvent_Refused" />
+    <bpmn:sequenceFlow id="Flow_DigiD_Delegation"      sourceRef="Task_DigiDStub"            targetRef="BR_DelegationCheck" />
+    <bpmn:sequenceFlow id="Flow_Delegation_Extract"    sourceRef="BR_DelegationCheck"        targetRef="Task_ExtractDelegation" />
+    <bpmn:sequenceFlow id="Flow_ExtractDeleg_Gateway"  sourceRef="Task_ExtractDelegation"    targetRef="Gateway_DelegationBlocked" />
+
+    <bpmn:sequenceFlow id="Flow_Deleg_Blocked" sourceRef="Gateway_DelegationBlocked" targetRef="Task_DelegationError">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${delegatieGeblokkeerd == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Deleg_OK" sourceRef="Gateway_DelegationBlocked" targetRef="UT_ConsentInfo">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${delegatieGeblokkeerd != true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_DelegError_End"        sourceRef="Task_DelegationError"      targetRef="EndEvent_Blocked" />
+    <bpmn:sequenceFlow id="Flow_ConsentInfo_Decision"  sourceRef="UT_ConsentInfo"            targetRef="UT_ConsentDecision" />
+    <bpmn:sequenceFlow id="Flow_Decision_Gateway"      sourceRef="UT_ConsentDecision"        targetRef="Gateway_ConsentGiven" />
+
+    <bpmn:sequenceFlow id="Flow_Consent_Yes" sourceRef="Gateway_ConsentGiven" targetRef="Task_RegisterConsent">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${consentGiven == "granted"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Consent_No" sourceRef="Gateway_ConsentGiven" targetRef="Task_RegisterRefusal">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${consentGiven == "refused"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_RegisterConsent_End"   sourceRef="Task_RegisterConsent"      targetRef="EndEvent_ConsentRegistered" />
+    <bpmn:sequenceFlow id="Flow_RegisterRefusal_End"   sourceRef="Task_RegisterRefusal"      targetRef="EndEvent_ConsentRefused" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Dvtp">
+    <bpmndi:BPMNPlane id="BPMNPlane_Dvtp" bpmnElement="DvtpToestemmingGevenProcess">
+
+      <!-- ─── Main happy path (y=160 for shapes, y=182 for events) ─── -->
+      <bpmndi:BPMNShape id="StartEvent_Dvtp_di" bpmnElement="StartEvent_Dvtp">
+        <dc:Bounds x="152" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="126" y="225" width="89" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Identity_di" bpmnElement="Task_Identity">
+        <dc:Bounds x="240" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="BR_ConfigCheck_di" bpmnElement="BR_ConfigCheck">
+        <dc:Bounds x="460" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_ExtractConfig_di" bpmnElement="Task_ExtractConfig">
+        <dc:Bounds x="690" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_InitiatorAllowed_di" bpmnElement="Gateway_InitiatorAllowed" isMarkerVisible="true">
+        <dc:Bounds x="910" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="870" y="232" width="130" height="40" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_DigiDStub_di" bpmnElement="Task_DigiDStub">
+        <dc:Bounds x="1020" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="BR_DelegationCheck_di" bpmnElement="BR_DelegationCheck">
+        <dc:Bounds x="1240" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_ExtractDelegation_di" bpmnElement="Task_ExtractDelegation">
+        <dc:Bounds x="1460" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_DelegationBlocked_di" bpmnElement="Gateway_DelegationBlocked" isMarkerVisible="true">
+        <dc:Bounds x="1680" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1636" y="232" width="138" height="40" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UT_ConsentInfo_di" bpmnElement="UT_ConsentInfo">
+        <dc:Bounds x="1790" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UT_ConsentDecision_di" bpmnElement="UT_ConsentDecision">
+        <dc:Bounds x="2010" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_ConsentGiven_di" bpmnElement="Gateway_ConsentGiven" isMarkerVisible="true">
+        <dc:Bounds x="2230" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="2208" y="232" width="94" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_RegisterConsent_di" bpmnElement="Task_RegisterConsent">
+        <dc:Bounds x="2340" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_ConsentRegistered_di" bpmnElement="EndEvent_ConsentRegistered">
+        <dc:Bounds x="2562" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="2538" y="225" width="84" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ─── Error branches (y=340 for shapes, y=362 for events) ─── -->
+      <bpmndi:BPMNShape id="Task_RejectInitiator_di" bpmnElement="Task_RejectInitiator">
+        <dc:Bounds x="855" y="340" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_Refused_di" bpmnElement="EndEvent_Refused">
+        <dc:Bounds x="1077" y="362" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1050" y="405" width="90" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_DelegationError_di" bpmnElement="Task_DelegationError">
+        <dc:Bounds x="1625" y="340" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_Blocked_di" bpmnElement="EndEvent_Blocked">
+        <dc:Bounds x="1847" y="362" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1818" y="405" width="94" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_RegisterRefusal_di" bpmnElement="Task_RegisterRefusal">
+        <dc:Bounds x="2175" y="340" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_ConsentRefused_di" bpmnElement="EndEvent_ConsentRefused">
+        <dc:Bounds x="2397" y="362" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="2370" y="405" width="90" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- ─── Happy path edges ─── -->
+      <bpmndi:BPMNEdge id="Flow_Start_Identity_di" bpmnElement="Flow_Start_Identity">
+        <di:waypoint x="188" y="200" /><di:waypoint x="240" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Identity_Config_di" bpmnElement="Flow_Identity_Config">
+        <di:waypoint x="400" y="200" /><di:waypoint x="460" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Config_Extract_di" bpmnElement="Flow_Config_Extract">
+        <di:waypoint x="620" y="200" /><di:waypoint x="690" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Extract_GatewayAllowed_di" bpmnElement="Flow_Extract_GatewayAllowed">
+        <di:waypoint x="850" y="200" /><di:waypoint x="910" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Allowed_Yes_di" bpmnElement="Flow_Allowed_Yes">
+        <di:waypoint x="960" y="200" /><di:waypoint x="1020" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DigiD_Delegation_di" bpmnElement="Flow_DigiD_Delegation">
+        <di:waypoint x="1180" y="200" /><di:waypoint x="1240" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Delegation_Extract_di" bpmnElement="Flow_Delegation_Extract">
+        <di:waypoint x="1400" y="200" /><di:waypoint x="1460" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ExtractDeleg_Gateway_di" bpmnElement="Flow_ExtractDeleg_Gateway">
+        <di:waypoint x="1620" y="200" /><di:waypoint x="1680" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Deleg_OK_di" bpmnElement="Flow_Deleg_OK">
+        <di:waypoint x="1730" y="200" /><di:waypoint x="1790" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ConsentInfo_Decision_di" bpmnElement="Flow_ConsentInfo_Decision">
+        <di:waypoint x="1950" y="200" /><di:waypoint x="2010" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Decision_Gateway_di" bpmnElement="Flow_Decision_Gateway">
+        <di:waypoint x="2170" y="200" /><di:waypoint x="2230" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Consent_Yes_di" bpmnElement="Flow_Consent_Yes">
+        <di:waypoint x="2280" y="200" /><di:waypoint x="2340" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RegisterConsent_End_di" bpmnElement="Flow_RegisterConsent_End">
+        <di:waypoint x="2500" y="200" /><di:waypoint x="2562" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ─── Error branch edges ─── -->
+      <bpmndi:BPMNEdge id="Flow_Allowed_No_di" bpmnElement="Flow_Allowed_No">
+        <di:waypoint x="935" y="225" /><di:waypoint x="935" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RejectInit_End_di" bpmnElement="Flow_RejectInit_End">
+        <di:waypoint x="1015" y="380" /><di:waypoint x="1077" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Deleg_Blocked_di" bpmnElement="Flow_Deleg_Blocked">
+        <di:waypoint x="1705" y="225" /><di:waypoint x="1705" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DelegError_End_di" bpmnElement="Flow_DelegError_End">
+        <di:waypoint x="1785" y="380" /><di:waypoint x="1847" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Consent_No_di" bpmnElement="Flow_Consent_No">
+        <di:waypoint x="2255" y="225" /><di:waypoint x="2255" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RegisterRefusal_End_di" bpmnElement="Flow_RegisterRefusal_End">
+        <di:waypoint x="2335" y="380" /><di:waypoint x="2397" y="380" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
