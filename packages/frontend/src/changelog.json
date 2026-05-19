@@ -1,6 +1,28 @@
 {
   "versions": [
     {
+      "version": "1.8.1",
+      "date": "May 19, 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "🩹",
+          "iconColor": "green",
+          "title": "DMN validator: INT-007 false positives eliminated",
+          "items": [
+            "INT-007 (Interaction Rules layer) no longer flags valid intra-DRD references. An <inputExpression> may legitimately reference a value produced by another decision wired in via <informationRequirement><requiredDecision> — that name is the producing decision's <variable name> or <decisionTable>/<output name>, never an <inputData>. The rule now resolves requiredDecision targets and treats their output variables as satisfied, mirroring the requiredInput → inputData resolution INT-001 already performs.",
+            "INT-007 now parses FEEL expressions instead of whole-text matching. Previously the entire <inputExpression><text> was treated as one variable name, so date and time(aanvraagDatum) demanded an <inputData name=\"date and time(aanvraagDatum)\"> and any operator expression false-fired. A new shared extractFeelIdentifiers() helper strips string literals, unwraps built-in calls (date(...), date and time(...), number(...), string(...), not(...), …), drops FEEL keywords/operators and qualified-name/property segments after a dot, and extracts each referenced identifier — every identifier is checked individually.",
+            "Decision outputs are excluded from the input-contract check entirely. Output variable names (decision <variable> and decision-table <output name>) are, by construction, never external inputs and are no longer subject to the must-have-matching-inputData requirement.",
+            "Genuine gaps still flagged: an inputExpression identifier that resolves to neither a declared <inputData> nor a requiredDecision-produced output continues to raise INT-007, now naming the specific identifier rather than the raw expression string.",
+            "Verified against real DMNs that deploy and evaluate correctly on Operaton: RONL_Heusden_Heusdenpas.dmn (aanmerkingHeusdenPas consumed purely via requiredDecision), RONL_SVB_Leeftijden.dmn (date(dagVanAanvraag).year property access), EmployeeRoleAssignment.dmn, tree-felling-decision.dmn and replacement-tree-decision.dmn all validate clean; backend tsc --noEmit passes.",
+            "No API or response-shape change. POST /v1/dmns/validate is unchanged; only the interaction-layer issue set for affected files differs (fewer false-positive warnings)."
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.8.0",
       "date": "May 15, 2026",
       "status": "Released",
