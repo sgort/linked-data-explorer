@@ -26,6 +26,7 @@ export interface DmnModel {
   organization?: string; // NEW: Organization URI
   organizationName?: string; // NEW: Organization display name
   logoUrl?: string; // NEW: Full logo URL (resolved with version ID)
+  xmlUrl?: string; // NEW: Relative URL to download the deployed DMN XML from Operaton, e.g. "/v1/dmns/<identifier>/xml". Injected by the route handler, not sourced from SPARQL.
   inputs: DmnVariable[];
   outputs: DmnVariable[];
 

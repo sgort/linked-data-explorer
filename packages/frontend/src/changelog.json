@@ -1,6 +1,25 @@
 {
   "versions": [
     {
+      "version": "1.8.2",
+      "status": "Latest",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "May 20, 2026",
+      "sections": [
+        {
+          "icon": "🚀",
+          "iconColor": "emerald",
+          "title": "New Features",
+          "items": [
+            "Download the deployed DMN XML directly from Operaton via the new GET /v1/dmns/:identifier/xml endpoint — the file is streamed as <identifier>.dmn with the correct Content-Type and Content-Disposition headers so browsers save it automatically.",
+            "DMN list and detail responses now include an xmlUrl field pointing to the new download endpoint, making the link self-discoverable for API clients without prior knowledge of the URL pattern.",
+            "Backward compatible: the legacy GET /api/dmns/:definitionKey/xml route remains available for existing consumers."
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.8.1",
       "date": "May 19, 2026",
       "status": "Released",
