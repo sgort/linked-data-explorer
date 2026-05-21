@@ -44,11 +44,21 @@ router.get('/', async (req: Request, res: Response) => {
     // Pass endpoint and refresh to sparqlService
     const dmns = await sparqlService.getAllDmns(requestedEndpoint, refresh);
 
+    // Enrich each DMN with a relative URL clients can use to download the
+    // deployed DMN XML from Operaton. The handler lives at
+    // `GET /v1/dmns/:identifier/xml` (also reachable via the legacy
+    // `/api/dmns` alias). Relative URLs keep the response portable across
+    // local / ACC / PROD without the backend needing to know its own host.
+    const dmnsWithLinks = dmns.map((dmn) => ({
+      ...dmn,
+      xmlUrl: `/v1/dmns/${encodeURIComponent(dmn.identifier)}/xml`,
+    }));
+
     res.json({
       success: true,
       data: {
-        total: dmns.length,
-        dmns,
+        total: dmnsWithLinks.length,
+        dmns: dmnsWithLinks,
         fromCache: !refresh, // Helpful for debugging
       },
       timestamp: new Date().toISOString(),
@@ -283,6 +293,60 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /v1/dmns/:identifier/xml
+ * Fetch the deployed DMN XML content from Operaton.
+ *
+ * Mirrors the handler in `dmn-xml.routes.ts` (still mounted at the legacy
+ * `/api/dmns` path in `index.ts` for backward compatibility) but exposes the
+ * route under the canonical `/v1/dmns` mount via the registry, and uses the
+ * `:identifier` parameter name to match the convention of the surrounding
+ * routes. The `identifier` value is passed verbatim as the Operaton decision
+ * definition key — for RONL DMNs deployed via this platform these are
+ * equivalent by convention.
+ *
+ * The response is `application/xml` with `Content-Disposition: attachment`
+ * so browsers save the file as `<identifier>.dmn`. Declared before the
+ * `GET /:identifier` route below to match the "more specific first" pattern
+ * used elsewhere in this file, though strictly speaking the segment counts
+ * differ so Express would not confuse them either way.
+ */
+router.get('/:identifier/xml', async (req: Request, res: Response) => {
+  const { identifier } = req.params;
+
+  logger.info('DMN XML download request', { identifier });
+
+  try {
+    const dmnXml = await operatonService.fetchDmnXml(identifier);
+
+    if (!dmnXml) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'DMN_NOT_FOUND',
+          message: `DMN definition not found in Operaton: ${identifier}`,
+        },
+        timestamp: new Date().toISOString(),
+      } as ApiResponse);
+    }
+
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Content-Disposition', `attachment; filename="${identifier}.dmn"`);
+    res.send(dmnXml);
+  } catch (error: unknown) {
+    const errorDetails = getErrorDetails(error);
+    logger.error('DMN XML download error', errorDetails);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'DMN_FETCH_FAILED',
+        message: getErrorMessage(error),
+      },
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  }
+});
+
+/**
  * GET /api/dmns/:identifier
  * Get a specific DMN by identifier
  *
@@ -311,9 +375,15 @@ router.get('/:identifier', async (req: Request, res: Response) => {
       } as ApiResponse);
     }
 
+    // Enrich with the XML download link (same convention as the list endpoint).
+    const dmnWithLink = {
+      ...dmn,
+      xmlUrl: `/v1/dmns/${encodeURIComponent(identifier)}/xml`,
+    };
+
     res.json({
       success: true,
-      data: dmn,
+      data: dmnWithLink,
       timestamp: new Date().toISOString(),
     } as ApiResponse);
   } catch (error: unknown) {

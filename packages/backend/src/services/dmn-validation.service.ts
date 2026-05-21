@@ -198,7 +198,87 @@ function get(node: XmlElement, xpath: string, ns?: Record<string, string>): XmlE
   }
 }
 
+/**
+ * FEEL keywords/operators and built-in function names that must not be treated
+ * as variable references. Listing the built-ins here is what transparently
+ * "unwraps" date(...) / date and time(...) / time(...) / duration(...) /
+ * number(...) / string(...) / not(...): their leading tokens are skipped while
+ * the inner identifier(s) survive tokenisation.
+ */
+const FEEL_RESERVED = new Set([
+  'and',
+  'or',
+  'not',
+  'true',
+  'false',
+  'null',
+  'if',
+  'then',
+  'else',
+  'for',
+  'in',
+  'return',
+  'some',
+  'every',
+  'between',
+  'instance',
+  'of',
+  'function',
+  'date',
+  'time',
+  'duration',
+  'number',
+  'string',
+]);
+/**
+ * Extract the variable identifiers referenced by a FEEL inputExpression text.
+ *
+ * INT-007 must check the variables an expression *references*, not the raw
+ * expression string. A bare reference ("treeDiameter") yields one identifier;
+ * a built-in-wrapped reference ("date and time(aanvraagDatum)") must yield the
+ * inner identifier ("aanvraagDatum"); an operator expression
+ * ("maandelijksBrutoInkomenAanvrager <= 1.1 * bijstandsNorm") must yield every
+ * referenced identifier.
+ *
+ * Pragmatic, regex-based to match the style used elsewhere in this file rather
+ * than embedding a full FEEL grammar:
+ *   1. strip single- and double-quoted string literals,
+ *   2. tokenise on the FEEL name character class,
+ *   3. drop FEEL keywords/operators and built-in function names (this also
+ *      unwraps date(...) / date and time(...) / number(...) / not(...) etc.),
+ *   4. drop property/path segments: a token whose nearest preceding
+ *      non-whitespace character is "." is a qualified-name / property access
+ *      (e.g. the "year" in "date(dagVanAanvraag).year", or ".years" on a
+ *      duration). These are never top-level inputData and must not be checked;
+ *      the path *head* (e.g. "dagVanAanvraag") is still extracted normally.
+ *   5. numeric and quoted literals never survive (digit-leading tokens do not
+ *      match the identifier pattern; strings were stripped in step 1).
+ * Returns a de-duplicated list in first-seen order.
+ */
+function extractFeelIdentifiers(text: string): string[] {
+  const stripped = text
+    .replace(/'(?:[^'\\]|\\.)*'/g, ' ')
+    .replace(/"(?:[^"\\]|\\.)*"/g, ' ');
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const tokenRe = /[A-Za-z_][A-Za-z0-9_]*/g;
+  let m: RegExpExecArray | null;
+  while ((m = tokenRe.exec(stripped)) !== null) {
+    const tok = m[0];
+    if (FEEL_RESERVED.has(tok.toLowerCase())) continue;
+    // Skip qualified-name / property-access segments (preceded by ".").
+    let p = m.index - 1;
+    while (p >= 0 && /\s/.test(stripped[p])) p--;
+    if (p >= 0 && stripped[p] === '.') continue;
+    if (seen.has(tok)) continue;
+    seen.add(tok);
+    out.push(tok);
+  }
+  return out;
+}
+
 // ── Layer 1: Base DMN (well-formedness + namespace checks) ────────────────────
+//
 //
 // libxml2's XSD schema compiler (used internally by libxmljs2's .validate())
 // rejects complex schemas with forward references and abstract types that are
@@ -271,7 +351,7 @@ async function validateBaseLayer(
           'error',
           'BASE-NS',
           `Unrecognised DMN namespace: "${rootNs}". ` +
-            `Expected one of: ${KNOWN_DMN_NS.join(', ')}.`
+          `Expected one of: ${KNOWN_DMN_NS.join(', ')}.`
         )
       );
     }
@@ -460,8 +540,8 @@ function validateBusinessLayer(doc: XmlElement): LayerResult {
             'error',
             'BIZ-008',
             `Duplicate rule rows in ${hp} table: rule "${ruleId}" has identical input entries ` +
-              `to rule "${firstRuleId}". Both will fire for the same input, ` +
-              `causing a DmnHitPolicyException at runtime.`,
+            `to rule "${firstRuleId}". Both will fire for the same input, ` +
+            `causing a DmnHitPolicyException at runtime.`,
             decisionLoc
           )
         );
@@ -488,9 +568,9 @@ function validateBusinessLayer(doc: XmlElement): LayerResult {
             'warning',
             'BIZ-009',
             `Catch-all rule "${ruleId}" (all input entries are empty or "-") exists alongside ` +
-              `specific rules in a ${hp} table. For any input that matches a specific rule, ` +
-              `both the specific rule and the catch-all fire — violating the ${hp} hit policy. ` +
-              `Consider hitPolicy="FIRST", or move default logic to an else-branch.`,
+            `specific rules in a ${hp} table. For any input that matches a specific rule, ` +
+            `both the specific rule and the catch-all fire — violating the ${hp} hit policy. ` +
+            `Consider hitPolicy="FIRST", or move default logic to an else-branch.`,
             decisionLoc
           )
         );
@@ -767,40 +847,82 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
     }
   }
 
-  // INT-007: inputExpression variable with no matching <inputData> declaration.
+  // INT-007: inputExpression references a variable with no resolvable source.
   //
-  // Each <inputExpression> whose text is a variable reference should have a
-  // corresponding top-level <inputData name="..."><variable .../></inputData>
-  // element. Without it the CPSV Editor cannot discover the input contract and
-  // will generate an empty request body on deploy.
+  // An <inputExpression> may reference either (a) a declared <inputData>, or
+  // (b) a value produced by another decision that is wired into the owning
+  // decision via <informationRequirement><requiredDecision>. Both are valid
+  // intra-DRD references and need no <inputData> element. INT-007 should fire
+  // only when a referenced identifier resolves to neither — otherwise the CPSV
+  // Editor cannot discover the input contract and generates an empty request
+  // body on deploy.
   //
-  // Skipped inputs:
-  //   - empty text (no variable)
-  //   - literal booleans ("true" / "false") — used as passthrough inputs in DRDs
-  //   - numeric or quoted-string literals — e.g. "0", "1.5", "'foo'" — these are
-  //     hardcoded values, not variable references, and need no inputData element
+  // Two false-positive classes are fixed here, both reproduced against a DMN
+  // that deploys and evaluates correctly on Operaton:
+  //   1. requiredDecision outputs were not resolved. A variable that is the
+  //      <decision><variable name> or decision-table <output name> of a
+  //      requiredDecision target is satisfied — the same resolution INT-001
+  //      applies to requiredInput → inputData. (Reference:
+  //      RONL_Heusden_Heusdenpas.dmn — "aanmerkingHeusdenPas" is consumed by
+  //      RONL_HeusdenpasEindresultaat purely via requiredDecision.)
+  //   2. the whole <text> was treated as one variable name. FEEL expressions
+  //      (e.g. "date and time(aanvraagDatum)" or operator expressions) are now
+  //      parsed into identifier references via extractFeelIdentifiers().
+  //
+  // Decision output variables are, by construction, never external inputs, so
+  // they are excluded from the "must have matching inputData" requirement.
   const inputDataNames = new Set<string>();
   for (const el of find(doc, '//d:inputData')) {
     const name = el.attr('name')?.value();
     if (name) inputDataNames.add(name);
   }
 
+  // decisionId → output variable names that decision produces. A decision
+  // exposes its result via a direct <decision><variable name> child and/or via
+  // its <decisionTable>/<output name> clauses.
+  const decisionOutputVars = new Map<string, Set<string>>();
+  for (const [id, decisionEl] of decisionIds) {
+    const names = new Set<string>();
+    const decVarName = get(decisionEl, 'd:variable')?.attr('name')?.value();
+    if (decVarName) names.add(decVarName);
+    for (const out of find(decisionEl, 'd:decisionTable/d:output')) {
+      const outName = out.attr('name')?.value();
+      if (outName) names.add(outName);
+    }
+    decisionOutputVars.set(id, names);
+  }
+
   for (const ie of find(doc, '//d:inputExpression')) {
     const textEl = get(ie, 'd:text');
-    const varName = textEl?.text()?.trim() ?? '';
+    const exprText = textEl?.text()?.trim() ?? '';
+    if (!exprText) continue;
 
-    if (!varName) continue;
-    if (/^(true|false)$/.test(varName)) continue;
-    if (/^[0-9"']/.test(varName)) continue;
+    const decision = get(ie, 'ancestor::d:decision');
 
-    if (!inputDataNames.has(varName)) {
-      const decision = get(ie, 'ancestor::d:decision');
+    // Names satisfied for THIS inputExpression: every declared inputData, plus
+    // the output variables of every decision the owning decision requires via
+    // <requiredDecision> (mirrors the requiredInput → inputData resolution
+    // already performed for INT-001).
+    const satisfied = new Set<string>(inputDataNames);
+    if (decision) {
+      for (const rd of find(decision, 'd:informationRequirement/d:requiredDecision')) {
+        const href = rd.attr('href')?.value() ?? '';
+        const targetId = href.startsWith('#') ? href.slice(1) : href;
+        const produced = decisionOutputVars.get(targetId);
+        if (produced) for (const n of produced) satisfied.add(n);
+      }
+    }
+
+    for (const ident of extractFeelIdentifiers(exprText)) {
+      if (satisfied.has(ident)) continue;
       issues.push(
         iss(
           'warning',
           'INT-007',
-          `<inputExpression> uses variable "${varName}" but no <inputData name="${varName}"> is declared at the definitions level. ` +
-            `Add a matching <inputData> element with a <variable> child for CPSV Editor compatibility.`,
+          `<inputExpression> references variable "${ident}" but it is neither declared as ` +
+          `<inputData name="${ident}"> nor produced by a requiredDecision target. ` +
+          `Add a matching <inputData> element with a <variable> child, or wire the ` +
+          `producing decision via <requiredDecision>, for CPSV Editor compatibility.`,
           decision ? elLoc(decision) : undefined
         )
       );
