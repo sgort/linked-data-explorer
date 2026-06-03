@@ -36,43 +36,43 @@ const router = Router();
  * 10 MB body limit is enforced by express.json() in index.ts.
  */
 router.post('/validate', async (req: Request, res: Response) => {
-    try {
-        const { content } = req.body as { content?: string };
+  try {
+    const { content } = req.body as { content?: string };
 
-        if (!content || typeof content !== 'string') {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    code: 'INVALID_REQUEST',
-                    message: 'Request body must contain a "content" field with the Turtle as a string.',
-                },
-                timestamp: new Date().toISOString(),
-            } as ApiResponse);
-        }
-
-        logger.info('[SHACL Validate] Validation requested', { contentLength: content.length });
-
-        const result = await shaclValidationService.validateFile(content);
-
-        logger.info('[SHACL Validate] Complete', {
-            valid: result.valid,
-            errors: result.summary.errors,
-            warnings: result.summary.warnings,
-        });
-
-        res.json({
-            success: true,
-            data: result,
-            timestamp: new Date().toISOString(),
-        } as ApiResponse);
-    } catch (error: unknown) {
-        logger.error('[SHACL Validate] Unexpected error', getErrorDetails(error));
-        res.status(500).json({
-            success: false,
-            error: { code: 'VALIDATION_ERROR', message: getErrorMessage(error) },
-            timestamp: new Date().toISOString(),
-        } as ApiResponse);
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_REQUEST',
+          message: 'Request body must contain a "content" field with the Turtle as a string.',
+        },
+        timestamp: new Date().toISOString(),
+      } as ApiResponse);
     }
+
+    logger.info('[SHACL Validate] Validation requested', { contentLength: content.length });
+
+    const result = await shaclValidationService.validateFile(content);
+
+    logger.info('[SHACL Validate] Complete', {
+      valid: result.valid,
+      errors: result.summary.errors,
+      warnings: result.summary.warnings,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  } catch (error: unknown) {
+    logger.error('[SHACL Validate] Unexpected error', getErrorDetails(error));
+    res.status(500).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  }
 });
 
 /**
@@ -92,46 +92,46 @@ router.post('/validate', async (req: Request, res: Response) => {
  * is not the caller's input fault.
  */
 router.post('/validate-merged', async (req: Request, res: Response) => {
-    try {
-        const { content, endpoint } = req.body as { content?: string; endpoint?: string };
+  try {
+    const { content, endpoint } = req.body as { content?: string; endpoint?: string };
 
-        if (!content || typeof content !== 'string') {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    code: 'INVALID_REQUEST',
-                    message: 'Request body must contain a "content" field with the Turtle as a string.',
-                },
-                timestamp: new Date().toISOString(),
-            } as ApiResponse);
-        }
-
-        logger.info('[SHACL Validate] Merged validation requested', {
-            contentLength: content.length,
-            endpoint: endpoint ?? '(default)',
-        });
-
-        const result = await shaclValidationService.validateMerged(content, endpoint);
-
-        logger.info('[SHACL Validate] Merged complete', {
-            valid: result.valid,
-            errors: result.summary.errors,
-            warnings: result.summary.warnings,
-        });
-
-        res.json({
-            success: true,
-            data: result,
-            timestamp: new Date().toISOString(),
-        } as ApiResponse);
-    } catch (error: unknown) {
-        logger.error('[SHACL Validate] Merged unexpected error', getErrorDetails(error));
-        res.status(500).json({
-            success: false,
-            error: { code: 'VALIDATION_ERROR', message: getErrorMessage(error) },
-            timestamp: new Date().toISOString(),
-        } as ApiResponse);
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_REQUEST',
+          message: 'Request body must contain a "content" field with the Turtle as a string.',
+        },
+        timestamp: new Date().toISOString(),
+      } as ApiResponse);
     }
+
+    logger.info('[SHACL Validate] Merged validation requested', {
+      contentLength: content.length,
+      endpoint: endpoint ?? '(default)',
+    });
+
+    const result = await shaclValidationService.validateMerged(content, endpoint);
+
+    logger.info('[SHACL Validate] Merged complete', {
+      valid: result.valid,
+      errors: result.summary.errors,
+      warnings: result.summary.warnings,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  } catch (error: unknown) {
+    logger.error('[SHACL Validate] Merged unexpected error', getErrorDetails(error));
+    res.status(500).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  }
 });
 
 export default router;

@@ -12,29 +12,29 @@ import packageJson from '../../package.json';
 // Stable group order on the root page. Categories not listed here render after
 // the listed ones in registry order.
 const CATEGORY_ORDER: ReadonlyArray<RouteCategory> = [
-    'Health & monitoring',
-    'Discovery',
-    'Validation',
-    'Execution',
-    'Assets',
-    'Integrations',
+  'Health & monitoring',
+  'Discovery',
+  'Validation',
+  'Execution',
+  'Assets',
+  'Integrations',
 ];
 
 interface RootEndpoint {
-    mount: string;
-    summary: string;
-    publicCors: boolean;
+  mount: string;
+  summary: string;
+  publicCors: boolean;
 }
 
 interface RootPayload {
-    name: string;
-    version: string;
-    environment: string;
-    status: 'running';
-    documentation: string;
-    health: string;
-    endpoints: Record<string, RootEndpoint[]>;
-    legacy: Record<string, string>;
+  name: string;
+  version: string;
+  environment: string;
+  status: 'running';
+  documentation: string;
+  health: string;
+  endpoints: Record<string, RootEndpoint[]>;
+  legacy: Record<string, string>;
 }
 
 /**
@@ -42,46 +42,46 @@ interface RootPayload {
  * data shape ensures both views always describe the same set of endpoints.
  */
 function buildPayload(): RootPayload {
-    const endpoints: RootPayload['endpoints'] = {};
+  const endpoints: RootPayload['endpoints'] = {};
 
-    // Seed groups in the preferred order; unknown categories appended later.
-    for (const cat of CATEGORY_ORDER) {
-        endpoints[cat] = [];
-    }
-    for (const route of routeRegistry) {
-        const list = endpoints[route.category] ?? (endpoints[route.category] = []);
-        list.push({
-            mount: route.mount,
-            summary: route.summary,
-            publicCors: route.publicCors === true,
-        });
-    }
-    // Drop any seeded-but-empty groups (e.g. a category with no routes yet).
-    for (const cat of Object.keys(endpoints)) {
-        if (endpoints[cat].length === 0) delete endpoints[cat];
-    }
+  // Seed groups in the preferred order; unknown categories appended later.
+  for (const cat of CATEGORY_ORDER) {
+    endpoints[cat] = [];
+  }
+  for (const route of routeRegistry) {
+    const list = endpoints[route.category] ?? (endpoints[route.category] = []);
+    list.push({
+      mount: route.mount,
+      summary: route.summary,
+      publicCors: route.publicCors === true,
+    });
+  }
+  // Drop any seeded-but-empty groups (e.g. a category with no routes yet).
+  for (const cat of Object.keys(endpoints)) {
+    if (endpoints[cat].length === 0) delete endpoints[cat];
+  }
 
-    return {
-        name: 'Linked Data Explorer Backend',
-        version: packageJson.version,
-        environment: config.displayEnv,
-        status: 'running',
-        documentation: '/v1/openapi.json',
-        health: '/v1/health',
-        endpoints,
-        // Hand-listed legacy aliases. The /api/* routes are deprecated and
-        // intentionally not in the registry — keeping them visible here so clients
-        // polling the root can still discover the migration path.
-        legacy: {
-            health: '/api/health (deprecated)',
-            dmns: '/api/dmns (deprecated)',
-            cache: '/api/cache (deprecated)',
-            'chains/templates': '/api/chains/templates (deprecated)',
-            chains: '/api/chains (deprecated)',
-            triplydb: '/api/triplydb (deprecated)',
-            vendors: '/api/vendors (deprecated)',
-        },
-    };
+  return {
+    name: 'Linked Data Explorer Backend',
+    version: packageJson.version,
+    environment: config.displayEnv,
+    status: 'running',
+    documentation: '/v1/openapi.json',
+    health: '/v1/health',
+    endpoints,
+    // Hand-listed legacy aliases. The /api/* routes are deprecated and
+    // intentionally not in the registry — keeping them visible here so clients
+    // polling the root can still discover the migration path.
+    legacy: {
+      health: '/api/health (deprecated)',
+      dmns: '/api/dmns (deprecated)',
+      cache: '/api/cache (deprecated)',
+      'chains/templates': '/api/chains/templates (deprecated)',
+      chains: '/api/chains (deprecated)',
+      triplydb: '/api/triplydb (deprecated)',
+      vendors: '/api/vendors (deprecated)',
+    },
+  };
 }
 
 // Minimal HTML escaper. Registry strings are author-controlled, but the
@@ -89,52 +89,50 @@ function buildPayload(): RootPayload {
 // is cheap to uphold and protects against future drift (e.g. if a route
 // summary ever pulls from a config source).
 function escapeHtml(s: string): string {
-    return s
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function renderHtml(payload: RootPayload): string {
-    const groups = Object.entries(payload.endpoints)
-        .map(([category, routes]) => {
-            const items = routes
-                .map((r) => {
-                    const badge = r.publicCors
-                        ? `<span class="badge">public · open CORS</span>`
-                        : '';
-                    return (
-                        `        <li>` +
-                        `<div class="path"><code>${escapeHtml(r.mount)}</code>${badge}</div>` +
-                        `<span class="summary">${escapeHtml(r.summary)}</span>` +
-                        `</li>`
-                    );
-                })
-                .join('\n');
-            return (
-                `    <section>\n` +
-                `      <h2>${escapeHtml(category)}</h2>\n` +
-                `      <ul>\n${items}\n      </ul>\n` +
-                `    </section>`
-            );
+  const groups = Object.entries(payload.endpoints)
+    .map(([category, routes]) => {
+      const items = routes
+        .map((r) => {
+          const badge = r.publicCors ? `<span class="badge">public · open CORS</span>` : '';
+          return (
+            `        <li>` +
+            `<div class="path"><code>${escapeHtml(r.mount)}</code>${badge}</div>` +
+            `<span class="summary">${escapeHtml(r.summary)}</span>` +
+            `</li>`
+          );
         })
         .join('\n');
+      return (
+        `    <section>\n` +
+        `      <h2>${escapeHtml(category)}</h2>\n` +
+        `      <ul>\n${items}\n      </ul>\n` +
+        `    </section>`
+      );
+    })
+    .join('\n');
 
-    const legacyRows = Object.entries(payload.legacy)
-        .map(([key, value]) => {
-            const path = value.replace(' (deprecated)', '');
-            return (
-                `        <li>` +
-                `<div class="path"><code>${escapeHtml(path)}</code></div>` +
-                `<span class="summary">replaced by <code>/v1/${escapeHtml(key)}</code></span>` +
-                `</li>`
-            );
-        })
-        .join('\n');
+  const legacyRows = Object.entries(payload.legacy)
+    .map(([key, value]) => {
+      const path = value.replace(' (deprecated)', '');
+      return (
+        `        <li>` +
+        `<div class="path"><code>${escapeHtml(path)}</code></div>` +
+        `<span class="summary">replaced by <code>/v1/${escapeHtml(key)}</code></span>` +
+        `</li>`
+      );
+    })
+    .join('\n');
 
-    return `<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -255,13 +253,13 @@ ${legacyRows}
  * any existing programmatic poller of the root endpoint.
  */
 export function rootHandler(req: Request, res: Response): void {
-    const payload = buildPayload();
-    const accepted = req.accepts(['json', 'html']);
+  const payload = buildPayload();
+  const accepted = req.accepts(['json', 'html']);
 
-    if (accepted === 'html') {
-        res.type('html').send(renderHtml(payload));
-        return;
-    }
+  if (accepted === 'html') {
+    res.type('html').send(renderHtml(payload));
+    return;
+  }
 
-    res.json(payload);
+  res.json(payload);
 }
