@@ -14,6 +14,7 @@ import packageJson from '../../package.json';
 const CATEGORY_ORDER: ReadonlyArray<RouteCategory> = [
     'Health & monitoring',
     'Discovery',
+    'Validation',
     'Execution',
     'Assets',
     'Integrations',

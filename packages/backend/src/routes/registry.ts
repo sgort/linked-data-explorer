@@ -20,12 +20,14 @@ import ropaPublicRoutes from './ropa.public.routes';
 import assetsPublicRoutes from './assets.public.routes';
 import dsoRoutes from './dso.routes';
 import normsRoutes from './norms.routes';
+import shaclRoutes from './shacl.routes';
 
 /** Logical grouping for the root page. New categories can be added; see
  *  CATEGORY_ORDER in utils/rootView.ts for render order. */
 export type RouteCategory =
   | 'Health & monitoring'
   | 'Discovery'
+  | 'Validation'
   | 'Execution'
   | 'Assets'
   | 'Integrations';
@@ -86,6 +88,14 @@ export const routeRegistry: ReadonlyArray<RouteDefinition> = [
     router: normsRoutes,
     summary: 'cprmv:Rule paths and norms in publish format',
     category: 'Discovery',
+  },
+
+  // Validation
+  {
+    mount: '/v1/shacl',
+    router: shaclRoutes,
+    summary: 'SHACL validation of CPSV-AP Turtle (file-local and merge-simulated)',
+    category: 'Validation',
   },
 
   // Execution (templates registered before /v1/chains to win route precedence)
