@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  BadgeCheck,
   BookOpen,
   Code2,
   Database,
@@ -32,6 +33,7 @@ import FormEditor from './components/FormEditor/FormEditor';
 import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
 import RopaEditor from './components/RopaEditor/RopaEditor';
+import ShaclValidator from './components/ShaclValidator';
 import Tutorial from './components/Tutorial/Tutorial';
 import { executeSparqlQuery } from './services/sparqlService';
 import { SparqlResponse, ViewMode } from './types';
@@ -303,6 +305,14 @@ const App: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setViewMode(ViewMode.SHACL)}
+            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.SHACL ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+            title="SHACL Validator"
+          >
+            <BadgeCheck size={24} />
+          </button>
+
+          <button
             onClick={() => setViewMode(ViewMode.VISUALIZE)}
             className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.VISUALIZE ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
             title="Graph Visualization"
@@ -354,6 +364,7 @@ const App: React.FC = () => {
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
             viewMode !== ViewMode.VALIDATE &&
+            viewMode !== ViewMode.SHACL &&
             viewMode !== ViewMode.ROPA &&
             viewMode !== ViewMode.DSO && (
               <div className="flex items-center gap-3">
@@ -481,11 +492,20 @@ const App: React.FC = () => {
             <DmnValidator apiBaseUrl={API_BASE_URL} />
           </div>
 
+          {/* SHACL Validator — always mounted (hidden via CSS) for the same drag-and-drop
+              state-preservation reason as the DMN Validator above. */}
+          <div
+            className={`flex-1 overflow-hidden flex flex-col ${viewMode === ViewMode.SHACL ? '' : 'hidden'}`}
+          >
+            <ShaclValidator apiBaseUrl={API_BASE_URL} />
+          </div>
+
           {/* Settings Panel Overlay */}
           {showSettings &&
             viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.TUTORIAL &&
-            viewMode !== ViewMode.VALIDATE && (
+            viewMode !== ViewMode.VALIDATE &&
+            viewMode !== ViewMode.SHACL && (
               <div className="absolute top-0 left-0 z-30 w-[450px] h-full bg-white border-r border-slate-200 shadow-2xl p-5 animate-in slide-in-from-left fade-in duration-200 flex flex-col">
                 <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
                   <h3 className="font-semibold text-slate-700 flex items-center gap-2">
@@ -692,7 +712,8 @@ const App: React.FC = () => {
             viewMode !== ViewMode.DOCUMENT &&
             viewMode !== ViewMode.ROPA &&
             viewMode !== ViewMode.DSO &&
-            viewMode !== ViewMode.VALIDATE && (
+            viewMode !== ViewMode.VALIDATE &&
+            viewMode !== ViewMode.SHACL && (
               <div className="w-1/2 md:w-[450px] lg:w-[500px] border-r border-slate-200 bg-white flex flex-col h-full shadow-sm z-10">
                 <div className="flex-1 flex flex-col min-h-0">
                   <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
@@ -752,7 +773,8 @@ const App: React.FC = () => {
             viewMode !== ViewMode.DOCUMENT &&
             viewMode !== ViewMode.ROPA &&
             viewMode !== ViewMode.DSO &&
-            viewMode !== ViewMode.VALIDATE && (
+            viewMode !== ViewMode.VALIDATE &&
+            viewMode !== ViewMode.SHACL && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
                 {/* Error Overlay */}
                 {error && (

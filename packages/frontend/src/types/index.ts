@@ -55,6 +55,7 @@ export enum ViewMode {
   TUTORIAL = 'TUTORIAL',
   BPMN = 'BPMN',
   VALIDATE = 'VALIDATE',
+  SHACL = 'SHACL',
   FORM = 'FORM',
   DOCUMENT = 'DOCUMENT',
   ROPA = 'ROPA',
