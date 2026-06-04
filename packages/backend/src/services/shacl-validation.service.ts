@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="../types/shacl-rdf.d.ts" />
 // packages/backend/src/services/shacl-validation.service.ts
 //
 // SHACL validation for CPSV-AP 3.2.0 (+ custom RONL) Turtle files. Mirrors the
@@ -266,26 +268,18 @@ class ShaclValidationService {
       for (const result of report.results) {
         const severity = severityFromTerm(result.severity);
         const baseMessage =
-          result.message.map((m) => m.value).join('; ') ||
-          codeFromComponent(result.sourceConstraintComponent);
+          result.message.map((m) => m.value).join('; ') || codeFromComponent(result.sourceConstraintComponent);
 
         const values = this.offendingValues(data, result.focusNode, result.path);
         const message =
-          values.length > 1
-            ? `${baseMessage} Found ${values.length} values: ${values.join(', ')}.`
-            : baseMessage;
+          values.length > 1 ? `${baseMessage} Found ${values.length} values: ${values.join(', ')}.` : baseMessage;
 
         const location =
           result.focusNode || result.path
             ? `${result.focusNode?.value ?? ''} ${compact(result.path?.value)}`.trim()
             : undefined;
 
-        layers[layer.key].issues.push({
-          severity,
-          code: codeFromComponent(result.sourceConstraintComponent),
-          message,
-          location,
-        });
+        layers[layer.key].issues.push({ severity, code: codeFromComponent(result.sourceConstraintComponent), message, location });
 
         if (severity === 'error') summary.errors++;
         else if (severity === 'warning') summary.warnings++;

@@ -57,10 +57,17 @@ jobs:
           # Copy package.json to deploy root (NOT inside dist)
           cp package.json deploy/
           
+          # Copy SHACL shape files — read at runtime from <package-root>/shapes
+          # (SHAPES_ROOT resolves to deploy/shapes via dist/services/../../shapes).
+          # tsc does not emit these .ttl assets, so copy them explicitly.
+          cp -r shapes deploy/
+          
           # Verify structure
           echo "Deployment structure:"
           ls -la deploy/
           ls -la deploy/dist/
+          echo "SHACL shapes:"
+          ls -R deploy/shapes/
           
           # Install production dependencies in deploy folder
           cd deploy
