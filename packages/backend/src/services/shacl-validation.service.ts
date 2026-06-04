@@ -1,4 +1,3 @@
-/// <reference path="../types/shacl-rdf.d.ts" />
 // packages/backend/src/services/shacl-validation.service.ts
 //
 // SHACL validation for CPSV-AP 3.2.0 (+ custom RONL) Turtle files. Mirrors the
