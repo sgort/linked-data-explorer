@@ -1,10 +1,32 @@
 {
   "versions": [
     {
-      "version": "1.8.2",
+      "version": "1.9.0",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "date": "June 4, 2026",
+      "sections": [
+        {
+          "icon": "🛡️",
+          "iconColor": "emerald",
+          "title": "SHACL Validator",
+          "items": [
+            "New SHACL Validator view in the sidebar: drop one or more CPSV-AP Turtle (.ttl) files and validate them against the bundled CPSV-AP 3.2.0 and RONL SHACL shapes before publishing. Results reuse the DMN Validator's layered layout, grouped into CPSV-AP Core, CPSV-AP Vocabularies, and RONL Custom with per-layer error/warning/info counts.",
+            "Two backend endpoints under a new Validation route category: POST /v1/shacl/validate (file-local) and POST /v1/shacl/validate-merged. Both return the same { valid, parseError, layers, summary } shape as /v1/dmns/validate, so the frontend renders them with the existing components.",
+            "Merge-simulated mode unions the uploaded file with the triples already published for its subjects — fetched from the configured SPARQL endpoint via a standard SPARQL 1.1 CONSTRUCT with one level of blank-node closure — then validates the union. This catches fan-out against live data that a file-local check cannot see; an optional endpoint field overrides the server default.",
+            "RONL shape PublicOrganisationUniquenessShape: at most one foaf:homepage, dct:identifier and cv:spatial per cv:PublicOrganisation, plus sh:uniqueLang on skos:prefLabel. Flags the duplicate-homepage fan-out where one organisation URI ends up with both a www. and non-www. homepage across publications.",
+            "RONL shape RuleUniquenessShape: sh:uniqueLang on dct:title and dct:description for cpsv:Rule. Detects subject-URI collisions where several distinct rules were authored under one URI and merge into N titles × M descriptions of duplicate rows in SPARQL results, while tolerating legitimate bilingual (nl/en) labels.",
+            "Cardinality and uniqueLang violations list the offending values inline (whitespace-normalised and capped at 60 characters) so collisions are immediately identifiable."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.8.2",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
       "date": "May 20, 2026",
       "sections": [
         {
