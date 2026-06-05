@@ -38,7 +38,7 @@ import logger from '../utils/logger';
 
 // ── Response types (shape matches DmnValidator's so the UI components are shared) ──
 
-export type ShaclLayerKey = 'cpsv-ap-core' | 'cpsv-ap-vocab' | 'ronl-custom';
+export type ShaclLayerKey = 'cpsv-ap' | 'ronl-custom';
 
 export interface ShaclIssue {
   severity: 'error' | 'warning' | 'info';
@@ -49,6 +49,8 @@ export interface ShaclIssue {
 
 export interface ShaclLayerResult {
   label: string;
+  /** false when no shape files were present for this layer (e.g. SEMIC shapes not vendored yet) — lets the UI distinguish "not evaluated" from "passed". */
+  loaded: boolean;
   issues: ShaclIssue[];
 }
 
@@ -79,14 +81,9 @@ interface LayerSpec {
 
 const LAYER_SPECS: LayerSpec[] = [
   {
-    key: 'cpsv-ap-core',
-    label: 'CPSV-AP Core',
-    files: ['cpsv-ap/3.2.0/CPSV-AP_shacl_shapes.ttl'],
-  },
-  {
-    key: 'cpsv-ap-vocab',
-    label: 'CPSV-AP Vocabularies',
-    files: ['cpsv-ap/3.2.0/CPSV-AP_shacl_cv_shapes.ttl'],
+    key: 'cpsv-ap',
+    label: 'CPSV-AP 3.2.0',
+    files: ['cpsv-ap/3.2.0/cpsv-ap-SHACL.ttl'],
   },
   {
     key: 'ronl-custom',
@@ -145,10 +142,20 @@ function compact(uri: string | undefined): string {
 
 // ── Service ─────────────────────────────────────────────────────────────────────
 
-class ShaclValidationService {
+/**
+ * Fetches a SPARQL CONSTRUCT result as Turtle. Injectable so merge-mode can be
+ * exercised deterministically in tests with a fixed "already-published" graph;
+ * defaults to the real TriplyDB-backed implementation.
+ */
+type GraphFetcher = (endpoint: string, query: string) => Promise<string>;
+
+export class ShaclValidationService {
   // Shapes are read once and cached for the life of the process. Adding shape
   // files requires a restart (which Azure does on deploy).
   private layersPromise: Promise<LoadedLayer[]> | null = null;
+
+  /** @param fetchGraph SPARQL CONSTRUCT→Turtle fetcher; override in tests. */
+  constructor(private readonly fetchGraph: GraphFetcher = constructGraph) {}
 
   private parse(ttl: string) {
     return new Parser().parse(ttl);
@@ -220,9 +227,8 @@ class ShaclValidationService {
 
   private emptyLayers(): Record<ShaclLayerKey, ShaclLayerResult> {
     return {
-      'cpsv-ap-core': { label: 'CPSV-AP Core', issues: [] },
-      'cpsv-ap-vocab': { label: 'CPSV-AP Vocabularies', issues: [] },
-      'ronl-custom': { label: 'RONL Custom', issues: [] },
+      'cpsv-ap': { label: 'CPSV-AP 3.2.0', loaded: false, issues: [] },
+      'ronl-custom': { label: 'RONL Custom', loaded: false, issues: [] },
     };
   }
 
@@ -262,24 +268,33 @@ class ShaclValidationService {
     const loaded = await this.loadLayers();
 
     for (const layer of loaded) {
+      layers[layer.key].loaded = layer.validator !== null;
       if (!layer.validator) continue;
       const report = await layer.validator.validate(data);
 
       for (const result of report.results) {
         const severity = severityFromTerm(result.severity);
         const baseMessage =
-          result.message.map((m) => m.value).join('; ') || codeFromComponent(result.sourceConstraintComponent);
+          result.message.map((m) => m.value).join('; ') ||
+          codeFromComponent(result.sourceConstraintComponent);
 
         const values = this.offendingValues(data, result.focusNode, result.path);
         const message =
-          values.length > 1 ? `${baseMessage} Found ${values.length} values: ${values.join(', ')}.` : baseMessage;
+          values.length > 1
+            ? `${baseMessage} Found ${values.length} values: ${values.join(', ')}.`
+            : baseMessage;
 
         const location =
           result.focusNode || result.path
             ? `${result.focusNode?.value ?? ''} ${compact(result.path?.value)}`.trim()
             : undefined;
 
-        layers[layer.key].issues.push({ severity, code: codeFromComponent(result.sourceConstraintComponent), message, location });
+        layers[layer.key].issues.push({
+          severity,
+          code: codeFromComponent(result.sourceConstraintComponent),
+          message,
+          location,
+        });
 
         if (severity === 'error') summary.errors++;
         else if (severity === 'warning') summary.warnings++;
@@ -314,7 +329,7 @@ class ShaclValidationService {
       };
     }
 
-    logger.info('[SHACL] validateFile', { contentLength: content.length, subjects: data.size });
+    logger.info('[SHACL] validateFile', { contentLength: content.length, triples: data.size });
     return this.runLayers(data, null);
   }
 
@@ -382,7 +397,7 @@ WHERE {
       subjects: subjects.size,
     });
 
-    const remoteTtl = await constructGraph(targetEndpoint, query);
+    const remoteTtl = await this.fetchGraph(targetEndpoint, query);
     const remoteQuads = this.parse(remoteTtl);
 
     const merged = rdfDataset.dataset([...localQuads, ...remoteQuads]);

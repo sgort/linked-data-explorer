@@ -1,6 +1,27 @@
 {
   "versions": [
     {
+      "version": "1.9.1",
+      "status": "Latest",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "June 5, 2026",
+      "sections": [
+        {
+          "icon": "🛡️",
+          "iconColor": "emerald",
+          "title": "SHACL Validator",
+          "items": [
+            "Vendored the canonical CPSV-AP 3.2.0 SHACL shapes (SEMIC) — the CPSV-AP layer is now active, validating the full model (PublicService, Rule, PublicOrganisation, ContactPoint, Channel, Address, …) across 32 shapes. Previously this layer reported no shapes.",
+            "Collapsed the earlier CPSV-AP Core and CPSV-AP Vocabularies layers into a single CPSV-AP 3.2.0 layer, matching SEMIC's combined shape file for the 3.2.0 release.",
+            "Layer results now distinguish 'Not loaded' (no shapes present for that layer) from 'OK' (evaluated and clean), so an unvendored layer no longer shows a misleading green check.",
+            "Offending values listed in cardinality and uniqueLang messages are now whitespace-normalised and capped at 60 characters, keeping long published descriptions readable.",
+            "Added a fully CPSV-AP-conformant example plus deterministic merge-simulated test coverage (a cross-publication homepage collision), alongside the existing file-local fixtures."
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.9.0",
       "status": "Latest",
       "statusColor": "emerald",

@@ -1,0 +1,14 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+# A fully CPSV-AP 3.2.0 conformant cpsv:Rule: carries the required dct:identifier,
+# and bilingual (nl/en) title and description. Demonstrates the all-green case —
+# clean against both the CPSV-AP layer and the RONL layer — and that sh:uniqueLang
+# correctly allows one label per language (one @nl + one @en) rather than flagging it.
+
+<https://regels.overheid.nl/register/Flevoland/subsidie-thuisbatterij> a cpsv:Rule ;
+    dct:identifier "RONL-FL-SUBSIDIE-THUISBATTERIJ-001" ;
+    dct:title "Subsidie thuisbatterij — bepaling subsidiehoogte"@nl ;
+    dct:title "Home battery subsidy — amount determination"@en ;
+    dct:description "Bepaalt de hoogte van de subsidie voor een thuisbatterij, met inachtneming van het beschikbare budget."@nl ;
+    dct:description "Determines the home battery subsidy amount, taking the available budget into account."@en .

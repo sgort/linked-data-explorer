@@ -5,9 +5,9 @@
 // carrying two divergent foaf:homepage values — the result of unioning File A and
 // File B) through validateFile and prints the report.
 //
-// Expected: valid=false, one error on focus node Provincie_Flevoland, path
-// foaf:homepage, in the ronl-custom layer (the CPSV-AP layers stay empty until the
-// SEMIC shapes are vendored).
+// Asserts on the RONL Custom layer specifically: exactly one error on focus node
+// Provincie_Flevoland, path foaf:homepage. Independent of whether the CPSV-AP layer
+// is vendored (which, once present, also flags this fixture for missing dct:spatial).
 //
 // Run from packages/backend:  npx ts-node scripts/shacl-smoke.ts
 
@@ -28,26 +28,27 @@ const MERGED_FIXTURE = `
 `;
 
 async function main(): Promise<void> {
-    const result = await shaclValidationService.validateFile(MERGED_FIXTURE);
+  const result = await shaclValidationService.validateFile(MERGED_FIXTURE);
 
-    console.log('valid     :', result.valid);
-    console.log('parseError:', result.parseError);
-    console.log('summary   :', JSON.stringify(result.summary));
-    for (const [key, layer] of Object.entries(result.layers)) {
-        if (layer.issues.length === 0) continue;
-        console.log(`\nlayer ${key} (${layer.label}):`);
-        for (const issue of layer.issues) {
-            console.log(`  [${issue.severity}] ${issue.code} — ${issue.message}`);
-            if (issue.location) console.log(`           @ ${issue.location}`);
-        }
+  console.log('valid     :', result.valid);
+  console.log('parseError:', result.parseError);
+  console.log('summary   :', JSON.stringify(result.summary));
+  for (const [key, layer] of Object.entries(result.layers)) {
+    if (layer.issues.length === 0) continue;
+    console.log(`\nlayer ${key} (${layer.label}):`);
+    for (const issue of layer.issues) {
+      console.log(`  [${issue.severity}] ${issue.code} — ${issue.message}`);
+      if (issue.location) console.log(`           @ ${issue.location}`);
     }
+  }
 
-    const ok = !result.valid && result.summary.errors === 1;
-    console.log(`\n${ok ? 'PASS' : 'FAIL'}: expected exactly one error.`);
-    process.exit(ok ? 0 : 1);
+  const ronlErrors = result.layers['ronl-custom'].issues.filter((i) => i.severity === 'error').length;
+  const ok = ronlErrors === 1;
+  console.log(`\n${ok ? 'PASS' : 'FAIL'}: expected exactly one error in the RONL Custom layer (got ${ronlErrors}).`);
+  process.exit(ok ? 0 : 1);
 }
 
 main().catch((err) => {
-    console.error(err);
-    process.exit(1);
+  console.error(err);
+  process.exit(1);
 });

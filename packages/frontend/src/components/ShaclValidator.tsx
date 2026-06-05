@@ -19,6 +19,7 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  CircleDashed,
   Database,
   FileText,
   Info,
@@ -42,6 +43,7 @@ interface ValidationIssue {
 
 interface LayerResult {
   label: string;
+  loaded: boolean;
   issues: ValidationIssue[];
 }
 
@@ -49,8 +51,7 @@ interface ValidationResult {
   valid: boolean;
   parseError: string | null;
   layers: {
-    'cpsv-ap-core': LayerResult;
-    'cpsv-ap-vocab': LayerResult;
+    'cpsv-ap': LayerResult;
     'ronl-custom': LayerResult;
   };
   summary: { errors: number; warnings: number; infos: number };
@@ -112,7 +113,8 @@ function LayerSection({ layer }: { layer: LayerResult }) {
   const errorCount = layer.issues.filter((i) => i.severity === 'error').length;
   const warningCount = layer.issues.filter((i) => i.severity === 'warning').length;
   const infoCount = layer.issues.filter((i) => i.severity === 'info').length;
-  const allClear = layer.issues.length === 0;
+  const notLoaded = !layer.loaded;
+  const allClear = layer.loaded && layer.issues.length === 0;
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
@@ -122,16 +124,23 @@ function LayerSection({ layer }: { layer: LayerResult }) {
         className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
       >
         <div className="flex items-center gap-1.5 min-w-0">
-          {allClear ? (
+          {notLoaded ? (
+            <CircleDashed size={13} className="text-slate-300 flex-shrink-0" />
+          ) : allClear ? (
             <CheckCircle size={13} className="text-green-500 flex-shrink-0" />
           ) : (
             <SeverityIcon
               severity={errorCount > 0 ? 'error' : warningCount > 0 ? 'warning' : 'info'}
             />
           )}
-          <span className="text-xs font-medium text-slate-700 truncate">{layer.label}</span>
+          <span
+            className={`text-xs font-medium truncate ${notLoaded ? 'text-slate-400' : 'text-slate-700'}`}
+          >
+            {layer.label}
+          </span>
         </div>
         <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+          {notLoaded && <span className="text-[10px] text-slate-400 font-medium">Not loaded</span>}
           {allClear && <span className="text-[10px] text-green-600 font-medium">OK</span>}
           {errorCount > 0 && (
             <span className="px-1 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-medium">
@@ -158,7 +167,11 @@ function LayerSection({ layer }: { layer: LayerResult }) {
 
       {open && (
         <div className="px-2.5 py-2 space-y-1.5 bg-white">
-          {layer.issues.length === 0 ? (
+          {notLoaded ? (
+            <p className="text-xs text-slate-400 italic">
+              No shapes are loaded for this layer, so nothing was validated against it.
+            </p>
+          ) : layer.issues.length === 0 ? (
             <p className="text-xs text-slate-400 italic">No issues found.</p>
           ) : (
             layer.issues.map((issue, idx) => (
