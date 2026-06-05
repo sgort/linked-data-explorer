@@ -256,9 +256,7 @@ const FEEL_RESERVED = new Set([
  * Returns a de-duplicated list in first-seen order.
  */
 function extractFeelIdentifiers(text: string): string[] {
-  const stripped = text
-    .replace(/'(?:[^'\\]|\\.)*'/g, ' ')
-    .replace(/"(?:[^"\\]|\\.)*"/g, ' ');
+  const stripped = text.replace(/'(?:[^'\\]|\\.)*'/g, ' ').replace(/"(?:[^"\\]|\\.)*"/g, ' ');
   const out: string[] = [];
   const seen = new Set<string>();
   const tokenRe = /[A-Za-z_][A-Za-z0-9_]*/g;
@@ -351,7 +349,7 @@ async function validateBaseLayer(
           'error',
           'BASE-NS',
           `Unrecognised DMN namespace: "${rootNs}". ` +
-          `Expected one of: ${KNOWN_DMN_NS.join(', ')}.`
+            `Expected one of: ${KNOWN_DMN_NS.join(', ')}.`
         )
       );
     }
@@ -540,8 +538,8 @@ function validateBusinessLayer(doc: XmlElement): LayerResult {
             'error',
             'BIZ-008',
             `Duplicate rule rows in ${hp} table: rule "${ruleId}" has identical input entries ` +
-            `to rule "${firstRuleId}". Both will fire for the same input, ` +
-            `causing a DmnHitPolicyException at runtime.`,
+              `to rule "${firstRuleId}". Both will fire for the same input, ` +
+              `causing a DmnHitPolicyException at runtime.`,
             decisionLoc
           )
         );
@@ -568,9 +566,9 @@ function validateBusinessLayer(doc: XmlElement): LayerResult {
             'warning',
             'BIZ-009',
             `Catch-all rule "${ruleId}" (all input entries are empty or "-") exists alongside ` +
-            `specific rules in a ${hp} table. For any input that matches a specific rule, ` +
-            `both the specific rule and the catch-all fire — violating the ${hp} hit policy. ` +
-            `Consider hitPolicy="FIRST", or move default logic to an else-branch.`,
+              `specific rules in a ${hp} table. For any input that matches a specific rule, ` +
+              `both the specific rule and the catch-all fire — violating the ${hp} hit policy. ` +
+              `Consider hitPolicy="FIRST", or move default logic to an else-branch.`,
             decisionLoc
           )
         );
@@ -920,9 +918,9 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
           'warning',
           'INT-007',
           `<inputExpression> references variable "${ident}" but it is neither declared as ` +
-          `<inputData name="${ident}"> nor produced by a requiredDecision target. ` +
-          `Add a matching <inputData> element with a <variable> child, or wire the ` +
-          `producing decision via <requiredDecision>, for CPSV Editor compatibility.`,
+            `<inputData name="${ident}"> nor produced by a requiredDecision target. ` +
+            `Add a matching <inputData> element with a <variable> child, or wire the ` +
+            `producing decision via <requiredDecision>, for CPSV Editor compatibility.`,
           decision ? elLoc(decision) : undefined
         )
       );

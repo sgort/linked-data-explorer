@@ -1,0 +1,30 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix ronl: <https://regels.overheid.nl/ontology#> .
+
+# A cpsv:Rule with more than one dct:title or dct:description in the same language
+# means distinct rules were authored under the same subject URI and got merged. In
+# LDE SPARQL this fans out as (number of titles × number of descriptions) duplicate
+# rows. dct:title / dct:description use sh:uniqueLang true (at most one value per
+# language), consistent with skos:prefLabel in org-uniqueness.ttl: this catches the
+# collision — whose merged duplicates share a language — while tolerating legitimate
+# bilingual (@nl + @en) labels.
+
+ronl:RuleUniquenessShape
+    a sh:NodeShape ;
+    sh:targetClass cpsv:Rule ;
+
+    sh:property [
+        sh:path dct:title ;
+        sh:uniqueLang true ;
+        sh:severity sh:Violation ;
+        sh:message "A cpsv:Rule must have at most one dct:title per language. Multiple same-language titles indicate distinct rules merged under the same subject URI, fanning out in SPARQL results."@en
+    ] ;
+
+    sh:property [
+        sh:path dct:description ;
+        sh:uniqueLang true ;
+        sh:severity sh:Violation ;
+        sh:message "A cpsv:Rule must have at most one dct:description per language. Multiple same-language descriptions indicate distinct rules merged under the same subject URI."@en
+    ] .

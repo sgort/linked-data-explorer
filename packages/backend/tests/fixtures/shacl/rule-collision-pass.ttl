@@ -1,0 +1,14 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+<https://regels.overheid.nl/register/Flevoland/subsidie-intake> a cpsv:Rule ;
+    dct:title "Subsidie aanvraag intake"@nl ;
+    dct:description "Beoordeelt of de subsidieaanvraag volledig is ingediend."@nl .
+
+<https://regels.overheid.nl/register/Flevoland/subsidie-beoordeling> a cpsv:Rule ;
+    dct:title "Subsidie inhoudelijke beoordeling"@nl ;
+    dct:description "Toetst de aanvraag aan de inhoudelijke subsidiecriteria."@nl .
+
+<https://regels.overheid.nl/register/Flevoland/subsidie-besluit> a cpsv:Rule ;
+    dct:title "Subsidie besluit"@nl ;
+    dct:description "Stelt het toekennings- of afwijzingsbesluit vast."@nl .

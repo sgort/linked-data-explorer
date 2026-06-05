@@ -77,6 +77,59 @@ export async function executeQuery(endpoint: string, query: string): Promise<Spa
 }
 
 /**
+ * Execute a SPARQL CONSTRUCT/DESCRIBE query against any SPARQL endpoint and return
+ * the resulting graph serialised as Turtle.
+ *
+ * Sibling to executeQuery(): that helper negotiates SPARQL-results JSON for
+ * SELECT/ASK; this one negotiates `text/turtle` for graph-returning queries so the
+ * caller can parse the closure with an RDF parser (n3). Used by the SHACL
+ * validator's merge-simulated mode to union already-published triples with an
+ * uploaded file before validation. Standard SPARQL 1.1 only — no TriplyDB-specific
+ * extensions — so it keeps working against any compliant endpoint.
+ */
+export async function constructGraph(endpoint: string, query: string): Promise<string> {
+  logger.info('[TriplyDB Service] Executing SPARQL CONSTRUCT', {
+    endpoint: endpoint,
+    queryLength: query.length,
+  });
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/sparql-query',
+        Accept: 'text/turtle',
+      },
+      body: query,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('[TriplyDB Service] CONSTRUCT execution failed', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
+      throw new Error(`CONSTRUCT failed: ${response.status} ${errorText}`);
+    }
+
+    const turtle = await response.text();
+
+    logger.info('[TriplyDB Service] CONSTRUCT executed successfully', {
+      bytes: turtle.length,
+    });
+
+    return turtle;
+  } catch (error) {
+    logger.error('[TriplyDB Service] Error executing CONSTRUCT', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw new Error(`Failed to execute CONSTRUCT: ${(error as Error).message}`);
+  }
+}
+
+/**
  * List all graphs in a TriplyDB dataset
  */
 export async function listGraphs(config: TriplyDBConfig): Promise<string[]> {

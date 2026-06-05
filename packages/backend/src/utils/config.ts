@@ -23,11 +23,7 @@ const getNestedProperty = (obj: Record<string, unknown>, path: string): unknown 
  *   az webapp config appsettings set -g rg-... -n ronl-linkeddata-backend-prod --settings DEPLOYMENT_ENV=prod
  * Falls back to NODE_ENV when unset so local development stays zero-config.
  */
-const rawDeploymentEnv = (
-  process.env.DEPLOYMENT_ENV ||
-  process.env.NODE_ENV ||
-  'development'
-)
+const rawDeploymentEnv = (process.env.DEPLOYMENT_ENV || process.env.NODE_ENV || 'development')
   .toLowerCase()
   .trim();
 

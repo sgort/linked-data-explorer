@@ -23,6 +23,9 @@ dist-ssr
 *.d.ts
 *.d.ts.map
 
+# Hand-authored ambient declarations (not generated output) — keep tracked
+!packages/backend/src/types/shacl-rdf.d.ts
+
 # But keep the source JSON
 !testData.json
 
