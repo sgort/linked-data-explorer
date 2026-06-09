@@ -1,0 +1,368 @@
+{
+  "metadata": {
+    "sourceDmn": "hoogteVergoedingThuisbatterijBijRechtEnBudget.dmn",
+    "algorithm": "Per-decision-table boundary domains + MC/DC-style condition-pair selection",
+    "note": "Each decision table is tested in direct-table-input mode. Non-boolean DMN entries such as date ranges, comparisons, and string equality tests are treated as atomic boolean predicates for MC/DC pair selection. Boundary/domain representatives are added so all generated input ranges appear in at least one case per table.",
+    "decisionCount": 5,
+    "selectedTestCaseCount": 98
+  },
+  "decisions": {
+    "BehaalbareHoogteSubsidie": {
+      "decisionName": "Behaalbare Hoogte Subsidie",
+      "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+      "hitPolicy": "UNIQUE",
+      "candidateCountEvaluated": 121,
+      "selectedTestCaseCount": 19,
+      "inputDomainsUsed": {
+        "basisHoogteSubsidie": [
+          0,
+          1,
+          749,
+          750,
+          751,
+          1249,
+          1250,
+          1251,
+          437499,
+          437500,
+          437501
+        ],
+        "beschikbaarSubsidiePlafond": [
+          0,
+          1,
+          749,
+          750,
+          751,
+          1249,
+          1250,
+          1251,
+          437499,
+          437500,
+          437501
+        ]
+      },
+      "rules": [
+        {
+          "ruleIndex": 1,
+          "ruleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+          "description": "",
+          "inputEntries": [
+            "<= beschikbaarSubsidiePlafond"
+          ],
+          "outputEntries": [
+            "basisHoogteSubsidie"
+          ]
+        },
+        {
+          "ruleIndex": 2,
+          "ruleId": "Rule_Behaalbare_BeperktDoorResterendBudget",
+          "description": "",
+          "inputEntries": [
+            "> beschikbaarSubsidiePlafond"
+          ],
+          "outputEntries": [
+            "beschikbaarSubsidiePlafond"
+          ]
+        }
+      ],
+      "uncoveredConditions": []
+    },
+    "BerekenBasisHoogteSubsidie": {
+      "decisionName": "Bereken Basis Hoogte Subsidie",
+      "decisionTableId": "DecisionTable_BerekenBasisHoogteSubsidie",
+      "hitPolicy": "UNIQUE",
+      "candidateCountEvaluated": 8,
+      "selectedTestCaseCount": 8,
+      "inputDomainsUsed": {
+        "gemaakteKosten": [
+          0,
+          2999,
+          3000,
+          3001,
+          4999,
+          5000,
+          5001,
+          10000
+        ],
+        "minimaleNoodzakelijkeKosten": [
+          750
+        ],
+        "subsidieMaximum": [
+          1250
+        ],
+        "subsidieMinimum": [
+          750
+        ],
+        "subsidiePercentage": [
+          0.25
+        ]
+      },
+      "rules": [
+        {
+          "ruleIndex": 1,
+          "ruleId": "Rule_Basis_BovenMinimum",
+          "description": "",
+          "inputEntries": [
+            ">= minimaleNoodzakelijkeKosten / subsidiePercentage"
+          ],
+          "outputEntries": [
+            "if subsidiePercentage * gemaakteKosten > subsidieMaximum then subsidieMaximum else if subsidiePercentage * gemaakteKosten < subsidieMinimum then subsidieMinimum else subsidiePercentage * gemaakteKosten"
+          ]
+        },
+        {
+          "ruleIndex": 2,
+          "ruleId": "Rule_Basis_OnderMinimum",
+          "description": "",
+          "inputEntries": [
+            "< minimaleNoodzakelijkeKosten / subsidiePercentage"
+          ],
+          "outputEntries": [
+            "0"
+          ]
+        }
+      ],
+      "uncoveredConditions": []
+    },
+    "BerekenBeschikbaarSubsidiePlafond": {
+      "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+      "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+      "hitPolicy": "FIRST",
+      "candidateCountEvaluated": 65340,
+      "selectedTestCaseCount": 64,
+      "inputDomainsUsed": {
+        "aanvraagDatum": [
+          "2025-12-31",
+          "2026-01-11",
+          "2026-01-12",
+          "2026-01-13",
+          "2026-09-29",
+          "2026-09-30",
+          "2026-10-01",
+          "2026-10-02",
+          "2026-12-30",
+          "2026-12-31",
+          "2027-01-01",
+          "2027-01-02",
+          "2027-09-29",
+          "2027-09-30",
+          "2027-10-01",
+          "2027-10-02",
+          "2027-12-30",
+          "2027-12-31",
+          "2028-01-01",
+          "2029-01-01"
+        ],
+        "aanvragerType": [
+          "eigenaar",
+          "huurder",
+          "onbekend"
+        ],
+        "plafondEigenaren": [
+          437500,
+          875000,
+          1000000
+        ],
+        "plafondHuurders": [
+          437500,
+          875000,
+          1000000
+        ],
+        "reedsGesubsidieerdEigenaren": [
+          0,
+          1,
+          437499,
+          437500,
+          437501,
+          874999,
+          875000,
+          875001,
+          999999,
+          1000000,
+          1000001
+        ],
+        "reedsGesubsidieerdHuurders": [
+          0,
+          1,
+          437499,
+          437500,
+          437501,
+          874999,
+          875000,
+          875001,
+          999999,
+          1000000,
+          1000001
+        ]
+      },
+      "rules": [
+        {
+          "ruleIndex": 1,
+          "ruleId": "Rule_Platform_2026_Eigenaar_Gescheiden",
+          "description": "12 januari 2026 t/m 30 september 2026: apart plafond voor eigenaren.",
+          "inputEntries": [
+            "date(aanvraagDatum) >= date(\"2026-01-12\") and date(aanvraagDatum) <= date(\"2026-09-30\")",
+            "\"eigenaar\"",
+            "-",
+            "-"
+          ],
+          "outputEntries": [
+            "if plafondEigenaren - reedsGesubsidieerdEigenaren > 0 then plafondEigenaren - reedsGesubsidieerdEigenaren else 0"
+          ]
+        },
+        {
+          "ruleIndex": 2,
+          "ruleId": "Rule_Platform_2026_Huurder_Gescheiden",
+          "description": "12 januari 2026 t/m 30 september 2026: apart plafond voor huurders.",
+          "inputEntries": [
+            "date(aanvraagDatum) >= date(\"2026-01-12\") and date(aanvraagDatum) <= date(\"2026-09-30\")",
+            "\"huurder\"",
+            "-",
+            "-"
+          ],
+          "outputEntries": [
+            "if plafondHuurders - reedsGesubsidieerdHuurders > 0 then plafondHuurders - reedsGesubsidieerdHuurders else 0"
+          ]
+        },
+        {
+          "ruleIndex": 3,
+          "ruleId": "Rule_Platform_2026_Gebundeld",
+          "description": "Vanaf 1 oktober 2026: wat over is van beide plafonds samen, geen onderscheid. Voor 2026 is het hele budget opgesplitst naar huurder en verhuurders.",
+          "inputEntries": [
+            "date(aanvraagDatum) >= date(\"2026-10-01\") and date(aanvraagDatum) <= date(\"2026-12-31\")",
+            "-",
+            "-",
+            "-"
+          ],
+          "outputEntries": [
+            "if plafondEigenaren + plafondHuurders - reedsGesubsidieerdEigenaren - reedsGesubsidieerdHuurders > 0 then plafondEigenaren + plafondHuurders - reedsGesubsidieerdEigenaren - reedsGesubsidieerdHuurders else 0"
+          ]
+        },
+        {
+          "ruleIndex": 4,
+          "ruleId": "Rule_Platform_2027_Eigenaar_Gescheiden",
+          "description": "1 januari 2027 t/m 30 september 2027: apart plafond voor eigenaren. NB: in deze berekening wordt nog geen 2026 overgebleven budget overgeheveld.",
+          "inputEntries": [
+            "date(\"2027-01-01\") <= date(aanvraagDatum)   and date(aanvraagDatum) <= date(\"2027-09-30\")",
+            "\"eigenaar\"",
+            "-",
+            "-"
+          ],
+          "outputEntries": [
+            "if plafondEigenaren - reedsGesubsidieerdEigenaren > 0 then plafondEigenaren - reedsGesubsidieerdEigenaren else 0"
+          ]
+        },
+        {
+          "ruleIndex": 5,
+          "ruleId": "Rule_Platform_2027_Huurder_Gescheiden",
+          "description": "1 januari 2027 t/m 30 september 2027: apart plafond voor huurders.",
+          "inputEntries": [
+            "date(aanvraagDatum) >= date(\"2027-01-01\") and date(aanvraagDatum) <= date(\"2027-09-30\")",
+            "\"huurder\"",
+            "-",
+            "-"
+          ],
+          "outputEntries": [
+            "if plafondHuurders - reedsGesubsidieerdHuurders > 0 then plafondHuurders - reedsGesubsidieerdHuurders else 0"
+          ]
+        },
+        {
+          "ruleIndex": 6,
+          "ruleId": "Rule_Platform_2027_Gebundeld",
+          "description": "Vanaf 1 oktober 2027: wat over is van beide plafonds samen, geen onderscheid. NB\": het totale budget voor 2027 is meer dan wat tm september mag worden uitgegeven!",
+          "inputEntries": [
+            "date(aanvraagDatum) >= date(\"2027-10-01\") and date(aanvraagDatum) <= date(\"2027-12-31\")",
+            "-",
+            "-",
+            "-"
+          ],
+          "outputEntries": [
+            "if 1000000 - reedsGesubsidieerdEigenaren - reedsGesubsidieerdHuurders > 0 then 1000000 - reedsGesubsidieerdEigenaren - reedsGesubsidieerdHuurders else 0"
+          ]
+        },
+        {
+          "ruleIndex": 7,
+          "ruleId": "Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+          "description": "Buiten de gemodelleerde aanvraagperiodes of onbekend type: geen beschikbaar plafond.",
+          "inputEntries": [
+            "-",
+            "-",
+            "-",
+            "-"
+          ],
+          "outputEntries": [
+            "0"
+          ]
+        }
+      ],
+      "uncoveredConditions": []
+    },
+    "SubsidieConstantenThuisbatterij": {
+      "decisionName": "Subsidie Constanten Thuisbatterij",
+      "decisionTableId": "DecisionTable_SubsidieConstantenThuisbatterij",
+      "hitPolicy": "UNIQUE",
+      "candidateCountEvaluated": 1,
+      "selectedTestCaseCount": 1,
+      "inputDomainsUsed": {},
+      "rules": [
+        {
+          "ruleIndex": 1,
+          "ruleId": "Rule_Constanten_Standaard",
+          "description": "",
+          "inputEntries": [],
+          "outputEntries": [
+            "0.25",
+            "750",
+            "1250",
+            "750"
+          ]
+        }
+      ],
+      "uncoveredConditions": []
+    },
+    "jaarGebondenBudget": {
+      "decisionName": "Jaar Gebonden Budget",
+      "decisionTableId": "DecisionTable_1bhjh1w",
+      "hitPolicy": "UNIQUE",
+      "candidateCountEvaluated": 6,
+      "selectedTestCaseCount": 6,
+      "inputDomainsUsed": {
+        "aanvraagDatum": [
+          "2025-12-31",
+          "2026-01-01",
+          "2026-12-31",
+          "2027-01-01",
+          "2027-12-31",
+          "2028-01-01"
+        ]
+      },
+      "rules": [
+        {
+          "ruleIndex": 1,
+          "ruleId": "DecisionRule_0nfr6kl",
+          "description": "",
+          "inputEntries": [
+            "2026"
+          ],
+          "outputEntries": [
+            "437500",
+            "437500"
+          ]
+        },
+        {
+          "ruleIndex": 2,
+          "ruleId": "DecisionRule_1e5agpr",
+          "description": "",
+          "inputEntries": [
+            "2027"
+          ],
+          "outputEntries": [
+            "437500",
+            "437500"
+          ]
+        }
+      ],
+      "uncoveredConditions": []
+    }
+  },
+  "uncoveredConditions": []
+}

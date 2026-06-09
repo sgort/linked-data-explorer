@@ -1,0 +1,491 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix cv: <http://data.europa.eu/m8g/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix eli: <http://data.europa.eu/eli/ontology#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix ronl: <https://regels.overheid.nl/ontology#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix cprmv: <https://cprmv.open-regels.nl/0.3.0/> .
+
+# ============================================================
+#  Public Service
+# ============================================================
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> a cpsv:PublicService ;
+    dct:identifier "recht-hoogte-subsidie-thuisbatterij-flevoland" ;
+    dct:title "recht en hoogte subsidie thuisbatterij Flevoland"@nl ;
+    dct:description "Onder de aanname van het recht, wordt de hoogte van de subsidie voor een thuisbatterij berekend. Deze wordt vermindert met de ruimte in het budget (2026,2027) op het moment van aanvraag"@nl ;
+    cv:thematicArea <https://www.flevoland.nl/Loket/Detail/Subsidie-Thuisbatterij-Provincie-Flevoland-aanvrag> ;
+    cv:sector <https://publications.europa.eu/resource/authority/corporate-body-classification/REGIONAL> ;
+    dcat:keyword "thuisbatterij, Flevoland, subsidie"@nl ;
+    dct:language <https://publications.europa.eu/resource/authority/language/NL> ;
+    cv:hasCompetentAuthority <https://organisaties.overheid.nl/14866/Provincie_Flevoland> ;
+    cv:hasLegalResource <https://lokaleregelgeving.overheid.nl/CVDR750157/1> ;
+    cprmv:hasDecisionModel <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn>  .
+
+
+# ============================================================
+#  Organization
+# ============================================================
+
+<https://organisaties.overheid.nl/14866/Provincie_Flevoland> a cv:PublicOrganisation ;
+    dct:identifier "Provincie_Flevoland" ;
+    skos:prefLabel "Provincie Flevoland"@nl ;
+    foaf:homepage <https://flevoland.nl/home> ;
+    cv:spatial <https://publications.europa.eu/resource/authority/country/NLD> ;
+    foaf:logo <./assets/Provincie_Flevoland_logo.png> ;
+    schema:image <./assets/Provincie_Flevoland_logo.png>  .
+
+
+# ============================================================
+#  Legal Resource
+# ============================================================
+
+<https://lokaleregelgeving.overheid.nl/CVDR750157/1> a eli:LegalResource ;
+    dct:identifier "CVDR750157" ;
+    dct:title "Regels Thuisbaterij Subsidie "@nl ;
+    dct:description "Wetsanalyse regels thuis batterij Flevoland uitgevoerd door Stefan 't Hoen"@nl ;
+    cprmv:hasAnalysis <https://regels.overheid.nl/termen/FLINT> ;
+    cprmv:hasMethod <https://regels.overheid.nl/termen/ConcordiaLegal> ;
+    eli:is_realized_by <https://lokaleregelgeving.overheid.nl/CVDR750157/1/2026-05-13>  .
+
+
+# ============================================================
+#  Temporal Rules
+# ============================================================
+
+<https://regels.overheid.nl/register/Flevoland/subsidie-Kale-Hoogte> a cpsv:Rule, cprmv:TemporalRule ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    dct:identifier "SubsidieThuisbatterij kale hoogte 001" ;
+    dct:title "kale Subsidiehoogte Thuisbatterij bepaling, zonder rekening houdend met budget"@nl ;
+    cprmv:validFrom "2026-01-01"^^xsd:date ;
+    cprmv:validUntil "2027-12-31"^^xsd:date ;
+    cprmv:confidenceLevel "high" ;
+    dct:description "Provinciaal  \n-Algemene Subsidieverordening Flevoland 2023 \n-Nadere regels Subsidie Thuisbatterij Provincie Flevoland\n\nAanname van recht op subsidie, bepaling van hoogte mogelijk beperkt door lopend budget.\n\nArtikel 5 Regeling \n\nDe hoogte van de subsidie voor een thuisbatterij bedraagt 25% van de subsidiabele kosten, met een minimumbedrag van € 750 en een maximumbedrag van € 1.250. \n\nHoogte subsidie = 25% van subsidiabel bedrag (gegeven)  \nMinimum van 750 euro, max 1250 euro.\n\n"@nl  .
+
+<https://regels.overheid.nl/register/Flevoland/subsidie-Budget> a cpsv:Rule, cprmv:TemporalRule ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    dct:identifier "SubsidieThuisbatterijbudget ruimte 002" ;
+    dct:title "Subsidiehoogte Thuisbatterij bepaling, met welk jaargebonden budget"@nl ;
+    cprmv:validFrom "2026-01-12"^^xsd:date ;
+    cprmv:validUntil "2027-12-31"^^xsd:date ;
+    cprmv:confidenceLevel "high" ;
+    dct:description "2026: 875.000 totaal \n\nAanvragen 12 januari 2026 – 30 september 2027 \n\nPlafond Eigenaren: 437.500 \nPlafond Huurder: 437.500 \n\nNa 1 oktober: wat nog over is, geen onderscheid.  \n\n2027: 1.000.000 + wat over was van het vorige jaar totaal \n\nAanvragen 1 januari 2027 – 30 september 2027 \n\nPlafond Eigenaren: 437.500 \nPlafond Huurder: 437.500 \n\nNa 1 oktober: wat nog over is, geen onderscheid.  "@nl  .
+
+<https://regels.overheid.nl/register/Flevoland/subsidie-Recht> a cpsv:Rule, cprmv:TemporalRule ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    dct:identifier "Subsidie Thuisbatterij Recht 01" ;
+    dct:title "Recht op subsidie thuisbatterij"@nl ;
+    cprmv:validFrom "2026-01-01"^^xsd:date ;
+    cprmv:validUntil "2028-12-31"^^xsd:date ;
+    cprmv:confidenceLevel "high" ;
+    dct:description "Invulling recht in de demo (basis vragen die vanuit formulieren/integraties ingevuld moeten worden): \n\nDe aanvrager heeft recht op subsidie voor de thuis batterij als \n\nDe aanvrager is niet failliet \n\nHet adres van de woning is in Flevoland \n\nDe aanvrager is eigenaar van de woning, of de aanvrager is huurder van de woning \n\nAls de aanvrager huurder is van de woning, dan heeft de aanvrager toestemming van de eigenaar \n\nDe aanvrager is ook de naam op de rekening van de energiemaatschappij "@nl  .
+
+
+# ============================================================
+#  DMN Decision Model
+# ============================================================
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> a cprmv:DecisionModel ;
+    dct:identifier "BehaalbareHoogteSubsidie" ;
+    dct:title "RechtEnHoogteSubsidieThuisbatterij.dmn"@nl ;
+    cprmv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    dct:source <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/file> ;
+    cprmv:deploymentId "29f13fef-5a91-11f1-8761-8ae6f7653f6b" ;
+    cprmv:deployedAt "2026-05-28T12:31:34.586Z"^^xsd:dateTime ;
+    cprmv:implementedBy <https://operaton.open-regels.nl/engine-rest/decision-definition/key/BehaalbareHoogteSubsidie/evaluate> ;
+    cprmv:lastTested "2026-05-28T12:31:36.896Z"^^xsd:dateTime ;
+    cprmv:testStatus "passed" ;
+    dct:description "DMN decision model for service evaluation"@nl .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/1> a cpsv:Input ;
+    dct:identifier "Reeds gesubsidieerd eigenaren" ;
+    dct:title "Reeds gesubsidieerd eigenaren"@nl ;
+    dct:type "String" ;
+    schema:value "" ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/2> a cpsv:Input ;
+    dct:identifier "Reeds gesubsidieerd huurders" ;
+    dct:title "Reeds gesubsidieerd huurders"@nl ;
+    dct:type "String" ;
+    schema:value "" ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/3> a cpsv:Input ;
+    dct:identifier "Datum van aanvraag" ;
+    dct:title "Datum van aanvraag"@nl ;
+    dct:type "String" ;
+    schema:value "2026-05-28" ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/4> a cpsv:Input ;
+    dct:identifier "Gemaakte Kosten" ;
+    dct:title "Gemaakte Kosten"@nl ;
+    dct:type "String" ;
+    schema:value "" ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/5> a cpsv:Input ;
+    dct:identifier "Aanvraag type" ;
+    dct:title "Aanvraag type"@nl ;
+    dct:type "String" ;
+    schema:value "" ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/6> a cpsv:Input ;
+    dct:identifier "Aanvrager is failliet" ;
+    dct:title "Aanvrager is failliet"@nl ;
+    dct:type "String" ;
+    schema:value "" ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/7> a cpsv:Input ;
+    dct:identifier "Provincie woning" ;
+    dct:title "Provincie woning"@nl ;
+    dct:type "String" ;
+    schema:value "" ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/8> a cpsv:Input ;
+    dct:identifier "Relatie tot woning" ;
+    dct:title "Relatie tot woning"@nl ;
+    dct:type "String" ;
+    schema:value "" ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/9> a cpsv:Input ;
+    dct:identifier "Toestemming eigenaar" ;
+    dct:title "Toestemming eigenaar"@nl ;
+    dct:type "String" ;
+    schema:value "" ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/10> a cpsv:Input ;
+    dct:identifier "Naam op energierekening komt overeen" ;
+    dct:title "Naam op energierekening komt overeen"@nl ;
+    dct:type "String" ;
+    schema:value "" ;
+    cpsv:isRequiredBy <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn> .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Behaalbare_BasisPastBinnenResterendBudget> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Behaalbare_BasisPastBinnenResterendBudget" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BehaalbareHoogteSubsidie" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Behaalbare_BeperktDoorResterendBudget> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Behaalbare_BeperktDoorResterendBudget" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BehaalbareHoogteSubsidie" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Basis_BovenMinimum> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Basis_BovenMinimum" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBasisHoogteSubsidie" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Basis_OnderMinimum> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Basis_OnderMinimum" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBasisHoogteSubsidie" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Platform_2026_Eigenaar_Gescheiden> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Platform_2026_Eigenaar_Gescheiden" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Platform_2026_Huurder_Gescheiden> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Platform_2026_Huurder_Gescheiden" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Platform_2026_Gebundeld> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Platform_2026_Gebundeld" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Platform_2027_Eigenaar_Gescheiden> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Platform_2027_Eigenaar_Gescheiden" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Platform_2027_Huurder_Gescheiden> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Platform_2027_Huurder_Gescheiden" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Platform_2027_Gebundeld> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Platform_2027_Gebundeld" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Platform_BuitenAanvraagperiodeOfOnbekendType> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Platform_BuitenAanvraagperiodeOfOnbekendType" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/DecisionRule_0klv7yq> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "DecisionRule_0klv7yq" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/DecisionRule_16qfnra> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "DecisionRule_16qfnra" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/DecisionRule_1dqlhxp> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "DecisionRule_1dqlhxp" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/DecisionRule_1pjqt9f> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "DecisionRule_1pjqt9f" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_BerekenBeschikbaarSubsidiePlafond" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Constanten_Standaard> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Constanten_Standaard" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_SubsidieConstantenThuisbatterij" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/DecisionRule_0nfr6kl> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "DecisionRule_0nfr6kl" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_1bhjh1w" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/DecisionRule_1e5agpr> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "DecisionRule_1e5agpr" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_1bhjh1w" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Afwijzing_AanvragerFailliet> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Afwijzing_AanvragerFailliet" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_RechtOpSubsidieThuisbatterij" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Afwijzing_NietInFlevoland> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Afwijzing_NietInFlevoland" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_RechtOpSubsidieThuisbatterij" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Afwijzing_GeenEigenaarOfHuurder> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Afwijzing_GeenEigenaarOfHuurder" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_RechtOpSubsidieThuisbatterij" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Afwijzing_HuurderZonderToestemming> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Afwijzing_HuurderZonderToestemming" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_RechtOpSubsidieThuisbatterij" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Afwijzing_NaamNietOpEnergierekening> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Afwijzing_NaamNietOpEnergierekening" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_RechtOpSubsidieThuisbatterij" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Toekenning_Eigenaar> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Toekenning_Eigenaar" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_RechtOpSubsidieThuisbatterij" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Toekenning_Huurder> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Toekenning_Huurder" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_RechtOpSubsidieThuisbatterij" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/rules/Rule_Afwijzing_Standaard> a cpsv:Rule, cprmv:DecisionRule ;
+    dct:identifier "Rule_Afwijzing_Standaard" ;
+    cpsv:implements <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland> ;
+    cprmv:ruleType "decision-rule" ;
+    cprmv:confidence "medium" ;
+    cprmv:decisionTable "DecisionTable_RechtOpSubsidieThuisbatterij" ;
+    cprmv:rulesetType "decision-table" .
+
+<https://regels.overheid.nl/schemes/dmn-variables> a skos:ConceptScheme ;
+    dct:title "DMN Variabelen Begrippenkader"@nl ;
+    dct:description "Begrippenkader voor invoer- en uitvoervariabelen van DMN beslisregels in het RONL stelsel."@nl ;
+    dct:creator "RONL" ;
+    dct:created "2026-05-28"^^xsd:date .
+
+# Input Variable Concepts
+# =====================================
+# NL-SBB Concept Definitions (DMN Variables)
+# =====================================
+
+<https://regels.overheid.nl/schemes/dmn-variables> a skos:ConceptScheme ;
+    dct:title "DMN Variabelen Begrippenkader"@nl ;
+    dct:description "Begrippenkader voor invoer- en uitvoervariabelen van DMN beslisregels in het RONL stelsel."@nl ;
+    dct:creator "RONL" ;
+    dct:created "2026-06-04"^^xsd:date .
+
+# Input Variable Concepts
+
+<https://regels.overheid.nl/concepts/behaalbarehoogtesubsidie/Reeds gesubsidieerd eigenaren> a skos:Concept ;
+    skos:prefLabel "Reeds gesubsidieerd eigenaren"@nl ;
+    skos:definition "Reeds gesubsidieerd eigenaren is een tekstuele waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "RGE" ;
+    dct:subject <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/1> ;
+    dct:type "dmn:InputVariable" ;
+    skos:exactMatch <https://regels.overheid.nl/concepts/Reeds gesubsidieerd eigenaren> ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/behaalbarehoogtesubsidie/Reeds gesubsidieerd huurders> a skos:Concept ;
+    skos:prefLabel "Reeds gesubsidieerd huurders"@nl ;
+    skos:definition "Reeds gesubsidieerd huurders is een tekstuele waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "RGH" ;
+    dct:subject <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/2> ;
+    dct:type "dmn:InputVariable" ;
+    skos:exactMatch <https://regels.overheid.nl/concepts/Reeds gesubsidieerd huurders> ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/behaalbarehoogtesubsidie/Datum van aanvraag> a skos:Concept ;
+    skos:prefLabel "Datum van aanvraag"@nl ;
+    skos:definition "Datum van aanvraag is een tekstuele waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "DVA" ;
+    dct:subject <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/3> ;
+    dct:type "dmn:InputVariable" ;
+    skos:exactMatch <https://regels.overheid.nl/concepts/Datum van aanvraag> ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/behaalbarehoogtesubsidie/Gemaakte Kosten> a skos:Concept ;
+    skos:prefLabel "Gemaakte Kosten"@nl ;
+    skos:definition "Gemaakte Kosten is een tekstuele waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "GK" ;
+    dct:subject <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/4> ;
+    dct:type "dmn:InputVariable" ;
+    skos:exactMatch <https://regels.overheid.nl/concepts/Gemaakte Kosten> ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/behaalbarehoogtesubsidie/Aanvraag type> a skos:Concept ;
+    skos:prefLabel "Aanvraag type"@nl ;
+    skos:definition "Aanvraag type is een tekstuele waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "AT" ;
+    dct:subject <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/5> ;
+    dct:type "dmn:InputVariable" ;
+    skos:exactMatch <https://regels.overheid.nl/concepts/Aanvraag type> ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/behaalbarehoogtesubsidie/Aanvrager is failliet> a skos:Concept ;
+    skos:prefLabel "Aanvrager is failliet"@nl ;
+    skos:definition "Aanvrager is failliet is een tekstuele waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "AIF" ;
+    dct:subject <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/6> ;
+    dct:type "dmn:InputVariable" ;
+    skos:exactMatch <https://regels.overheid.nl/concepts/Aanvrager is failliet> ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/behaalbarehoogtesubsidie/Provincie woning> a skos:Concept ;
+    skos:prefLabel "Provincie woning"@nl ;
+    skos:definition "Provincie woning is een tekstuele waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "PW" ;
+    dct:subject <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/7> ;
+    dct:type "dmn:InputVariable" ;
+    skos:exactMatch <https://regels.overheid.nl/concepts/Provincie woning> ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/behaalbarehoogtesubsidie/Relatie tot woning> a skos:Concept ;
+    skos:prefLabel "Relatie tot woning"@nl ;
+    skos:definition "Relatie tot woning is een tekstuele waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "RTW" ;
+    dct:subject <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/8> ;
+    dct:type "dmn:InputVariable" ;
+    skos:exactMatch <https://regels.overheid.nl/concepts/Relatie tot woning> ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/behaalbarehoogtesubsidie/Toestemming eigenaar> a skos:Concept ;
+    skos:prefLabel "Toestemming eigenaar"@nl ;
+    skos:definition "Toestemming eigenaar is een tekstuele waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "TE" ;
+    dct:subject <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/9> ;
+    dct:type "dmn:InputVariable" ;
+    skos:exactMatch <https://regels.overheid.nl/concepts/Toestemming eigenaar> ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
+<https://regels.overheid.nl/concepts/behaalbarehoogtesubsidie/Naam op energierekening komt overeen> a skos:Concept ;
+    skos:prefLabel "Naam op energierekening komt overeen"@nl ;
+    skos:definition "Naam op energierekening komt overeen is een tekstuele waarde die als invoer dient voor de beslisregel."@nl ;
+    skos:notation "NOEKO" ;
+    dct:subject <https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/dmn/input/10> ;
+    dct:type "dmn:InputVariable" ;
+    skos:exactMatch <https://regels.overheid.nl/concepts/Naam op energierekening komt overeen> ;
+    skos:inScheme <https://regels.overheid.nl/schemes/dmn-variables> .
+
