@@ -1,4 +1,4 @@
-# DSO Integration — Phase Plan
+# DSO Integration — Phase Plan updated
 
 ## End goal
 
