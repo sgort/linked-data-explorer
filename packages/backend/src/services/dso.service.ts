@@ -1,5 +1,6 @@
 // packages/backend/src/services/dso.service.ts
 
+import { XMLParser } from 'fast-xml-parser';
 import { config } from '../utils/config';
 import { logger } from '../utils/logger';
 
@@ -335,4 +336,164 @@ export async function getWerkzaamheidDetail(urn: string, env: DsoEnv = 'pre'): P
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Uitvoeren Gegevens API  (toepasbareregelsuitvoerengegevens v1)
+// ---------------------------------------------------------------------------
+
+/** Fetch helper that returns raw XML text (used for STTR bestand downloads). */
+async function dsoFetchXml(url: string, env: DsoEnv = 'pre'): Promise<string> {
+  const dsoConfig = getDsoConfig(env);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
+  try {
+    const response = await fetch(url, {
+      headers: { 'x-api-key': dsoConfig.apiKey, Accept: 'application/xml' },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`DSO responded ${response.status}: ${body}`);
+    }
+    return response.text();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * GET /toepasbareRegels?functioneleStructuurRef=...
+ * Returns the metadata list for a given functioneleStructuurRef.
+ */
+export async function getToepasbareRegels(
+  functioneleStructuurRef: string,
+  env: DsoEnv = 'pre'
+): Promise<unknown> {
+  const params = new URLSearchParams({ functioneleStructuurRef });
+  const url = `${getDsoConfig(env).uitvoerenGegevensBaseUrl}/toepasbareRegels?${params}`;
+  logger.info('[DSO] GET toepasbareRegels', { env, functioneleStructuurRef });
+  return dsoFetch(url, env);
+}
+
+/**
+ * GET /toepasbareRegels/:id/sttr
+ * Returns the raw STTR XML for a toepasbare regel by its generated id.
+ */
+export async function getSttrBestand(id: string, env: DsoEnv = 'pre'): Promise<string> {
+  const url = `${getDsoConfig(env).uitvoerenGegevensBaseUrl}/toepasbareRegels/${encodeURIComponent(id)}/sttrBestand`;
+  logger.info('[DSO] GET STTR bestand', { env, id });
+  return dsoFetchXml(url, env);
+}
+
+// ---------------------------------------------------------------------------
+// STTR parsing helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts the embedded DMN <definitions> element from a conclusie STTR envelope
+ * and returns it as a standalone DMN XML string.
+ */
+export function extractDmnFromSttr(sttrXml: string): string {
+  // The conclusie STTR wraps a complete DMN 1.2 <definitions> element.
+  // Match including any namespace declarations and closing tag,
+  // handling both prefixed (dmn:definitions) and un-prefixed variants.
+  const match = sttrXml.match(/<(?:dmn:)?definitions[\s\S]*?<\/(?:dmn:)?definitions>/);
+  if (!match) throw new Error('No DMN <definitions> element found in STTR XML');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${match[0]}`;
+}
+
+export interface FormScaffoldField {
+  id: string;
+  type: string;
+  label: string;
+  key: string;
+  values?: { label: string; value: string }[];
+  validate?: { required: boolean };
+}
+
+export interface FormScaffold {
+  schemaVersion: number;
+  id: string;
+  components: FormScaffoldField[];
+  type: 'default';
+}
+
+/**
+ * Parses an indieningsvereisten STTR and generates a best-effort form-js field
+ * scaffold from the uitv:uitvoeringsregels questionnaire in dmn:extensionElements.
+ */
+export function extractFormScaffoldFromSttr(sttrXml: string, formId: string): FormScaffold {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    isArray: (name) => ['uitv:uitvoeringsregel', 'uitv:optie'].includes(name),
+  });
+
+  const parsed = parser.parse(sttrXml);
+
+  const defs = parsed?.['dmn:definitions'] ?? parsed?.['definitions'] ?? {};
+  const ext = defs?.['dmn:extensionElements'] ?? {};
+  const regels: unknown[] =
+    ext?.['uitv:uitvoeringsregels']?.['uitv:uitvoeringsregel'] ?? [];
+
+  const components: FormScaffoldField[] = [];
+
+  for (const r of regels) {
+    const regel = r as Record<string, unknown>;
+    const id = (regel['@_id'] as string) ?? '';
+    const key = id.replace(/^uitv__/, '').replace(/[^a-zA-Z0-9_]/g, '_');
+
+    if (regel['uitv:vraag']) {
+      const vraag = regel['uitv:vraag'] as Record<string, unknown>;
+      const gegevensType = (vraag['uitv:gegevensType'] as string) ?? 'string';
+      const vraagTekst = (vraag['uitv:vraagTekst'] as string) ?? '';
+      const inputType = vraag['inter:inputType'] as string | undefined;
+
+      let fieldType: string;
+      let values: { label: string; value: string }[] | undefined;
+
+      if (gegevensType === 'boolean') {
+        fieldType = 'checkbox';
+      } else if (gegevensType === 'list') {
+        fieldType = 'select';
+        const opties = (vraag['uitv:opties'] as Record<string, unknown>)?.['uitv:optie'];
+        if (Array.isArray(opties)) {
+          values = opties.map((o: unknown) => {
+            const text = ((o as Record<string, unknown>)['uitv:optieText'] as string) ?? '';
+            return { label: text, value: text };
+          });
+        }
+      } else if (gegevensType === 'number') {
+        fieldType = 'number';
+      } else if (inputType === 'textarea') {
+        fieldType = 'textarea';
+      } else {
+        fieldType = 'textfield';
+      }
+
+      components.push({
+        id,
+        type: fieldType,
+        label: vraagTekst,
+        key,
+        ...(values ? { values } : {}),
+        validate: { required: false },
+      });
+    } else if (regel['uitv:bijlage']) {
+      // Attachment requirement — emit as a labelled textfield placeholder
+      const bijlageType =
+        ((regel['uitv:bijlage'] as Record<string, unknown>)['uitv:bijlageType'] as string) ?? '';
+      components.push({
+        id,
+        type: 'textfield',
+        label: `[Bijlage] ${bijlageType}`,
+        key,
+        validate: { required: false },
+      });
+    }
+    // uitv:geoVerwijzing — geo fields not representable in form-js, skip
+  }
+
+  return { schemaVersion: 17, id: formId, components, type: 'default' };
 }

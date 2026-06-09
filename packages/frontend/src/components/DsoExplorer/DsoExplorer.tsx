@@ -6,18 +6,24 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActiviteitenResult,
   BegrippenResult,
+  dmnDownloadUrl,
   DsoActiviteit,
   DsoActiviteitDetail,
   DsoBegrip,
   DsoEnv,
   DsoRegelbeheerobject,
+  DsoToepasbareRegel,
   DsoWerkzaamheidVersie,
+  fetchFormScaffold,
+  fetchToepasbareRegels,
   getActiviteitDetail,
   getActiviteiten,
   getActiviteitenByOin,
   getWerkzaamheidDetail,
   searchBegrippen,
+  sttrDownloadUrl,
   suggereerWerkzaamheden,
+  ToepasbareRegelsResult,
   urnFromHref,
   WerkzaamhedenZoekResult,
   zoekWerkzaamheden,
@@ -483,8 +489,12 @@ const WerkzaamhedenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 
 // ── Activities tab ───────────────────────────────────────────────────────────
 
-const TYPERING_META: Record<DsoRegelbeheerobject['typering'], { label: string; color: string }> = {
+const TYPERING_META: Record<string, { label: string; color: string }> = {
   indieningsvereisten: {
+    label: 'Submission requirements',
+    color: 'bg-blue-100 text-blue-700 border-blue-200',
+  },
+  Indieningsvereisten: {
     label: 'Submission requirements',
     color: 'bg-blue-100 text-blue-700 border-blue-200',
   },
@@ -492,7 +502,12 @@ const TYPERING_META: Record<DsoRegelbeheerobject['typering'], { label: string; c
     label: 'Decision criteria',
     color: 'bg-purple-100 text-purple-700 border-purple-200',
   },
+  Conclusie: {
+    label: 'Decision criteria',
+    color: 'bg-purple-100 text-purple-700 border-purple-200',
+  },
   maatregelen: { label: 'Measures', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  Maatregelen: { label: 'Measures', color: 'bg-amber-100 text-amber-700 border-amber-200' },
 };
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
@@ -503,6 +518,151 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
     {children}
   </div>
 );
+
+// ── Applicable Rules (STTR) ──────────────────────────────────────────────────
+
+const ApplicableRuleRow: React.FC<{
+  regel: DsoRegelbeheerobject;
+  env: DsoEnv;
+}> = ({ regel, env }) => {
+  const [result, setResult] = useState<ToepasbareRegelsResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [scaffoldLoading, setScaffoldLoading] = useState(false);
+  const [scaffoldError, setScaffoldError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!regel.functioneleStructuurRef) return;
+    setLoading(true);
+    setError(null);
+    fetchToepasbareRegels(regel.functioneleStructuurRef, env)
+      .then(setResult)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .finally(() => setLoading(false));
+  }, [regel.functioneleStructuurRef, env]);
+
+  const meta = TYPERING_META[regel.typering] ?? {
+    label: regel.typering,
+    color: 'bg-slate-100 text-slate-600 border-slate-200',
+  };
+
+  const handleDownloadScaffold = async (item: DsoToepasbareRegel) => {
+    setScaffoldLoading(true);
+    setScaffoldError(null);
+    try {
+      const scaffold = await fetchFormScaffold(item.identifier, `form-${item.identifier}`, env);
+      const blob = new Blob([JSON.stringify(scaffold, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `form-scaffold-${item.identifier}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setScaffoldError(e instanceof Error ? e.message : 'Scaffold generation failed');
+    } finally {
+      setScaffoldLoading(false);
+    }
+  };
+
+  return (
+    <div className="border border-slate-200 rounded-lg p-3 space-y-2 bg-slate-50">
+      <span
+        className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded border ${meta.color}`}
+      >
+        {meta.label}
+      </span>
+
+      {loading && (
+        <div className="flex items-center gap-1 text-xs text-slate-400">
+          <Loader2 size={11} className="animate-spin" />
+          Loading…
+        </div>
+      )}
+      {error && <p className="text-xs text-red-600">{error}</p>}
+
+      {result?.items.map((item, idx) => (
+        <div key={item.identifier ?? item.functioneleStructuurRef ?? idx} className="space-y-2">
+          <div className="text-xs text-slate-600 space-y-0.5">
+            {item.begindatum && (
+              <p>
+                <span className="text-slate-400">Valid from: </span>
+                {item.begindatum}
+              </p>
+            )}
+            {item.sttrVersie !== undefined && (
+              <p>
+                <span className="text-slate-400">STTR version: </span>
+                {item.sttrVersie}
+              </p>
+            )}
+            <p className="text-[10px] text-slate-300 font-mono">id: {item.identifier}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            <a
+              href={sttrDownloadUrl(item.identifier, env)}
+              download={`sttr-${item.identifier}.xml`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 py-1 text-[10px] bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-colors"
+            >
+              ↓ STTR
+            </a>
+            {regel.typering.toLowerCase() === 'conclusie' && (
+              <a
+                href={dmnDownloadUrl(item.identifier, env)}
+                download={`decision-${item.identifier}.dmn`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-1 text-[10px] bg-purple-50 border border-purple-200 text-purple-700 rounded hover:bg-purple-100 transition-colors"
+              >
+                ↓ Extract DMN
+              </a>
+            )}
+            {regel.typering.toLowerCase() === 'indieningsvereisten' && (
+              <button
+                onClick={() => handleDownloadScaffold(item)}
+                disabled={scaffoldLoading}
+                className="px-2 py-1 text-[10px] bg-blue-50 border border-blue-200 text-blue-700 rounded hover:bg-blue-100 disabled:opacity-50 transition-colors"
+              >
+                {scaffoldLoading ? '…' : '↓ Form scaffold'}
+              </button>
+            )}
+          </div>
+          {scaffoldError && <p className="text-[10px] text-red-600">{scaffoldError}</p>}
+        </div>
+      ))}
+
+      {!loading && !error && result?.items.length === 0 && (
+        <p className="text-xs text-slate-400 italic">No toepasbare regels found.</p>
+      )}
+    </div>
+  );
+};
+
+const ApplicableRulesSection: React.FC<{
+  regelBeheerObjecten: DsoRegelbeheerobject[];
+  env: DsoEnv;
+}> = ({ regelBeheerObjecten, env }) => {
+  const candidates = regelBeheerObjecten.filter(
+    (r) =>
+      r.functioneleStructuurRef &&
+      (r.typering.toLowerCase() === 'conclusie' ||
+        r.typering.toLowerCase() === 'indieningsvereisten')
+  );
+  if (candidates.length === 0) return null;
+
+  return (
+    <Section title={`Applicable rules (${candidates.length})`}>
+      <div className="space-y-2">
+        {candidates.map((r) => (
+          <ApplicableRuleRow key={r.functioneleStructuurRef ?? r.typering} regel={r} env={env} />
+        ))}
+      </div>
+    </Section>
+  );
+};
 
 const ActivityDetailPanel: React.FC<{
   urn: string;
@@ -674,6 +834,11 @@ const ActivityDetailPanel: React.FC<{
               <Section title="Rule types present">
                 <p className="text-xs text-slate-400 italic">None registered</p>
               </Section>
+            )}
+
+            {/* Applicable rules (STTR) */}
+            {detail.regelBeheerObjecten && detail.regelBeheerObjecten.length > 0 && (
+              <ApplicableRulesSection regelBeheerObjecten={detail.regelBeheerObjecten} env={env} />
             )}
 
             {/* Child activities */}

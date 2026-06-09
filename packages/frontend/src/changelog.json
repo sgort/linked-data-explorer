@@ -1,10 +1,31 @@
 {
   "versions": [
     {
-      "version": "1.9.2",
+      "version": "1.9.3",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "date": "June 9, 2026",
+      "sections": [
+        {
+          "icon": "🏛️",
+          "iconColor": "purple",
+          "title": "DSO Integration — Phase 2a + 4",
+          "items": [
+            "Activity Detail panel now shows an 'Applicable Rules' section listing toepasbare regels fetched live from the DSO Uitvoeren Gegevens API, grouped by rule type (Conclusie / Indieningsvereisten) with validity date and STTR version.",
+            "↓ STTR button downloads the raw STTR XML for any rule type.",
+            "↓ Extract DMN button (Conclusie only) extracts the embedded DMN decision table as a standalone .dmn file ready for import into LDE or deployment to Operaton.",
+            "↓ Form scaffold button (Indieningsvereisten only) generates a form-js JSON scaffold from the STTR questionnaire, mapping boolean questions to checkboxes, list questions to select fields with options, number questions to number fields, and attachment requirements to labelled textfields.",
+            "Added ronl:dsoActiviteitUrn extension on TreeFellingPermitSubProcess linking it to nl.imow-gm0995.activiteit.HoutopstandVellen (Gemeente Lelystad)."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.2",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "date": "June 9, 2026",
       "sections": [
         {

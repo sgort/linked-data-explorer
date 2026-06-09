@@ -25,9 +25,17 @@ export interface DsoActiviteit {
 }
 
 export interface DsoRegelbeheerobject {
-  urn: string;
+  urn?: string;
   omschrijving?: string;
-  typering: 'conclusie' | 'indieningsvereisten' | 'maatregelen';
+  // RTR API returns capitalized ("Conclusie"); accept both forms.
+  typering:
+    | 'conclusie'
+    | 'indieningsvereisten'
+    | 'maatregelen'
+    | 'Conclusie'
+    | 'Indieningsvereisten'
+    | 'Maatregelen';
+  functioneleStructuurRef?: string;
 }
 
 export interface DsoActiviteitDetail extends DsoActiviteit {
@@ -263,4 +271,64 @@ export async function getActiviteiten(
   if (datum) params.set('datum', datum);
   const raw = await get<Record<string, unknown>>(`/v1/dso/activiteiten?${params}`, env);
   return parseActiviteitenResult(raw);
+}
+
+// ---------------------------------------------------------------------------
+// Uitvoeren Gegevens API — Toepasbare Regels
+// ---------------------------------------------------------------------------
+
+export interface DsoToepasbareRegel {
+  identifier: number;
+  functioneleStructuurRef?: string;
+  begindatum?: string;
+  sttrVersie?: number;
+  oin?: string;
+  _links?: Record<string, { href: string }>;
+}
+
+export interface ToepasbareRegelsResult {
+  items: DsoToepasbareRegel[];
+}
+
+function parseToepasbareRegelsResult(raw: Record<string, unknown>): ToepasbareRegelsResult {
+  // HAL envelope: _embedded.toepasbareRegelsList or similar; fall back to array at root
+  const embedded = (raw as { _embedded?: Record<string, unknown> })._embedded;
+  const list: unknown =
+    embedded?.toepasbareRegelsList ?? embedded?.toepasbareRegels ?? (Array.isArray(raw) ? raw : []);
+  return { items: Array.isArray(list) ? (list as DsoToepasbareRegel[]) : [] };
+}
+
+export async function fetchToepasbareRegels(
+  functioneleStructuurRef: string,
+  env: DsoEnv = 'pre'
+): Promise<ToepasbareRegelsResult> {
+  const params = new URLSearchParams({ functioneleStructuurRef });
+  const raw = await get<Record<string, unknown>>(`/v1/dso/toepasbare-regels?${params}`, env);
+  return parseToepasbareRegelsResult(raw);
+}
+
+/** Returns a URL to download the raw STTR XML for a given toepasbare-regel identifier. */
+export function sttrDownloadUrl(identifier: number, env: DsoEnv): string {
+  return `${API_BASE}/v1/dso/toepasbare-regels/${identifier}/sttr${env === 'prod' ? '?env=prod' : ''}`;
+}
+
+/** Returns a URL to download the extracted DMN for a given toepasbare-regel identifier. */
+export function dmnDownloadUrl(identifier: number, env: DsoEnv): string {
+  return `${API_BASE}/v1/dso/toepasbare-regels/${identifier}/dmn${env === 'prod' ? '?env=prod' : ''}`;
+}
+
+export interface FormScaffold {
+  schemaVersion: number;
+  id: string;
+  components: unknown[];
+  type: string;
+}
+
+export async function fetchFormScaffold(
+  identifier: number,
+  formId: string,
+  env: DsoEnv = 'pre'
+): Promise<FormScaffold> {
+  const params = new URLSearchParams({ formId });
+  return get<FormScaffold>(`/v1/dso/toepasbare-regels/${identifier}/form-scaffold?${params}`, env);
 }

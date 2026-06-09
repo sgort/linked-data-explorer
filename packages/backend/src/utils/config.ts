@@ -85,6 +85,9 @@ export const config = {
     opvragenWerkzaamhedenBaseUrl:
       process.env.DSO_OPVRAGEN_WERKZAAMHEDEN_BASE_URL ||
       'https://service.pre.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/opvragenwerkzaamheden/v1',
+    uitvoerenGegevensBaseUrl:
+      process.env.DSO_UITVOEREN_GEGEVENS_BASE_URL ||
+      'https://service.pre.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/toepasbareregelsuitvoerengegevens/v1',
     apiKey: process.env.DSO_API_KEY || '',
     timeout: parseInt(process.env.DSO_TIMEOUT || '15000', 10),
   },
@@ -102,6 +105,9 @@ export const config = {
     opvragenWerkzaamhedenBaseUrl:
       process.env.DSO_OPVRAGEN_WERKZAAMHEDEN_BASE_URL_PROD ||
       'https://service.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/opvragenwerkzaamheden/v1',
+    uitvoerenGegevensBaseUrl:
+      process.env.DSO_UITVOEREN_GEGEVENS_BASE_URL_PROD ||
+      'https://service.omgevingswet.overheid.nl/publiek/toepasbare-regels/api/toepasbareregelsuitvoerengegevens/v1',
     apiKey: process.env.DSO_API_KEY_PROD || '',
   },
 

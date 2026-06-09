@@ -18,7 +18,7 @@
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
   example_awb_process: 4, // v4: organization=flevoland tagging
-  example_tree_felling: 5, // v5: organization=flevoland tagging
+  example_tree_felling: 6, // v6: ronl:dsoActiviteitUrn=nl.imow-gm0995.activiteit.HoutopstandVellen
   example_awb_zorgtoeslag: 3, // v3: organization=toeslagen tagging
   example_zorgtoeslag_provisional: 4, // v4: organization=toeslagen tagging
   example_zorgtoeslag_final: 4, // v4: organization=toeslagen tagging

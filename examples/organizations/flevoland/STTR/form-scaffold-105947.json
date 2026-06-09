@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 17,
+  "id": "form-105947",
+  "components": [
+    {
+      "id": "uitv__5acd1773-b81c-436f-a91e-d37546ad5e24",
+      "type": "select",
+      "label": "Wat wilt u gaan doen?",
+      "key": "5acd1773_b81c_436f_a91e_d37546ad5e24",
+      "values": [
+        {
+          "label": "Kappen",
+          "value": "Kappen"
+        },
+        {
+          "label": "Anders",
+          "value": "Anders"
+        }
+      ],
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "uitv__625483ff-2dfd-4e63-8c52-2773cf169211",
+      "type": "textarea",
+      "label": "Beschrijf  wat u wilt gaan doen.",
+      "key": "625483ff_2dfd_4e63_8c52_2773cf169211",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "uitv__06480753-bdb0-4d23-8fd7-8941fad930f2",
+      "type": "textfield",
+      "label": "Waarom wilt u de houtopstand onderhouden of weghalen?",
+      "key": "06480753_bdb0_4d23_8fd7_8941fad930f2",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "uitv__c1720883-89cf-47e5-97f0-36ef4d5fab05",
+      "type": "number",
+      "label": "Om hoeveel bomen gaat het?",
+      "key": "c1720883_89cf_47e5_97f0_36ef4d5fab05",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "uitv__2ebda717-baaf-4b56-8cc8-e8761d7ab632",
+      "type": "textarea",
+      "label": "Beschrijf om welke soort(en) het gaat.",
+      "key": "2ebda717_baaf_4b56_8cc8_e8761d7ab632",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "uitv__94af6398-3d9e-450b-bb64-12b1728fee00",
+      "type": "checkbox",
+      "label": "Bent u de eigenaar van de boom of houtopstand?",
+      "key": "94af6398_3d9e_450b_bb64_12b1728fee00",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "uitv__5f545924-6269-4f1b-b4e7-26c457e7fd31",
+      "type": "checkbox",
+      "label": "Stemt de eigenaar van de boom in met de kap?",
+      "key": "5f545924_6269_4f1b_b4e7_26c457e7fd31",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "uitv__9d5e992e-4e3f-429b-930c-0e9d69e997de",
+      "type": "textfield",
+      "label": "[Bijlage] Toestemming van de eigenaar",
+      "key": "9d5e992e_4e3f_429b_930c_0e9d69e997de",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "uitv__acbdb84c-54b5-4bd9-98b4-bf7e676bf3d4",
+      "type": "textfield",
+      "label": "[Bijlage] Situatietekening kappen",
+      "key": "acbdb84c_54b5_4bd9_98b4_bf7e676bf3d4",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "id": "uitv__82778bb0-6319-4d43-985e-d3d4c4ea2958",
+      "type": "textfield",
+      "label": "[Bijlage] Gegevens houtopstanden",
+      "key": "82778bb0_6319_4d43_985e_d3d4c4ea2958",
+      "validate": {
+        "required": false
+      }
+    }
+  ],
+  "type": "default"
+}
