@@ -11,7 +11,6 @@ import {
   DsoBegrip,
   DsoEnv,
   DsoRegelbeheerobject,
-  DsoWerkzaamheid,
   DsoWerkzaamheidVersie,
   getActiviteitDetail,
   getActiviteiten,
@@ -21,7 +20,6 @@ import {
   suggereerWerkzaamheden,
   urnFromHref,
   WerkzaamhedenZoekResult,
-  zoekActiviteiten,
   zoekWerkzaamheden,
 } from '../../services/dsoService';
 

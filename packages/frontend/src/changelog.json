@@ -1,10 +1,28 @@
 {
   "versions": [
     {
-      "version": "1.9.1",
+      "version": "1.9.2",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "date": "June 9, 2026",
+      "sections": [
+        {
+          "icon": "🔀",
+          "iconColor": "blue",
+          "title": "BPMN Modeler",
+          "items": [
+            "Uploaded BPMN processes that form a shell/subprocess pair are now automatically linked: a process with call-activity elements is classified as a shell, and any process whose BPMN process ID is targeted by a shell's call-activity is classified as its subprocess. The relationship is detected both on fresh imports and retroactively on startup, so previously uploaded standalone processes are reclassified without requiring a re-upload.",
+            "Removed two unused TypeScript imports (DsoWerkzaamheid, zoekActiviteiten) in DsoExplorer."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "date": "June 5, 2026",
       "sections": [
         {
