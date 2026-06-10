@@ -500,6 +500,29 @@ const WerkzaamhedenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 
 // ── Activities tab ───────────────────────────────────────────────────────────
 
+// Known authorities with human-readable names, keyed by OIN. Drives both the
+// location presets below and the organization label used when importing forms,
+// since the RTR API only returns the authority code (e.g. "GM0995"), not a name.
+const LOCATION_PRESETS = [
+  { label: 'Lelystad', oin: '00000001005024249000' },
+  { label: 'Flevoland', oin: '00000001006203243000' },
+] as const;
+
+/**
+ * Resolve a readable authority name for an activity's bestuursorgaan.
+ * Falls back to the bare code (organisatieType + organisatieCode) when the
+ * authority is not one of the known presets.
+ */
+function authorityLabel(bestuursorgaan?: {
+  oin: string;
+  organisatieType: string;
+  organisatieCode: string;
+}): string | undefined {
+  if (!bestuursorgaan) return undefined;
+  const preset = LOCATION_PRESETS.find((p) => p.oin === bestuursorgaan.oin);
+  return preset?.label ?? `${bestuursorgaan.organisatieType}${bestuursorgaan.organisatieCode}`;
+}
+
 const TYPERING_META: Record<string, { label: string; color: string }> = {
   indieningsvereisten: {
     label: 'Submission requirements',
@@ -927,11 +950,7 @@ const ActivityDetailPanel: React.FC<{
                 regelBeheerObjecten={detail.regelBeheerObjecten}
                 env={env}
                 activityName={detail.omschrijving ?? undefined}
-                organization={
-                  detail.bestuursorgaan
-                    ? `${detail.bestuursorgaan.organisatieType}${detail.bestuursorgaan.organisatieCode}`
-                    : undefined
-                }
+                organization={authorityLabel(detail.bestuursorgaan)}
               />
             )}
 
@@ -1015,10 +1034,7 @@ const ActiviteitRow: React.FC<{
 
 const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   // ── preset authorities ───────────────────────────────────────────────
-  const PRESETS = [
-    { label: 'Lelystad', oin: '00000001005024249000' },
-    { label: 'Flevoland', oin: '00000001006203243000' },
-  ] as const;
+  const PRESETS = LOCATION_PRESETS;
 
   const [datum, setDatum] = useState('');
   const [activeDatum, setActiveDatum] = useState<string | undefined>(undefined);
