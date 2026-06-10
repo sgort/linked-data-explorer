@@ -45,6 +45,9 @@ dist-ssr
 *.sw?
 .claudesync
 
+# Claude Code local config & per-machine memory (machine-specific, not portable)
+.claude/
+
 # flatten script & dir
 flatten_directory.sh
 flattened
