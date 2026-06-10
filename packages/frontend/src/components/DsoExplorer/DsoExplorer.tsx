@@ -936,6 +936,9 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   const [selectedUrn, setSelectedUrn] = useState<string | null>(null);
   const [urnInput, setUrnInput] = useState('');
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  // Client-side name filter — only meaningful when a location preset is fixed,
+  // since OIN mode loads the authority's full activity set in one call.
+  const [nameFilter, setNameFilter] = useState('');
 
   const toDsoDate = (iso: string) => {
     if (!iso) return undefined;
@@ -948,6 +951,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
       setLoading(true);
       setError(null);
       setOinMode(false);
+      setNameFilter('');
       try {
         const dsoDate = toDsoDate(d);
         const res = await getActiviteiten(dsoDate, p, env);
@@ -1003,6 +1007,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
     const isActive = activePreset === preset.label;
     setActivePreset(isActive ? null : preset.label);
     setSelectedUrn(null);
+    setNameFilter('');
     if (isActive) {
       setOinMode(false);
       setDatum('');
@@ -1022,6 +1027,14 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
     setSelectedUrn(null);
     load(datum, p);
   };
+
+  // In OIN mode the full authority set is loaded, so filter by name client-side.
+  const filteredItems =
+    oinMode && nameFilter.trim()
+      ? (result?.items ?? []).filter((a) =>
+          (a.omschrijving ?? a.urn).toLowerCase().includes(nameFilter.trim().toLowerCase())
+        )
+      : (result?.items ?? []);
 
   return (
     <div className="flex flex-col h-full">
@@ -1072,6 +1085,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
                   setOinMode(false);
                   setSelectedUrn(null);
                   setDatum('');
+                  setNameFilter('');
                   load('', 1);
                 }}
                 className="ml-auto text-[10px] text-slate-400 hover:text-slate-600 underline transition-colors"
@@ -1081,6 +1095,34 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
             </>
           )}
         </div>
+        {/* Row 2b: name search — only when a location is fixed */}
+        {oinMode && (
+          <div className="px-3 py-2 flex gap-2 items-center border-b border-slate-100">
+            <div className="relative flex-1">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                value={nameFilter}
+                onChange={(e) => {
+                  setNameFilter(e.target.value);
+                  setSelectedUrn(null);
+                }}
+                placeholder={`Filter ${activePreset ?? 'location'} activities by name…`}
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+            {nameFilter && (
+              <button
+                onClick={() => setNameFilter('')}
+                className="text-[10px] text-slate-400 hover:text-slate-600 underline transition-colors shrink-0"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
         {/* Row 3: URN paste */}
         <div className="px-3 py-2 flex gap-2 items-center">
           <input
@@ -1119,16 +1161,18 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
               {error}
             </div>
           )}
-          {!loading && !error && result && result.items.length === 0 && (
+          {!loading && !error && result && filteredItems.length === 0 && (
             <p className="text-center text-slate-400 text-sm py-12">
-              {oinMode
-                ? 'No activities found for this authority on the selected date.'
-                : 'No activities found.'}
+              {oinMode && nameFilter.trim()
+                ? `No activities matching “${nameFilter.trim()}”.`
+                : oinMode
+                  ? 'No activities found for this authority on the selected date.'
+                  : 'No activities found.'}
             </p>
           )}
           {!loading &&
             !error &&
-            result?.items.map((a) => (
+            filteredItems.map((a) => (
               <ActiviteitRow
                 key={a.urn}
                 act={a}
@@ -1154,24 +1198,31 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
       {result && (result.items.length > 0 || page > 1) && (
         <div className="p-3 border-t border-slate-200 bg-white flex items-center justify-between flex-shrink-0">
           <span className="text-xs text-slate-500">
-            Page {page} · {result.items.length} items
+            {oinMode
+              ? nameFilter.trim()
+                ? `${filteredItems.length} of ${result.items.length} activities`
+                : `${result.items.length} activities`
+              : `Page ${page} · ${result.items.length} items`}
           </span>
-          <div className="flex gap-1">
-            <button
-              onClick={() => goPage(page - 1)}
-              disabled={page <= 1 || loading}
-              className="p-1.5 rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <button
-              onClick={() => goPage(page + 1)}
-              disabled={!result.hasNext || loading}
-              className="p-1.5 rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
+          {/* OIN mode loads the full set in one call — no pagination */}
+          {!oinMode && (
+            <div className="flex gap-1">
+              <button
+                onClick={() => goPage(page - 1)}
+                disabled={page <= 1 || loading}
+                className="p-1.5 rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                onClick={() => goPage(page + 1)}
+                disabled={!result.hasNext || loading}
+                className="p-1.5 rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

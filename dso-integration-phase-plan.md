@@ -129,6 +129,14 @@ The questionnaire is extracted from `uitv:uitvoeringsregels`, not from the decis
 - Action buttons per entry (see Phase 4)
 - Supported for `Conclusie` and `Indieningsvereisten`; `Maatregelen` displayed when present, no action buttons yet
 
+**Step 2d — Activities tab name search (location-scoped) ✅ Done**
+
+- Fixing a location preset (Lelystad / Flevoland) loads that authority's full activity set in one `activiteiten/_zoek` call (`pageSize=200`; the API caps `size` to the actual count — Lelystad 136, Flevoland 50)
+- A name search box appears only when a location is fixed, live-filtering the loaded list by `omschrijving` (case-insensitive substring) — purely client-side, no extra API calls
+- Solves the problem of finding e.g. `nl.imow-gm0995.activiteit.HoutopstandVellen` ("Boom kappen of houtopstand vellen") without walking the activity hierarchy
+- Pagination arrows hidden in OIN mode (single full load); footer shows `N of M activities` when filtering
+- The unscoped `/activiteiten` endpoint (date-only, large, paginated) is deliberately not wired to this search
+
 **Step 2b — Works tab → Applicable Rules shortcut ⏳ Pending**
 
 - Each werkzaamheid result carries its own `functioneleStructuurRef` — wire a "View applicable rules" action that queries the Uitvoeren Gegevens API without navigating through the activity hierarchy
@@ -192,6 +200,7 @@ The questionnaire is extracted from `uitv:uitvoeringsregels`, not from the decis
 | `ronl:dsoActiviteitUrn` on BPMN subprocess with live verification | ✅ Live |
 | BPMN shell/subprocess auto-detection on import and startup | ✅ Live |
 | Applicable Rules panel (Phase 2a) | ✅ Live |
+| Activities tab name search (location-scoped, Phase 2d) | ✅ Live |
 | ↓ STTR download (conclusie + indieningsvereisten) | ✅ Live |
 | ↓ Extract DMN (conclusie) | ✅ Live |
 | ↓ Form scaffold (indieningsvereisten) | ✅ Live |

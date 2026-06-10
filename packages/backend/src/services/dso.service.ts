@@ -100,7 +100,9 @@ export async function getActiviteitenByOin(
 
   const params = new URLSearchParams();
   params.set('page', '1');
-  params.set('pageSize', '100');
+  // Full set in one call so the Activities tab can filter client-side.
+  // The API caps `size` to the actual count, so this never over-fetches.
+  params.set('pageSize', '200');
 
   const body = {
     datum: effectiveDatum,
