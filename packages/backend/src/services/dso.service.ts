@@ -436,8 +436,7 @@ export function extractFormScaffoldFromSttr(sttrXml: string, formId: string): Fo
 
   const defs = parsed?.['dmn:definitions'] ?? parsed?.['definitions'] ?? {};
   const ext = defs?.['dmn:extensionElements'] ?? {};
-  const regels: unknown[] =
-    ext?.['uitv:uitvoeringsregels']?.['uitv:uitvoeringsregel'] ?? [];
+  const regels: unknown[] = ext?.['uitv:uitvoeringsregels']?.['uitv:uitvoeringsregel'] ?? [];
 
   const components: FormScaffoldField[] = [];
 
