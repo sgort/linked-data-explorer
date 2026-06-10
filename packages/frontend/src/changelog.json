@@ -1,10 +1,29 @@
 {
   "versions": [
     {
-      "version": "1.9.3",
+      "version": "1.9.4",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "date": "June 10, 2026",
+      "sections": [
+        {
+          "icon": "🏛️",
+          "iconColor": "purple",
+          "title": "DSO Integration — Phase 2d + 4.2",
+          "items": [
+            "Activities tab now supports name search: fixing a location (Lelystad / Flevoland) loads that authority's full activity set in one call and reveals a search box that live-filters by name, so activities like 'Boom kappen of houtopstand vellen' are findable without walking the hierarchy.",
+            "↓ Import into LDE button (Indieningsvereisten only) saves the generated form-js scaffold straight into the Form Editor as a draft, named after the activity and tagged with the authority — no manual download/import step needed.",
+            "Imported forms are now tagged with the readable authority name (e.g. 'Lelystad') instead of the bare RTR code (GM0995), falling back to the code for authorities outside the known presets."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.3",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "date": "June 9, 2026",
       "sections": [
         {
