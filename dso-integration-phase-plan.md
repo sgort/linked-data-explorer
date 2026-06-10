@@ -161,7 +161,11 @@ The questionnaire is extracted from `uitv:uitvoeringsregels`, not from the decis
 - Backend route `GET /v1/dso/toepasbare-regels/:id/dmn`
 - Extracts `<dmn:definitions>...</dmn:definitions>` from the STTR and returns it as a standalone `.dmn` file
 - ↓ Extract DMN button in the Applicable Rules panel (Conclusie entries only)
-- Next: "Import into LDE" button to register the DMN as a new asset linked to the subprocess
+- **"Import into LDE" is blocked on an architectural decision** ⏳ — unlike forms, DMNs have no local asset store. The DMN picker (`DmnTemplateSelector`) is populated from **TriplyDB via SPARQL** (`sparqlService.getAllDmns`) and DMN XML is fetched from **Operaton** by identifier; there is no `upsertDmn`/`POST /v1/dmns`. So an extracted DMN has nowhere to "import" to that would surface it in the picker. Options, increasing cost:
+  - **A — Deploy to Operaton:** executable + referenceable via `camunda:decisionRef`, but won't appear in the SPARQL-sourced dropdown
+  - **B — Validate first:** wire `POST /v1/dmns/validate` to show RONL-layer issues before deploy; keep download
+  - **C — Local DMN asset store:** new Postgres table + routes, merged into the DMN list alongside SPARQL results (makes DSO DMNs first-class LDE assets)
+  - **Decision: deferred.** DMN remains download-only until the direction is chosen.
 
 **Step 4.2 — Form scaffold from indieningsvereisten STTR ✅ Done (v1.9.3)**
 
@@ -169,7 +173,7 @@ The questionnaire is extracted from `uitv:uitvoeringsregels`, not from the decis
 - Parses `uitv:uitvoeringsregels` from `dmn:extensionElements`, maps questions to form-js field types
 - ↓ Form scaffold button in the Applicable Rules panel (Indieningsvereisten entries only)
 - Output is a ready-to-use form-js JSON schema
-- Next: "Import into LDE" button to register the form as a new asset
+- ✅ **"Import into LDE" button** — saves the scaffold straight into the LDE form store via `FormService.saveForm` (localStorage + `POST /v1/assets/forms`), stamped with the execution-platform metadata the editor/Operaton deploy expect. Appears in the Form Editor as a `wip` draft named `<activity> — Submission requirements`, tagged with the authority as organization. Unlike the DMN side, forms already have a local asset store, so no backend changes were needed.
 
 **Step 4.3 — Document template from maatregelen STTR ⏳ Pending**
 
@@ -207,8 +211,8 @@ The questionnaire is extracted from `uitv:uitvoeringsregels`, not from the decis
 | Werkzaamheid keywords + logical relations | ⏳ Pending (`_expandScope` enum) |
 | Works tab → Applicable Rules shortcut (Phase 2b) | ⏳ Pending |
 | Rule type completeness check (Phase 2c) | ⏳ Pending |
-| Import DMN into LDE from STTR | ⏳ Pending |
-| Import form scaffold into LDE from STTR | ⏳ Pending |
+| Import DMN into LDE from STTR | ⏳ Blocked (no local DMN store — A/B/C decision deferred) |
+| Import form scaffold into LDE from STTR | ✅ Live |
 | Maatregelen → document template scaffold (Phase 4.3) | ⏳ Pending |
 | BPMN subprocess scaffold (Phase 4.4) | ⏳ Pending |
 | Deploy bundle to Operaton (Phase 5) | ⏳ Pending |

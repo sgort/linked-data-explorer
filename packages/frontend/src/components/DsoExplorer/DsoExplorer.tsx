@@ -1,6 +1,15 @@
 // packages/frontend/src/components/DsoExplorer/DsoExplorer.tsx
 
-import { BookOpen, ChevronLeft, ChevronRight, Loader2, Search, TreePine } from 'lucide-react';
+import {
+  BookOpen,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Loader2,
+  Search,
+  TreePine,
+} from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
@@ -28,6 +37,8 @@ import {
   WerkzaamhedenZoekResult,
   zoekWerkzaamheden,
 } from '../../services/dsoService';
+import { FormService } from '../../services/formService';
+import { FormSchema } from '../../types';
 
 type Tab = 'begrippen' | 'werkzaamheden' | 'activiteiten';
 
@@ -524,12 +535,17 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 const ApplicableRuleRow: React.FC<{
   regel: DsoRegelbeheerobject;
   env: DsoEnv;
-}> = ({ regel, env }) => {
+  activityName?: string;
+  organization?: string;
+}> = ({ regel, env, activityName, organization }) => {
   const [result, setResult] = useState<ToepasbareRegelsResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scaffoldLoading, setScaffoldLoading] = useState(false);
   const [scaffoldError, setScaffoldError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!regel.functioneleStructuurRef) return;
@@ -562,6 +578,43 @@ const ApplicableRuleRow: React.FC<{
       setScaffoldError(e instanceof Error ? e.message : 'Scaffold generation failed');
     } finally {
       setScaffoldLoading(false);
+    }
+  };
+
+  // Import the generated scaffold straight into the LDE form store so it shows
+  // up in the Form Editor. Mirrors FormEditor.handleImportForm: the DSO scaffold
+  // is already a form-js schema, we just stamp the execution-platform metadata
+  // the editor and Operaton deploy expect (the scaffold omits it).
+  const handleImportScaffold = async (item: DsoToepasbareRegel) => {
+    setImporting(true);
+    setImportError(null);
+    try {
+      const scaffold = await fetchFormScaffold(item.identifier, `form-${item.identifier}`, env);
+      const id = `form_dso_${item.identifier}`;
+      const now = new Date().toISOString();
+      const newForm: FormSchema = {
+        id,
+        name: activityName
+          ? `${activityName} — Submission requirements`
+          : `DSO form ${item.identifier}`,
+        schema: {
+          ...scaffold,
+          id,
+          executionPlatform: 'Camunda Platform',
+          executionPlatformVersion: '7.21.0',
+        },
+        createdAt: now,
+        updatedAt: now,
+        status: 'wip',
+        language: 'nl',
+        organization,
+      };
+      FormService.saveForm(newForm);
+      setImported(true);
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : 'Import failed');
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -621,16 +674,40 @@ const ApplicableRuleRow: React.FC<{
               </a>
             )}
             {regel.typering.toLowerCase() === 'indieningsvereisten' && (
-              <button
-                onClick={() => handleDownloadScaffold(item)}
-                disabled={scaffoldLoading}
-                className="px-2 py-1 text-[10px] bg-blue-50 border border-blue-200 text-blue-700 rounded hover:bg-blue-100 disabled:opacity-50 transition-colors"
-              >
-                {scaffoldLoading ? '…' : '↓ Form scaffold'}
-              </button>
+              <>
+                <button
+                  onClick={() => handleDownloadScaffold(item)}
+                  disabled={scaffoldLoading}
+                  className="px-2 py-1 text-[10px] bg-blue-50 border border-blue-200 text-blue-700 rounded hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                >
+                  {scaffoldLoading ? '…' : '↓ Form scaffold'}
+                </button>
+                <button
+                  onClick={() => handleImportScaffold(item)}
+                  disabled={importing || imported}
+                  className="px-2 py-1 text-[10px] inline-flex items-center gap-1 bg-blue-600 border border-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  title="Save as a new form in the LDE Form Editor"
+                >
+                  {imported ? (
+                    <>
+                      <Check size={11} /> Imported
+                    </>
+                  ) : importing ? (
+                    '…'
+                  ) : (
+                    <>
+                      <Download size={11} /> Import into LDE
+                    </>
+                  )}
+                </button>
+              </>
             )}
           </div>
           {scaffoldError && <p className="text-[10px] text-red-600">{scaffoldError}</p>}
+          {importError && <p className="text-[10px] text-red-600">{importError}</p>}
+          {imported && (
+            <p className="text-[10px] text-green-600">Saved to Form Editor as a draft.</p>
+          )}
         </div>
       ))}
 
@@ -644,7 +721,9 @@ const ApplicableRuleRow: React.FC<{
 const ApplicableRulesSection: React.FC<{
   regelBeheerObjecten: DsoRegelbeheerobject[];
   env: DsoEnv;
-}> = ({ regelBeheerObjecten, env }) => {
+  activityName?: string;
+  organization?: string;
+}> = ({ regelBeheerObjecten, env, activityName, organization }) => {
   const candidates = regelBeheerObjecten.filter(
     (r) =>
       r.functioneleStructuurRef &&
@@ -657,7 +736,13 @@ const ApplicableRulesSection: React.FC<{
     <Section title={`Applicable rules (${candidates.length})`}>
       <div className="space-y-2">
         {candidates.map((r) => (
-          <ApplicableRuleRow key={r.functioneleStructuurRef ?? r.typering} regel={r} env={env} />
+          <ApplicableRuleRow
+            key={r.functioneleStructuurRef ?? r.typering}
+            regel={r}
+            env={env}
+            activityName={activityName}
+            organization={organization}
+          />
         ))}
       </div>
     </Section>
@@ -838,7 +923,16 @@ const ActivityDetailPanel: React.FC<{
 
             {/* Applicable rules (STTR) */}
             {detail.regelBeheerObjecten && detail.regelBeheerObjecten.length > 0 && (
-              <ApplicableRulesSection regelBeheerObjecten={detail.regelBeheerObjecten} env={env} />
+              <ApplicableRulesSection
+                regelBeheerObjecten={detail.regelBeheerObjecten}
+                env={env}
+                activityName={detail.omschrijving ?? undefined}
+                organization={
+                  detail.bestuursorgaan
+                    ? `${detail.bestuursorgaan.organisatieType}${detail.bestuursorgaan.organisatieCode}`
+                    : undefined
+                }
+              />
             )}
 
             {/* Child activities */}
