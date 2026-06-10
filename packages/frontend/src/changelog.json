@@ -16,6 +16,16 @@
             "↓ Import into LDE button (Indieningsvereisten only) saves the generated form-js scaffold straight into the Form Editor as a draft, named after the activity and tagged with the authority — no manual download/import step needed.",
             "Imported forms are now tagged with the readable authority name (e.g. 'Lelystad') instead of the bare RTR code (GM0995), falling back to the code for authorities outside the known presets."
           ]
+        },
+        {
+          "icon": "⚖️",
+          "iconColor": "purple",
+          "title": "DSO Integration — DMN publish handoff (Phase 4.1)",
+          "items": [
+            "Publish via CPSV Editor button (Conclusie only) opens the CPSV Editor with a deep-link to publish the extracted DMN to TriplyDB, where the LDE DMN picker can consume it — no local DMN store needed.",
+            "Extracted DMNs are now normalized to deploy and evaluate on Operaton: DMN 1.2 is upgraded to 1.3, missing input ids are added, variable names are made FEEL-safe (hyphens/spaces broke evaluation), and output columns get an explicit typeRef.",
+            "Verified end-to-end against Operaton: the normalized HoutopstandVellen decision deploys (all 7 decisions) and the root decision evaluates without the previous FEEL error."
+          ]
         }
       ]
     },

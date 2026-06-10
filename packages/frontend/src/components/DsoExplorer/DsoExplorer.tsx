@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  ExternalLink,
   Loader2,
   Search,
   TreePine,
@@ -523,6 +524,44 @@ function authorityLabel(bestuursorgaan?: {
   return preset?.label ?? `${bestuursorgaan.organisatieType}${bestuursorgaan.organisatieCode}`;
 }
 
+// ── DSO → DMN publish handoff (CPSV Editor) ──────────────────────────────────
+// LDE extracts a DMN from the conclusie STTR but has no local DMN store: the DMN
+// picker reads from TriplyDB via SPARQL. The CPSV Editor already deploys DMNs to
+// Operaton and publishes their RDF to that same TriplyDB graph, so we hand the
+// extracted DMN off to it rather than duplicating that pipeline here.
+const CPSV_EDITOR_URL = import.meta.env.VITE_CPSV_EDITOR_URL || 'http://localhost:3002';
+
+/**
+ * Build the CPSV Editor deep-link for publishing a DSO-extracted DMN.
+ *
+ * Contract (consumed by the CPSV Editor, separate codebase):
+ *   <CPSV_EDITOR_URL>/?dsoImport=dmn&dmnId=<id>&env=<pre|prod>&...metadata
+ *
+ * Only identifiers + DSO metadata travel in the URL. The CPSV Editor fetches the
+ * DMN XML itself from the shared LDE backend
+ * (GET /v1/dso/toepasbare-regels/{dmnId}/dmn?env=<env>), so the large DMN payload
+ * never goes through the query string.
+ */
+function buildCpsvEditorImportUrl(params: {
+  dmnId: number;
+  env: DsoEnv;
+  activityName?: string;
+  authority?: string;
+  activityUrn?: string;
+  functioneleStructuurRef?: string;
+}): string {
+  const q = new URLSearchParams({
+    dsoImport: 'dmn',
+    dmnId: String(params.dmnId),
+    env: params.env,
+  });
+  if (params.activityName) q.set('activityName', params.activityName);
+  if (params.authority) q.set('authority', params.authority);
+  if (params.activityUrn) q.set('activityUrn', params.activityUrn);
+  if (params.functioneleStructuurRef) q.set('fsRef', params.functioneleStructuurRef);
+  return `${CPSV_EDITOR_URL.replace(/\/$/, '')}/?${q.toString()}`;
+}
+
 const TYPERING_META: Record<string, { label: string; color: string }> = {
   indieningsvereisten: {
     label: 'Submission requirements',
@@ -560,7 +599,8 @@ const ApplicableRuleRow: React.FC<{
   env: DsoEnv;
   activityName?: string;
   organization?: string;
-}> = ({ regel, env, activityName, organization }) => {
+  activityUrn?: string;
+}> = ({ regel, env, activityName, organization, activityUrn }) => {
   const [result, setResult] = useState<ToepasbareRegelsResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -686,15 +726,33 @@ const ApplicableRuleRow: React.FC<{
               ↓ STTR
             </a>
             {regel.typering.toLowerCase() === 'conclusie' && (
-              <a
-                href={dmnDownloadUrl(item.identifier, env)}
-                download={`decision-${item.identifier}.dmn`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 py-1 text-[10px] bg-purple-50 border border-purple-200 text-purple-700 rounded hover:bg-purple-100 transition-colors"
-              >
-                ↓ Extract DMN
-              </a>
+              <>
+                <a
+                  href={dmnDownloadUrl(item.identifier, env)}
+                  download={`decision-${item.identifier}.dmn`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1 text-[10px] bg-purple-50 border border-purple-200 text-purple-700 rounded hover:bg-purple-100 transition-colors"
+                >
+                  ↓ Extract DMN
+                </a>
+                <a
+                  href={buildCpsvEditorImportUrl({
+                    dmnId: item.identifier,
+                    env,
+                    activityName,
+                    authority: organization,
+                    activityUrn,
+                    functioneleStructuurRef: regel.functioneleStructuurRef,
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1 text-[10px] inline-flex items-center gap-1 bg-purple-600 border border-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                  title="Open in the CPSV Editor to deploy this DMN to Operaton and publish it to TriplyDB, where the LDE DMN picker can consume it"
+                >
+                  <ExternalLink size={11} /> Publish via CPSV Editor
+                </a>
+              </>
             )}
             {regel.typering.toLowerCase() === 'indieningsvereisten' && (
               <>
@@ -746,7 +804,8 @@ const ApplicableRulesSection: React.FC<{
   env: DsoEnv;
   activityName?: string;
   organization?: string;
-}> = ({ regelBeheerObjecten, env, activityName, organization }) => {
+  activityUrn?: string;
+}> = ({ regelBeheerObjecten, env, activityName, organization, activityUrn }) => {
   const candidates = regelBeheerObjecten.filter(
     (r) =>
       r.functioneleStructuurRef &&
@@ -765,6 +824,7 @@ const ApplicableRulesSection: React.FC<{
             env={env}
             activityName={activityName}
             organization={organization}
+            activityUrn={activityUrn}
           />
         ))}
       </div>
@@ -951,6 +1011,7 @@ const ActivityDetailPanel: React.FC<{
                 env={env}
                 activityName={detail.omschrijving ?? undefined}
                 organization={authorityLabel(detail.bestuursorgaan)}
+                activityUrn={detail.urn}
               />
             )}
 

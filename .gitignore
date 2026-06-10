@@ -48,6 +48,9 @@ dist-ssr
 # Claude Code local config & per-machine memory (machine-specific, not portable)
 .claude/
 
+# Local env overrides (committed envs are .env.development / .acceptance / .production)
+.env
+
 # flatten script & dir
 flatten_directory.sh
 flattened
