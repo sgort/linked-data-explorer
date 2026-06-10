@@ -70,7 +70,7 @@ Content:
 - `dmn:inputData` elements — one per `uitvoeringsregel`, typed (boolean, string, number)
 - `dmn:decision` elements — full decision tables implementing the check logic
 
-The file **is** a deployable DMN. "Extract DMN" returns the full `<dmn:definitions>` element as a standalone `.dmn` file, which can be imported into LDE or deployed to Operaton directly.
+The file is **structurally** a DMN but is **not deployable as-extracted** — the Sogelink STTR Builder emits DMN 1.2 with `<input>` elements lacking ids, which Operaton refuses. "Extract DMN" returns the full `<dmn:definitions>` element normalized for Operaton (DMN 1.3 + input ids — see Phase 4.1); the deployer still adds `camunda:historyTimeToLive`.
 
 ### indieningsvereisten STTR (identifier 105947)
 
@@ -161,11 +161,37 @@ The questionnaire is extracted from `uitv:uitvoeringsregels`, not from the decis
 - Backend route `GET /v1/dso/toepasbare-regels/:id/dmn`
 - Extracts `<dmn:definitions>...</dmn:definitions>` from the STTR and returns it as a standalone `.dmn` file
 - ↓ Extract DMN button in the Applicable Rules panel (Conclusie entries only)
-- **"Import into LDE" is blocked on an architectural decision** ⏳ — unlike forms, DMNs have no local asset store. The DMN picker (`DmnTemplateSelector`) is populated from **TriplyDB via SPARQL** (`sparqlService.getAllDmns`) and DMN XML is fetched from **Operaton** by identifier; there is no `upsertDmn`/`POST /v1/dmns`. So an extracted DMN has nowhere to "import" to that would surface it in the picker. Options, increasing cost:
-  - **A — Deploy to Operaton:** executable + referenceable via `camunda:decisionRef`, but won't appear in the SPARQL-sourced dropdown
-  - **B — Validate first:** wire `POST /v1/dmns/validate` to show RONL-layer issues before deploy; keep download
-  - **C — Local DMN asset store:** new Postgres table + routes, merged into the DMN list alongside SPARQL results (makes DSO DMNs first-class LDE assets)
-  - **Decision: deferred.** DMN remains download-only until the direction is chosen.
+
+**Operaton deploy + eval normalization (`normalizeDmnForOperaton` in `dso.service.ts`)** — verified against `operaton.open-regels.nl` (engine `1.0.0`). A raw STTR DMN both fails to *deploy* (`ENGINE-22004 Unable to transform DMN resource`) and, once deployable, fails to *evaluate*. Fixes and the LDE/CPSV split:
+
+- ✅ **#1 DMN 1.2 → 1.3 (LDE):** the engine only transforms DMN 1.3, so the four spec namespaces `…/20180521/…` → `…/20191111/…` (incl. http→https). DSO target namespace untouched.
+- ✅ **#2 Missing input ids (LDE):** STTR `<input>` / `<inputExpression>` have no `id` (rejected by the engine); a stable id is injected where absent.
+- ⏳ **#3 `camunda:historyTimeToLive` (CPSV Editor):** this Operaton enforces HTTL at deploy. It is a deployment policy (TTL value is the org's choice), added by the deployer — the CPSV Editor — not by extraction.
+- ✅ **#4 FEEL-safe variable names (LDE):** the STTR names variables with hyphenated GUIDs (`uitv__<guid>`) and spaces (`Boom kappen … _cross`). FEEL reads `-` as subtraction and spaces as separators, so the DMN deploys but **fails to evaluate** (`Exception while evaluating decision`). `sanitizeFeelNames` renames every `<variable>` name to a FEEL-safe identifier and rewrites the exact `<inputExpression>` references; rule logic and output value literals are untouched. This is also the root cause of the validator's INT-007 warnings.
+- ✅ **BIZ-004 output typeRef (LDE):** untyped `<output>` columns get the type of their decision's result `<variable>` (default `string`).
+- Ruled out (not causes of deploy failure): `outputLabel` on decisionTable.
+- Verified: STTR 105946 → after #1+#2+#4+BIZ-004 (and #3 added at deploy) deploys all 7 decisions **and** the root decision evaluates with HTTP 200 (previously a 500 FEEL exception); a minimal `cleanVar` vs `uitv__…-…` test isolated hyphens as the eval breaker.
+- **"Import into LDE" — decided: publish via the CPSV Editor → TriplyDB.** Unlike forms, DMNs have no local asset store: the DMN picker (`DmnTemplateSelector`) is populated from **TriplyDB via SPARQL** (`sparqlService.getAllDmns`) and DMN XML is fetched from **Operaton** by identifier; there is no `upsertDmn`/`POST /v1/dmns`. Rather than duplicate a publish pipeline in LDE, the extracted DMN is handed to the **CPSV Editor** (`ttl-editor`, separate codebase), which already (a) deploys DMN XML to Operaton (`/engine-rest/deployment/create`) and (b) publishes the DMN's RDF to the same TriplyDB graph LDE reads. Once published, the DMN appears in LDE's picker automatically — no LDE-side store required.
+  - **RDF contract** a DMN must satisfy to appear in LDE (`sparql.service.ts` `getAllDmns` + `ttl-editor` `ttlGenerator.generateDmnSection`): a node `a cprmv:DecisionModel` with `dct:identifier` (→ `camunda:decisionRef`) and `dct:title` required; `cprmv:implements <cpsv:PublicService>`, `cprmv:deploymentId`, `cprmv:deployedAt` expected. Publishing is service-centric — the DMN rides along with a `cpsv:PublicService` definition.
+  - **DSO → CPSV-AP mapping:** activity `omschrijving` → PublicService title; `bestuursorgaan` (via `authorityLabel`) → competent authority; primary decision key in the extracted DMN → `dct:identifier`; `functioneleStructuurRef` → provenance.
+
+**Step 4.1b — DSO → CPSV Editor handoff deep-link ✅ Done (LDE side)**
+
+- "Publish via CPSV Editor" button on Conclusie entries in the Applicable Rules panel, alongside ↓ Extract DMN
+- Opens the CPSV Editor with a deep-link carrying identifiers + DSO metadata; the DMN XML is **not** in the URL — the CPSV Editor fetches it from the shared LDE backend
+- **Deep-link contract** (the interface the CPSV Editor chat must implement):
+  ```
+  <VITE_CPSV_EDITOR_URL>/?dsoImport=dmn
+      &dmnId=<toepasbareRegel identifier, e.g. 105946>
+      &env=<pre|prod>
+      &activityName=<omschrijving>
+      &authority=<resolved authority label, e.g. Lelystad>
+      &activityUrn=<nl.imow-…>
+      &fsRef=<functioneleStructuurRef>
+  ```
+  - CPSV Editor fetches DMN XML from: `GET <backend>/v1/dso/toepasbare-regels/<dmnId>/dmn?env=<env>` (same backend both apps already share via `REACT_APP_BACKEND_URL` / `VITE_API_BASE_URL`)
+  - `VITE_CPSV_EDITOR_URL` configured per environment (dev `http://localhost:3002`, acc `https://acc.cpsv-editor.open-regels.nl`, prod `https://cpsv-editor.open-regels.nl`)
+- **Pending (CPSV Editor chat):** consume the `dsoImport=dmn` params — fetch the DMN, prefill DMNTab + Service/Organization tabs from the DSO metadata, then deploy + publish through the existing pipeline.
 
 **Step 4.2 — Form scaffold from indieningsvereisten STTR ✅ Done (v1.9.3)**
 
@@ -211,8 +237,9 @@ The questionnaire is extracted from `uitv:uitvoeringsregels`, not from the decis
 | Werkzaamheid keywords + logical relations | ⏳ Pending (`_expandScope` enum) |
 | Works tab → Applicable Rules shortcut (Phase 2b) | ⏳ Pending |
 | Rule type completeness check (Phase 2c) | ⏳ Pending |
-| Import DMN into LDE from STTR | ⏳ Blocked (no local DMN store — A/B/C decision deferred) |
 | Import form scaffold into LDE from STTR | ✅ Live |
+| DMN → CPSV Editor publish handoff deep-link (Phase 4.1b, LDE side) | ✅ Live |
+| DMN handoff consumed in CPSV Editor (fetch + prefill + publish) | ⏳ Pending (CPSV Editor chat) |
 | Maatregelen → document template scaffold (Phase 4.3) | ⏳ Pending |
 | BPMN subprocess scaffold (Phase 4.4) | ⏳ Pending |
 | Deploy bundle to Operaton (Phase 5) | ⏳ Pending |

@@ -393,8 +393,147 @@ export async function getSttrBestand(id: string, env: DsoEnv = 'pre'): Promise<s
 // ---------------------------------------------------------------------------
 
 /**
+ * Convert an arbitrary STTR variable name into a FEEL-safe identifier.
+ * FEEL treats `-` as subtraction and whitespace as token separators, so the
+ * STTR's hyphenated GUID names (`uitv__<guid>`) and spaced names
+ * (`Boom kappen … _cross`) are not resolvable as variable references. Mapping
+ * every non-`[A-Za-z0-9_]` char to `_` yields a usable identifier.
+ */
+function toFeelName(name: string): string {
+  const safe = name.replace(/[^A-Za-z0-9_]/g, '_');
+  return /^[0-9]/.test(safe) ? `_${safe}` : safe;
+}
+
+/**
+ * Rename every declared `<variable name="…">` to a FEEL-safe identifier and
+ * rewrite the `<inputExpression>` references that point at those names, so the
+ * DMN actually *evaluates* on Camunda/Operaton (not just deploys). References
+ * are matched on exact, full name equality — output value literals and the `?`
+ * rule expressions never reference names, so they are left untouched. Decision
+ * and inputData display names (`name=` on `<decision>`/`<inputData>`) are also
+ * left as-is; only `<variable>` names drive FEEL resolution.
+ */
+function sanitizeFeelNames(xml: string): string {
+  const names = new Set<string>();
+  for (const m of xml.matchAll(/<(?:\w+:)?variable\b[^>]*\bname="([^"]*)"/g)) names.add(m[1]);
+
+  // Build name → FEEL-safe map, disambiguating any collisions.
+  const map = new Map<string, string>();
+  const used = new Set<string>();
+  for (const name of names) {
+    let safe = toFeelName(name);
+    if (safe !== name) {
+      let candidate = safe;
+      let i = 1;
+      while (used.has(candidate) || (candidate !== name && names.has(candidate)))
+        candidate = `${safe}_${i++}`;
+      safe = candidate;
+    }
+    used.add(safe);
+    map.set(name, safe);
+  }
+
+  // Rename the variable declarations.
+  let out = xml.replace(
+    /(<(?:\w+:)?variable\b[^>]*\bname=")([^"]*)(")/g,
+    (full, pre: string, nm: string, post: string) => {
+      const safe = map.get(nm);
+      return safe ? `${pre}${safe}${post}` : full;
+    }
+  );
+
+  // Rewrite inputExpression bodies that reference a known variable name
+  // (handles both plain and CDATA-wrapped text).
+  out = out.replace(
+    /(<(?:\w+:)?inputExpression\b[^>]*>\s*<(?:\w+:)?text>)(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?(<\/(?:\w+:)?text>)/g,
+    (full, open: string, content: string, close: string) => {
+      const safe = map.get(content.trim());
+      return safe ? `${open}${safe}${close}` : full;
+    }
+  );
+
+  return out;
+}
+
+/**
+ * Give every `<output>` that lacks a `typeRef` the type of its owning decision's
+ * result `<variable>` (defaulting to `string`). Clears the BIZ-004 validator
+ * warning and lets Camunda type-coerce output values correctly.
+ */
+function ensureOutputTypeRefs(xml: string): string {
+  return xml.replace(
+    /<(?:\w+:)?decision\b[^>]*>[\s\S]*?<\/(?:\w+:)?decision>/g,
+    (decBlock: string) => {
+      const tref = decBlock.match(/<(?:\w+:)?variable\b[^>]*\btypeRef="([^"]*)"/);
+      const type = tref ? tref[1] : 'string';
+      return decBlock.replace(
+        /<((?:\w+:)?output)\b((?:\s[^>]*?)?)(\/?)>/g,
+        (full, tag: string, attrs: string, selfClose: string) => {
+          if (/\btypeRef\s*=/.test(attrs)) return full;
+          return `<${tag}${attrs} typeRef="${type}"${selfClose}>`;
+        }
+      );
+    }
+  );
+}
+
+/**
+ * Normalises an STTR-extracted DMN so it both transforms AND evaluates on
+ * Operaton/Camunda. The Sogelink STTR Builder emits DMN the engine rejects
+ * (`ENGINE-22004`) and that, once deployable, still fails to evaluate. Fixes,
+ * verified against operaton.open-regels.nl:
+ *
+ *   1. DMN version: rewrite the four spec namespaces `…/20180521/…` (DMN 1.2)
+ *      → `…/20191111/…` (DMN 1.3); the engine only transforms 1.3.
+ *   2. Missing ids: inject `id` on `<input>` / `<inputExpression>` (engine rejects
+ *      inputs without one).
+ *   3. FEEL-safe names: rename `<variable>` names and their `<inputExpression>`
+ *      references to valid FEEL identifiers — without this the DMN deploys but
+ *      fails to evaluate (hyphens parse as subtraction, spaces as separators).
+ *   4. Output types: give untyped `<output>` columns a `typeRef` (BIZ-004).
+ *
+ * NOT handled here: `camunda:historyTimeToLive` (a deployment policy, added by
+ * the deployer — the CPSV Editor — not by extraction). See the phase plan.
+ */
+export function normalizeDmnForOperaton(dmn: string): string {
+  // 1. DMN 1.2 → 1.3 (covers MODEL / DI / DMNDI / DC; no-op if already 1.3).
+  let out = dmn.replace(
+    /http:\/\/www\.omg\.org\/spec\/DMN\/20180521\//g,
+    'https://www.omg.org/spec/DMN/20191111/'
+  );
+
+  // 2a. Add an id to every <input> opening tag that lacks one. Matching `input`
+  // followed by whitespace-or-`>` keeps this off <inputExpression>/<inputEntry>.
+  let inputCount = 0;
+  out = out.replace(/<((?:\w+:)?input)((?:\s[^>]*)?)>/g, (full, tag: string, attrs: string) => {
+    if (/\bid\s*=/.test(attrs)) return full;
+    inputCount += 1;
+    return `<${tag} id="dsoInput_${inputCount}"${attrs}>`;
+  });
+
+  // 2b. Same for <inputExpression>.
+  let exprCount = 0;
+  out = out.replace(
+    /<((?:\w+:)?inputExpression)((?:\s[^>]*)?)>/g,
+    (full, tag: string, attrs: string) => {
+      if (/\bid\s*=/.test(attrs)) return full;
+      exprCount += 1;
+      return `<${tag} id="dsoInputExpr_${exprCount}"${attrs}>`;
+    }
+  );
+
+  // 3. FEEL-safe variable names + reference rewrite (makes the DMN evaluatable).
+  out = sanitizeFeelNames(out);
+
+  // 4. Ensure output columns are typed (BIZ-004).
+  out = ensureOutputTypeRefs(out);
+
+  return out;
+}
+
+/**
  * Extracts the embedded DMN <definitions> element from a conclusie STTR envelope
- * and returns it as a standalone DMN XML string.
+ * and returns it as a standalone, Operaton-deployable DMN XML string.
  */
 export function extractDmnFromSttr(sttrXml: string): string {
   // The conclusie STTR wraps a complete DMN 1.2 <definitions> element.
@@ -402,7 +541,7 @@ export function extractDmnFromSttr(sttrXml: string): string {
   // handling both prefixed (dmn:definitions) and un-prefixed variants.
   const match = sttrXml.match(/<(?:dmn:)?definitions[\s\S]*?<\/(?:dmn:)?definitions>/);
   if (!match) throw new Error('No DMN <definitions> element found in STTR XML');
-  return `<?xml version="1.0" encoding="UTF-8"?>\n${match[0]}`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${normalizeDmnForOperaton(match[0])}`;
 }
 
 export interface FormScaffoldField {
