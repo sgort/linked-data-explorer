@@ -668,7 +668,7 @@ const ApplicableRuleRow: React.FC<{
         },
         createdAt: now,
         updatedAt: now,
-        status: 'wip',
+        status: 'dso',
         language: 'nl',
         organization,
       };

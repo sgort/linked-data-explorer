@@ -266,7 +266,7 @@ export interface FormSchema {
   createdAt: string;
   updatedAt: string;
   readonly?: boolean;
-  status?: 'example' | 'wip';
+  status?: 'example' | 'wip' | 'dso';
   language?: 'en' | 'nl' | 'de';
   organization?: string;
 }
