@@ -455,6 +455,31 @@ function sanitizeFeelNames(xml: string): string {
   return out;
 }
 
+// Default Camunda history TTL (days) stamped on extracted DMN decisions, matching
+// the LDE BPMN templates' `historyTimeToLive="180"` convention. This Operaton
+// instance enforces HTTL at deploy, so without it the deploy fails.
+const DSO_DMN_HISTORY_TTL = 180;
+
+/**
+ * Ensure the `camunda` namespace is declared and every `<decision>` carries a
+ * `camunda:historyTimeToLive`, so the DMN is deployable on an Operaton instance
+ * that enforces HTTL — making the extracted DMN handoff-ready without the
+ * deployer having to patch it. Decisions that already declare HTTL are left as-is.
+ */
+function ensureHistoryTimeToLive(xml: string): string {
+  let out = xml;
+  if (!/\bxmlns:camunda=/.test(out)) {
+    out = out.replace(
+      /<((?:\w+:)?definitions)\b/,
+      (full, tag: string) => `<${tag} xmlns:camunda="http://camunda.org/schema/1.0/dmn"`
+    );
+  }
+  return out.replace(/<((?:\w+:)?decision)((?:\s[^>]*)?)>/g, (full, tag: string, attrs: string) => {
+    if (/\bcamunda:historyTimeToLive\s*=/.test(attrs)) return full;
+    return `<${tag} camunda:historyTimeToLive="${DSO_DMN_HISTORY_TTL}"${attrs}>`;
+  });
+}
+
 /**
  * Give every `<output>` that lacks a `typeRef` the type of its owning decision's
  * result `<variable>` (defaulting to `string`). Clears the BIZ-004 validator
@@ -491,9 +516,10 @@ function ensureOutputTypeRefs(xml: string): string {
  *      references to valid FEEL identifiers — without this the DMN deploys but
  *      fails to evaluate (hyphens parse as subtraction, spaces as separators).
  *   4. Output types: give untyped `<output>` columns a `typeRef` (BIZ-004).
- *
- * NOT handled here: `camunda:historyTimeToLive` (a deployment policy, added by
- * the deployer — the CPSV Editor — not by extraction). See the phase plan.
+ *   5. History TTL: declare the `camunda` namespace and stamp
+ *      `camunda:historyTimeToLive` on each `<decision>`; this Operaton enforces
+ *      HTTL at deploy. With this the extracted DMN is deploy-ready as handed off
+ *      (the CPSV Editor deploys it as-is — no patching required).
  */
 export function normalizeDmnForOperaton(dmn: string): string {
   // 1. DMN 1.2 → 1.3 (covers MODEL / DI / DMNDI / DC; no-op if already 1.3).
@@ -527,6 +553,9 @@ export function normalizeDmnForOperaton(dmn: string): string {
 
   // 4. Ensure output columns are typed (BIZ-004).
   out = ensureOutputTypeRefs(out);
+
+  // 5. Stamp camunda:historyTimeToLive so the DMN deploys as handed off.
+  out = ensureHistoryTimeToLive(out);
 
   return out;
 }
