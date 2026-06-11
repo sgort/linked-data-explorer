@@ -38,7 +38,7 @@ import logger from '../utils/logger';
 
 // ── Response types (shape matches DmnValidator's so the UI components are shared) ──
 
-export type ShaclLayerKey = 'cpsv-ap' | 'ronl-custom';
+export type ShaclLayerKey = 'cpsv-ap' | 'ronl-custom' | 'cprmv';
 
 export interface ShaclIssue {
   severity: 'error' | 'warning' | 'info';
@@ -89,6 +89,11 @@ const LAYER_SPECS: LayerSpec[] = [
     key: 'ronl-custom',
     label: 'RONL Custom',
     dir: 'ronl',
+  },
+  {
+    key: 'cprmv',
+    label: 'CPRMV 0.4.1',
+    files: ['cprmv/0.4.1/cprmv.shacl.ttl'],
   },
 ];
 
@@ -227,8 +232,9 @@ export class ShaclValidationService {
 
   private emptyLayers(): Record<ShaclLayerKey, ShaclLayerResult> {
     return {
+      'cprmv' : { label: 'CPRMV 0.4.1', loaded: false, issues: [] },
       'cpsv-ap': { label: 'CPSV-AP 3.2.0', loaded: false, issues: [] },
-      'ronl-custom': { label: 'RONL Custom', loaded: false, issues: [] },
+      'ronl-custom': { label: 'RONL Custom', loaded: false, issues: [] }
     };
   }
 
