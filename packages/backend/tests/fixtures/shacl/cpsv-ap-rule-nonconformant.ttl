@@ -1,0 +1,13 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+# A cpsv:Rule that breaks the canonical CPSV-AP 3.2.0 RuleShape — the non-conformant
+# counterpart to cpsv-ap-conformant.ttl, exercising the CPSV-AP layer specifically:
+#   - dct:title is a plain string, not rdf:langString -> Datatype violation
+#   - dct:identifier is absent (sh:minCount 1)        -> MinCount violation
+#   - dct:description is absent (sh:minCount 1)        -> MinCount violation
+# => 3 CPSV-AP errors. The RONL Custom layer stays clean: a single plain-language
+# title cannot violate sh:uniqueLang, so this isolates the CPSV-AP findings.
+
+<https://regels.overheid.nl/register/Flevoland/subsidie-thuisbatterij> a cpsv:Rule ;
+    dct:title "Subsidie thuisbatterij — bepaling subsidiehoogte" .

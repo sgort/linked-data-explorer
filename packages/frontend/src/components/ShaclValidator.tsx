@@ -51,6 +51,7 @@ interface ValidationResult {
   valid: boolean;
   parseError: string | null;
   layers: {
+    cprmv: LayerResult;
     'cpsv-ap': LayerResult;
     'ronl-custom': LayerResult;
   };

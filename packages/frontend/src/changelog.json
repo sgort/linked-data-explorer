@@ -15,6 +15,15 @@
             "Extracted DSO DMNs now carry camunda:historyTimeToLive, so they deploy to Operaton exactly as handed off — the consumer no longer has to patch the DMN before deploying. LDE now produces a fully deploy-ready and evaluatable DMN (DMN 1.3, input ids, FEEL-safe variable names, output typeRefs, history TTL).",
             "Forms imported from DSO now show a green DSO badge in the Form Editor list, instead of the generic yellow WIP badge."
           ]
+        },
+        {
+          "icon": "🧪",
+          "iconColor": "blue",
+          "title": "SHACL Validator — CPRMV layer + validation test fixtures",
+          "items": [
+            "The SHACL validator now checks uploaded Turtle against a CPRMV 0.4.1 shape layer alongside CPSV-AP 3.2.0 and the RONL Custom rules; the results panel renders the new layer automatically.",
+            "Added valid/invalid test fixtures for every layer — CPRMV (cprmv-conformant.ttl / cprmv-nonconformant.ttl), CPSV-AP (cpsv-ap-conformant.ttl / cpsv-ap-rule-nonconformant.ttl), and RONL (rule- and org-collision pass/fail) — plus a malformed-Turtle case covering the parser path."
+          ]
         }
       ]
     },

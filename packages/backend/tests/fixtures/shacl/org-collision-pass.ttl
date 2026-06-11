@@ -1,0 +1,19 @@
+@prefix cv:   <http://data.europa.eu/m8g/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+# A fully conformant cv:PublicOrganisation: one homepage, one identifier, and a
+# bilingual (nl/en) preferred label. The all-green organisation case — clean against
+# BOTH the CPSV-AP layer (dct:spatial present, pointing at a dct:Location; prefLabel
+# is rdf:langString) and the RONL Custom layer (single homepage; sh:uniqueLang allows
+# one label per language rather than flagging the @nl + @en pair).
+
+<https://organisaties.overheid.nl/14866/Provincie_Flevoland> a cv:PublicOrganisation ;
+    dct:identifier "Provincie_Flevoland" ;
+    skos:prefLabel "Provincie Flevoland"@nl ;
+    skos:prefLabel "Province of Flevoland"@en ;
+    foaf:homepage <https://www.flevoland.nl/home> ;
+    dct:spatial <https://publications.europa.eu/resource/authority/country/NLD> .
+
+<https://publications.europa.eu/resource/authority/country/NLD> a dct:Location .
