@@ -232,9 +232,9 @@ export class ShaclValidationService {
 
   private emptyLayers(): Record<ShaclLayerKey, ShaclLayerResult> {
     return {
-      'cprmv' : { label: 'CPRMV 0.4.1', loaded: false, issues: [] },
+      cprmv: { label: 'CPRMV 0.4.1', loaded: false, issues: [] },
       'cpsv-ap': { label: 'CPSV-AP 3.2.0', loaded: false, issues: [] },
-      'ronl-custom': { label: 'RONL Custom', loaded: false, issues: [] }
+      'ronl-custom': { label: 'RONL Custom', loaded: false, issues: [] },
     };
   }
 
