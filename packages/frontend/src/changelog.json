@@ -1,10 +1,28 @@
 {
   "versions": [
     {
-      "version": "1.9.5",
+      "version": "1.9.6",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "date": "June 13, 2026",
+      "sections": [
+        {
+          "icon": "🐛",
+          "iconColor": "red",
+          "title": "Bug Fixes",
+          "items": [
+            "DMNs published under the new CPRMV 0.4.1 namespace (e.g. vast_bedrag_op_vestiging) were missing from /v1/dmns and the ChainBuilder DMN picker — getAllDmns and the chain-link queries only matched cprmv:DecisionModel under the old 0.3.0 namespace. Both namespaces are now supported side by side until existing 0.3.0 data is migrated.",
+            "Fixed 'Fill with test data' in the ChainBuilder input form not visibly filling Integer/Double fields when the RDF-sourced test value is 0 — the input rendered as empty (0 || '' = '') instead of showing 0."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.5",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "date": "June 11, 2026",
       "sections": [
         {
