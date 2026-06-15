@@ -251,10 +251,9 @@ export class ShaclValidationService {
     if (!focusNode || !path || path.termType !== 'NamedNode') return [];
     const values: string[] = [];
     for (const quad of data.match(focusNode, path, null)) {
-      // Normalise whitespace and cap length — published literals (e.g. long
-      // multi-line rule descriptions) would otherwise bloat the issue message.
-      const normalised = quad.object.value.replace(/\s+/g, ' ').trim();
-      values.push(normalised.length > 60 ? `${normalised.slice(0, 60)}…` : normalised);
+      // Normalise whitespace only — the full value is reported so the user can see
+      // the complete offending value (the frontend wraps long messages).
+      values.push(quad.object.value.replace(/\s+/g, ' ').trim());
     }
     return values;
   }

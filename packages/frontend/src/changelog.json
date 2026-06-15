@@ -1,10 +1,28 @@
 {
   "versions": [
     {
-      "version": "1.9.6",
+      "version": "1.9.7",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "date": "June 15, 2026",
+      "sections": [
+        {
+          "icon": "🐛",
+          "iconColor": "red",
+          "title": "Bug Fixes",
+          "items": [
+            "SHACL Validator: long issue messages and focus-node locations were cut off with an ellipsis and could not be read — the location used a single-line CSS truncate. Messages and locations now wrap in full (break-words / break-all) and expose the complete text on hover (title tooltip).",
+            "SHACL backend: removed the 60-character cap on offending values reported for cardinality (maxCount / uniqueLang) violations, so the full value appears in the issue message instead of being truncated with an ellipsis."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.6",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "date": "June 13, 2026",
       "sections": [
         {

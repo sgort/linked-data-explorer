@@ -93,9 +93,13 @@ function IssueRow({ issue }: { issue: ValidationIssue }) {
       <SeverityIcon severity={issue.severity} />
       <div className="flex-1 min-w-0">
         <span className="font-mono text-slate-400 mr-1">{issue.code}</span>
-        <span className="text-slate-700">{issue.message}</span>
+        <span className="text-slate-700 break-words" title={issue.message}>
+          {issue.message}
+        </span>
         {issue.location && (
-          <span className="block mt-0.5 font-mono text-slate-400 truncate">{issue.location}</span>
+          <span className="block mt-0.5 font-mono text-slate-400 break-all" title={issue.location}>
+            {issue.location}
+          </span>
         )}
         {issue.line && (
           <span className="block mt-0.5 text-slate-400">
