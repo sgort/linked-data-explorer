@@ -1,10 +1,29 @@
 {
   "versions": [
     {
-      "version": "1.9.7",
+      "version": "1.9.8",
+      "date": "June 17, 2026",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "sections": [
+        {
+          "icon": "🛡️",
+          "iconColor": "emerald",
+          "title": "CPRMV SHACL — ParameterWaardeShape and TemporalRuleShape",
+          "items": [
+            "Added cprmv:ParameterWaardeShape targeting cprmv:ParameterWaarde: skos:notation [1,1] xsd:string and skos:prefLabel [1,n] rdf:langString are mandatory; schema:value [0,1] xsd:decimal, schema:unitCode [0,1] xsd:string, dct:description [0,1] rdf:langString, and cprmv:validFrom/validUntil [0,1] xsd:date are optional. Previously cprmv:ParameterWaarde had no SHACL shape at all, so the entire Parameters section of an editor-generated TTL was unvalidated.",
+            "Added cprmv:TemporalRuleShape targeting cprmv:TemporalRule: cprmv:validFrom [0,1] xsd:date, cprmv:validUntil [0,1] xsd:date, cprmv:confidenceLevel [0,1] xsd:string, and cprmv:isBasedOn [0,n] sh:class cpsv:Rule — all optional. Previously the temporal extensions on cpsv:Rule (validity window, confidence level, extends) were unvalidated by any SHACL shape.",
+            "Also adds skos:, schema:, and dct: @prefix declarations required by the new shapes; no changes to existing shapes in the file."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.7",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "date": "June 15, 2026",
       "sections": [
         {
