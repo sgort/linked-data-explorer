@@ -43,9 +43,9 @@ type BoardChoice = 'auto' | 'infra-board' | 'caseworker';
 
 /**
  * Candidate-group → board mapping, mirrored from the backend's deploy-time
- * derivation. Used here only to show the auto-detected suggestion in the modal;
- * the backend remains authoritative (on 'auto' the UI sends no boardOwner and
- * the server re-derives). Keep in sync with operaton.service.ts BOARD_BY_GROUP.
+ * derivation. boardOwner is mandatory, so on 'auto' the UI resolves the board
+ * here and sends that concrete value (used for both the Operaton tag and the
+ * persisted LDE record). Keep in sync with operaton.service.ts BOARD_BY_GROUP.
  */
 const BOARD_BY_GROUP: { match: RegExp; board: string }[] = [
   { match: /^(infra-projectteam|infra-medewerker|rip-[\w-]+)$/i, board: 'infra-board' },
