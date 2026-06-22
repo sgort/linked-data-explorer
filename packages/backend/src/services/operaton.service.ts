@@ -648,9 +648,11 @@ export class OperatonService {
   ): Promise<{ deploymentId: string; resourceCount: number }> {
     try {
       // Stamp the owning board onto the process definition (deploy-time tag).
-      // Explicit boardOwner wins; otherwise it's derived from the candidate
-      // groups in the BPMN. Untaggable bundles are deployed verbatim.
-      const owner = boardOwner ?? this.deriveBoardOwner(bpmnXml);
+      // boardOwner semantics:
+      //   undefined  → derive from the BPMN's candidate groups
+      //   '' (empty) → caller explicitly opted out; deploy untagged
+      //   value      → use as-is (explicit override)
+      const owner = boardOwner === undefined ? this.deriveBoardOwner(bpmnXml) : boardOwner;
       const taggedXml = this.injectBoardOwner(bpmnXml, owner);
 
       logger.info('Deploying BPMN process to Operaton', {

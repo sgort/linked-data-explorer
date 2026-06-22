@@ -38,6 +38,38 @@ interface BpmnCanvasProps {
   onClose: () => void;
 }
 
+/** User's board-ownership choice in the deploy modal. */
+type BoardChoice = 'auto' | 'infra-board' | 'caseworker' | 'none';
+
+/**
+ * Candidate-group → board mapping, mirrored from the backend's deploy-time
+ * derivation. Used here only to show the auto-detected suggestion in the modal;
+ * the backend remains authoritative (on 'auto' the UI sends no boardOwner and
+ * the server re-derives). Keep in sync with operaton.service.ts BOARD_BY_GROUP.
+ */
+const BOARD_BY_GROUP: { match: RegExp; board: string }[] = [
+  { match: /^(infra-projectteam|infra-medewerker|rip-[\w-]+)$/i, board: 'infra-board' },
+  { match: /^(caseworker|case-workers|hr-medewerker)$/i, board: 'caseworker' },
+];
+
+/** Derive the owning board from candidate groups in a BPMN, or null if unknown. */
+const deriveBoardOwnerFromXml = (xml: string): string | null => {
+  const groups = new Set<string>();
+  for (const m of xml.matchAll(/candidateGroups\s*=\s*["']([^"']+)["']/g)) {
+    for (const g of m[1].split(',')) groups.add(g.trim());
+  }
+  let found: string | null = null;
+  for (const g of groups) {
+    for (const { match, board } of BOARD_BY_GROUP) {
+      if (match.test(g)) {
+        if (board === 'infra-board') return 'infra-board';
+        found = board;
+      }
+    }
+  }
+  return found;
+};
+
 const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   xml,
   endpoint,
@@ -72,6 +104,11 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   );
   const [operatonUsername, setOperatonUsername] = useState<string>('');
   const [operatonPassword, setOperatonPassword] = useState<string>('');
+
+  // Board-ownership picker (deploy modal). `boardChoice` is the user's selection;
+  // `boardAuto` is the auto-detected suggestion shown alongside the Auto option.
+  const [boardChoice, setBoardChoice] = useState<BoardChoice>('auto');
+  const [boardAuto, setBoardAuto] = useState<string | null>(null);
 
   const [selectedElement, setSelectedElement] = useState<any>(null);
 
@@ -458,6 +495,9 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       languageMismatch?: boolean;
       languageList?: string[];
     });
+    // Pre-fill the board-ownership picker with the auto-detected board.
+    setBoardAuto(deriveBoardOwnerFromXml(xml));
+    setBoardChoice('auto');
     setDeployResult(null);
     setShowDeployModal(true);
   };
@@ -530,6 +570,11 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           documents,
           subProcesses: subProcessXmls,
           operatonUrl: operatonUrl.trim() || undefined,
+          // Board-ownership tag: omit on 'auto' (backend derives), send '' to
+          // force untagged on 'none', otherwise send the chosen board.
+          ...(boardChoice !== 'auto' && {
+            boardOwner: boardChoice === 'none' ? '' : boardChoice,
+          }),
         }),
       });
 
@@ -685,6 +730,59 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
               >
                 <X size={20} />
               </button>
+            </div>
+
+            {/* Board ownership — deploy-time boardOwner tag */}
+            <div className="mb-4 p-3 rounded-lg border-2 bg-slate-50 border-slate-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold text-sm text-slate-800">🏷️ Board ownership</div>
+                {boardAuto ? (
+                  <span className="text-xs text-slate-500">
+                    auto-detected: <span className="font-mono text-slate-700">{boardAuto}</span>
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-400">no board auto-detected</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    { id: 'auto', label: boardAuto ? `Auto (${boardAuto})` : 'Auto (none)' },
+                    { id: 'infra-board', label: 'Infra-board' },
+                    { id: 'caseworker', label: 'Caseworker' },
+                    { id: 'none', label: 'None (leave untagged)' },
+                  ] as { id: BoardChoice; label: string }[]
+                ).map((opt) => {
+                  const active = boardChoice === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setBoardChoice(opt.id)}
+                      disabled={isDeploying || deployResult?.success === true}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors disabled:opacity-50 ${
+                        active
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                {boardChoice === 'auto' ? (
+                  'The server tags the process from its candidate groups.'
+                ) : boardChoice === 'none' ? (
+                  'The process is deployed without a boardOwner tag.'
+                ) : (
+                  <>
+                    Tagging as <span className="font-mono">{boardChoice}</span> — overrides
+                    auto-detection.
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Resources preview */}
