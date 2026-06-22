@@ -816,11 +816,12 @@ export class OperatonService {
     if (/xmlns:camunda\s*=/.test(xml)) return xml;
     const defs = xml.match(/<([A-Za-z_][\w.-]*:)?definitions\b[^>]*?>/);
     if (!defs) return xml;
-    const patched = defs[0].replace(
-      />$/,
-      ` xmlns:camunda="http://camunda.org/schema/1.0/bpmn">`
+    const patched = defs[0].replace(/>$/, ` xmlns:camunda="http://camunda.org/schema/1.0/bpmn">`);
+    return (
+      xml.slice(0, defs.index as number) +
+      patched +
+      xml.slice((defs.index as number) + defs[0].length)
     );
-    return xml.slice(0, defs.index as number) + patched + xml.slice((defs.index as number) + defs[0].length);
   }
 }
 
