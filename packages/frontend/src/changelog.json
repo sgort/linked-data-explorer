@@ -1,11 +1,30 @@
 {
   "versions": [
     {
-      "version": "1.9.8",
-      "date": "June 17, 2026",
+      "version": "1.9.9",
+      "date": "June 22, 2026",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "sections": [
+        {
+          "icon": "🏷️",
+          "iconColor": "emerald",
+          "title": "Process board ownership — deploy-time tagging",
+          "items": [
+            "Deploy modal now requires a board owner: a new \"Board ownership\" section auto-detects the board from the process's candidate groups (infra/rip → Infra-board, caseworker/hr → Caseworker) and lets you override it. Deploy is blocked until a board is resolved.",
+            "Deployed BPMN is stamped with a process-level camunda:property boardOwner (explicit choice or auto-derived). Injection is idempotent and non-destructive — on any unexpected BPMN shape the original XML is deployed untouched.",
+            "boardOwner is persisted on the process_definitions record (new board_owner column) and exposed via /bundles/public, so downstream consumers (ronl-business-api Procesbibliotheek and archive split) can read it."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.8",
+      "date": "June 17, 2026",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "sections": [
         {
           "icon": "🛡️",
