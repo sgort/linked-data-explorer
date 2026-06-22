@@ -643,13 +643,21 @@ export class OperatonService {
     documents: { id: string; template: Record<string, unknown> }[] = [],
     operatonUrl?: string,
     operatonUsername?: string,
-    operatonPassword?: string
+    operatonPassword?: string,
+    boardOwner?: string
   ): Promise<{ deploymentId: string; resourceCount: number }> {
     try {
+      // Stamp the owning board onto the process definition (deploy-time tag).
+      // Explicit boardOwner wins; otherwise it's derived from the candidate
+      // groups in the BPMN. Untaggable bundles are deployed verbatim.
+      const owner = boardOwner ?? this.deriveBoardOwner(bpmnXml);
+      const taggedXml = this.injectBoardOwner(bpmnXml, owner);
+
       logger.info('Deploying BPMN process to Operaton', {
         deploymentName,
         formCount: forms.length,
         subProcessCount: subProcesses.length,
+        boardOwner: owner ?? '(none)',
       });
 
       const client = operatonUrl
@@ -669,7 +677,7 @@ export class OperatonService {
 
       // Main BPMN
       const mainFilename = `${deploymentName}.bpmn`;
-      formData.append(mainFilename, Buffer.from(bpmnXml, 'utf-8'), {
+      formData.append(mainFilename, Buffer.from(taggedXml, 'utf-8'), {
         filename: mainFilename,
         contentType: 'application/xml',
       });
@@ -717,6 +725,100 @@ export class OperatonService {
         `Process deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
+  }
+
+  /**
+   * Candidate-group → board mapping used to derive a process's owning board when
+   * the deploy request doesn't pass one explicitly. Kept here as the single point
+   * of coupling to RONL's board taxonomy; extend as new boards/roles appear.
+   */
+  private static readonly BOARD_BY_GROUP: { match: RegExp; board: string }[] = [
+    { match: /^(infra-projectteam|infra-medewerker|rip-[\w-]+)$/i, board: 'infra-board' },
+    { match: /^(caseworker|case-workers|hr-medewerker)$/i, board: 'caseworker' },
+  ];
+
+  /**
+   * Derive the owning board from the candidate groups present in the BPMN. Returns
+   * undefined when no known group is found, so the process is left untagged (and the
+   * consumer falls back to its legacy split). Infra ownership wins over caseworker
+   * when both appear, since RIP processes also carry the broad `caseworker` role.
+   */
+  private deriveBoardOwner(bpmnXml: string): string | undefined {
+    const groups = new Set<string>();
+    for (const m of bpmnXml.matchAll(/candidateGroups\s*=\s*["']([^"']+)["']/g)) {
+      for (const g of m[1].split(',')) groups.add(g.trim());
+    }
+    let found: string | undefined;
+    for (const g of groups) {
+      for (const { match, board } of OperatonService.BOARD_BY_GROUP) {
+        if (match.test(g)) {
+          if (board === 'infra-board') return 'infra-board';
+          found = board;
+        }
+      }
+    }
+    return found;
+  }
+
+  /**
+   * Inject a process-level <camunda:property name="boardOwner" …/> into the main
+   * BPMN process element. Conservative by design: idempotent, and if the BPMN shape
+   * is anything unexpected the original XML is returned untouched — deployment must
+   * never break because of tagging.
+   */
+  private injectBoardOwner(bpmnXml: string, boardOwner?: string): string {
+    if (!boardOwner) return bpmnXml;
+    try {
+      if (/name\s*=\s*["']boardOwner["']/.test(bpmnXml)) return bpmnXml; // already tagged
+
+      const processOpen = bpmnXml.match(/<([A-Za-z_][\w.-]*:)?process\b[^>]*?>/);
+      if (!processOpen || processOpen[0].endsWith('/>')) return bpmnXml;
+      const pfx = processOpen[1] ?? '';
+      const insertAt = (processOpen.index as number) + processOpen[0].length;
+
+      const property = `<camunda:property name="boardOwner" value="${boardOwner}" />`;
+      const after = bpmnXml.slice(insertAt);
+      const extOpen = after.match(/^\s*<([A-Za-z_][\w.-]*:)?extensionElements\b[^>]*?>/);
+
+      let tagged: string;
+      if (extOpen) {
+        // Process already opens with an extensionElements — merge into it, reusing an
+        // existing camunda:properties block when present, otherwise adding one.
+        const extEnd = insertAt + extOpen[0].length;
+        const propsOpen = bpmnXml.slice(extEnd).match(/^\s*<camunda:properties\b[^>]*?>/);
+        if (propsOpen) {
+          const at = extEnd + propsOpen[0].length;
+          tagged = bpmnXml.slice(0, at) + property + bpmnXml.slice(at);
+        } else {
+          const block = `<camunda:properties>${property}</camunda:properties>`;
+          tagged = bpmnXml.slice(0, extEnd) + block + bpmnXml.slice(extEnd);
+        }
+      } else {
+        const block =
+          `<${pfx}extensionElements><camunda:properties>${property}` +
+          `</camunda:properties></${pfx}extensionElements>`;
+        tagged = bpmnXml.slice(0, insertAt) + block + bpmnXml.slice(insertAt);
+      }
+
+      return this.ensureCamundaNamespace(tagged);
+    } catch (err) {
+      logger.warn('boardOwner injection skipped — BPMN deployed untouched', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return bpmnXml;
+    }
+  }
+
+  /** Ensure the camunda namespace is declared on <definitions> so the property resolves. */
+  private ensureCamundaNamespace(xml: string): string {
+    if (/xmlns:camunda\s*=/.test(xml)) return xml;
+    const defs = xml.match(/<([A-Za-z_][\w.-]*:)?definitions\b[^>]*?>/);
+    if (!defs) return xml;
+    const patched = defs[0].replace(
+      />$/,
+      ` xmlns:camunda="http://camunda.org/schema/1.0/bpmn">`
+    );
+    return xml.slice(0, defs.index as number) + patched + xml.slice((defs.index as number) + defs[0].length);
   }
 }
 

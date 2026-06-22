@@ -236,6 +236,7 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       operatonUrl,
       operatonUsername,
       operatonPassword,
+      boardOwner,
     } = req.body as {
       bpmnXml: string;
       deploymentName: string;
@@ -245,6 +246,8 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       operatonUrl?: string;
       operatonUsername?: string;
       operatonPassword?: string;
+      /** Owning board for the deployed process; auto-derived from candidate groups when omitted. */
+      boardOwner?: string;
     };
 
     if (!bpmnXml?.trim()) {
@@ -271,7 +274,8 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       documents,
       operatonUrl,
       operatonUsername,
-      operatonPassword
+      operatonPassword,
+      boardOwner
     );
 
     res.json({
