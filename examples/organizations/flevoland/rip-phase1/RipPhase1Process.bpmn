@@ -94,6 +94,15 @@
       <bpmn:script>
         execution.setVariable("candidateGroups", roleResult.get("candidateGroups"));
         execution.setVariable("assignedRoles",   roleResult.get("assignedRoles"));
+
+        // Derive the portfolio lead/owner role (Infra-board "ROL" ownership
+        // signal — distinct from the task candidateGroups above). Maps the intake
+        // projectType to a rip-model portfolio role key; defaults to Projectleider,
+        // which leads a RIP project unless a control-track type owns it instead.
+        // NOTE: confirm this projectType -> leadRole mapping with the business.
+        var pt = String(execution.getVariable("projectType") || "");
+        var leadRole = (pt === "contractbeheer") ? "manager-pb" : "projectleider";
+        execution.setVariable("leadRole", leadRole);
       </bpmn:script>
     </bpmn:scriptTask>
 

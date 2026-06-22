@@ -16,6 +16,15 @@
             "Deployed BPMN is stamped with a process-level camunda:property boardOwner (explicit choice or auto-derived). Injection is idempotent and non-destructive — on any unexpected BPMN shape the original XML is deployed untouched.",
             "boardOwner is persisted on the process_definitions record (new board_owner column) and exposed via /bundles/public, so downstream consumers (ronl-business-api Procesbibliotheek and archive split) can read it."
           ]
+        },
+        {
+          "icon": "👤",
+          "iconColor": "emerald",
+          "title": "RIP Phase 1 — derive portfolio leadRole",
+          "items": [
+            "The Map role outputs script now sets a leadRole process variable, derived from the intake projectType (contractbeheer → manager-pb, otherwise projectleider). This is the ownership signal the Infra-board Portfolio ROL filter reads.",
+            "Distinct from the task candidateGroups: leadRole names who owns the project in the portfolio, not who can claim its tasks. Takes effect for instances started after redeploy; the projectType → leadRole mapping is a placeholder to confirm with the business."
+          ]
         }
       ]
     },
