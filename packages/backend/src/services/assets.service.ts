@@ -90,7 +90,8 @@ export async function markDeployed(
   deploymentId: string,
   operatonUrl: string | undefined,
   formIds: string[],
-  documentIds: string[]
+  documentIds: string[],
+  boardOwner?: string
 ): Promise<void> {
   if (!pool) return;
   await pool.query(
@@ -99,9 +100,10 @@ export async function markDeployed(
        operaton_deployment_id = $2,
        operaton_url           = $3,
        deployed_forms         = $4,
-       deployed_documents     = $5
+       deployed_documents     = $5,
+       board_owner            = COALESCE($6, board_owner)
      WHERE lde_id = $1`,
-    [ldeId, deploymentId, operatonUrl ?? null, formIds, documentIds]
+    [ldeId, deploymentId, operatonUrl ?? null, formIds, documentIds, boardOwner ?? null]
   );
 }
 
@@ -123,6 +125,7 @@ export async function listPublicBundles(): Promise<unknown[]> {
     deployed_documents: string[];
     language: string | null;
     organization: string | null;
+    board_owner: string | null;
     updated_at: Date;
   }>(
     `SELECT pd_shell.lde_id,
@@ -139,6 +142,7 @@ export async function listPublicBundles(): Promise<unknown[]> {
             pd_shell.deployed_documents,
             pd_shell.language,
             pd_shell.organization,
+            pd_shell.board_owner,
             pd_shell.updated_at,
             COALESCE(
               json_agg(
@@ -183,6 +187,7 @@ export async function listPublicBundles(): Promise<unknown[]> {
               pd_shell.deployed_documents,
               pd_shell.language,
               pd_shell.organization,
+              pd_shell.board_owner,
               pd_shell.updated_at
      ORDER BY pd_shell.deployed_at DESC`
   );
@@ -206,6 +211,7 @@ export async function listPublicBundles(): Promise<unknown[]> {
     ).subprocesses,
     language: r.language ?? undefined,
     organization: r.organization ?? undefined,
+    boardOwner: r.board_owner ?? undefined,
     updatedAt: r.updated_at,
   }));
 }

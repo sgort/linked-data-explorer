@@ -78,13 +78,15 @@ router.patch('/bpmn/:id/deploy', async (req: Request, res: Response) => {
       operatonUrl,
       formIds = [],
       documentIds = [],
+      boardOwner,
     } = req.body as {
       deploymentId: string;
       operatonUrl?: string;
       formIds?: string[];
       documentIds?: string[];
+      boardOwner?: string;
     };
-    await markDeployed(req.params.id, deploymentId, operatonUrl, formIds, documentIds);
+    await markDeployed(req.params.id, deploymentId, operatonUrl, formIds, documentIds, boardOwner);
     res.json({ success: true });
   } catch (err) {
     logger.error('[assets] markDeployed failed', { error: getErrorMessage(err) });

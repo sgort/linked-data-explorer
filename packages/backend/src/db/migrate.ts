@@ -36,7 +36,8 @@ export async function migrate(): Promise<void> {
       ADD COLUMN IF NOT EXISTS deployed_forms         TEXT[] NOT NULL DEFAULT '{}',
       ADD COLUMN IF NOT EXISTS deployed_documents     TEXT[] NOT NULL DEFAULT '{}',
       ADD COLUMN IF NOT EXISTS language               VARCHAR(2),
-      ADD COLUMN IF NOT EXISTS organization           VARCHAR(100);
+      ADD COLUMN IF NOT EXISTS organization           VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS board_owner            VARCHAR(50);
 
       CREATE INDEX IF NOT EXISTS idx_pd_bpmn_process_id
         ON process_definitions (bpmn_process_id);
