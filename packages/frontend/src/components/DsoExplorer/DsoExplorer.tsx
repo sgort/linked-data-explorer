@@ -1,29 +1,45 @@
 // packages/frontend/src/components/DsoExplorer/DsoExplorer.tsx
 
-import { BookOpen, ChevronLeft, ChevronRight, Loader2, Search, TreePine } from 'lucide-react';
+import {
+  BookOpen,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  ExternalLink,
+  Loader2,
+  Search,
+  TreePine,
+} from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   ActiviteitenResult,
   BegrippenResult,
+  dmnDownloadUrl,
   DsoActiviteit,
   DsoActiviteitDetail,
   DsoBegrip,
   DsoEnv,
   DsoRegelbeheerobject,
-  DsoWerkzaamheid,
+  DsoToepasbareRegel,
   DsoWerkzaamheidVersie,
+  fetchFormScaffold,
+  fetchToepasbareRegels,
   getActiviteitDetail,
   getActiviteiten,
   getActiviteitenByOin,
   getWerkzaamheidDetail,
   searchBegrippen,
+  sttrDownloadUrl,
   suggereerWerkzaamheden,
+  ToepasbareRegelsResult,
   urnFromHref,
   WerkzaamhedenZoekResult,
-  zoekActiviteiten,
   zoekWerkzaamheden,
 } from '../../services/dsoService';
+import { FormService } from '../../services/formService';
+import { FormSchema } from '../../types';
 
 type Tab = 'begrippen' | 'werkzaamheden' | 'activiteiten';
 
@@ -485,8 +501,73 @@ const WerkzaamhedenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 
 // ── Activities tab ───────────────────────────────────────────────────────────
 
-const TYPERING_META: Record<DsoRegelbeheerobject['typering'], { label: string; color: string }> = {
+// Known authorities with human-readable names, keyed by OIN. Drives both the
+// location presets below and the organization label used when importing forms,
+// since the RTR API only returns the authority code (e.g. "GM0995"), not a name.
+const LOCATION_PRESETS = [
+  { label: 'Lelystad', oin: '00000001005024249000' },
+  { label: 'Flevoland', oin: '00000001006203243000' },
+] as const;
+
+/**
+ * Resolve a readable authority name for an activity's bestuursorgaan.
+ * Falls back to the bare code (organisatieType + organisatieCode) when the
+ * authority is not one of the known presets.
+ */
+function authorityLabel(bestuursorgaan?: {
+  oin: string;
+  organisatieType: string;
+  organisatieCode: string;
+}): string | undefined {
+  if (!bestuursorgaan) return undefined;
+  const preset = LOCATION_PRESETS.find((p) => p.oin === bestuursorgaan.oin);
+  return preset?.label ?? `${bestuursorgaan.organisatieType}${bestuursorgaan.organisatieCode}`;
+}
+
+// ── DSO → DMN publish handoff (CPSV Editor) ──────────────────────────────────
+// LDE extracts a DMN from the conclusie STTR but has no local DMN store: the DMN
+// picker reads from TriplyDB via SPARQL. The CPSV Editor already deploys DMNs to
+// Operaton and publishes their RDF to that same TriplyDB graph, so we hand the
+// extracted DMN off to it rather than duplicating that pipeline here.
+const CPSV_EDITOR_URL = import.meta.env.VITE_CPSV_EDITOR_URL || 'http://localhost:3002';
+
+/**
+ * Build the CPSV Editor deep-link for publishing a DSO-extracted DMN.
+ *
+ * Contract (consumed by the CPSV Editor, separate codebase):
+ *   <CPSV_EDITOR_URL>/?dsoImport=dmn&dmnId=<id>&env=<pre|prod>&...metadata
+ *
+ * Only identifiers + DSO metadata travel in the URL. The CPSV Editor fetches the
+ * DMN XML itself from the shared LDE backend
+ * (GET /v1/dso/toepasbare-regels/{dmnId}/dmn?env=<env>), so the large DMN payload
+ * never goes through the query string.
+ */
+function buildCpsvEditorImportUrl(params: {
+  dmnId: number;
+  env: DsoEnv;
+  activityName?: string;
+  authority?: string;
+  activityUrn?: string;
+  functioneleStructuurRef?: string;
+}): string {
+  const q = new URLSearchParams({
+    dsoImport: 'dmn',
+    dmnId: String(params.dmnId),
+    env: params.env,
+  });
+  if (params.activityName) q.set('activityName', params.activityName);
+  if (params.authority) q.set('authority', params.authority);
+  if (params.activityUrn) q.set('activityUrn', params.activityUrn);
+  if (params.functioneleStructuurRef) q.set('fsRef', params.functioneleStructuurRef);
+  return `${CPSV_EDITOR_URL.replace(/\/$/, '')}/?${q.toString()}`;
+}
+
+const TYPERING_META: Record<string, { label: string; color: string }> = {
   indieningsvereisten: {
+    label: 'Submission requirements',
+    color: 'bg-blue-100 text-blue-700 border-blue-200',
+  },
+  Indieningsvereisten: {
     label: 'Submission requirements',
     color: 'bg-blue-100 text-blue-700 border-blue-200',
   },
@@ -494,7 +575,12 @@ const TYPERING_META: Record<DsoRegelbeheerobject['typering'], { label: string; c
     label: 'Decision criteria',
     color: 'bg-purple-100 text-purple-700 border-purple-200',
   },
+  Conclusie: {
+    label: 'Decision criteria',
+    color: 'bg-purple-100 text-purple-700 border-purple-200',
+  },
   maatregelen: { label: 'Measures', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  Maatregelen: { label: 'Measures', color: 'bg-amber-100 text-amber-700 border-amber-200' },
 };
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
@@ -505,6 +591,246 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
     {children}
   </div>
 );
+
+// ── Applicable Rules (STTR) ──────────────────────────────────────────────────
+
+const ApplicableRuleRow: React.FC<{
+  regel: DsoRegelbeheerobject;
+  env: DsoEnv;
+  activityName?: string;
+  organization?: string;
+  activityUrn?: string;
+}> = ({ regel, env, activityName, organization, activityUrn }) => {
+  const [result, setResult] = useState<ToepasbareRegelsResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [scaffoldLoading, setScaffoldLoading] = useState(false);
+  const [scaffoldError, setScaffoldError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!regel.functioneleStructuurRef) return;
+    setLoading(true);
+    setError(null);
+    fetchToepasbareRegels(regel.functioneleStructuurRef, env)
+      .then(setResult)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .finally(() => setLoading(false));
+  }, [regel.functioneleStructuurRef, env]);
+
+  const meta = TYPERING_META[regel.typering] ?? {
+    label: regel.typering,
+    color: 'bg-slate-100 text-slate-600 border-slate-200',
+  };
+
+  const handleDownloadScaffold = async (item: DsoToepasbareRegel) => {
+    setScaffoldLoading(true);
+    setScaffoldError(null);
+    try {
+      const scaffold = await fetchFormScaffold(item.identifier, `form-${item.identifier}`, env);
+      const blob = new Blob([JSON.stringify(scaffold, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `form-scaffold-${item.identifier}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setScaffoldError(e instanceof Error ? e.message : 'Scaffold generation failed');
+    } finally {
+      setScaffoldLoading(false);
+    }
+  };
+
+  // Import the generated scaffold straight into the LDE form store so it shows
+  // up in the Form Editor. Mirrors FormEditor.handleImportForm: the DSO scaffold
+  // is already a form-js schema, we just stamp the execution-platform metadata
+  // the editor and Operaton deploy expect (the scaffold omits it).
+  const handleImportScaffold = async (item: DsoToepasbareRegel) => {
+    setImporting(true);
+    setImportError(null);
+    try {
+      const scaffold = await fetchFormScaffold(item.identifier, `form-${item.identifier}`, env);
+      const id = `form_dso_${item.identifier}`;
+      const now = new Date().toISOString();
+      const newForm: FormSchema = {
+        id,
+        name: activityName
+          ? `${activityName} — Submission requirements`
+          : `DSO form ${item.identifier}`,
+        schema: {
+          ...scaffold,
+          id,
+          executionPlatform: 'Camunda Platform',
+          executionPlatformVersion: '7.21.0',
+        },
+        createdAt: now,
+        updatedAt: now,
+        status: 'dso',
+        language: 'nl',
+        organization,
+      };
+      FormService.saveForm(newForm);
+      setImported(true);
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : 'Import failed');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <div className="border border-slate-200 rounded-lg p-3 space-y-2 bg-slate-50">
+      <span
+        className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded border ${meta.color}`}
+      >
+        {meta.label}
+      </span>
+
+      {loading && (
+        <div className="flex items-center gap-1 text-xs text-slate-400">
+          <Loader2 size={11} className="animate-spin" />
+          Loading…
+        </div>
+      )}
+      {error && <p className="text-xs text-red-600">{error}</p>}
+
+      {result?.items.map((item, idx) => (
+        <div key={item.identifier ?? item.functioneleStructuurRef ?? idx} className="space-y-2">
+          <div className="text-xs text-slate-600 space-y-0.5">
+            {item.begindatum && (
+              <p>
+                <span className="text-slate-400">Valid from: </span>
+                {item.begindatum}
+              </p>
+            )}
+            {item.sttrVersie !== undefined && (
+              <p>
+                <span className="text-slate-400">STTR version: </span>
+                {item.sttrVersie}
+              </p>
+            )}
+            <p className="text-[10px] text-slate-300 font-mono">id: {item.identifier}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            <a
+              href={sttrDownloadUrl(item.identifier, env)}
+              download={`sttr-${item.identifier}.xml`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 py-1 text-[10px] bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-colors"
+            >
+              ↓ STTR
+            </a>
+            {regel.typering.toLowerCase() === 'conclusie' && (
+              <>
+                <a
+                  href={dmnDownloadUrl(item.identifier, env)}
+                  download={`decision-${item.identifier}.dmn`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1 text-[10px] bg-purple-50 border border-purple-200 text-purple-700 rounded hover:bg-purple-100 transition-colors"
+                >
+                  ↓ Extract DMN
+                </a>
+                <a
+                  href={buildCpsvEditorImportUrl({
+                    dmnId: item.identifier,
+                    env,
+                    activityName,
+                    authority: organization,
+                    activityUrn,
+                    functioneleStructuurRef: regel.functioneleStructuurRef,
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1 text-[10px] inline-flex items-center gap-1 bg-purple-600 border border-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                  title="Open in the CPSV Editor to deploy this DMN to Operaton and publish it to TriplyDB, where the LDE DMN picker can consume it"
+                >
+                  <ExternalLink size={11} /> Publish via CPSV Editor
+                </a>
+              </>
+            )}
+            {regel.typering.toLowerCase() === 'indieningsvereisten' && (
+              <>
+                <button
+                  onClick={() => handleDownloadScaffold(item)}
+                  disabled={scaffoldLoading}
+                  className="px-2 py-1 text-[10px] bg-blue-50 border border-blue-200 text-blue-700 rounded hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                >
+                  {scaffoldLoading ? '…' : '↓ Form scaffold'}
+                </button>
+                <button
+                  onClick={() => handleImportScaffold(item)}
+                  disabled={importing || imported}
+                  className="px-2 py-1 text-[10px] inline-flex items-center gap-1 bg-blue-600 border border-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  title="Save as a new form in the LDE Form Editor"
+                >
+                  {imported ? (
+                    <>
+                      <Check size={11} /> Imported
+                    </>
+                  ) : importing ? (
+                    '…'
+                  ) : (
+                    <>
+                      <Download size={11} /> Import into LDE
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+          {scaffoldError && <p className="text-[10px] text-red-600">{scaffoldError}</p>}
+          {importError && <p className="text-[10px] text-red-600">{importError}</p>}
+          {imported && (
+            <p className="text-[10px] text-green-600">Saved to Form Editor as a draft.</p>
+          )}
+        </div>
+      ))}
+
+      {!loading && !error && result?.items.length === 0 && (
+        <p className="text-xs text-slate-400 italic">No toepasbare regels found.</p>
+      )}
+    </div>
+  );
+};
+
+const ApplicableRulesSection: React.FC<{
+  regelBeheerObjecten: DsoRegelbeheerobject[];
+  env: DsoEnv;
+  activityName?: string;
+  organization?: string;
+  activityUrn?: string;
+}> = ({ regelBeheerObjecten, env, activityName, organization, activityUrn }) => {
+  const candidates = regelBeheerObjecten.filter(
+    (r) =>
+      r.functioneleStructuurRef &&
+      (r.typering.toLowerCase() === 'conclusie' ||
+        r.typering.toLowerCase() === 'indieningsvereisten')
+  );
+  if (candidates.length === 0) return null;
+
+  return (
+    <Section title={`Applicable rules (${candidates.length})`}>
+      <div className="space-y-2">
+        {candidates.map((r) => (
+          <ApplicableRuleRow
+            key={r.functioneleStructuurRef ?? r.typering}
+            regel={r}
+            env={env}
+            activityName={activityName}
+            organization={organization}
+            activityUrn={activityUrn}
+          />
+        ))}
+      </div>
+    </Section>
+  );
+};
 
 const ActivityDetailPanel: React.FC<{
   urn: string;
@@ -678,6 +1004,17 @@ const ActivityDetailPanel: React.FC<{
               </Section>
             )}
 
+            {/* Applicable rules (STTR) */}
+            {detail.regelBeheerObjecten && detail.regelBeheerObjecten.length > 0 && (
+              <ApplicableRulesSection
+                regelBeheerObjecten={detail.regelBeheerObjecten}
+                env={env}
+                activityName={detail.omschrijving ?? undefined}
+                organization={authorityLabel(detail.bestuursorgaan)}
+                activityUrn={detail.urn}
+              />
+            )}
+
             {/* Child activities */}
             {detail._links?.onderliggendeActiviteiten &&
               detail._links.onderliggendeActiviteiten.length > 0 && (
@@ -758,10 +1095,7 @@ const ActiviteitRow: React.FC<{
 
 const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   // ── preset authorities ───────────────────────────────────────────────
-  const PRESETS = [
-    { label: 'Lelystad', oin: '00000001005024249000' },
-    { label: 'Flevoland', oin: '00000001006203243000' },
-  ] as const;
+  const PRESETS = LOCATION_PRESETS;
 
   const [datum, setDatum] = useState('');
   const [activeDatum, setActiveDatum] = useState<string | undefined>(undefined);
@@ -773,6 +1107,9 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   const [selectedUrn, setSelectedUrn] = useState<string | null>(null);
   const [urnInput, setUrnInput] = useState('');
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  // Client-side name filter — only meaningful when a location preset is fixed,
+  // since OIN mode loads the authority's full activity set in one call.
+  const [nameFilter, setNameFilter] = useState('');
 
   const toDsoDate = (iso: string) => {
     if (!iso) return undefined;
@@ -785,6 +1122,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
       setLoading(true);
       setError(null);
       setOinMode(false);
+      setNameFilter('');
       try {
         const dsoDate = toDsoDate(d);
         const res = await getActiviteiten(dsoDate, p, env);
@@ -840,6 +1178,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
     const isActive = activePreset === preset.label;
     setActivePreset(isActive ? null : preset.label);
     setSelectedUrn(null);
+    setNameFilter('');
     if (isActive) {
       setOinMode(false);
       setDatum('');
@@ -859,6 +1198,14 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
     setSelectedUrn(null);
     load(datum, p);
   };
+
+  // In OIN mode the full authority set is loaded, so filter by name client-side.
+  const filteredItems =
+    oinMode && nameFilter.trim()
+      ? (result?.items ?? []).filter((a) =>
+          (a.omschrijving ?? a.urn).toLowerCase().includes(nameFilter.trim().toLowerCase())
+        )
+      : (result?.items ?? []);
 
   return (
     <div className="flex flex-col h-full">
@@ -909,6 +1256,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
                   setOinMode(false);
                   setSelectedUrn(null);
                   setDatum('');
+                  setNameFilter('');
                   load('', 1);
                 }}
                 className="ml-auto text-[10px] text-slate-400 hover:text-slate-600 underline transition-colors"
@@ -918,6 +1266,34 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
             </>
           )}
         </div>
+        {/* Row 2b: name search — only when a location is fixed */}
+        {oinMode && (
+          <div className="px-3 py-2 flex gap-2 items-center border-b border-slate-100">
+            <div className="relative flex-1">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                value={nameFilter}
+                onChange={(e) => {
+                  setNameFilter(e.target.value);
+                  setSelectedUrn(null);
+                }}
+                placeholder={`Filter ${activePreset ?? 'location'} activities by name…`}
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+            {nameFilter && (
+              <button
+                onClick={() => setNameFilter('')}
+                className="text-[10px] text-slate-400 hover:text-slate-600 underline transition-colors shrink-0"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
         {/* Row 3: URN paste */}
         <div className="px-3 py-2 flex gap-2 items-center">
           <input
@@ -956,16 +1332,18 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
               {error}
             </div>
           )}
-          {!loading && !error && result && result.items.length === 0 && (
+          {!loading && !error && result && filteredItems.length === 0 && (
             <p className="text-center text-slate-400 text-sm py-12">
-              {oinMode
-                ? 'No activities found for this authority on the selected date.'
-                : 'No activities found.'}
+              {oinMode && nameFilter.trim()
+                ? `No activities matching “${nameFilter.trim()}”.`
+                : oinMode
+                  ? 'No activities found for this authority on the selected date.'
+                  : 'No activities found.'}
             </p>
           )}
           {!loading &&
             !error &&
-            result?.items.map((a) => (
+            filteredItems.map((a) => (
               <ActiviteitRow
                 key={a.urn}
                 act={a}
@@ -991,24 +1369,31 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
       {result && (result.items.length > 0 || page > 1) && (
         <div className="p-3 border-t border-slate-200 bg-white flex items-center justify-between flex-shrink-0">
           <span className="text-xs text-slate-500">
-            Page {page} · {result.items.length} items
+            {oinMode
+              ? nameFilter.trim()
+                ? `${filteredItems.length} of ${result.items.length} activities`
+                : `${result.items.length} activities`
+              : `Page ${page} · ${result.items.length} items`}
           </span>
-          <div className="flex gap-1">
-            <button
-              onClick={() => goPage(page - 1)}
-              disabled={page <= 1 || loading}
-              className="p-1.5 rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <button
-              onClick={() => goPage(page + 1)}
-              disabled={!result.hasNext || loading}
-              className="p-1.5 rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
+          {/* OIN mode loads the full set in one call — no pagination */}
+          {!oinMode && (
+            <div className="flex gap-1">
+              <button
+                onClick={() => goPage(page - 1)}
+                disabled={page <= 1 || loading}
+                className="p-1.5 rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                onClick={() => goPage(page + 1)}
+                disabled={!result.hasNext || loading}
+                className="p-1.5 rounded border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

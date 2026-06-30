@@ -186,6 +186,11 @@ const FormList: React.FC<FormListProps> = ({
                   WIP
                 </span>
               )}
+              {form.status === 'dso' && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">
+                  DSO
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {new Date(form.updatedAt).toLocaleDateString()}

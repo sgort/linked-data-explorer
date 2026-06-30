@@ -1,0 +1,284 @@
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix cpsv:   <http://purl.org/vocab/cpsv#> .
+@prefix cprmv:  <https://standaarden.open-regels.nl/standards/cprmv/0.4.1#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+
+cprmv:RuleSetShape
+    a sh:NodeShape ;
+    sh:targetClass cprmv:RuleSet ;
+    sh:property [
+        sh:path cprmv:id ;
+        sh:minCount 1 ;
+    ] ;
+    sh:property [
+        sh:path cprmv:comment ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path cprmv:validFrom ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:date ;
+    ] ;
+    sh:property [
+        sh:path cprmv:validUntil ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:date ;
+    ] ;
+    sh:property [
+        sh:path cprmv:publishedOn ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:date ;
+    ] ;
+    sh:property [
+        sh:path cprmv:isBasedOn ;
+        sh:class cprmv:RuleSet ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path cprmv:isOutputOf ;
+        sh:class cpsv:PublicService ;
+        sh:minCount 1 ;
+    ] ;
+    sh:property [
+        sh:path cprmv:hasMethod ;
+        sh:class cprmv:RuleMethod ;
+        sh:minCount 1 ;
+    ]  ;
+    sh:property [
+        sh:path cprmv:hasPart ;
+        sh:node cprmv:hasPartListShape ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+cprmv:DecisionModelShape
+    a sh:NodeShape ;
+    sh:targetClass cprmv:DecisionModel ;
+    sh:property [
+        sh:path cprmv:hasAnalysis ;
+        sh:class cprmv:Analysis ;
+        sh:minCount 0 ;
+    ] .
+
+cprmv:RuleShape
+    a sh:NodeShape ;
+    sh:targetClass cprmv:Rule ;
+    sh:property [
+        sh:path cprmv:id ;
+        sh:minCount 1 ;
+    ] ;
+    sh:property [
+        sh:path cprmv:definition ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path cprmv:postDefinition ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path cprmv:sourceQuote ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path cprmv:comment ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path cprmv:isBasedOn ;
+        sh:class cprmv:Rule ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path cprmv:hasPart ;
+        sh:node cprmv:hasPartListShape ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+    ] .
+
+cprmv:RuleMethodShape
+    a sh:NodeShape ;
+    sh:targetClass cprmv:RuleMethod ;
+    sh:property [
+        sh:path cprmv:id ;
+        sh:minCount 1 ;
+    ] ;
+    sh:property [
+        sh:path cprmv:comment ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+    ] .
+
+cprmv:AnalysisMethod
+    a sh:NodeShape ;
+    sh:targetClass cprmv:AnalysisMethod .
+
+cprmv:FormalisationMethod
+    a sh:NodeShape ;
+    sh:targetClass cprmv:FormalisationMethod .
+    
+cprmv:CodificationMethod
+    a sh:NodeShape ;
+    sh:targetClass cprmv:CodificationMethod .
+
+cprmv:ExecutionMethod
+    a sh:NodeShape ;
+    sh:targetClass cprmv:ExecutionMethod.
+    
+cprmv:ExplanationMethod
+    a sh:NodeShape ;
+    sh:targetClass cprmv:ExplanationMethod .
+    
+cprmv:TestMethod
+    a sh:NodeShape ;
+    sh:targetClass cprmv:TestMethod .
+    
+cprmv:PublicationMethod
+    a sh:NodeShape ;
+    sh:targetClass cprmv:PublicationMethod .
+    
+cprmv:ReferenceMethod
+    a sh:NodeShape ;
+    sh:targetClass cprmv:ReferenceMethod .
+
+cprmv:hasPartListShape a sh:NodeShape ;
+  sh:or (
+    [
+      sh:hasValue rdf:nil ;
+    ]
+    [
+      sh:property [
+        sh:path rdf:first ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        # Optional: Further constraints on the list members can be added here
+        sh:class cprmv:Rule ;
+      ] ;
+      sh:property [
+        sh:path rdf:rest ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        # Recursively apply ex:ListShape to the rest of the list (see https://www.w3.org/TR/shacl/#shapes-recursion)
+        # comment the line below if the system processing this shape has no recursive shapes support
+        sh:node cprmv:hasPartListShape ;
+      ] ;
+    ]
+  ) .
+
+cprmv:Explanation
+    a sh:NodeShape ;
+    sh:targetClass cprmv:Explanation ;
+    sh:property [
+        sh:path cprmv:explains ;
+        sh:or (
+            [ sh:class cprmv:Rule ]
+            [ sh:class cprmv:RuleSet ]
+        ) ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+cprmv:TestCase
+    a sh:NodeShape ;
+    sh:targetClass cprmv:TestCase .
+
+cprmv:TestSet
+    a sh:NodeShape ;
+    sh:targetClass cprmv:TestSet.
+
+cprmv:Decision
+    a sh:NodeShape ;
+    sh:targetClass cprmv:Decision .
+
+cprmv:Case
+    a sh:NodeShape ;
+    sh:targetClass cprmv:Case .
+
+cprmv:ParameterWaardeShape
+    a sh:NodeShape ;
+    sh:targetClass cprmv:ParameterWaarde ;
+    sh:property [
+        sh:path skos:notation ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path skos:prefLabel ;
+        sh:minCount 1 ;
+        sh:datatype rdf:langString ;
+    ] ;
+    sh:property [
+        sh:path schema:value ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+    ] ;
+    sh:property [
+        sh:path schema:unitCode ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path dct:description ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype rdf:langString ;
+    ] ;
+    sh:property [
+        sh:path cprmv:validFrom ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:date ;
+    ] ;
+    sh:property [
+        sh:path cprmv:validUntil ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:date ;
+    ] .
+
+cprmv:TemporalRuleShape
+    a sh:NodeShape ;
+    sh:targetClass cprmv:TemporalRule ;
+    sh:property [
+        sh:path cprmv:validFrom ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:date ;
+    ] ;
+    sh:property [
+        sh:path cprmv:validUntil ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:date ;
+    ] ;
+    sh:property [
+        sh:path cprmv:confidenceLevel ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path cprmv:isBasedOn ;
+        sh:class cpsv:Rule ;
+        sh:minCount 0 ;
+    ] .
+

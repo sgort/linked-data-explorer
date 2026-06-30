@@ -1,0 +1,77 @@
+@prefix ex: <http://example.com/> .
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix cprmv: <https://standaarden.open-regels.nl/standards/cprmv/0.4.1#> .
+
+ex:myRuleMethod a cprmv:RuleMethod ;
+    cprmv:id "test" ;
+    cprmv:comment "test comment" .
+
+ex:myAnalysisMethod a cprmv:AnalysisMethod ;
+    cprmv:id "test" .
+    
+ex:myFormalisationMethod a cprmv:FormalisationMethod ;
+    cprmv:id "test" .
+
+ex:myCodificationMethod a cprmv:CodificationMethod ;
+    cprmv:id "test" .
+    
+ex:myExecutionMethod a cprmv:ExecutionMethod ;
+    cprmv:id "test" .
+
+ex:myExplanationMethod a cprmv:ExplanationMethod ;
+    cprmv:id "test" .
+    
+ex:myTestMethod a cprmv:TestMethod ;
+    cprmv:id "test" .
+    
+ex:myPublicationMethod a cprmv:PublicationMethod ;
+    cprmv:id "test" .
+    
+ex:myReferenceMethod a cprmv:ReferenceMethod ;
+    cprmv:id "test" .
+
+ex:myRuleSet a cprmv:RuleSet ;
+    cprmv:id "test" ;
+    cprmv:isOutputOf [a cpsv:PublicService] ;
+    cprmv:hasMethod ex:myRuleMethod ;
+    cprmv:hasPart ( ex:myRuleA ) ;
+    cprmv:validFrom "2026-01-01"^^xsd:date .
+
+ex:myAnalysis a cprmv:Analysis ;
+    cprmv:id "test" ;
+    cprmv:isOutputOf [a cpsv:PublicService] ;
+    cprmv:hasMethod ex:myRuleMethod ;
+    cprmv:hasPart ( ex:myRuleA ) ;
+    cprmv:validFrom "2026-01-01"^^xsd:date .
+
+ex:myDecisionModel a cprmv:DecisionModel ;
+    cprmv:id "test" ;
+    cprmv:hasAnalysis ex:myAnalysis ;
+    cprmv:isOutputOf [a cpsv:PublicService] ;
+    cprmv:hasMethod ex:myRuleMethod ;
+    cprmv:hasPart ( ex:myRuleA ) ;
+    cprmv:validFrom "2026-01-01"^^xsd:date .
+
+ex:myRuleA a cprmv:Rule ;
+    cprmv:id "test" .
+
+ex:myRuleB a cprmv:Rule ;
+    cprmv:id "test" ;
+    cprmv:isBasedOn ex:myRuleA .
+
+ex:myExplanation a cprmv:Explanation ;
+    cprmv:id "test" ;
+    cprmv:explains ex:myRuleB .
+
+ex:testSet a cprmv:testSet ;
+    cprmv:id "test" .
+    
+ex:testCase a cprmv:testCase ;
+    cprmv:id "test" .
+
+ex:testDecision a cprmv:Decision ;
+    cprmv:id "test" .
+    
+ex:Case a cprmv:Case ;
+    cprmv:id "test" .

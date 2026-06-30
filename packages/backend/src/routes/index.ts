@@ -1,4 +1,3 @@
-
 // packages/backend/src/routes/index.ts
 // Mounts v1 routes from the shared registry plus legacy /api/* deprecation
 // aliases. The v1 list is intentionally not maintained here — see registry.ts.

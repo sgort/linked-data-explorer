@@ -163,6 +163,7 @@ export class SparqlService {
 
     const query = `
 PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
+PREFIX cprmv041: <https://standaarden.open-regels.nl/standards/cprmv/0.4.1#>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX ronl: <https://regels.overheid.nl/termen/>
@@ -171,37 +172,46 @@ PREFIX cv: <http://data.europa.eu/m8g/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 
-SELECT ?dmn ?identifier ?title ?description ?deploymentId ?deployedAt 
-       ?implementedBy ?lastTested ?testStatus 
+SELECT ?dmn ?identifier ?title ?description ?deploymentId ?deployedAt
+       ?implementedBy ?lastTested ?testStatus
        ?service ?serviceTitle ?organization ?orgName ?logo
        ?validationStatus ?validatedBy ?validatedByName ?validatedAt ?validationNote
 WHERE {
-  ?dmn a cprmv:DecisionModel ;
-       dct:identifier ?identifier ;
+  # DecisionModel type: support CPRMV 0.3.0 and CPRMV 0.4.1 namespaces
+  { ?dmn a cprmv:DecisionModel } UNION { ?dmn a cprmv041:DecisionModel }
+  ?dmn dct:identifier ?identifier ;
        dct:title ?title .
-  
+
   OPTIONAL { ?dmn dct:description ?description }
   OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
+  OPTIONAL { ?dmn cprmv041:deploymentId ?deploymentId }
   OPTIONAL { ?dmn cprmv:deployedAt ?deployedAt }
-  
-  # implementedBy: Support both old (ronl:) and new (cprmv:)
+  OPTIONAL { ?dmn cprmv041:deployedAt ?deployedAt }
+
+  # implementedBy: support old (ronl:), CPRMV 0.3.0 (cprmv:) and CPRMV 0.4.1 (cprmv041:)
   OPTIONAL { ?dmn ronl:implementedBy ?implementedBy }
   OPTIONAL { ?dmn cprmv:implementedBy ?implementedBy }
-  
+  OPTIONAL { ?dmn cprmv041:implementedBy ?implementedBy }
+
   OPTIONAL { ?dmn cprmv:lastTested ?lastTested }
+  OPTIONAL { ?dmn cprmv041:lastTested ?lastTested }
   OPTIONAL { ?dmn cprmv:testStatus ?testStatus }
-  
+  OPTIONAL { ?dmn cprmv041:testStatus ?testStatus }
+
   # Traverse DMN → Service → Organization → Logo
-  # Support BOTH old (ronl:implements) and new (cprmv:implements)
+  # Support old (ronl:implements), CPRMV 0.3.0 (cprmv:implements) and CPRMV 0.4.1 (cprmv041:implements)
   OPTIONAL {
     {
-      # NEW namespace (facts endpoint uses this)
+      # CPRMV 0.4.1 namespace (canonical going forward)
+      ?dmn cprmv041:implements ?service .
+    } UNION {
+      # CPRMV 0.3.0 namespace (facts endpoint uses this)
       ?dmn cprmv:implements ?service .
     } UNION {
       # OLD namespace (RONL/DMN-discovery endpoints use this)
       ?dmn ronl:implements ?service .
     }
-    
+
     ?service dct:title ?serviceTitle .
     
     OPTIONAL {
@@ -468,21 +478,22 @@ ORDER BY ?identifier
 
     const query = `
 PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
+PREFIX cprmv041: <https://standaarden.open-regels.nl/standards/cprmv/0.4.1#>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX dct: <http://purl.org/dc/terms/>
 
 SELECT ?dmn1Identifier ?dmn2Identifier ?variableId ?variableType
 WHERE {
-  # DMN 1 produces a variable
-  ?dmn1 a cprmv:DecisionModel ;
-        dct:identifier ?dmn1Identifier .
+  # DMN 1 produces a variable (DecisionModel type: CPRMV 0.3.0 or 0.4.1)
+  { ?dmn1 a cprmv:DecisionModel } UNION { ?dmn1 a cprmv041:DecisionModel }
+  ?dmn1 dct:identifier ?dmn1Identifier .
   ?output1 cpsv:produces ?dmn1 ;
            dct:identifier ?variableId ;
            dct:type ?variableType .
-  
-  # DMN 2 requires the same variable
-  ?dmn2 a cprmv:DecisionModel ;
-        dct:identifier ?dmn2Identifier .
+
+  # DMN 2 requires the same variable (DecisionModel type: CPRMV 0.3.0 or 0.4.1)
+  { ?dmn2 a cprmv:DecisionModel } UNION { ?dmn2 a cprmv041:DecisionModel }
+  ?dmn2 dct:identifier ?dmn2Identifier .
   ?input2 cpsv:isRequiredBy ?dmn2 ;
           dct:identifier ?variableId .
   
@@ -518,6 +529,7 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
+PREFIX cprmv041: <https://standaarden.open-regels.nl/standards/cprmv/0.4.1#>
 
 SELECT ?concept1 ?concept1Label ?concept1Notation ?variable1 ?variable1Id ?variable1Type
        ?concept2 ?concept2Label ?concept2Notation ?variable2 ?variable2Id ?variable2Type
@@ -543,9 +555,9 @@ WHERE {
                cpsv:produces ?dmn1 .
   }
   
-  ?dmn1 a cprmv:DecisionModel ;
-        dct:title ?dmn1Title .
-  
+  { ?dmn1 a cprmv:DecisionModel } UNION { ?dmn1 a cprmv041:DecisionModel }
+  ?dmn1 dct:title ?dmn1Title .
+
   # Second concept with same exactMatch
   ?concept2 a skos:Concept ;
             skos:exactMatch ?sharedConcept ;
@@ -566,9 +578,9 @@ WHERE {
                cpsv:produces ?dmn2 .
   }
   
-  ?dmn2 a cprmv:DecisionModel ;
-        dct:title ?dmn2Title .
-  
+  { ?dmn2 a cprmv:DecisionModel } UNION { ?dmn2 a cprmv041:DecisionModel }
+  ?dmn2 dct:title ?dmn2Title .
+
   # Ensure different concepts (but same sharedConcept URI)
   FILTER(?concept1 != ?concept2)
   FILTER(?dmn1 != ?dmn2)
@@ -628,8 +640,9 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
+PREFIX cprmv041: <https://standaarden.open-regels.nl/standards/cprmv/0.4.1#>
 
-SELECT DISTINCT ?dmn1 ?dmn1Identifier ?dmn1Title 
+SELECT DISTINCT ?dmn1 ?dmn1Identifier ?dmn1Title
                 ?dmn2 ?dmn2Identifier ?dmn2Title 
                 ?outputVar ?outputVarId ?inputVar ?inputVarId ?variableType
                 ?matchType ?sharedConcept
@@ -650,13 +663,13 @@ WHERE {
   FILTER(?variableType = ?inputVarType)
   FILTER(?dmn1 != ?dmn2)
   
-  # Get DMN metadata
-  ?dmn1 a cprmv:DecisionModel ;
-        dct:identifier ?dmn1Identifier ;
+  # Get DMN metadata (DecisionModel type: CPRMV 0.3.0 or 0.4.1)
+  { ?dmn1 a cprmv:DecisionModel } UNION { ?dmn1 a cprmv041:DecisionModel }
+  ?dmn1 dct:identifier ?dmn1Identifier ;
         dct:title ?dmn1Title .
-  
-  ?dmn2 a cprmv:DecisionModel ;
-        dct:identifier ?dmn2Identifier ;
+
+  { ?dmn2 a cprmv:DecisionModel } UNION { ?dmn2 a cprmv041:DecisionModel }
+  ?dmn2 dct:identifier ?dmn2Identifier ;
         dct:title ?dmn2Title .
   
   # Check for matching via identifier or concept
@@ -773,6 +786,7 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX cpsv: <http://purl.org/vocab/cpsv#>
 PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
+PREFIX cprmv041: <https://standaarden.open-regels.nl/standards/cprmv/0.4.1#>
 
 SELECT DISTINCT ?dmn1 ?dmn1Title ?dmn2 ?dmn2Title ?dmn3 ?dmn3Title
                 ?var1 ?var2 ?concept1 ?concept2
@@ -826,9 +840,12 @@ WHERE {
                dct:subject ?input1 .
   }
   
-  ?dmn1 a cprmv:DecisionModel ; dct:title ?dmn1Title .
-  ?dmn2 a cprmv:DecisionModel ; dct:title ?dmn2Title .
-  ?dmn3 a cprmv:DecisionModel ; dct:title ?dmn3Title .
+  { ?dmn1 a cprmv:DecisionModel } UNION { ?dmn1 a cprmv041:DecisionModel }
+  ?dmn1 dct:title ?dmn1Title .
+  { ?dmn2 a cprmv:DecisionModel } UNION { ?dmn2 a cprmv041:DecisionModel }
+  ?dmn2 dct:title ?dmn2Title .
+  { ?dmn3 a cprmv:DecisionModel } UNION { ?dmn3 a cprmv041:DecisionModel }
+  ?dmn3 dct:title ?dmn3Title .
   
   FILTER(?dmn1 != ?dmn2 && ?dmn2 != ?dmn3 && ?dmn3 != ?dmn1)
 }

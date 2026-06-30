@@ -1,0 +1,11 @@
+# Deliberately malformed Turtle — exercises the parser branch of the validator,
+# which must return { valid: false, parseError: <message> } rather than throwing or
+# reporting SHACL violations. The dct:title statement is missing its closing quote
+# and terminating period, so n3's Parser.parse() raises.
+
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+<https://regels.overheid.nl/register/Flevoland/subsidie-thuisbatterij> a cpsv:Rule ;
+    dct:identifier "RONL-FL-001" ;
+    dct:title "Subsidie thuisbatterij

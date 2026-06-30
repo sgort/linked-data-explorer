@@ -1,5 +1,6 @@
 // packages/backend/src/services/dso.service.ts
 
+import { XMLParser } from 'fast-xml-parser';
 import { config } from '../utils/config';
 import { logger } from '../utils/logger';
 
@@ -99,7 +100,9 @@ export async function getActiviteitenByOin(
 
   const params = new URLSearchParams();
   params.set('page', '1');
-  params.set('pageSize', '100');
+  // Full set in one call so the Activities tab can filter client-side.
+  // The API caps `size` to the actual count, so this never over-fetches.
+  params.set('pageSize', '200');
 
   const body = {
     datum: effectiveDatum,
@@ -335,4 +338,331 @@ export async function getWerkzaamheidDetail(urn: string, env: DsoEnv = 'pre'): P
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Uitvoeren Gegevens API  (toepasbareregelsuitvoerengegevens v1)
+// ---------------------------------------------------------------------------
+
+/** Fetch helper that returns raw XML text (used for STTR bestand downloads). */
+async function dsoFetchXml(url: string, env: DsoEnv = 'pre'): Promise<string> {
+  const dsoConfig = getDsoConfig(env);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
+  try {
+    const response = await fetch(url, {
+      headers: { 'x-api-key': dsoConfig.apiKey, Accept: 'application/xml' },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`DSO responded ${response.status}: ${body}`);
+    }
+    return response.text();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * GET /toepasbareRegels?functioneleStructuurRef=...
+ * Returns the metadata list for a given functioneleStructuurRef.
+ */
+export async function getToepasbareRegels(
+  functioneleStructuurRef: string,
+  env: DsoEnv = 'pre'
+): Promise<unknown> {
+  const params = new URLSearchParams({ functioneleStructuurRef });
+  const url = `${getDsoConfig(env).uitvoerenGegevensBaseUrl}/toepasbareRegels?${params}`;
+  logger.info('[DSO] GET toepasbareRegels', { env, functioneleStructuurRef });
+  return dsoFetch(url, env);
+}
+
+/**
+ * GET /toepasbareRegels/:id/sttr
+ * Returns the raw STTR XML for a toepasbare regel by its generated id.
+ */
+export async function getSttrBestand(id: string, env: DsoEnv = 'pre'): Promise<string> {
+  const url = `${getDsoConfig(env).uitvoerenGegevensBaseUrl}/toepasbareRegels/${encodeURIComponent(id)}/sttrBestand`;
+  logger.info('[DSO] GET STTR bestand', { env, id });
+  return dsoFetchXml(url, env);
+}
+
+// ---------------------------------------------------------------------------
+// STTR parsing helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert an arbitrary STTR variable name into a FEEL-safe identifier.
+ * FEEL treats `-` as subtraction and whitespace as token separators, so the
+ * STTR's hyphenated GUID names (`uitv__<guid>`) and spaced names
+ * (`Boom kappen … _cross`) are not resolvable as variable references. Mapping
+ * every non-`[A-Za-z0-9_]` char to `_` yields a usable identifier.
+ */
+function toFeelName(name: string): string {
+  const safe = name.replace(/[^A-Za-z0-9_]/g, '_');
+  return /^[0-9]/.test(safe) ? `_${safe}` : safe;
+}
+
+/**
+ * Rename every declared `<variable name="…">` to a FEEL-safe identifier and
+ * rewrite the `<inputExpression>` references that point at those names, so the
+ * DMN actually *evaluates* on Camunda/Operaton (not just deploys). References
+ * are matched on exact, full name equality — output value literals and the `?`
+ * rule expressions never reference names, so they are left untouched. Decision
+ * and inputData display names (`name=` on `<decision>`/`<inputData>`) are also
+ * left as-is; only `<variable>` names drive FEEL resolution.
+ */
+function sanitizeFeelNames(xml: string): string {
+  const names = new Set<string>();
+  for (const m of xml.matchAll(/<(?:\w+:)?variable\b[^>]*\bname="([^"]*)"/g)) names.add(m[1]);
+
+  // Build name → FEEL-safe map, disambiguating any collisions.
+  const map = new Map<string, string>();
+  const used = new Set<string>();
+  for (const name of names) {
+    let safe = toFeelName(name);
+    if (safe !== name) {
+      let candidate = safe;
+      let i = 1;
+      while (used.has(candidate) || (candidate !== name && names.has(candidate)))
+        candidate = `${safe}_${i++}`;
+      safe = candidate;
+    }
+    used.add(safe);
+    map.set(name, safe);
+  }
+
+  // Rename the variable declarations.
+  let out = xml.replace(
+    /(<(?:\w+:)?variable\b[^>]*\bname=")([^"]*)(")/g,
+    (full, pre: string, nm: string, post: string) => {
+      const safe = map.get(nm);
+      return safe ? `${pre}${safe}${post}` : full;
+    }
+  );
+
+  // Rewrite inputExpression bodies that reference a known variable name
+  // (handles both plain and CDATA-wrapped text).
+  out = out.replace(
+    /(<(?:\w+:)?inputExpression\b[^>]*>\s*<(?:\w+:)?text>)(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?(<\/(?:\w+:)?text>)/g,
+    (full, open: string, content: string, close: string) => {
+      const safe = map.get(content.trim());
+      return safe ? `${open}${safe}${close}` : full;
+    }
+  );
+
+  return out;
+}
+
+// Default Camunda history TTL (days) stamped on extracted DMN decisions, matching
+// the LDE BPMN templates' `historyTimeToLive="180"` convention. This Operaton
+// instance enforces HTTL at deploy, so without it the deploy fails.
+const DSO_DMN_HISTORY_TTL = 180;
+
+/**
+ * Ensure the `camunda` namespace is declared and every `<decision>` carries a
+ * `camunda:historyTimeToLive`, so the DMN is deployable on an Operaton instance
+ * that enforces HTTL — making the extracted DMN handoff-ready without the
+ * deployer having to patch it. Decisions that already declare HTTL are left as-is.
+ */
+function ensureHistoryTimeToLive(xml: string): string {
+  let out = xml;
+  if (!/\bxmlns:camunda=/.test(out)) {
+    out = out.replace(
+      /<((?:\w+:)?definitions)\b/,
+      (full, tag: string) => `<${tag} xmlns:camunda="http://camunda.org/schema/1.0/dmn"`
+    );
+  }
+  return out.replace(/<((?:\w+:)?decision)((?:\s[^>]*)?)>/g, (full, tag: string, attrs: string) => {
+    if (/\bcamunda:historyTimeToLive\s*=/.test(attrs)) return full;
+    return `<${tag} camunda:historyTimeToLive="${DSO_DMN_HISTORY_TTL}"${attrs}>`;
+  });
+}
+
+/**
+ * Give every `<output>` that lacks a `typeRef` the type of its owning decision's
+ * result `<variable>` (defaulting to `string`). Clears the BIZ-004 validator
+ * warning and lets Camunda type-coerce output values correctly.
+ */
+function ensureOutputTypeRefs(xml: string): string {
+  return xml.replace(
+    /<(?:\w+:)?decision\b[^>]*>[\s\S]*?<\/(?:\w+:)?decision>/g,
+    (decBlock: string) => {
+      const tref = decBlock.match(/<(?:\w+:)?variable\b[^>]*\btypeRef="([^"]*)"/);
+      const type = tref ? tref[1] : 'string';
+      return decBlock.replace(
+        /<((?:\w+:)?output)\b((?:\s[^>]*?)?)(\/?)>/g,
+        (full, tag: string, attrs: string, selfClose: string) => {
+          if (/\btypeRef\s*=/.test(attrs)) return full;
+          return `<${tag}${attrs} typeRef="${type}"${selfClose}>`;
+        }
+      );
+    }
+  );
+}
+
+/**
+ * Normalises an STTR-extracted DMN so it both transforms AND evaluates on
+ * Operaton/Camunda. The Sogelink STTR Builder emits DMN the engine rejects
+ * (`ENGINE-22004`) and that, once deployable, still fails to evaluate. Fixes,
+ * verified against operaton.open-regels.nl:
+ *
+ *   1. DMN version: rewrite the four spec namespaces `…/20180521/…` (DMN 1.2)
+ *      → `…/20191111/…` (DMN 1.3); the engine only transforms 1.3.
+ *   2. Missing ids: inject `id` on `<input>` / `<inputExpression>` (engine rejects
+ *      inputs without one).
+ *   3. FEEL-safe names: rename `<variable>` names and their `<inputExpression>`
+ *      references to valid FEEL identifiers — without this the DMN deploys but
+ *      fails to evaluate (hyphens parse as subtraction, spaces as separators).
+ *   4. Output types: give untyped `<output>` columns a `typeRef` (BIZ-004).
+ *   5. History TTL: declare the `camunda` namespace and stamp
+ *      `camunda:historyTimeToLive` on each `<decision>`; this Operaton enforces
+ *      HTTL at deploy. With this the extracted DMN is deploy-ready as handed off
+ *      (the CPSV Editor deploys it as-is — no patching required).
+ */
+export function normalizeDmnForOperaton(dmn: string): string {
+  // 1. DMN 1.2 → 1.3 (covers MODEL / DI / DMNDI / DC; no-op if already 1.3).
+  let out = dmn.replace(
+    /http:\/\/www\.omg\.org\/spec\/DMN\/20180521\//g,
+    'https://www.omg.org/spec/DMN/20191111/'
+  );
+
+  // 2a. Add an id to every <input> opening tag that lacks one. Matching `input`
+  // followed by whitespace-or-`>` keeps this off <inputExpression>/<inputEntry>.
+  let inputCount = 0;
+  out = out.replace(/<((?:\w+:)?input)((?:\s[^>]*)?)>/g, (full, tag: string, attrs: string) => {
+    if (/\bid\s*=/.test(attrs)) return full;
+    inputCount += 1;
+    return `<${tag} id="dsoInput_${inputCount}"${attrs}>`;
+  });
+
+  // 2b. Same for <inputExpression>.
+  let exprCount = 0;
+  out = out.replace(
+    /<((?:\w+:)?inputExpression)((?:\s[^>]*)?)>/g,
+    (full, tag: string, attrs: string) => {
+      if (/\bid\s*=/.test(attrs)) return full;
+      exprCount += 1;
+      return `<${tag} id="dsoInputExpr_${exprCount}"${attrs}>`;
+    }
+  );
+
+  // 3. FEEL-safe variable names + reference rewrite (makes the DMN evaluatable).
+  out = sanitizeFeelNames(out);
+
+  // 4. Ensure output columns are typed (BIZ-004).
+  out = ensureOutputTypeRefs(out);
+
+  // 5. Stamp camunda:historyTimeToLive so the DMN deploys as handed off.
+  out = ensureHistoryTimeToLive(out);
+
+  return out;
+}
+
+/**
+ * Extracts the embedded DMN <definitions> element from a conclusie STTR envelope
+ * and returns it as a standalone, Operaton-deployable DMN XML string.
+ */
+export function extractDmnFromSttr(sttrXml: string): string {
+  // The conclusie STTR wraps a complete DMN 1.2 <definitions> element.
+  // Match including any namespace declarations and closing tag,
+  // handling both prefixed (dmn:definitions) and un-prefixed variants.
+  const match = sttrXml.match(/<(?:dmn:)?definitions[\s\S]*?<\/(?:dmn:)?definitions>/);
+  if (!match) throw new Error('No DMN <definitions> element found in STTR XML');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${normalizeDmnForOperaton(match[0])}`;
+}
+
+export interface FormScaffoldField {
+  id: string;
+  type: string;
+  label: string;
+  key: string;
+  values?: { label: string; value: string }[];
+  validate?: { required: boolean };
+}
+
+export interface FormScaffold {
+  schemaVersion: number;
+  id: string;
+  components: FormScaffoldField[];
+  type: 'default';
+}
+
+/**
+ * Parses an indieningsvereisten STTR and generates a best-effort form-js field
+ * scaffold from the uitv:uitvoeringsregels questionnaire in dmn:extensionElements.
+ */
+export function extractFormScaffoldFromSttr(sttrXml: string, formId: string): FormScaffold {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    isArray: (name) => ['uitv:uitvoeringsregel', 'uitv:optie'].includes(name),
+  });
+
+  const parsed = parser.parse(sttrXml);
+
+  const defs = parsed?.['dmn:definitions'] ?? parsed?.['definitions'] ?? {};
+  const ext = defs?.['dmn:extensionElements'] ?? {};
+  const regels: unknown[] = ext?.['uitv:uitvoeringsregels']?.['uitv:uitvoeringsregel'] ?? [];
+
+  const components: FormScaffoldField[] = [];
+
+  for (const r of regels) {
+    const regel = r as Record<string, unknown>;
+    const id = (regel['@_id'] as string) ?? '';
+    const key = id.replace(/^uitv__/, '').replace(/[^a-zA-Z0-9_]/g, '_');
+
+    if (regel['uitv:vraag']) {
+      const vraag = regel['uitv:vraag'] as Record<string, unknown>;
+      const gegevensType = (vraag['uitv:gegevensType'] as string) ?? 'string';
+      const vraagTekst = (vraag['uitv:vraagTekst'] as string) ?? '';
+      const inputType = vraag['inter:inputType'] as string | undefined;
+
+      let fieldType: string;
+      let values: { label: string; value: string }[] | undefined;
+
+      if (gegevensType === 'boolean') {
+        fieldType = 'checkbox';
+      } else if (gegevensType === 'list') {
+        fieldType = 'select';
+        const opties = (vraag['uitv:opties'] as Record<string, unknown>)?.['uitv:optie'];
+        if (Array.isArray(opties)) {
+          values = opties.map((o: unknown) => {
+            const text = ((o as Record<string, unknown>)['uitv:optieText'] as string) ?? '';
+            return { label: text, value: text };
+          });
+        }
+      } else if (gegevensType === 'number') {
+        fieldType = 'number';
+      } else if (inputType === 'textarea') {
+        fieldType = 'textarea';
+      } else {
+        fieldType = 'textfield';
+      }
+
+      components.push({
+        id,
+        type: fieldType,
+        label: vraagTekst,
+        key,
+        ...(values ? { values } : {}),
+        validate: { required: false },
+      });
+    } else if (regel['uitv:bijlage']) {
+      // Attachment requirement — emit as a labelled textfield placeholder
+      const bijlageType =
+        ((regel['uitv:bijlage'] as Record<string, unknown>)['uitv:bijlageType'] as string) ?? '';
+      components.push({
+        id,
+        type: 'textfield',
+        label: `[Bijlage] ${bijlageType}`,
+        key,
+        validate: { required: false },
+      });
+    }
+    // uitv:geoVerwijzing — geo fields not representable in form-js, skip
+  }
+
+  return { schemaVersion: 17, id: formId, components, type: 'default' };
 }

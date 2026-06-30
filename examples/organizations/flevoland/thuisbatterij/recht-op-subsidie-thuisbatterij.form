@@ -1,0 +1,148 @@
+{
+  "components": [
+    {
+      "text": "# Recht op subsidie thuisbatterij\nVul deze gegevens in om de DMN-beslissing `RechtOpSubsidieThuisbatterij` te kunnen evalueren. Boolean velden zijn aangevinkt = ja, niet aangevinkt = nee.",
+      "type": "text",
+      "layout": {
+        "row": "Row_recht_intro",
+        "columns": null
+      },
+      "id": "Field_recht_intro"
+    },
+    {
+      "label": "Is de aanvrager failliet?",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_recht_01",
+        "columns": null
+      },
+      "id": "Field_aanvragerFailliet",
+      "key": "aanvragerFailliet",
+      "description": "Aangevinkt = ja; niet aangevinkt = nee.",
+      "defaultValue": false
+    },
+    {
+      "values": [
+        {
+          "label": "Flevoland",
+          "value": "Flevoland"
+        },
+        {
+          "label": "Drenthe",
+          "value": "Drenthe"
+        },
+        {
+          "label": "Friesland",
+          "value": "Friesland"
+        },
+        {
+          "label": "Gelderland",
+          "value": "Gelderland"
+        },
+        {
+          "label": "Groningen",
+          "value": "Groningen"
+        },
+        {
+          "label": "Limburg",
+          "value": "Limburg"
+        },
+        {
+          "label": "Noord-Brabant",
+          "value": "Noord-Brabant"
+        },
+        {
+          "label": "Noord-Holland",
+          "value": "Noord-Holland"
+        },
+        {
+          "label": "Overijssel",
+          "value": "Overijssel"
+        },
+        {
+          "label": "Utrecht",
+          "value": "Utrecht"
+        },
+        {
+          "label": "Zeeland",
+          "value": "Zeeland"
+        },
+        {
+          "label": "Zuid-Holland",
+          "value": "Zuid-Holland"
+        }
+      ],
+      "label": "In welke provincie ligt de woning?",
+      "type": "select",
+      "layout": {
+        "row": "Row_recht_02",
+        "columns": null
+      },
+      "id": "Field_provincieWoning",
+      "key": "provincieWoning",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "values": [
+        {
+          "label": "Eigenaar",
+          "value": "eigenaar"
+        },
+        {
+          "label": "Huurder",
+          "value": "huurder"
+        },
+        {
+          "label": "Anders",
+          "value": "anders"
+        }
+      ],
+      "label": "Wat is de relatie van de aanvrager tot de woning?",
+      "type": "select",
+      "layout": {
+        "row": "Row_recht_03",
+        "columns": null
+      },
+      "id": "Field_relatieTotWoning",
+      "key": "relatieTotWoning",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Heeft de huurder toestemming van de eigenaar?",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_recht_04",
+        "columns": null
+      },
+      "id": "Field_toestemmingEigenaar",
+      "key": "toestemmingEigenaar",
+      "description": "Aangevinkt = ja; niet aangevinkt = nee. Bij een eigenaar wordt deze waarde door de DMN-regels genegeerd.",
+      "defaultValue": false
+    },
+    {
+      "label": "Komt de naam op de energierekening overeen met de aanvrager?",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_recht_05",
+        "columns": null
+      },
+      "id": "Field_rekeningNaamKomtOvereen",
+      "key": "rekeningNaamKomtOvereen",
+      "description": "Aangevinkt = ja; niet aangevinkt = nee.",
+      "defaultValue": false
+    }
+  ],
+  "type": "default",
+  "id": "recht-op-subsidie-thuisbatterij",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.46.1"
+  },
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.24.0",
+  "schemaVersion": 16
+}

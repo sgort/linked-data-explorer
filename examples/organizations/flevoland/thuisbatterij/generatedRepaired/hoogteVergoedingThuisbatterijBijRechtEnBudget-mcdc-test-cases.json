@@ -1,0 +1,3813 @@
+[
+  {
+    "name": "TC_001 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=0.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 0,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=0",
+        "Boundary/domain value: beschikbaarSubsidiePlafond=0",
+        "Output minimum: hoogteSubsidie=0",
+        "Output near zero boundary: hoogteSubsidie=0"
+      ]
+    }
+  },
+  {
+    "name": "TC_002 Behaalbare Hoogte Subsidie - MC/DC - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=0.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 0,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 1,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "MC/DC: rule 2 Rule_Behaalbare_BeperktDoorResterendBudget, condition [basisHoogteSubsidie > beschikbaarSubsidiePlafond] baseline"
+      ]
+    }
+  },
+  {
+    "name": "TC_003 Behaalbare Hoogte Subsidie - MC/DC - Rule_Behaalbare_BeperktDoorResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=0.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 1,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BeperktDoorResterendBudget",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "MC/DC: rule 1 Rule_Behaalbare_BasisPastBinnenResterendBudget, condition [basisHoogteSubsidie <= beschikbaarSubsidiePlafond] baseline"
+      ]
+    }
+  },
+  {
+    "name": "TC_004 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=1.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 1,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 1249,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=1"
+      ]
+    }
+  },
+  {
+    "name": "TC_005 Behaalbare Hoogte Subsidie - MC/DC - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=1.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 1,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 1,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "MC/DC: rule 1 Rule_Behaalbare_BasisPastBinnenResterendBudget, condition [basisHoogteSubsidie <= beschikbaarSubsidiePlafond] flipped",
+        "Boundary/domain value: beschikbaarSubsidiePlafond=1"
+      ]
+    }
+  },
+  {
+    "name": "TC_006 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=1249.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 1249,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 1249,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=1249",
+        "Boundary/domain value: beschikbaarSubsidiePlafond=1249"
+      ]
+    }
+  },
+  {
+    "name": "TC_007 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BeperktDoorResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=749.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 1249,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 749,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BeperktDoorResterendBudget",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "Boundary/domain value: beschikbaarSubsidiePlafond=749"
+      ]
+    }
+  },
+  {
+    "name": "TC_008 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BeperktDoorResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=750.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 1249,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 750,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BeperktDoorResterendBudget",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "Boundary/domain value: beschikbaarSubsidiePlafond=750"
+      ]
+    }
+  },
+  {
+    "name": "TC_009 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BeperktDoorResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=751.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 1249,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 751,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BeperktDoorResterendBudget",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "Boundary/domain value: beschikbaarSubsidiePlafond=751"
+      ]
+    }
+  },
+  {
+    "name": "TC_010 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=1250.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 1250,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 1250,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=1250",
+        "Boundary/domain value: beschikbaarSubsidiePlafond=1250"
+      ]
+    }
+  },
+  {
+    "name": "TC_011 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=1251.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 1251,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 1251,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=1251",
+        "Boundary/domain value: beschikbaarSubsidiePlafond=1251"
+      ]
+    }
+  },
+  {
+    "name": "TC_012 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=437499.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 437499,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 437499,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=437499",
+        "Boundary/domain value: beschikbaarSubsidiePlafond=437499"
+      ]
+    }
+  },
+  {
+    "name": "TC_013 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=437500.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 437500,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=437500",
+        "Boundary/domain value: beschikbaarSubsidiePlafond=437500"
+      ]
+    }
+  },
+  {
+    "name": "TC_014 Behaalbare Hoogte Subsidie - Representative selected rule 2 - Rule_Behaalbare_BeperktDoorResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=437500.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 437501,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 437500,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BeperktDoorResterendBudget",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "Representative selected rule 2: Rule_Behaalbare_BeperktDoorResterendBudget"
+      ]
+    }
+  },
+  {
+    "name": "TC_015 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=437501.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 437501,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 437501,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=437501",
+        "Boundary/domain value: beschikbaarSubsidiePlafond=437501",
+        "Representative selected rule 1: Rule_Behaalbare_BasisPastBinnenResterendBudget",
+        "Output maximum: hoogteSubsidie=437501"
+      ]
+    }
+  },
+  {
+    "name": "TC_016 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=749.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 749,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 1249,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=749"
+      ]
+    }
+  },
+  {
+    "name": "TC_017 Behaalbare Hoogte Subsidie - MC/DC - Rule_Behaalbare_BeperktDoorResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=1.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 749,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 1,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BeperktDoorResterendBudget",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "MC/DC: rule 2 Rule_Behaalbare_BeperktDoorResterendBudget, condition [basisHoogteSubsidie > beschikbaarSubsidiePlafond] flipped"
+      ]
+    }
+  },
+  {
+    "name": "TC_018 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=750.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 750,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 1249,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=750"
+      ]
+    }
+  },
+  {
+    "name": "TC_019 Behaalbare Hoogte Subsidie - Boundary/domain value - Rule_Behaalbare_BasisPastBinnenResterendBudget",
+    "decisionId": "BehaalbareHoogteSubsidie",
+    "decisionName": "Behaalbare Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BehaalbareHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "hoogteSubsidie=751.0",
+    "requestBody": {
+      "variables": {
+        "basisHoogteSubsidie": {
+          "value": 751,
+          "type": "Double"
+        },
+        "beschikbaarSubsidiePlafond": {
+          "value": 1249,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Behaalbare_BasisPastBinnenResterendBudget",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: basisHoogteSubsidie=751"
+      ]
+    }
+  },
+  {
+    "name": "TC_020 Bereken Basis Hoogte Subsidie - MC/DC - Rule_Basis_OnderMinimum",
+    "decisionId": "BerekenBasisHoogteSubsidie",
+    "decisionName": "Bereken Basis Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BerekenBasisHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "basisHoogteSubsidie=0.0",
+    "requestBody": {
+      "variables": {
+        "gemaakteKosten": {
+          "value": 0,
+          "type": "Double"
+        },
+        "minimaleNoodzakelijkeKosten": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidieMaximum": {
+          "value": 1250,
+          "type": "Double"
+        },
+        "subsidieMinimum": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidiePercentage": {
+          "value": 0.25,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Basis_OnderMinimum",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "MC/DC: rule 1 Rule_Basis_BovenMinimum, condition [gemaakteKosten >= minimaleNoodzakelijkeKosten / subsidiePercentage] baseline",
+        "MC/DC: rule 2 Rule_Basis_OnderMinimum, condition [gemaakteKosten < minimaleNoodzakelijkeKosten / subsidiePercentage] flipped",
+        "Boundary/domain value: gemaakteKosten=0",
+        "Representative selected rule 2: Rule_Basis_OnderMinimum",
+        "Output minimum: basisHoogteSubsidie=0",
+        "Output near zero boundary: basisHoogteSubsidie=0"
+      ]
+    }
+  },
+  {
+    "name": "TC_021 Bereken Basis Hoogte Subsidie - Boundary/domain value - Rule_Basis_BovenMinimum",
+    "decisionId": "BerekenBasisHoogteSubsidie",
+    "decisionName": "Bereken Basis Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BerekenBasisHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "basisHoogteSubsidie=1250.0",
+    "requestBody": {
+      "variables": {
+        "gemaakteKosten": {
+          "value": 10000,
+          "type": "Double"
+        },
+        "minimaleNoodzakelijkeKosten": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidieMaximum": {
+          "value": 1250,
+          "type": "Double"
+        },
+        "subsidieMinimum": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidiePercentage": {
+          "value": 0.25,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Basis_BovenMinimum",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: gemaakteKosten=10000",
+        "Boundary/domain value: minimaleNoodzakelijkeKosten=750",
+        "Boundary/domain value: subsidieMaximum=1250",
+        "Boundary/domain value: subsidieMinimum=750",
+        "Boundary/domain value: subsidiePercentage=0.25",
+        "Representative selected rule 1: Rule_Basis_BovenMinimum",
+        "Output maximum: basisHoogteSubsidie=1250"
+      ]
+    }
+  },
+  {
+    "name": "TC_022 Bereken Basis Hoogte Subsidie - Boundary/domain value - Rule_Basis_OnderMinimum",
+    "decisionId": "BerekenBasisHoogteSubsidie",
+    "decisionName": "Bereken Basis Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BerekenBasisHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "basisHoogteSubsidie=0.0",
+    "requestBody": {
+      "variables": {
+        "gemaakteKosten": {
+          "value": 2999,
+          "type": "Double"
+        },
+        "minimaleNoodzakelijkeKosten": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidieMaximum": {
+          "value": 1250,
+          "type": "Double"
+        },
+        "subsidieMinimum": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidiePercentage": {
+          "value": 0.25,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Basis_OnderMinimum",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "Boundary/domain value: gemaakteKosten=2999"
+      ]
+    }
+  },
+  {
+    "name": "TC_023 Bereken Basis Hoogte Subsidie - MC/DC - Rule_Basis_BovenMinimum",
+    "decisionId": "BerekenBasisHoogteSubsidie",
+    "decisionName": "Bereken Basis Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BerekenBasisHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "basisHoogteSubsidie=750.0",
+    "requestBody": {
+      "variables": {
+        "gemaakteKosten": {
+          "value": 3000,
+          "type": "Double"
+        },
+        "minimaleNoodzakelijkeKosten": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidieMaximum": {
+          "value": 1250,
+          "type": "Double"
+        },
+        "subsidieMinimum": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidiePercentage": {
+          "value": 0.25,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Basis_BovenMinimum",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "MC/DC: rule 1 Rule_Basis_BovenMinimum, condition [gemaakteKosten >= minimaleNoodzakelijkeKosten / subsidiePercentage] flipped",
+        "MC/DC: rule 2 Rule_Basis_OnderMinimum, condition [gemaakteKosten < minimaleNoodzakelijkeKosten / subsidiePercentage] baseline",
+        "Boundary/domain value: gemaakteKosten=3000"
+      ]
+    }
+  },
+  {
+    "name": "TC_024 Bereken Basis Hoogte Subsidie - Boundary/domain value - Rule_Basis_BovenMinimum",
+    "decisionId": "BerekenBasisHoogteSubsidie",
+    "decisionName": "Bereken Basis Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BerekenBasisHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "basisHoogteSubsidie=750.25",
+    "requestBody": {
+      "variables": {
+        "gemaakteKosten": {
+          "value": 3001,
+          "type": "Double"
+        },
+        "minimaleNoodzakelijkeKosten": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidieMaximum": {
+          "value": 1250,
+          "type": "Double"
+        },
+        "subsidieMinimum": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidiePercentage": {
+          "value": 0.25,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Basis_BovenMinimum",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: gemaakteKosten=3001"
+      ]
+    }
+  },
+  {
+    "name": "TC_025 Bereken Basis Hoogte Subsidie - Boundary/domain value - Rule_Basis_BovenMinimum",
+    "decisionId": "BerekenBasisHoogteSubsidie",
+    "decisionName": "Bereken Basis Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BerekenBasisHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "basisHoogteSubsidie=1249.75",
+    "requestBody": {
+      "variables": {
+        "gemaakteKosten": {
+          "value": 4999,
+          "type": "Double"
+        },
+        "minimaleNoodzakelijkeKosten": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidieMaximum": {
+          "value": 1250,
+          "type": "Double"
+        },
+        "subsidieMinimum": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidiePercentage": {
+          "value": 0.25,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Basis_BovenMinimum",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: gemaakteKosten=4999"
+      ]
+    }
+  },
+  {
+    "name": "TC_026 Bereken Basis Hoogte Subsidie - Boundary/domain value - Rule_Basis_BovenMinimum",
+    "decisionId": "BerekenBasisHoogteSubsidie",
+    "decisionName": "Bereken Basis Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BerekenBasisHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "basisHoogteSubsidie=1250.0",
+    "requestBody": {
+      "variables": {
+        "gemaakteKosten": {
+          "value": 5000,
+          "type": "Double"
+        },
+        "minimaleNoodzakelijkeKosten": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidieMaximum": {
+          "value": 1250,
+          "type": "Double"
+        },
+        "subsidieMinimum": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidiePercentage": {
+          "value": 0.25,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Basis_BovenMinimum",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: gemaakteKosten=5000"
+      ]
+    }
+  },
+  {
+    "name": "TC_027 Bereken Basis Hoogte Subsidie - Boundary/domain value - Rule_Basis_BovenMinimum",
+    "decisionId": "BerekenBasisHoogteSubsidie",
+    "decisionName": "Bereken Basis Hoogte Subsidie",
+    "decisionTableId": "DecisionTable_BerekenBasisHoogteSubsidie",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "basisHoogteSubsidie=1250.0",
+    "requestBody": {
+      "variables": {
+        "gemaakteKosten": {
+          "value": 5001,
+          "type": "Double"
+        },
+        "minimaleNoodzakelijkeKosten": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidieMaximum": {
+          "value": 1250,
+          "type": "Double"
+        },
+        "subsidieMinimum": {
+          "value": 750,
+          "type": "Double"
+        },
+        "subsidiePercentage": {
+          "value": 0.25,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Basis_BovenMinimum",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: gemaakteKosten=5001"
+      ]
+    }
+  },
+  {
+    "name": "TC_028 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=0.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2025-12-31",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+      "selectedRuleIndex": 7,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2025-12-31'",
+        "Representative selected rule 7: Rule_Platform_BuitenAanvraagperiodeOfOnbekendType"
+      ]
+    }
+  },
+  {
+    "name": "TC_029 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=0.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2025-12-31",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+      "selectedRuleIndex": 7,
+      "reasons": [
+        "MC/DC: rule 1 Rule_Platform_2026_Eigenaar_Gescheiden, condition [date(aanvraagDatum) >= date(\"2026-01-12\")] baseline",
+        "MC/DC: rule 3 Rule_Platform_2026_Gebundeld, condition [date(aanvraagDatum) >= date(\"2026-10-01\")] baseline",
+        "MC/DC: rule 4 Rule_Platform_2027_Eigenaar_Gescheiden, condition [date(\"2027-01-01\") <= date(aanvraagDatum)] baseline",
+        "MC/DC: rule 6 Rule_Platform_2027_Gebundeld, condition [date(aanvraagDatum) >= date(\"2027-10-01\")] baseline",
+        "Output minimum: beschikbaarSubsidiePlafond=0",
+        "Output near zero boundary: beschikbaarSubsidiePlafond=0"
+      ]
+    }
+  },
+  {
+    "name": "TC_030 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=0.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2025-12-31",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+      "selectedRuleIndex": 7,
+      "reasons": [
+        "MC/DC: rule 2 Rule_Platform_2026_Huurder_Gescheiden, condition [date(aanvraagDatum) >= date(\"2026-01-12\")] baseline",
+        "MC/DC: rule 5 Rule_Platform_2027_Huurder_Gescheiden, condition [date(aanvraagDatum) >= date(\"2027-01-01\")] baseline"
+      ]
+    }
+  },
+  {
+    "name": "TC_031 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=0.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-11",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+      "selectedRuleIndex": 7,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2026-01-11'"
+      ]
+    }
+  },
+  {
+    "name": "TC_032 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-12",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2026-01-12'",
+        "Representative selected rule 1: Rule_Platform_2026_Eigenaar_Gescheiden"
+      ]
+    }
+  },
+  {
+    "name": "TC_033 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-12",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdHuurders=1000000"
+      ]
+    }
+  },
+  {
+    "name": "TC_034 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-12",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 1000001,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdHuurders=1000001"
+      ]
+    }
+  },
+  {
+    "name": "TC_035 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2026_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-12",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "MC/DC: rule 1 Rule_Platform_2026_Eigenaar_Gescheiden, condition [date(aanvraagDatum) >= date(\"2026-01-12\")] flipped",
+        "MC/DC: rule 1 Rule_Platform_2026_Eigenaar_Gescheiden, condition [date(aanvraagDatum) <= date(\"2026-09-30\")] flipped"
+      ]
+    }
+  },
+  {
+    "name": "TC_036 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2026_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-12",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 1,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "MC/DC: rule 1 Rule_Platform_2026_Eigenaar_Gescheiden, condition [aanvragerType == \"eigenaar\"] flipped",
+        "MC/DC: rule 2 Rule_Platform_2026_Huurder_Gescheiden, condition [aanvragerType == \"huurder\"] baseline"
+      ]
+    }
+  },
+  {
+    "name": "TC_037 Bereken Beschikbaar Subsidie Plafond - Representative selected rule 2 - Rule_Platform_2026_Huurder_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-12",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Huurder_Gescheiden",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "Representative selected rule 2: Rule_Platform_2026_Huurder_Gescheiden"
+      ]
+    }
+  },
+  {
+    "name": "TC_038 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Huurder_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-12",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Huurder_Gescheiden",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=1000000"
+      ]
+    }
+  },
+  {
+    "name": "TC_039 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Huurder_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-12",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 1000001,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Huurder_Gescheiden",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=1000001"
+      ]
+    }
+  },
+  {
+    "name": "TC_040 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2026_Huurder_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-12",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Huurder_Gescheiden",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "MC/DC: rule 2 Rule_Platform_2026_Huurder_Gescheiden, condition [date(aanvraagDatum) >= date(\"2026-01-12\")] flipped",
+        "MC/DC: rule 2 Rule_Platform_2026_Huurder_Gescheiden, condition [date(aanvraagDatum) <= date(\"2026-09-30\")] flipped"
+      ]
+    }
+  },
+  {
+    "name": "TC_041 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2026_Huurder_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=437499.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-12",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 1,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Huurder_Gescheiden",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "MC/DC: rule 1 Rule_Platform_2026_Eigenaar_Gescheiden, condition [aanvragerType == \"eigenaar\"] baseline",
+        "MC/DC: rule 2 Rule_Platform_2026_Huurder_Gescheiden, condition [aanvragerType == \"huurder\"] flipped"
+      ]
+    }
+  },
+  {
+    "name": "TC_042 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-13",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2026-01-13'"
+      ]
+    }
+  },
+  {
+    "name": "TC_043 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-09-29",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2026-09-29'"
+      ]
+    }
+  },
+  {
+    "name": "TC_044 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-09-30",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2026-09-30'"
+      ]
+    }
+  },
+  {
+    "name": "TC_045 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=2000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2026-10-01'",
+        "Boundary/domain value: aanvragerType='eigenaar'",
+        "Boundary/domain value: plafondEigenaren=1000000",
+        "Boundary/domain value: plafondHuurders=1000000",
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=0",
+        "Boundary/domain value: reedsGesubsidieerdHuurders=0",
+        "Representative selected rule 3: Rule_Platform_2026_Gebundeld"
+      ]
+    }
+  },
+  {
+    "name": "TC_046 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1999999.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 1,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdHuurders=1"
+      ]
+    }
+  },
+  {
+    "name": "TC_047 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1562501.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 437499,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdHuurders=437499"
+      ]
+    }
+  },
+  {
+    "name": "TC_048 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1562500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 437500,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdHuurders=437500"
+      ]
+    }
+  },
+  {
+    "name": "TC_049 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1562499.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 437501,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdHuurders=437501"
+      ]
+    }
+  },
+  {
+    "name": "TC_050 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1125001.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 874999,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdHuurders=874999"
+      ]
+    }
+  },
+  {
+    "name": "TC_051 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1125000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 875000,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdHuurders=875000"
+      ]
+    }
+  },
+  {
+    "name": "TC_052 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1124999.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 875001,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdHuurders=875001"
+      ]
+    }
+  },
+  {
+    "name": "TC_053 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000001.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 999999,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdHuurders=999999"
+      ]
+    }
+  },
+  {
+    "name": "TC_054 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1999999.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 1,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=1"
+      ]
+    }
+  },
+  {
+    "name": "TC_055 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1562501.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 437499,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=437499"
+      ]
+    }
+  },
+  {
+    "name": "TC_056 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1562500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=437500"
+      ]
+    }
+  },
+  {
+    "name": "TC_057 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1562499.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 437501,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=437501"
+      ]
+    }
+  },
+  {
+    "name": "TC_058 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1125001.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 874999,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=874999"
+      ]
+    }
+  },
+  {
+    "name": "TC_059 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1125000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 875000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=875000"
+      ]
+    }
+  },
+  {
+    "name": "TC_060 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1124999.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 875001,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=875001"
+      ]
+    }
+  },
+  {
+    "name": "TC_061 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000001.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 999999,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: reedsGesubsidieerdEigenaren=999999"
+      ]
+    }
+  },
+  {
+    "name": "TC_062 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: plafondHuurders=437500"
+      ]
+    }
+  },
+  {
+    "name": "TC_063 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1875000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 875000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: plafondHuurders=875000"
+      ]
+    }
+  },
+  {
+    "name": "TC_064 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: plafondEigenaren=437500"
+      ]
+    }
+  },
+  {
+    "name": "TC_065 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=875000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "MC/DC: rule 1 Rule_Platform_2026_Eigenaar_Gescheiden, condition [date(aanvraagDatum) <= date(\"2026-09-30\")] baseline",
+        "MC/DC: rule 3 Rule_Platform_2026_Gebundeld, condition [date(aanvraagDatum) >= date(\"2026-10-01\")] flipped",
+        "MC/DC: rule 3 Rule_Platform_2026_Gebundeld, condition [date(aanvraagDatum) <= date(\"2026-12-31\")] flipped"
+      ]
+    }
+  },
+  {
+    "name": "TC_066 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1875000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 875000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: plafondEigenaren=875000"
+      ]
+    }
+  },
+  {
+    "name": "TC_067 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=2000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: aanvragerType='huurder'"
+      ]
+    }
+  },
+  {
+    "name": "TC_068 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=875000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "MC/DC: rule 2 Rule_Platform_2026_Huurder_Gescheiden, condition [date(aanvraagDatum) <= date(\"2026-09-30\")] baseline"
+      ]
+    }
+  },
+  {
+    "name": "TC_069 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=2000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "onbekend",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: aanvragerType='onbekend'"
+      ]
+    }
+  },
+  {
+    "name": "TC_070 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=2000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-10-02",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2026-10-02'"
+      ]
+    }
+  },
+  {
+    "name": "TC_071 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=2000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-12-30",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2026-12-30'"
+      ]
+    }
+  },
+  {
+    "name": "TC_072 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=2000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-12-31",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2026-12-31'"
+      ]
+    }
+  },
+  {
+    "name": "TC_073 Bereken Beschikbaar Subsidie Plafond - Output maximum - Rule_Platform_2026_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=2000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-12-31",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "onbekend",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2026_Gebundeld",
+      "selectedRuleIndex": 3,
+      "reasons": [
+        "Output maximum: beschikbaarSubsidiePlafond=2000000"
+      ]
+    }
+  },
+  {
+    "name": "TC_074 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2027_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-01-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 4,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2027-01-01'",
+        "Representative selected rule 4: Rule_Platform_2027_Eigenaar_Gescheiden"
+      ]
+    }
+  },
+  {
+    "name": "TC_075 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2027_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-01-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 4,
+      "reasons": [
+        "MC/DC: rule 3 Rule_Platform_2026_Gebundeld, condition [date(aanvraagDatum) <= date(\"2026-12-31\")] baseline",
+        "MC/DC: rule 4 Rule_Platform_2027_Eigenaar_Gescheiden, condition [date(\"2027-01-01\") <= date(aanvraagDatum)] flipped",
+        "MC/DC: rule 4 Rule_Platform_2027_Eigenaar_Gescheiden, condition [date(aanvraagDatum) <= date(\"2027-09-30\")] flipped"
+      ]
+    }
+  },
+  {
+    "name": "TC_076 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2027_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-01-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 1,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 4,
+      "reasons": [
+        "MC/DC: rule 4 Rule_Platform_2027_Eigenaar_Gescheiden, condition [aanvragerType == \"eigenaar\"] flipped",
+        "MC/DC: rule 5 Rule_Platform_2027_Huurder_Gescheiden, condition [aanvragerType == \"huurder\"] baseline"
+      ]
+    }
+  },
+  {
+    "name": "TC_077 Bereken Beschikbaar Subsidie Plafond - Representative selected rule 5 - Rule_Platform_2027_Huurder_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-01-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Huurder_Gescheiden",
+      "selectedRuleIndex": 5,
+      "reasons": [
+        "Representative selected rule 5: Rule_Platform_2027_Huurder_Gescheiden"
+      ]
+    }
+  },
+  {
+    "name": "TC_078 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2027_Huurder_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-01-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Huurder_Gescheiden",
+      "selectedRuleIndex": 5,
+      "reasons": [
+        "MC/DC: rule 5 Rule_Platform_2027_Huurder_Gescheiden, condition [date(aanvraagDatum) >= date(\"2027-01-01\")] flipped",
+        "MC/DC: rule 5 Rule_Platform_2027_Huurder_Gescheiden, condition [date(aanvraagDatum) <= date(\"2027-09-30\")] flipped"
+      ]
+    }
+  },
+  {
+    "name": "TC_079 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2027_Huurder_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=437499.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-01-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 1,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Huurder_Gescheiden",
+      "selectedRuleIndex": 5,
+      "reasons": [
+        "MC/DC: rule 4 Rule_Platform_2027_Eigenaar_Gescheiden, condition [aanvragerType == \"eigenaar\"] baseline",
+        "MC/DC: rule 5 Rule_Platform_2027_Huurder_Gescheiden, condition [aanvragerType == \"huurder\"] flipped"
+      ]
+    }
+  },
+  {
+    "name": "TC_080 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2027_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-01-02",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 4,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2027-01-02'"
+      ]
+    }
+  },
+  {
+    "name": "TC_081 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2027_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-09-29",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 4,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2027-09-29'"
+      ]
+    }
+  },
+  {
+    "name": "TC_082 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2027_Eigenaar_Gescheiden",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-09-30",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Eigenaar_Gescheiden",
+      "selectedRuleIndex": 4,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2027-09-30'"
+      ]
+    }
+  },
+  {
+    "name": "TC_083 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2027_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Gebundeld",
+      "selectedRuleIndex": 6,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2027-10-01'",
+        "Representative selected rule 6: Rule_Platform_2027_Gebundeld"
+      ]
+    }
+  },
+  {
+    "name": "TC_084 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2027_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Gebundeld",
+      "selectedRuleIndex": 6,
+      "reasons": [
+        "MC/DC: rule 4 Rule_Platform_2027_Eigenaar_Gescheiden, condition [date(aanvraagDatum) <= date(\"2027-09-30\")] baseline",
+        "MC/DC: rule 6 Rule_Platform_2027_Gebundeld, condition [date(aanvraagDatum) >= date(\"2027-10-01\")] flipped",
+        "MC/DC: rule 6 Rule_Platform_2027_Gebundeld, condition [date(aanvraagDatum) <= date(\"2027-12-31\")] flipped"
+      ]
+    }
+  },
+  {
+    "name": "TC_085 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_2027_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-10-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "huurder",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Gebundeld",
+      "selectedRuleIndex": 6,
+      "reasons": [
+        "MC/DC: rule 5 Rule_Platform_2027_Huurder_Gescheiden, condition [date(aanvraagDatum) <= date(\"2027-09-30\")] baseline"
+      ]
+    }
+  },
+  {
+    "name": "TC_086 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2027_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-10-02",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Gebundeld",
+      "selectedRuleIndex": 6,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2027-10-02'"
+      ]
+    }
+  },
+  {
+    "name": "TC_087 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2027_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-12-30",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Gebundeld",
+      "selectedRuleIndex": 6,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2027-12-30'"
+      ]
+    }
+  },
+  {
+    "name": "TC_088 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_2027_Gebundeld",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=1000000.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-12-31",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_2027_Gebundeld",
+      "selectedRuleIndex": 6,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2027-12-31'"
+      ]
+    }
+  },
+  {
+    "name": "TC_089 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=0.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2028-01-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+      "selectedRuleIndex": 7,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2028-01-01'"
+      ]
+    }
+  },
+  {
+    "name": "TC_090 Bereken Beschikbaar Subsidie Plafond - MC/DC - Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=0.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2028-01-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 437500,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+      "selectedRuleIndex": 7,
+      "reasons": [
+        "MC/DC: rule 6 Rule_Platform_2027_Gebundeld, condition [date(aanvraagDatum) <= date(\"2027-12-31\")] baseline"
+      ]
+    }
+  },
+  {
+    "name": "TC_091 Bereken Beschikbaar Subsidie Plafond - Boundary/domain value - Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+    "decisionId": "BerekenBeschikbaarSubsidiePlafond",
+    "decisionName": "Bereken Beschikbaar Subsidie Plafond",
+    "decisionTableId": "DecisionTable_BerekenBeschikbaarSubsidiePlafond",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "beschikbaarSubsidiePlafond=0.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2029-01-01",
+          "type": "String"
+        },
+        "aanvragerType": {
+          "value": "eigenaar",
+          "type": "String"
+        },
+        "plafondEigenaren": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "plafondHuurders": {
+          "value": 1000000,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdEigenaren": {
+          "value": 0,
+          "type": "Double"
+        },
+        "reedsGesubsidieerdHuurders": {
+          "value": 0,
+          "type": "Double"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Platform_BuitenAanvraagperiodeOfOnbekendType",
+      "selectedRuleIndex": 7,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2029-01-01'"
+      ]
+    }
+  },
+  {
+    "name": "TC_092 Subsidie Constanten Thuisbatterij - Representative selected rule 1 - Rule_Constanten_Standaard",
+    "decisionId": "SubsidieConstantenThuisbatterij",
+    "decisionName": "Subsidie Constanten Thuisbatterij",
+    "decisionTableId": "DecisionTable_SubsidieConstantenThuisbatterij",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "subsidiePercentage=0.25, subsidieMinimum=750.0, subsidieMaximum=1250.0, minimaleNoodzakelijkeKosten=750.0",
+    "requestBody": {
+      "variables": {}
+    },
+    "coverage": {
+      "selectedRuleId": "Rule_Constanten_Standaard",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Representative selected rule 1: Rule_Constanten_Standaard",
+        "Output minimum: subsidiePercentage=0.25",
+        "Output maximum: subsidiePercentage=0.25",
+        "Output near zero boundary: subsidiePercentage=0.25",
+        "Output minimum: subsidieMinimum=750",
+        "Output maximum: subsidieMinimum=750",
+        "Output near zero boundary: subsidieMinimum=750",
+        "Output minimum: subsidieMaximum=1250",
+        "Output maximum: subsidieMaximum=1250",
+        "Output near zero boundary: subsidieMaximum=1250",
+        "Output minimum: minimaleNoodzakelijkeKosten=750",
+        "Output maximum: minimaleNoodzakelijkeKosten=750",
+        "Output near zero boundary: minimaleNoodzakelijkeKosten=750"
+      ]
+    }
+  },
+  {
+    "name": "TC_093 Jaar Gebonden Budget - MC/DC - no matching rule",
+    "decisionId": "jaarGebondenBudget",
+    "decisionName": "Jaar Gebonden Budget",
+    "decisionTableId": "DecisionTable_1bhjh1w",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "plafondEigenaren=null, plafondHuurders=null",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2025-12-31",
+          "type": "String"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": null,
+      "selectedRuleIndex": null,
+      "reasons": [
+        "MC/DC: rule 1 DecisionRule_0nfr6kl, condition [date(aanvraagDatum).year == 2026] baseline",
+        "MC/DC: rule 2 DecisionRule_1e5agpr, condition [date(aanvraagDatum).year == 2027] baseline",
+        "Boundary/domain value: aanvraagDatum='2025-12-31'"
+      ]
+    }
+  },
+  {
+    "name": "TC_094 Jaar Gebonden Budget - MC/DC - DecisionRule_0nfr6kl",
+    "decisionId": "jaarGebondenBudget",
+    "decisionName": "Jaar Gebonden Budget",
+    "decisionTableId": "DecisionTable_1bhjh1w",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "plafondEigenaren=437500.0, plafondHuurders=437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-01-01",
+          "type": "String"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "DecisionRule_0nfr6kl",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "MC/DC: rule 1 DecisionRule_0nfr6kl, condition [date(aanvraagDatum).year == 2026] flipped",
+        "Boundary/domain value: aanvraagDatum='2026-01-01'",
+        "Representative selected rule 1: DecisionRule_0nfr6kl",
+        "Output minimum: plafondEigenaren=437500",
+        "Output near zero boundary: plafondEigenaren=437500",
+        "Output minimum: plafondHuurders=437500",
+        "Output near zero boundary: plafondHuurders=437500"
+      ]
+    }
+  },
+  {
+    "name": "TC_095 Jaar Gebonden Budget - Boundary/domain value - DecisionRule_0nfr6kl",
+    "decisionId": "jaarGebondenBudget",
+    "decisionName": "Jaar Gebonden Budget",
+    "decisionTableId": "DecisionTable_1bhjh1w",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "plafondEigenaren=437500.0, plafondHuurders=437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2026-12-31",
+          "type": "String"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "DecisionRule_0nfr6kl",
+      "selectedRuleIndex": 1,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2026-12-31'"
+      ]
+    }
+  },
+  {
+    "name": "TC_096 Jaar Gebonden Budget - MC/DC - DecisionRule_1e5agpr",
+    "decisionId": "jaarGebondenBudget",
+    "decisionName": "Jaar Gebonden Budget",
+    "decisionTableId": "DecisionTable_1bhjh1w",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "plafondEigenaren=437500.0, plafondHuurders=437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-01-01",
+          "type": "String"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "DecisionRule_1e5agpr",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "MC/DC: rule 2 DecisionRule_1e5agpr, condition [date(aanvraagDatum).year == 2027] flipped",
+        "Boundary/domain value: aanvraagDatum='2027-01-01'",
+        "Representative selected rule 2: DecisionRule_1e5agpr"
+      ]
+    }
+  },
+  {
+    "name": "TC_097 Jaar Gebonden Budget - Boundary/domain value - DecisionRule_1e5agpr",
+    "decisionId": "jaarGebondenBudget",
+    "decisionName": "Jaar Gebonden Budget",
+    "decisionTableId": "DecisionTable_1bhjh1w",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "plafondEigenaren=437500.0, plafondHuurders=437500.0",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2027-12-31",
+          "type": "String"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": "DecisionRule_1e5agpr",
+      "selectedRuleIndex": 2,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2027-12-31'",
+        "Output maximum: plafondEigenaren=437500",
+        "Output maximum: plafondHuurders=437500"
+      ]
+    }
+  },
+  {
+    "name": "TC_098 Jaar Gebonden Budget - Boundary/domain value - no matching rule",
+    "decisionId": "jaarGebondenBudget",
+    "decisionName": "Jaar Gebonden Budget",
+    "decisionTableId": "DecisionTable_1bhjh1w",
+    "evaluationMode": "direct-table-inputs",
+    "expected": "plafondEigenaren=null, plafondHuurders=null",
+    "requestBody": {
+      "variables": {
+        "aanvraagDatum": {
+          "value": "2028-01-01",
+          "type": "String"
+        }
+      }
+    },
+    "coverage": {
+      "selectedRuleId": null,
+      "selectedRuleIndex": null,
+      "reasons": [
+        "Boundary/domain value: aanvraagDatum='2028-01-01'"
+      ]
+    }
+  }
+]

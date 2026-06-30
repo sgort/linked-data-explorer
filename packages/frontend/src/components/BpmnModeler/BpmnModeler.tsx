@@ -17,6 +17,58 @@ const extractBpmnProcessId = (xml: string): string => {
   return match?.[1] ?? 'unknown';
 };
 
+/** Returns every calledElement value found in callActivity elements. */
+const extractCallActivityTargets = (xml: string): string[] => {
+  const targets: string[] = [];
+  const re = /calledElement="([^"]+)"/g;
+  let m;
+  while ((m = re.exec(xml)) !== null) targets.push(m[1]);
+  return targets;
+};
+
+/**
+ * Inspects all standalone processes and reclassifies them as shell or subprocess
+ * based on their BPMN XML. A process with callActivity elements becomes a shell;
+ * a process whose bpmnProcessId is referenced by a shell's callActivity becomes
+ * a subprocess. Returns true when at least one record was updated.
+ */
+const reclassifyProcessRoles = (all: BpmnProcess[]): boolean => {
+  const standalones = all.filter((p) => p.processRole === 'standalone');
+  if (standalones.length === 0) return false;
+
+  let changed = false;
+  const promotedShells: BpmnProcess[] = [];
+
+  for (const p of standalones) {
+    if (extractCallActivityTargets(p.xml).length > 0) {
+      const updated: BpmnProcess = { ...p, processRole: 'shell' };
+      BpmnService.saveProcess(updated);
+      promotedShells.push(updated);
+      changed = true;
+    }
+  }
+
+  const allShells = [...all.filter((p) => p.processRole === 'shell'), ...promotedShells];
+  const promotedIds = new Set(promotedShells.map((s) => s.id));
+
+  for (const p of standalones) {
+    if (promotedIds.has(p.id)) continue;
+    const parent = allShells.find(
+      (s) => p.bpmnProcessId && extractCallActivityTargets(s.xml).includes(p.bpmnProcessId)
+    );
+    if (parent?.bpmnProcessId) {
+      BpmnService.saveProcess({
+        ...p,
+        processRole: 'subprocess',
+        calledElement: parent.bpmnProcessId,
+      });
+      changed = true;
+    }
+  }
+
+  return changed;
+};
+
 type FooterDraft = {
   language?: BpmnProcess['language'];
   organization?: string;
@@ -315,7 +367,13 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    BpmnService.hydrateFromServer().then(setProcesses);
+    BpmnService.hydrateFromServer().then((all) => {
+      if (reclassifyProcessRoles(all)) {
+        setProcesses(BpmnService.getProcesses());
+      } else {
+        setProcesses(all);
+      }
+    });
   }, []);
 
   const handleCreateProcess = () => {
@@ -357,6 +415,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       organization,
     };
     BpmnService.saveProcess(newProcess);
+    reclassifyProcessRoles(BpmnService.getProcesses());
     setProcesses(BpmnService.getProcesses());
     setActiveProcessId(newProcess.id);
     setCurrentXml(xml);

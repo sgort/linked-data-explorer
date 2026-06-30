@@ -8,7 +8,8 @@ import packageJson from '../../package.json';
 const router = Router();
 
 const getEnv = (req: Request): 'pre' | 'prod' => {
-  return req.headers['x-dso-env'] === 'prod' ? 'prod' : 'pre';
+  if (req.headers['x-dso-env'] === 'prod' || req.query['env'] === 'prod') return 'prod';
+  return 'pre';
 };
 
 /**
@@ -218,6 +219,92 @@ router.get('/werkzaamheden/:urn', async (req: Request, res: Response) => {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     const status = msg.includes('404') ? 404 : 502;
     logger.error('[DSO Routes] GET /werkzaamheden/:urn failed', { error: msg });
+    res.status(status).json({ success: false, error: msg });
+  }
+});
+
+/**
+ * GET /v1/dso/toepasbare-regels
+ * Fetch metadata for toepasbare regels by functioneleStructuurRef.
+ *
+ * Query params:
+ *   functioneleStructuurRef  — full concept URI (required)
+ */
+router.get('/toepasbare-regels', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  const { functioneleStructuurRef } = req.query;
+  if (!functioneleStructuurRef || typeof functioneleStructuurRef !== 'string') {
+    return res.status(400).json({ success: false, error: 'functioneleStructuurRef is required' });
+  }
+  try {
+    const data = await dsoService.getToepasbareRegels(functioneleStructuurRef, getEnv(req));
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    const status = msg.includes('404') ? 404 : 502;
+    logger.error('[DSO Routes] GET /toepasbare-regels failed', { error: msg });
+    res.status(status).json({ success: false, error: msg });
+  }
+});
+
+/**
+ * GET /v1/dso/toepasbare-regels/:id/sttr
+ * Download the raw STTR XML for a toepasbare regel.
+ */
+router.get('/toepasbare-regels/:id/sttr', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const xml = await dsoService.getSttrBestand(req.params.id, getEnv(req));
+    res.set('Content-Type', 'application/xml');
+    res.set('Content-Disposition', `attachment; filename="sttr-${req.params.id}.xml"`);
+    res.status(200).send(xml);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    const status = msg.includes('404') ? 404 : 502;
+    logger.error('[DSO Routes] GET /toepasbare-regels/:id/sttr failed', { error: msg });
+    res.status(status).json({ success: false, error: msg });
+  }
+});
+
+/**
+ * GET /v1/dso/toepasbare-regels/:id/dmn
+ * Extract the embedded DMN <definitions> from a conclusie STTR and return it
+ * as a standalone DMN XML file ready for import into LDE or deployment to Operaton.
+ */
+router.get('/toepasbare-regels/:id/dmn', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const xml = await dsoService.getSttrBestand(req.params.id, getEnv(req));
+    const dmn = dsoService.extractDmnFromSttr(xml);
+    res.set('Content-Type', 'application/xml');
+    res.set('Content-Disposition', `attachment; filename="decision-${req.params.id}.dmn"`);
+    res.status(200).send(dmn);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DMN extraction failed';
+    const status = msg.includes('404') ? 404 : msg.includes('No DMN') ? 422 : 502;
+    logger.error('[DSO Routes] GET /toepasbare-regels/:id/dmn failed', { error: msg });
+    res.status(status).json({ success: false, error: msg });
+  }
+});
+
+/**
+ * GET /v1/dso/toepasbare-regels/:id/form-scaffold
+ * Generate a best-effort form-js field scaffold from an indieningsvereisten STTR.
+ *
+ * Query params:
+ *   formId  — desired form-js schema id (optional, defaults to the toepasbare-regel id)
+ */
+router.get('/toepasbare-regels/:id/form-scaffold', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const xml = await dsoService.getSttrBestand(req.params.id, getEnv(req));
+    const formId = (req.query.formId as string | undefined) ?? req.params.id;
+    const scaffold = dsoService.extractFormScaffoldFromSttr(xml, formId);
+    res.status(200).json({ success: true, data: scaffold });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Form scaffold extraction failed';
+    const status = msg.includes('404') ? 404 : 502;
+    logger.error('[DSO Routes] GET /toepasbare-regels/:id/form-scaffold failed', { error: msg });
     res.status(status).json({ success: false, error: msg });
   }
 });

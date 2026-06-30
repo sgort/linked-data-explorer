@@ -53,7 +53,7 @@ const InputForm: React.FC<InputFormProps> = ({ chain, inputs, onInputChange, val
           <input
             type="number"
             step="1"
-            value={(value as number) || ''}
+            value={(value as number) ?? ''}
             onChange={(e) => onInputChange(input.identifier, parseInt(e.target.value, 10) || 0)}
             placeholder={`Enter ${input.title.toLowerCase()}`}
             className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -65,7 +65,7 @@ const InputForm: React.FC<InputFormProps> = ({ chain, inputs, onInputChange, val
           <input
             type="number"
             step="0.01"
-            value={(value as number) || ''}
+            value={(value as number) ?? ''}
             onChange={(e) => onInputChange(input.identifier, parseFloat(e.target.value) || 0)}
             placeholder={`Enter ${input.title.toLowerCase()}`}
             className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

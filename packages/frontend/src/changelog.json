@@ -1,6 +1,268 @@
 {
   "versions": [
     {
+      "version": "1.9.9",
+      "date": "June 22, 2026",
+      "status": "Latest",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "sections": [
+        {
+          "icon": "🏷️",
+          "iconColor": "emerald",
+          "title": "Process board ownership — deploy-time tagging",
+          "items": [
+            "Deploy modal now requires a board owner: a new \"Board ownership\" section auto-detects the board from the process's candidate groups (infra/rip → Infra-board, caseworker/hr → Caseworker) and lets you override it. Deploy is blocked until a board is resolved.",
+            "Deployed BPMN is stamped with a process-level camunda:property boardOwner (explicit choice or auto-derived). Injection is idempotent and non-destructive — on any unexpected BPMN shape the original XML is deployed untouched.",
+            "boardOwner is persisted on the process_definitions record (new board_owner column) and exposed via /bundles/public, so downstream consumers (ronl-business-api Procesbibliotheek and archive split) can read it."
+          ]
+        },
+        {
+          "icon": "👤",
+          "iconColor": "emerald",
+          "title": "RIP Phase 1 — derive portfolio leadRole",
+          "items": [
+            "The Map role outputs script now sets a leadRole process variable, derived from the intake projectType (contractbeheer → manager-pb, otherwise projectleider). This is the ownership signal the Infra-board Portfolio ROL filter reads.",
+            "Distinct from the task candidateGroups: leadRole names who owns the project in the portfolio, not who can claim its tasks. Takes effect for instances started after redeploy; the projectType → leadRole mapping is a placeholder to confirm with the business."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.8",
+      "date": "June 17, 2026",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
+      "sections": [
+        {
+          "icon": "🛡️",
+          "iconColor": "emerald",
+          "title": "CPRMV SHACL — ParameterWaardeShape and TemporalRuleShape",
+          "items": [
+            "Added cprmv:ParameterWaardeShape targeting cprmv:ParameterWaarde: skos:notation [1,1] xsd:string and skos:prefLabel [1,n] rdf:langString are mandatory; schema:value [0,1] xsd:decimal, schema:unitCode [0,1] xsd:string, dct:description [0,1] rdf:langString, and cprmv:validFrom/validUntil [0,1] xsd:date are optional. Previously cprmv:ParameterWaarde had no SHACL shape at all, so the entire Parameters section of an editor-generated TTL was unvalidated.",
+            "Added cprmv:TemporalRuleShape targeting cprmv:TemporalRule: cprmv:validFrom [0,1] xsd:date, cprmv:validUntil [0,1] xsd:date, cprmv:confidenceLevel [0,1] xsd:string, and cprmv:isBasedOn [0,n] sh:class cpsv:Rule — all optional. Previously the temporal extensions on cpsv:Rule (validity window, confidence level, extends) were unvalidated by any SHACL shape.",
+            "Also adds skos:, schema:, and dct: @prefix declarations required by the new shapes; no changes to existing shapes in the file."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.7",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
+      "date": "June 15, 2026",
+      "sections": [
+        {
+          "icon": "🐛",
+          "iconColor": "red",
+          "title": "Bug Fixes",
+          "items": [
+            "SHACL Validator: long issue messages and focus-node locations were cut off with an ellipsis and could not be read — the location used a single-line CSS truncate. Messages and locations now wrap in full (break-words / break-all) and expose the complete text on hover (title tooltip).",
+            "SHACL backend: removed the 60-character cap on offending values reported for cardinality (maxCount / uniqueLang) violations, so the full value appears in the issue message instead of being truncated with an ellipsis."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.6",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
+      "date": "June 13, 2026",
+      "sections": [
+        {
+          "icon": "🐛",
+          "iconColor": "red",
+          "title": "Bug Fixes",
+          "items": [
+            "DMNs published under the new CPRMV 0.4.1 namespace (e.g. vast_bedrag_op_vestiging) were missing from /v1/dmns and the ChainBuilder DMN picker — getAllDmns and the chain-link queries only matched cprmv:DecisionModel under the old 0.3.0 namespace. Both namespaces are now supported side by side until existing 0.3.0 data is migrated.",
+            "Fixed 'Fill with test data' in the ChainBuilder input form not visibly filling Integer/Double fields when the RDF-sourced test value is 0 — the input rendered as empty (0 || '' = '') instead of showing 0."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.5",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
+      "date": "June 11, 2026",
+      "sections": [
+        {
+          "icon": "⚖️",
+          "iconColor": "purple",
+          "title": "DSO Integration — deploy-ready DMN + form badge",
+          "items": [
+            "Extracted DSO DMNs now carry camunda:historyTimeToLive, so they deploy to Operaton exactly as handed off — the consumer no longer has to patch the DMN before deploying. LDE now produces a fully deploy-ready and evaluatable DMN (DMN 1.3, input ids, FEEL-safe variable names, output typeRefs, history TTL).",
+            "Forms imported from DSO now show a green DSO badge in the Form Editor list, instead of the generic yellow WIP badge."
+          ]
+        },
+        {
+          "icon": "🧪",
+          "iconColor": "blue",
+          "title": "SHACL Validator — CPRMV layer + validation test fixtures",
+          "items": [
+            "The SHACL validator now checks uploaded Turtle against a CPRMV 0.4.1 shape layer alongside CPSV-AP 3.2.0 and the RONL Custom rules; the results panel renders the new layer automatically.",
+            "Added valid/invalid test fixtures for every layer — CPRMV (cprmv-conformant.ttl / cprmv-nonconformant.ttl), CPSV-AP (cpsv-ap-conformant.ttl / cpsv-ap-rule-nonconformant.ttl), and RONL (rule- and org-collision pass/fail) — plus a malformed-Turtle case covering the parser path."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.4",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
+      "date": "June 10, 2026",
+      "sections": [
+        {
+          "icon": "🏛️",
+          "iconColor": "purple",
+          "title": "DSO Integration — Phase 2d + 4.2",
+          "items": [
+            "Activities tab now supports name search: fixing a location (Lelystad / Flevoland) loads that authority's full activity set in one call and reveals a search box that live-filters by name, so activities like 'Boom kappen of houtopstand vellen' are findable without walking the hierarchy.",
+            "↓ Import into LDE button (Indieningsvereisten only) saves the generated form-js scaffold straight into the Form Editor as a draft, named after the activity and tagged with the authority — no manual download/import step needed.",
+            "Imported forms are now tagged with the readable authority name (e.g. 'Lelystad') instead of the bare RTR code (GM0995), falling back to the code for authorities outside the known presets."
+          ]
+        },
+        {
+          "icon": "⚖️",
+          "iconColor": "purple",
+          "title": "DSO Integration — DMN publish handoff (Phase 4.1)",
+          "items": [
+            "Publish via CPSV Editor button (Conclusie only) opens the CPSV Editor with a deep-link to publish the extracted DMN to TriplyDB, where the LDE DMN picker can consume it — no local DMN store needed.",
+            "Extracted DMNs are now normalized to deploy and evaluate on Operaton: DMN 1.2 is upgraded to 1.3, missing input ids are added, variable names are made FEEL-safe (hyphens/spaces broke evaluation), and output columns get an explicit typeRef.",
+            "Verified end-to-end against Operaton: the normalized HoutopstandVellen decision deploys (all 7 decisions) and the root decision evaluates without the previous FEEL error."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.3",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
+      "date": "June 9, 2026",
+      "sections": [
+        {
+          "icon": "🏛️",
+          "iconColor": "purple",
+          "title": "DSO Integration — Phase 2a + 4",
+          "items": [
+            "Activity Detail panel now shows an 'Applicable Rules' section listing toepasbare regels fetched live from the DSO Uitvoeren Gegevens API, grouped by rule type (Conclusie / Indieningsvereisten) with validity date and STTR version.",
+            "↓ STTR button downloads the raw STTR XML for any rule type.",
+            "↓ Extract DMN button (Conclusie only) extracts the embedded DMN decision table as a standalone .dmn file ready for import into LDE or deployment to Operaton.",
+            "↓ Form scaffold button (Indieningsvereisten only) generates a form-js JSON scaffold from the STTR questionnaire, mapping boolean questions to checkboxes, list questions to select fields with options, number questions to number fields, and attachment requirements to labelled textfields.",
+            "Added ronl:dsoActiviteitUrn extension on TreeFellingPermitSubProcess linking it to nl.imow-gm0995.activiteit.HoutopstandVellen (Gemeente Lelystad)."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.2",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
+      "date": "June 9, 2026",
+      "sections": [
+        {
+          "icon": "🔀",
+          "iconColor": "blue",
+          "title": "BPMN Modeler",
+          "items": [
+            "Uploaded BPMN processes that form a shell/subprocess pair are now automatically linked: a process with call-activity elements is classified as a shell, and any process whose BPMN process ID is targeted by a shell's call-activity is classified as its subprocess. The relationship is detected both on fresh imports and retroactively on startup, so previously uploaded standalone processes are reclassified without requiring a re-upload.",
+            "Removed two unused TypeScript imports (DsoWerkzaamheid, zoekActiviteiten) in DsoExplorer."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
+      "date": "June 5, 2026",
+      "sections": [
+        {
+          "icon": "🛡️",
+          "iconColor": "emerald",
+          "title": "SHACL Validator",
+          "items": [
+            "Vendored the canonical CPSV-AP 3.2.0 SHACL shapes (SEMIC) — the CPSV-AP layer is now active, validating the full model (PublicService, Rule, PublicOrganisation, ContactPoint, Channel, Address, …) across 32 shapes. Previously this layer reported no shapes.",
+            "Collapsed the earlier CPSV-AP Core and CPSV-AP Vocabularies layers into a single CPSV-AP 3.2.0 layer, matching SEMIC's combined shape file for the 3.2.0 release.",
+            "Layer results now distinguish 'Not loaded' (no shapes present for that layer) from 'OK' (evaluated and clean), so an unvendored layer no longer shows a misleading green check.",
+            "Offending values listed in cardinality and uniqueLang messages are now whitespace-normalised and capped at 60 characters, keeping long published descriptions readable.",
+            "Added a fully CPSV-AP-conformant example plus deterministic merge-simulated test coverage (a cross-publication homepage collision), alongside the existing file-local fixtures."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.0",
+      "status": "Latest",
+      "statusColor": "emerald",
+      "borderColor": "emerald",
+      "date": "June 4, 2026",
+      "sections": [
+        {
+          "icon": "🛡️",
+          "iconColor": "emerald",
+          "title": "SHACL Validator",
+          "items": [
+            "New SHACL Validator view in the sidebar: drop one or more CPSV-AP Turtle (.ttl) files and validate them against the bundled CPSV-AP 3.2.0 and RONL SHACL shapes before publishing. Results reuse the DMN Validator's layered layout, grouped into CPSV-AP Core, CPSV-AP Vocabularies, and RONL Custom with per-layer error/warning/info counts.",
+            "Two backend endpoints under a new Validation route category: POST /v1/shacl/validate (file-local) and POST /v1/shacl/validate-merged. Both return the same { valid, parseError, layers, summary } shape as /v1/dmns/validate, so the frontend renders them with the existing components.",
+            "Merge-simulated mode unions the uploaded file with the triples already published for its subjects — fetched from the configured SPARQL endpoint via a standard SPARQL 1.1 CONSTRUCT with one level of blank-node closure — then validates the union. This catches fan-out against live data that a file-local check cannot see; an optional endpoint field overrides the server default.",
+            "RONL shape PublicOrganisationUniquenessShape: at most one foaf:homepage, dct:identifier and cv:spatial per cv:PublicOrganisation, plus sh:uniqueLang on skos:prefLabel. Flags the duplicate-homepage fan-out where one organisation URI ends up with both a www. and non-www. homepage across publications.",
+            "RONL shape RuleUniquenessShape: sh:uniqueLang on dct:title and dct:description for cpsv:Rule. Detects subject-URI collisions where several distinct rules were authored under one URI and merge into N titles × M descriptions of duplicate rows in SPARQL results, while tolerating legitimate bilingual (nl/en) labels.",
+            "Cardinality and uniqueLang violations list the offending values inline (whitespace-normalised and capped at 60 characters) so collisions are immediately identifiable."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.8.2",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "date": "May 20, 2026",
+      "sections": [
+        {
+          "icon": "🚀",
+          "iconColor": "emerald",
+          "title": "New Features",
+          "items": [
+            "Download the deployed DMN XML directly from Operaton via the new GET /v1/dmns/:identifier/xml endpoint — the file is streamed as <identifier>.dmn with the correct Content-Type and Content-Disposition headers so browsers save it automatically.",
+            "DMN list and detail responses now include an xmlUrl field pointing to the new download endpoint, making the link self-discoverable for API clients without prior knowledge of the URL pattern.",
+            "Backward compatible: the legacy GET /api/dmns/:definitionKey/xml route remains available for existing consumers."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.8.1",
+      "date": "May 19, 2026",
+      "status": "Released",
+      "statusColor": "green",
+      "borderColor": "green",
+      "sections": [
+        {
+          "icon": "🩹",
+          "iconColor": "green",
+          "title": "DMN validator: INT-007 false positives eliminated",
+          "items": [
+            "INT-007 (Interaction Rules layer) no longer flags valid intra-DRD references. An <inputExpression> may legitimately reference a value produced by another decision wired in via <informationRequirement><requiredDecision> — that name is the producing decision's <variable name> or <decisionTable>/<output name>, never an <inputData>. The rule now resolves requiredDecision targets and treats their output variables as satisfied, mirroring the requiredInput → inputData resolution INT-001 already performs.",
+            "INT-007 now parses FEEL expressions instead of whole-text matching. Previously the entire <inputExpression><text> was treated as one variable name, so date and time(aanvraagDatum) demanded an <inputData name=\"date and time(aanvraagDatum)\"> and any operator expression false-fired. A new shared extractFeelIdentifiers() helper strips string literals, unwraps built-in calls (date(...), date and time(...), number(...), string(...), not(...), …), drops FEEL keywords/operators and qualified-name/property segments after a dot, and extracts each referenced identifier — every identifier is checked individually.",
+            "Decision outputs are excluded from the input-contract check entirely. Output variable names (decision <variable> and decision-table <output name>) are, by construction, never external inputs and are no longer subject to the must-have-matching-inputData requirement.",
+            "Genuine gaps still flagged: an inputExpression identifier that resolves to neither a declared <inputData> nor a requiredDecision-produced output continues to raise INT-007, now naming the specific identifier rather than the raw expression string.",
+            "Verified against real DMNs that deploy and evaluate correctly on Operaton: RONL_Heusden_Heusdenpas.dmn (aanmerkingHeusdenPas consumed purely via requiredDecision), RONL_SVB_Leeftijden.dmn (date(dagVanAanvraag).year property access), EmployeeRoleAssignment.dmn, tree-felling-decision.dmn and replacement-tree-decision.dmn all validate clean; backend tsc --noEmit passes.",
+            "No API or response-shape change. POST /v1/dmns/validate is unchanged; only the interaction-layer issue set for affected files differs (fewer false-positive warnings)."
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.8.0",
       "date": "May 15, 2026",
       "status": "Released",

@@ -55,6 +55,7 @@ export enum ViewMode {
   TUTORIAL = 'TUTORIAL',
   BPMN = 'BPMN',
   VALIDATE = 'VALIDATE',
+  SHACL = 'SHACL',
   FORM = 'FORM',
   DOCUMENT = 'DOCUMENT',
   ROPA = 'ROPA',
@@ -265,7 +266,7 @@ export interface FormSchema {
   createdAt: string;
   updatedAt: string;
   readonly?: boolean;
-  status?: 'example' | 'wip';
+  status?: 'example' | 'wip' | 'dso';
   language?: 'en' | 'nl' | 'de';
   organization?: string;
 }

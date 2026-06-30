@@ -1,0 +1,27 @@
+@prefix ex:    <http://example.com/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix cprmv: <https://standaarden.open-regels.nl/standards/cprmv/0.4.1#> .
+
+# The nonconformant counterpart to cprmv-conformant.ttl — every finding lands in the CPRMV
+# 0.4.1 layer. No cpsv:* or cv:* subjects are present, so the CPSV-AP and RONL Custom
+# layers stay clean and these errors are unambiguously CPRMV.
+#
+# cprmv:RuleSetShape violations on ex:badRuleSet:
+#   - cprmv:id absent .......................... sh:minCount 1            -> MinCount
+#   - two cprmv:comment values ................. sh:maxCount 1            -> MaxCount
+#   - cprmv:validFrom is a plain string, ....... sh:datatype xsd:date     -> Datatype
+#     not an xsd:date (the value also satisfies min/maxCount 1)
+#   - cprmv:isOutputOf absent .................. sh:minCount 1 (cpsv:PublicService)
+#   - cprmv:hasMethod absent ................... sh:minCount 1 (cprmv:RuleMethod)
+#   - cprmv:hasPart absent ..................... sh:minCount 1
+#
+# cprmv:RuleShape violation on ex:badRule:
+#   - cprmv:id absent .......................... sh:minCount 1            -> MinCount
+
+ex:badRuleSet a cprmv:RuleSet ;
+    cprmv:comment "first comment" ;
+    cprmv:comment "second comment" ;
+    cprmv:validFrom "2026-01-01" .
+
+ex:badRule a cprmv:Rule ;
+    cprmv:definition "A rule definition that is missing its required cprmv:id." .

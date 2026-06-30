@@ -23,6 +23,9 @@ dist-ssr
 *.d.ts
 *.d.ts.map
 
+# Hand-authored ambient declarations (not generated output) — keep tracked
+!packages/backend/src/types/shacl-rdf.d.ts
+
 # But keep the source JSON
 !testData.json
 
@@ -41,6 +44,12 @@ dist-ssr
 *.sln
 *.sw?
 .claudesync
+
+# Claude Code local config & per-machine memory (machine-specific, not portable)
+.claude/
+
+# Local env overrides (committed envs are .env.development / .acceptance / .production)
+.env
 
 # flatten script & dir
 flatten_directory.sh

@@ -28,6 +28,7 @@ PREFIX m8g: <http://data.europa.eu/m8g/>
 PREFIX eli: <http://data.europa.eu/eli/ontology#>
 PREFIX ronl: <https://regels.overheid.nl/ontology#>
 PREFIX cprmv: <https://cprmv.open-regels.nl/0.3.0/>
+PREFIX cprmv041: <https://standaarden.open-regels.nl/standards/cprmv/0.4.1#>
 PREFIX schema: <http://schema.org/>
 `;
 
@@ -201,7 +202,7 @@ WHERE {
     ?variable cpsv:produces ?dmn .
   }
 
-  ?dmn cprmv:implements ?service .
+  { ?dmn cprmv:implements ?service } UNION { ?dmn cprmv041:implements ?service }
   OPTIONAL { ?service dct:title ?serviceTitle . FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "") }
 }
 ORDER BY ?service ?subject`,
@@ -232,13 +233,14 @@ SELECT DISTINCT ?dmn ?identifier ?title ?apiEndpoint ?deploymentId ?service
        ?inputUri ?inputId ?inputType ?inputTitle
        ?outputUri ?outputId ?outputType ?outputTitle
 WHERE {
-  # Core DMN properties
-  ?dmn a cprmv:DecisionModel ;
-       dct:identifier ?identifier ;
-       dct:title ?title ;
-       cprmv:implementedBy ?apiEndpoint .
-  
+  # Core DMN properties (DecisionModel type + implementedBy: CPRMV 0.3.0 or 0.4.1)
+  { ?dmn a cprmv:DecisionModel } UNION { ?dmn a cprmv041:DecisionModel }
+  ?dmn dct:identifier ?identifier ;
+       dct:title ?title .
+  { ?dmn cprmv:implementedBy ?apiEndpoint } UNION { ?dmn cprmv041:implementedBy ?apiEndpoint }
+
   OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
+  OPTIONAL { ?dmn cprmv041:deploymentId ?deploymentId }
   OPTIONAL { ?dmn cpsv:implements ?service }
   
   # Get all inputs
@@ -269,10 +271,10 @@ ORDER BY ?title ?inputId ?outputId`,
     sparql: `${COMMON_PREFIXES}
 SELECT ?dmn ?dmnTitle ?service ?serviceTitle ?organization ?orgName ?logo
 WHERE {
-  # Start with DMN
-  ?dmn a cprmv:DecisionModel ;
-       dct:title ?dmnTitle ;
-       cprmv:implements ?service .
+  # Start with DMN (DecisionModel type + implements: CPRMV 0.3.0 or 0.4.1)
+  { ?dmn a cprmv:DecisionModel } UNION { ?dmn a cprmv041:DecisionModel }
+  ?dmn dct:title ?dmnTitle .
+  { ?dmn cprmv:implements ?service } UNION { ?dmn cprmv041:implements ?service }
 
   # Service details
   ?service a cpsv:PublicService ;
@@ -298,9 +300,9 @@ ORDER BY ?dmnTtitle`,
     sparql: `${COMMON_PREFIXES}
 SELECT ?dmn ?dmnTitle ?inputUri ?inputId ?inputType ?outputUri ?outputId ?outputType ?outputValue
 WHERE {
-  ?dmn a cprmv:DecisionModel ;
-       dct:title ?dmnTitle .
-  
+  { ?dmn a cprmv:DecisionModel } UNION { ?dmn a cprmv041:DecisionModel }
+  ?dmn dct:title ?dmnTitle .
+
   OPTIONAL {
     ?inputUri a cpsv:Input ;
               cpsv:isRequiredBy ?dmn ;
@@ -338,13 +340,13 @@ WHERE {
           dct:identifier ?variableId ;
           dct:type ?variableType .
   
-  # Get DMN titles
-  ?dmn1 a cprmv:DecisionModel ;
-        dct:title ?dmn1Title .
-  
-  ?dmn2 a cprmv:DecisionModel ;
-        dct:title ?dmn2Title .
-  
+  # Get DMN titles (DecisionModel type: CPRMV 0.3.0 or 0.4.1)
+  { ?dmn1 a cprmv:DecisionModel } UNION { ?dmn1 a cprmv041:DecisionModel }
+  ?dmn1 dct:title ?dmn1Title .
+
+  { ?dmn2 a cprmv:DecisionModel } UNION { ?dmn2 a cprmv041:DecisionModel }
+  ?dmn2 dct:title ?dmn2Title .
+
   # Ensure different DMNs
   FILTER(?dmn1 != ?dmn2)
   FILTER(LANG(?dmn1Title) = "nl" || LANG(?dmn1Title) = "")
@@ -385,11 +387,11 @@ WHERE {
     BIND(2 AS ?pathLength)
   }
   
-  ?startDmn a cprmv:DecisionModel ;
-            dct:title ?startTitle .
-  ?endDmn a cprmv:DecisionModel ;
-          dct:title ?endTitle .
-  
+  { ?startDmn a cprmv:DecisionModel } UNION { ?startDmn a cprmv041:DecisionModel }
+  ?startDmn dct:title ?startTitle .
+  { ?endDmn a cprmv:DecisionModel } UNION { ?endDmn a cprmv041:DecisionModel }
+  ?endDmn dct:title ?endTitle .
+
   FILTER(?startDmn != ?endDmn)
   FILTER(LANG(?startTitle) = "nl" || LANG(?startTitle) = "")
   FILTER(LANG(?endTitle) = "nl" || LANG(?endTitle) = "")
@@ -404,14 +406,16 @@ SELECT ?dmn ?identifier ?title ?apiEndpoint ?deploymentId ?service ?serviceTitle
        (GROUP_CONCAT(DISTINCT ?inputId; separator=", ") as ?inputs)
        (GROUP_CONCAT(DISTINCT ?outputId; separator=", ") as ?outputs)
 WHERE {
-  ?dmn a cprmv:DecisionModel ;
-       dct:identifier ?identifier ;
-       dct:title ?title ;
-       cprmv:implementedBy ?apiEndpoint .
-  
+  # DecisionModel type + implementedBy: CPRMV 0.3.0 or 0.4.1
+  { ?dmn a cprmv:DecisionModel } UNION { ?dmn a cprmv041:DecisionModel }
+  ?dmn dct:identifier ?identifier ;
+       dct:title ?title .
+  { ?dmn cprmv:implementedBy ?apiEndpoint } UNION { ?dmn cprmv041:implementedBy ?apiEndpoint }
+
   OPTIONAL { ?dmn cprmv:deploymentId ?deploymentId }
-  
-  OPTIONAL { 
+  OPTIONAL { ?dmn cprmv041:deploymentId ?deploymentId }
+
+  OPTIONAL {
     ?dmn cpsv:implements ?service .
     ?service dct:title ?serviceTitle .
     FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "")

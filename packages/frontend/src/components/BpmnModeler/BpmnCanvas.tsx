@@ -38,6 +38,38 @@ interface BpmnCanvasProps {
   onClose: () => void;
 }
 
+/** User's board-ownership choice in the deploy modal. boardOwner is mandatory. */
+type BoardChoice = 'auto' | 'infra-board' | 'caseworker';
+
+/**
+ * Candidate-group → board mapping, mirrored from the backend's deploy-time
+ * derivation. boardOwner is mandatory, so on 'auto' the UI resolves the board
+ * here and sends that concrete value (used for both the Operaton tag and the
+ * persisted LDE record). Keep in sync with operaton.service.ts BOARD_BY_GROUP.
+ */
+const BOARD_BY_GROUP: { match: RegExp; board: string }[] = [
+  { match: /^(infra-projectteam|infra-medewerker|rip-[\w-]+)$/i, board: 'infra-board' },
+  { match: /^(caseworker|case-workers|hr-medewerker)$/i, board: 'caseworker' },
+];
+
+/** Derive the owning board from candidate groups in a BPMN, or null if unknown. */
+const deriveBoardOwnerFromXml = (xml: string): string | null => {
+  const groups = new Set<string>();
+  for (const m of xml.matchAll(/candidateGroups\s*=\s*["']([^"']+)["']/g)) {
+    for (const g of m[1].split(',')) groups.add(g.trim());
+  }
+  let found: string | null = null;
+  for (const g of groups) {
+    for (const { match, board } of BOARD_BY_GROUP) {
+      if (match.test(g)) {
+        if (board === 'infra-board') return 'infra-board';
+        found = board;
+      }
+    }
+  }
+  return found;
+};
+
 const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   xml,
   endpoint,
@@ -72,6 +104,11 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   );
   const [operatonUsername, setOperatonUsername] = useState<string>('');
   const [operatonPassword, setOperatonPassword] = useState<string>('');
+
+  // Board-ownership picker (deploy modal). `boardChoice` is the user's selection;
+  // `boardAuto` is the auto-detected suggestion shown alongside the Auto option.
+  const [boardChoice, setBoardChoice] = useState<BoardChoice>('auto');
+  const [boardAuto, setBoardAuto] = useState<string | null>(null);
 
   const [selectedElement, setSelectedElement] = useState<any>(null);
 
@@ -458,12 +495,27 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       languageMismatch?: boolean;
       languageList?: string[];
     });
+    // Pre-fill the board-ownership picker with the auto-detected board.
+    setBoardAuto(deriveBoardOwnerFromXml(xml));
+    setBoardChoice('auto');
     setDeployResult(null);
     setShowDeployModal(true);
   };
 
   const handleDeploy = async () => {
     if (!modelerRef.current) return;
+
+    // boardOwner is mandatory. On 'auto' we send the auto-detected board so the
+    // Operaton tag and the persisted LDE record carry the same concrete value.
+    const boardOwner = boardChoice === 'auto' ? boardAuto : boardChoice;
+    if (!boardOwner) {
+      setDeployResult({
+        success: false,
+        message: 'Select a board — boardOwner is required before deploying.',
+      });
+      return;
+    }
+
     setIsDeploying(true);
 
     try {
@@ -530,6 +582,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           documents,
           subProcesses: subProcessXmls,
           operatonUrl: operatonUrl.trim() || undefined,
+          boardOwner,
         }),
       });
 
@@ -549,6 +602,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
               operatonUrl: operatonUrl.trim() || undefined,
               formIds: forms.map((f) => f.id),
               documentIds: documents.map((d) => d.id),
+              boardOwner,
             }),
           }).catch((err) => console.warn('[BpmnCanvas] Deploy record update failed:', err));
         }
@@ -582,6 +636,10 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     if (!canvas) return;
     canvas.zoom('fit-viewport');
   };
+
+  // Resolved board the deploy will use (mandatory). null when 'auto' detects none
+  // and the user hasn't picked one — deploy is blocked until then.
+  const resolvedBoard = boardChoice === 'auto' ? boardAuto : boardChoice;
 
   return (
     <div className="flex-1 flex flex-col">
@@ -685,6 +743,70 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
               >
                 <X size={20} />
               </button>
+            </div>
+
+            {/* Board ownership — deploy-time boardOwner tag */}
+            <div className="mb-4 p-3 rounded-lg border-2 bg-slate-50 border-slate-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold text-sm text-slate-800">🏷️ Board ownership</div>
+                {boardAuto ? (
+                  <span className="text-xs text-slate-500">
+                    auto-detected: <span className="font-mono text-slate-700">{boardAuto}</span>
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-400">no board auto-detected</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    { id: 'auto', label: boardAuto ? `Auto (${boardAuto})` : 'Auto (none)' },
+                    { id: 'infra-board', label: 'Infra-board' },
+                    { id: 'caseworker', label: 'Caseworker' },
+                  ] as { id: BoardChoice; label: string }[]
+                ).map((opt) => {
+                  const active = boardChoice === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setBoardChoice(opt.id)}
+                      disabled={isDeploying || deployResult?.success === true}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors disabled:opacity-50 ${
+                        active
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                {boardChoice === 'auto' ? (
+                  boardAuto ? (
+                    <>
+                      Auto-detected <span className="font-mono">{boardAuto}</span> from the
+                      candidate groups.
+                    </>
+                  ) : (
+                    'No board could be auto-detected — pick one to continue.'
+                  )
+                ) : (
+                  <>
+                    Tagging as <span className="font-mono">{boardChoice}</span> — overrides
+                    auto-detection.
+                  </>
+                )}
+              </div>
+              {!resolvedBoard && (
+                <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                  ⚠️ A board owner is required. Select{' '}
+                  <span className="font-mono">Infra-board</span> or{' '}
+                  <span className="font-mono">Caseworker</span> before deploying.
+                </div>
+              )}
             </div>
 
             {/* Resources preview */}
@@ -799,7 +921,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={handleDeploy}
-                disabled={isDeploying || deployResult?.success === true}
+                disabled={isDeploying || deployResult?.success === true || !resolvedBoard}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isDeploying ? (

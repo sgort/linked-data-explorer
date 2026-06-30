@@ -1,0 +1,52 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix cv:   <http://data.europa.eu/m8g/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix ronl: <https://regels.overheid.nl/ontology#> .
+
+# Uniqueness constraints on cv:PublicOrganisation identity properties.
+#
+# Motivation: the same organisation subject URI is declared across multiple
+# published TTL files. When those files are merged into TriplyDB, divergent
+# values for a single-valued property silently produce multiple triples on the
+# same subject, which then fan out into duplicate rows in any SPARQL result that
+# selects that property. The concrete case this guards against is two different
+# foaf:homepage values (with and without "www.") on Provincie_Flevoland.
+#
+# foaf:homepage / dct:identifier / cv:spatial are genuinely single-valued, so
+# sh:maxCount 1 applies. skos:prefLabel is multilingual in this project (EN + NL),
+# so the correct constraint is sh:uniqueLang true — at most one label per language
+# — rather than sh:maxCount 1, which would reject legitimate bilingual labels.
+
+ronl:PublicOrganisationUniquenessShape
+    a sh:NodeShape ;
+    sh:targetClass cv:PublicOrganisation ;
+
+    sh:property [
+        sh:path foaf:homepage ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message "A public organisation must have at most one foaf:homepage. Divergent homepage values across publications fan out into duplicate rows when merged."@en
+    ] ;
+
+    sh:property [
+        sh:path dct:identifier ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message "A public organisation must have at most one dct:identifier."@en
+    ] ;
+
+    sh:property [
+        sh:path cv:spatial ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message "A public organisation must have at most one cv:spatial."@en
+    ] ;
+
+    sh:property [
+        sh:path skos:prefLabel ;
+        sh:uniqueLang true ;
+        sh:severity sh:Violation ;
+        sh:message "A public organisation must have at most one skos:prefLabel per language."@en
+    ] .

@@ -1,0 +1,106 @@
+{
+  "components": [
+    {
+      "text": "# Hoogte subsidie thuisbatterij\nVul deze gegevens in om de DMN-beslissing `BehaalbareHoogteSubsidie` te kunnen evalueren.",
+      "type": "text",
+      "layout": {
+        "row": "Row_hoogte_intro",
+        "columns": null
+      },
+      "id": "Field_hoogte_intro"
+    },
+    {
+      "label": "Gemaakte kosten",
+      "type": "number",
+      "layout": {
+        "row": "Row_hoogte_01",
+        "columns": null
+      },
+      "id": "Field_gemaakteKosten",
+      "key": "gemaakteKosten",
+      "description": "Bedrag in euro's.",
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "subtype": "date",
+      "dateLabel": "Datum van aanvraag",
+      "label": "Datum van aanvraag",
+      "type": "datetime",
+      "layout": {
+        "row": "Row_hoogte_02",
+        "columns": null
+      },
+      "id": "Field_aanvraagDatum",
+      "key": "aanvraagDatum",
+      "description": "Wordt als string in ISO-formaat yyyy-MM-dd opgeslagen; dit past bij date(aanvraagDatum) in de DMN.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "values": [
+        {
+          "label": "Eigenaar",
+          "value": "eigenaar"
+        },
+        {
+          "label": "Huurder",
+          "value": "huurder"
+        }
+      ],
+      "label": "Aanvrager type",
+      "type": "select",
+      "layout": {
+        "row": "Row_hoogte_03",
+        "columns": null
+      },
+      "id": "Field_aanvragerType",
+      "key": "aanvragerType",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Reeds gesubsidieerd bedrag eigenaren",
+      "type": "number",
+      "layout": {
+        "row": "Row_hoogte_04",
+        "columns": null
+      },
+      "id": "Field_reedsGesubsidieerdEigenaren",
+      "key": "reedsGesubsidieerdEigenaren",
+      "description": "Tot nu toe toegekend bedrag uit het eigenarenplafond, in euro's.",
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "label": "Reeds gesubsidieerd bedrag huurders",
+      "type": "number",
+      "layout": {
+        "row": "Row_hoogte_05",
+        "columns": null
+      },
+      "id": "Field_reedsGesubsidieerdHuurders",
+      "key": "reedsGesubsidieerdHuurders",
+      "description": "Tot nu toe toegekend bedrag uit het huurdersplafond, in euro's.",
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    }
+  ],
+  "type": "default",
+  "id": "hoogte-subsidie-thuisbatterij",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.46.1"
+  },
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.24.0",
+  "schemaVersion": 16
+}
