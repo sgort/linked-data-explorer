@@ -110,7 +110,10 @@ router.get('/', async (req: Request, res: Response) => {
     } as ApiResponse);
   }
 
-  if (requestedCprmvVersion !== undefined && !SUPPORTED_CPRMV_VERSION_SET.has(requestedCprmvVersion)) {
+  if (
+    requestedCprmvVersion !== undefined &&
+    !SUPPORTED_CPRMV_VERSION_SET.has(requestedCprmvVersion)
+  ) {
     return res.status(400).json({
       success: false,
       error: {
@@ -133,7 +136,10 @@ router.get('/', async (req: Request, res: Response) => {
     // until we run the rules query, so we have to do the full work first
     // and rely on application-level cache on subsequent requests.
     if (rulesetid) {
-      const allDatasetVersions = await getDatasetVersionsByRulesetid(requestedEndpoint, cprmvVersion);
+      const allDatasetVersions = await getDatasetVersionsByRulesetid(
+        requestedEndpoint,
+        cprmvVersion
+      );
       const list = allDatasetVersions[rulesetid];
 
       if (list && list.length > 0) {
