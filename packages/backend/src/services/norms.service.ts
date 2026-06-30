@@ -26,17 +26,29 @@ import * as triplydbService from './triplydb.service';
 import { config } from '../utils/config';
 import logger from '../utils/logger';
 
-// Supported CPRMV vocabulary versions and their namespace bases. 0.3.0 and
-// 0.3.2 share the same flat cprmv:Rule publish shape and differ only in the
-// version segment of the namespace IRI, so both are served by one query/
-// mapping with the namespace swapped per request (?cprmv_version=).
+// Supported CPRMV vocabulary versions and their namespace bases. All three
+// emit flat cprmv:Rule resources carrying the same predicates (id, definition,
+// rulesetId, ruleIdPath, situatie, norm), so the RULES query is one shape with
+// the namespace swapped per request (?cprmv_version=). 0.3.0/0.3.2 use the
+// versioned-path IRI; 0.4.1 uses the canonical standaarden.open-regels term IRI.
 //
-// 0.4.1 uses a structurally different RuleSet/hasPart model with predicates in
-// a separate namespace and is intentionally NOT listed here — it needs its own
-// query and mapper (Track 2) rather than a namespace swap.
+// The per-ruleset METADATA differs: 0.3.x carries it on cprmv:Dataset (with
+// dct:issued + dcat:version), whereas 0.4.1 has no cprmv:Dataset and carries it
+// on cprmv:RuleSet (cprmv:validFrom, no dct:issued). buildDatasetMetadataQuery
+// branches on that; see CPRMV_METADATA_MODEL.
 const CPRMV_NS_BY_VERSION: Record<string, string> = {
   '0.3.0': 'https://cprmv.open-regels.nl/0.3.0/',
   '0.3.2': 'https://cprmv.open-regels.nl/0.3.2/',
+  '0.4.1': 'https://standaarden.open-regels.nl/standards/cprmv/0.4.1#',
+};
+
+// Which graph shape carries the per-ruleset version metadata for each version:
+// the 0.3.x cprmv:Dataset, or the 0.4.1 cprmv:RuleSet. Anything not listed
+// defaults to the cprmv:Dataset model.
+const CPRMV_METADATA_MODEL: Record<string, 'dataset' | 'ruleset'> = {
+  '0.3.0': 'dataset',
+  '0.3.2': 'dataset',
+  '0.4.1': 'ruleset',
 };
 
 // The version used when ?cprmv_version= is omitted — preserves the historical
@@ -158,17 +170,39 @@ function extractRulePathParts(ruleIdPath: string): RulePathParts {
 // Dataset metadata (per rulesetid)
 // =====================================================================
 
-// Fetches ALL cprmv:Dataset records. Each cprmv:rulesetId may have multiple
-// records — different applicable periods of the same law (e.g. 2025-01-01
-// and 2026-01-01 of BWBR0015703) are concurrent and authoritative. The
-// caller groups by rulesetId and sorts by version desc (nulls last),
-// publishedAt desc tie-break.
+// Fetches the per-ruleset version metadata. A cprmv:rulesetId may have multiple
+// records — different applicable periods of the same law (e.g. 2025-01-01 and
+// 2026-01-01 of BWBR0015703) are concurrent and authoritative. The caller groups
+// by rulesetId and sorts by version desc (nulls last), publishedAt desc tie-break.
 //
-// The CPSV editor's publish format (see cprmv-dataset-generation.md):
-//   - dct:issued     — always present, publication timestamp (xsd:dateTime)
-//   - dcat:version   — primary ruleset only (the service's legalResource)
-//   - dct:title      — primary ruleset only
-function buildDatasetMetadataQuery(ns: string): string {
+// Two shapes, selected by CPRMV_METADATA_MODEL:
+//   'dataset' (0.3.x) — cprmv:Dataset with dct:issued (publication timestamp,
+//     always present) and OPTIONAL dcat:version / dct:title (primary only).
+//   'ruleset' (0.4.1) — no cprmv:Dataset exists; metadata lives on cprmv:RuleSet
+//     as cprmv:validFrom (the version/applicable date). There is no dct:issued,
+//     so validFrom doubles as the freshness signal (bound to ?issued) — it
+//     advances whenever a new RuleSet version is published, which is what the
+//     ETag / Last-Modified need.
+function buildDatasetMetadataQuery(ns: string, cprmvVersion: string): string {
+  const model = CPRMV_METADATA_MODEL[cprmvVersion] ?? 'dataset';
+
+  if (model === 'ruleset') {
+    return `
+PREFIX cprmv: <${ns}>
+PREFIX dct: <http://purl.org/dc/terms/>
+
+SELECT ?rulesetId ?version ?issued ?title
+WHERE {
+  ?rs a cprmv:RuleSet ;
+      cprmv:rulesetId ?rulesetId ;
+      cprmv:validFrom ?version .
+  BIND(?version AS ?issued)
+  OPTIONAL { ?rs dct:title ?title }
+}
+ORDER BY ?rulesetId DESC(?version)
+`;
+  }
+
   return `
 PREFIX cprmv: <${ns}>
 PREFIX dct: <http://purl.org/dc/terms/>
@@ -230,7 +264,7 @@ export async function getDatasetVersionsByRulesetid(
   try {
     const data = await triplydbService.executeQuery(
       targetEndpoint,
-      buildDatasetMetadataQuery(cprmvNs(cprmvVersion))
+      buildDatasetMetadataQuery(cprmvNs(cprmvVersion), cprmvVersion)
     );
     const bindings = data.results?.bindings || [];
 

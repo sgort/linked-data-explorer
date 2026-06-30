@@ -67,10 +67,11 @@ const CACHE_MAX_AGE_SECONDS = 3600;
  *   applicable_date   YYYY-MM-DD or 400
  *   cprmv_version     CPRMV vocabulary version selecting the namespace to
  *                     query and emit; one of SUPPORTED_CPRMV_VERSIONS (0.3.0,
- *                     0.3.2) or 400. Defaults to DEFAULT_CPRMV_VERSION. The
- *                     0.3.0 and 0.3.2 data share the flat cprmv:Rule shape and
- *                     differ only in namespace; 0.4.1 (RuleSet/hasPart model)
- *                     is handled separately and not yet accepted here.
+ *                     0.3.2, 0.4.1) or 400. Defaults to DEFAULT_CPRMV_VERSION.
+ *                     All three carry flat cprmv:Rule resources and differ only
+ *                     in namespace for the rules query; 0.4.1's per-ruleset
+ *                     metadata comes from cprmv:RuleSet (validFrom) instead of
+ *                     the 0.3.x cprmv:Dataset.
  *
  * Compliance notes:
  * - API-05: noun-based resource name "norms"
