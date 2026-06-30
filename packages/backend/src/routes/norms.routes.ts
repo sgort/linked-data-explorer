@@ -3,7 +3,12 @@
 // norm publisher, with HTTP cache headers for efficient G2G consumption.
 
 import { Router, Request, Response } from 'express';
-import { getAllNorms, getDatasetVersionsByRulesetid } from '../services/norms.service';
+import {
+  getAllNorms,
+  getDatasetVersionsByRulesetid,
+  SUPPORTED_CPRMV_VERSIONS,
+  DEFAULT_CPRMV_VERSION,
+} from '../services/norms.service';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { computeNormsEtag, computeLastModified } from '../utils/etag';
@@ -18,6 +23,11 @@ const router = Router();
 // contract — the service layer assumes pre-validated input.
 const RULESETID_PATTERN = /^[A-Za-z0-9_-]+$/;
 const APPLICABLE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// Accepted ?cprmv_version= values — validated against the set the service can
+// actually serve (the flat 0.3.x publish shapes). Membership check rather than
+// a character-class regex because the value selects a namespace, not a filter.
+const SUPPORTED_CPRMV_VERSION_SET = new Set(SUPPORTED_CPRMV_VERSIONS);
 
 // Cache-Control max-age. Biannual data tolerates generous caching; 1 hour is
 // conservative. Could be longer (12-24h) once the publication cadence is
@@ -55,6 +65,12 @@ const CACHE_MAX_AGE_SECONDS = 3600;
  *   endpoint          SPARQL endpoint URL override
  *   rulesetid         exact-match filter, /^[A-Za-z0-9_-]+$/ or 400
  *   applicable_date   YYYY-MM-DD or 400
+ *   cprmv_version     CPRMV vocabulary version selecting the namespace to
+ *                     query and emit; one of SUPPORTED_CPRMV_VERSIONS (0.3.0,
+ *                     0.3.2) or 400. Defaults to DEFAULT_CPRMV_VERSION. The
+ *                     0.3.0 and 0.3.2 data share the flat cprmv:Rule shape and
+ *                     differ only in namespace; 0.4.1 (RuleSet/hasPart model)
+ *                     is handled separately and not yet accepted here.
  *
  * Compliance notes:
  * - API-05: noun-based resource name "norms"
@@ -67,6 +83,7 @@ router.get('/', async (req: Request, res: Response) => {
   const requestedEndpoint = req.query.endpoint as string | undefined;
   const rulesetid = req.query.rulesetid as string | undefined;
   const applicableDate = req.query.applicable_date as string | undefined;
+  const requestedCprmvVersion = req.query.cprmv_version as string | undefined;
 
   // Validate filter inputs upfront. Reject on any pattern mismatch so the
   // service layer can safely treat values as injection-safe.
@@ -92,6 +109,20 @@ router.get('/', async (req: Request, res: Response) => {
     } as ApiResponse);
   }
 
+  if (requestedCprmvVersion !== undefined && !SUPPORTED_CPRMV_VERSION_SET.has(requestedCprmvVersion)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'INVALID_PARAM',
+        message: `Invalid cprmv_version: must be one of ${SUPPORTED_CPRMV_VERSIONS.join(', ')}`,
+      },
+      timestamp: new Date().toISOString(),
+    } as ApiResponse);
+  }
+
+  // Validated; fall back to the default namespace when omitted.
+  const cprmvVersion = requestedCprmvVersion ?? DEFAULT_CPRMV_VERSION;
+
   try {
     // ETag short-circuit: when the request is filtered to a single rulesetid,
     // we can decide freshness from the (cached) metadata map alone — no need
@@ -101,7 +132,7 @@ router.get('/', async (req: Request, res: Response) => {
     // until we run the rules query, so we have to do the full work first
     // and rely on application-level cache on subsequent requests.
     if (rulesetid) {
-      const allDatasetVersions = await getDatasetVersionsByRulesetid(requestedEndpoint);
+      const allDatasetVersions = await getDatasetVersionsByRulesetid(requestedEndpoint, cprmvVersion);
       const list = allDatasetVersions[rulesetid];
 
       if (list && list.length > 0) {
@@ -112,6 +143,7 @@ router.get('/', async (req: Request, res: Response) => {
             endpoint: requestedEndpoint,
             rulesetid,
             applicable_date: applicableDate,
+            cprmv_version: cprmvVersion,
           },
         });
         const lastModified = computeLastModified(datasetVersionsForEtag);
@@ -136,10 +168,14 @@ router.get('/', async (req: Request, res: Response) => {
     });
 
     // Full rules query + aggregation + scoped dataset metadata
-    const result = await getAllNorms(requestedEndpoint, {
-      rulesetid,
-      applicableDate,
-    });
+    const result = await getAllNorms(
+      requestedEndpoint,
+      {
+        rulesetid,
+        applicableDate,
+      },
+      cprmvVersion
+    );
 
     // Cache headers when EVERY rulesetid in the response has dataset metadata.
     // Partial coverage falls back to no-cache: we can't reliably detect a
@@ -156,6 +192,7 @@ router.get('/', async (req: Request, res: Response) => {
           endpoint: requestedEndpoint,
           rulesetid,
           applicable_date: applicableDate,
+          cprmv_version: cprmvVersion,
         },
       });
       const lastModified = computeLastModified(result.metadata.datasetVersions);

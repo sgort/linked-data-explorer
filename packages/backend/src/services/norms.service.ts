@@ -26,32 +26,58 @@ import * as triplydbService from './triplydb.service';
 import { config } from '../utils/config';
 import logger from '../utils/logger';
 
-// CPRMV namespace constants — kept as full URIs because the publish format
-// expects fully-qualified property keys for type/id/definition/contains.
-const CPRMV_NS = 'https://cprmv.open-regels.nl/0.3.0/';
-const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-const CPRMV_RULE_TYPE = `${CPRMV_NS}Rule`;
-const CPRMV_ID = `${CPRMV_NS}id`;
-const CPRMV_DEFINITION = `${CPRMV_NS}definition`;
-const CPRMV_CONTAINS = `${CPRMV_NS}contains`;
+// Supported CPRMV vocabulary versions and their namespace bases. 0.3.0 and
+// 0.3.2 share the same flat cprmv:Rule publish shape and differ only in the
+// version segment of the namespace IRI, so both are served by one query/
+// mapping with the namespace swapped per request (?cprmv_version=).
+//
+// 0.4.1 uses a structurally different RuleSet/hasPart model with predicates in
+// a separate namespace and is intentionally NOT listed here — it needs its own
+// query and mapper (Track 2) rather than a namespace swap.
+const CPRMV_NS_BY_VERSION: Record<string, string> = {
+  '0.3.0': 'https://cprmv.open-regels.nl/0.3.0/',
+  '0.3.2': 'https://cprmv.open-regels.nl/0.3.2/',
+};
 
-// CPRMV vocabulary version — extracted from the namespace URI so the constant
-// stays self-consistent with CPRMV_NS. Surfaced via cprmv_version envelope
-// field; describes which vocabulary this BACKEND speaks (independent of
-// which data has been published).
-const CPRMV_VERSION_MATCH = CPRMV_NS.match(/\/(\d+\.\d+\.\d+)\/?$/);
-const CPRMV_VERSION = CPRMV_VERSION_MATCH ? CPRMV_VERSION_MATCH[1] : 'unknown';
+// The version used when ?cprmv_version= is omitted — preserves the historical
+// behaviour (the data currently in TriplyDB is 0.3.0).
+export const DEFAULT_CPRMV_VERSION = '0.3.0';
+
+// Versions accepted by the route layer's validation. Exported so the route
+// can reject anything outside this set with a helpful message.
+export const SUPPORTED_CPRMV_VERSIONS = Object.keys(CPRMV_NS_BY_VERSION);
+
+const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+
+// Resolves the namespace base for a (validated) version, falling back to the
+// default so a stray value can never produce an undefined IRI.
+function cprmvNs(version: string): string {
+  return CPRMV_NS_BY_VERSION[version] ?? CPRMV_NS_BY_VERSION[DEFAULT_CPRMV_VERSION];
+}
+
+// Fully-qualified publish-format property keys for a given CPRMV version. The
+// output object keys must reflect the namespace of the data being queried, so
+// these are derived per request rather than from a single module constant.
+function cprmvTerms(version: string) {
+  const ns = cprmvNs(version);
+  return {
+    ns,
+    ruleType: `${ns}Rule`,
+    id: `${ns}id`,
+    definition: `${ns}definition`,
+    contains: `${ns}contains`,
+  };
+}
 
 // Dataset metadata cache TTL. Biannual data tolerates this happily; the cache
 // keeps the metadata SPARQL query off the hot path while still picking up new
 // publications within a minute or two.
 const META_CACHE_TTL_MS = 60_000;
 
-interface ChildRule {
-  [RDF_TYPE]: string;
-  [CPRMV_ID]: string;
-  [CPRMV_DEFINITION]: string;
-}
+// Child (contained) rule in publish format. Keys are version-dependent
+// (type/id/definition carry the requested namespace), so this is a plain
+// string map rather than a fixed-key interface.
+type ChildRule = Record<string, string>;
 
 export type PublishedRule = Record<string, unknown>;
 
@@ -142,8 +168,9 @@ function extractRulePathParts(ruleIdPath: string): RulePathParts {
 //   - dct:issued     — always present, publication timestamp (xsd:dateTime)
 //   - dcat:version   — primary ruleset only (the service's legalResource)
 //   - dct:title      — primary ruleset only
-const DATASET_METADATA_QUERY = `
-PREFIX cprmv: <${CPRMV_NS}>
+function buildDatasetMetadataQuery(ns: string): string {
+  return `
+PREFIX cprmv: <${ns}>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX dcat: <http://www.w3.org/ns/dcat#>
 
@@ -158,6 +185,7 @@ WHERE {
 }
 ORDER BY ?rulesetId DESC(?issued)
 `;
+}
 
 interface MetadataCacheEntry {
   /** Per-rulesetid list of dataset records (one per applicable period).
@@ -181,21 +209,29 @@ const metaCache = new Map<string, MetadataCacheEntry>();
  * with degraded cache headers.
  */
 export async function getDatasetVersionsByRulesetid(
-  endpoint?: string
+  endpoint?: string,
+  cprmvVersion: string = DEFAULT_CPRMV_VERSION
 ): Promise<Record<string, DatasetVersionInfo[]>> {
   const targetEndpoint = endpoint || config.triplydb.endpoint;
 
   if (!targetEndpoint) return {};
 
+  // Cache key includes the version: 0.3.0 and 0.3.2 query different
+  // namespaces and must not share cached metadata.
+  const cacheKey = `${targetEndpoint}::${cprmvVersion}`;
+
   // Cache hit
-  const cached = metaCache.get(targetEndpoint);
+  const cached = metaCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) {
     return cached.byRulesetid;
   }
 
   // Cache miss — query SPARQL
   try {
-    const data = await triplydbService.executeQuery(targetEndpoint, DATASET_METADATA_QUERY);
+    const data = await triplydbService.executeQuery(
+      targetEndpoint,
+      buildDatasetMetadataQuery(cprmvNs(cprmvVersion))
+    );
     const bindings = data.results?.bindings || [];
 
     const byRulesetid: Record<string, DatasetVersionInfo[]> = {};
@@ -236,13 +272,14 @@ export async function getDatasetVersionsByRulesetid(
       });
     }
 
-    metaCache.set(targetEndpoint, {
+    metaCache.set(cacheKey, {
       byRulesetid,
       expires: Date.now() + META_CACHE_TTL_MS,
     });
 
     logger.info('[Norms Service] Dataset metadata fetched', {
       endpoint: targetEndpoint,
+      cprmvVersion,
       rulesetCount: Object.keys(byRulesetid).length,
     });
 
@@ -257,19 +294,19 @@ export async function getDatasetVersionsByRulesetid(
 }
 
 /**
- * Backend constant accessor for the CPRMV vocabulary version.
- * Exposed for the route layer so it can populate `cprmv_version` even
- * when there are no datasets at all.
+ * Default CPRMV vocabulary version accessor. Exposed for the route layer so it
+ * can populate `cprmv_version` even when there are no datasets at all. Callers
+ * that honour ?cprmv_version= should use the requested value instead.
  */
 export function getCprmvVersion(): string {
-  return CPRMV_VERSION;
+  return DEFAULT_CPRMV_VERSION;
 }
 
 // =====================================================================
 // Norms query
 // =====================================================================
 
-function buildNormsQuery(filter?: NormsFilter): string {
+function buildNormsQuery(ns: string, filter?: NormsFilter): string {
   const filterClauses: string[] = [];
 
   if (filter?.rulesetid) {
@@ -283,7 +320,7 @@ function buildNormsQuery(filter?: NormsFilter): string {
 
   return `
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX cprmv: <${CPRMV_NS}>
+PREFIX cprmv: <${ns}>
 
 SELECT DISTINCT
   ?rule ?id ?definition ?rulesetId ?ruleIdPath
@@ -318,24 +355,32 @@ ORDER BY ?rulesetId ?ruleIdPath ?containedId
  * from the returned map; the route layer treats missing entries as a
  * "do not cache" signal.
  */
-export async function getAllNorms(endpoint?: string, filter?: NormsFilter): Promise<NormsResult> {
+export async function getAllNorms(
+  endpoint?: string,
+  filter?: NormsFilter,
+  cprmvVersion: string = DEFAULT_CPRMV_VERSION
+): Promise<NormsResult> {
   const targetEndpoint = endpoint || config.triplydb.endpoint;
 
   if (!targetEndpoint) {
     throw new Error('No SPARQL endpoint configured — set TRIPLYDB_ENDPOINT or pass ?endpoint=');
   }
 
+  // Per-request publish-format keys and namespace (0.3.0 vs 0.3.2).
+  const terms = cprmvTerms(cprmvVersion);
+
   logger.info('[Norms Service] Fetching all rule paths and norms', {
     endpoint: targetEndpoint,
+    cprmvVersion,
     ...(filter?.rulesetid && { rulesetid: filter.rulesetid }),
     ...(filter?.applicableDate && { applicableDate: filter.applicableDate }),
   });
 
   // Dataset metadata first — cached, cheap. Failures degrade to empty map;
   // we still serve rules data below.
-  const allDatasetVersions = await getDatasetVersionsByRulesetid(targetEndpoint);
+  const allDatasetVersions = await getDatasetVersionsByRulesetid(targetEndpoint, cprmvVersion);
 
-  const query = buildNormsQuery(filter);
+  const query = buildNormsQuery(terms.ns, filter);
   const data = await triplydbService.executeQuery(targetEndpoint, query);
   const bindings = data.results?.bindings || [];
 
@@ -385,9 +430,9 @@ export async function getAllNorms(endpoint?: string, filter?: NormsFilter): Prom
 
     if (b.contained?.value && b.containedId?.value && b.containedDefinition?.value) {
       entry.children.set(b.containedId.value, {
-        [RDF_TYPE]: CPRMV_RULE_TYPE,
-        [CPRMV_ID]: b.containedId.value,
-        [CPRMV_DEFINITION]: b.containedDefinition.value,
+        [RDF_TYPE]: terms.ruleType,
+        [terms.id]: b.containedId.value,
+        [terms.definition]: b.containedDefinition.value,
       });
     }
   }
@@ -403,11 +448,11 @@ export async function getAllNorms(endpoint?: string, filter?: NormsFilter): Prom
 
   for (const entry of acc.values()) {
     const rule: PublishedRule = {
-      [RDF_TYPE]: CPRMV_RULE_TYPE,
-      [CPRMV_ID]: entry.id,
-      [CPRMV_DEFINITION]: entry.definition,
+      [RDF_TYPE]: terms.ruleType,
+      [terms.id]: entry.id,
+      [terms.definition]: entry.definition,
       ...(entry.children.size > 0 && {
-        [CPRMV_CONTAINS]: Object.fromEntries(entry.children),
+        [terms.contains]: Object.fromEntries(entry.children),
       }),
       ...(entry.situatie !== undefined && { situatie: entry.situatie }),
       ...(entry.norm !== undefined && { norm: entry.norm }),
@@ -446,7 +491,7 @@ export async function getAllNorms(endpoint?: string, filter?: NormsFilter): Prom
     aggregations: { normsPerRulesetid },
     metadata: {
       datasetVersions,
-      cprmvVersion: CPRMV_VERSION,
+      cprmvVersion,
     },
   };
 }
