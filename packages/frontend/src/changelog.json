@@ -1,37 +1,20 @@
 {
   "versions": [
     {
-      "version": "1.9.11",
+      "version": "1.9.10",
       "date": "June 30, 2026",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
       "sections": [
         {
-          "icon": "🧩",
-          "iconColor": "emerald",
-          "title": "/v1/norms — ?cprmv_version=0.4.1 support",
-          "items": [
-            "?cprmv_version= now also accepts 0.4.1. The CPSV editor's 0.4.1 output emits flat cprmv:Rule resources carrying the same predicates as 0.3.x (id, definition, rulesetId, ruleIdPath, situatie, norm) in the standaarden.open-regels 0.4.1# namespace, so the rules query is the existing one with the namespace swapped — no separate rule mapper needed.",
-            "The per-ruleset metadata differs: 0.4.1 has no cprmv:Dataset, so dataset_versions is read from cprmv:RuleSet instead (cprmv:validFrom as the version). There is no dct:issued, so validFrom doubles as the freshness signal behind ETag / Last-Modified. Verified against live data: 72 norms across 7 rulesets, with cache headers and the 0.3.0/0.3.2 paths unchanged."
-          ]
-        }
-      ]
-    },
-    {
-      "version": "1.9.10",
-      "date": "June 30, 2026",
-      "status": "Released",
-      "statusColor": "slate",
-      "borderColor": "slate",
-      "sections": [
-        {
           "icon": "🔀",
           "iconColor": "emerald",
-          "title": "/v1/norms — select the CPRMV namespace with ?cprmv_version=",
+          "title": "/v1/norms — ?cprmv_version= selector (0.3.0 / 0.3.2 / 0.4.1)",
           "items": [
-            "The norms query was hardcoded to the CPRMV 0.3.0 namespace, so data published under any other namespace returned nothing. A new ?cprmv_version= query parameter selects which CPRMV vocabulary version to query and emit; it is validated against the supported set (0.3.0, 0.3.2) and rejects anything else (including 0.4.1) with a 400. It defaults to 0.3.0, preserving existing behaviour.",
-            "0.3.0 and 0.3.2 share the flat cprmv:Rule publish shape and differ only in the namespace IRI, so the selected version is threaded through the rules query, the dataset-metadata query (cache now keyed by endpoint + version), the publish-format output keys, the cprmv_version envelope field, and the ETag filter signature — different versions never share a cache entry. The 0.4.1 RuleSet/hasPart model is handled separately and not yet accepted here."
+            "A new ?cprmv_version= query parameter on /v1/norms selects which CPRMV vocabulary version to query and emit — one of 0.3.0, 0.3.2 or 0.4.1 (else 400), defaulting to 0.3.0. The query was previously hardcoded to 0.3.0, so anything published under another namespace returned nothing.",
+            "All three versions carry flat cprmv:Rule resources with the same predicates (id, definition, rulesetId, ruleIdPath, situatie, norm), so the rules query is one shape with the namespace swapped: 0.3.0/0.3.2 use the cprmv.open-regels versioned-path IRI, 0.4.1 the standaarden.open-regels 0.4.1# IRI. The selected version is threaded through the rules query, the publish-format output keys, the cprmv_version envelope and the ETag/cache signature, so versions never share a cache entry.",
+            "Per-ruleset metadata (dataset_versions) differs by version: 0.3.x reads cprmv:Dataset (dct:issued + dcat:version), while 0.4.1 has no cprmv:Dataset and reads cprmv:RuleSet (cprmv:validFrom, which doubles as the ETag / Last-Modified freshness signal since 0.4.1 has no dct:issued). Verified against live data: 0.4.1 returns 72 norms across 7 rulesets, with cache headers and the 0.3.x paths unchanged."
           ]
         }
       ]
