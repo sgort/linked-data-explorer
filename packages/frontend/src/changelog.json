@@ -1,11 +1,29 @@
 {
   "versions": [
     {
-      "version": "1.9.10",
+      "version": "1.9.11",
       "date": "June 30, 2026",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "sections": [
+        {
+          "icon": "🧩",
+          "iconColor": "emerald",
+          "title": "/v1/norms — ?cprmv_version=0.4.1 support",
+          "items": [
+            "?cprmv_version= now also accepts 0.4.1. The CPSV editor's 0.4.1 output emits flat cprmv:Rule resources carrying the same predicates as 0.3.x (id, definition, rulesetId, ruleIdPath, situatie, norm) in the standaarden.open-regels 0.4.1# namespace, so the rules query is the existing one with the namespace swapped — no separate rule mapper needed.",
+            "The per-ruleset metadata differs: 0.4.1 has no cprmv:Dataset, so dataset_versions is read from cprmv:RuleSet instead (cprmv:validFrom as the version). There is no dct:issued, so validFrom doubles as the freshness signal behind ETag / Last-Modified. Verified against live data: 72 norms across 7 rulesets, with cache headers and the 0.3.0/0.3.2 paths unchanged."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.10",
+      "date": "June 30, 2026",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "sections": [
         {
           "icon": "🔀",
