@@ -1,11 +1,29 @@
 {
   "versions": [
     {
-      "version": "1.9.9",
-      "date": "June 22, 2026",
+      "version": "1.9.10",
+      "date": "June 30, 2026",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "sections": [
+        {
+          "icon": "🔀",
+          "iconColor": "emerald",
+          "title": "/v1/norms — select the CPRMV namespace with ?cprmv_version=",
+          "items": [
+            "The norms query was hardcoded to the CPRMV 0.3.0 namespace, so data published under any other namespace returned nothing. A new ?cprmv_version= query parameter selects which CPRMV vocabulary version to query and emit; it is validated against the supported set (0.3.0, 0.3.2) and rejects anything else (including 0.4.1) with a 400. It defaults to 0.3.0, preserving existing behaviour.",
+            "0.3.0 and 0.3.2 share the flat cprmv:Rule publish shape and differ only in the namespace IRI, so the selected version is threaded through the rules query, the dataset-metadata query (cache now keyed by endpoint + version), the publish-format output keys, the cprmv_version envelope field, and the ETag filter signature — different versions never share a cache entry. The 0.4.1 RuleSet/hasPart model is handled separately and not yet accepted here."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.9",
+      "date": "June 22, 2026",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "sections": [
         {
           "icon": "🏷️",
