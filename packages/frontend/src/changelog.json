@@ -1,11 +1,30 @@
 {
   "versions": [
     {
-      "version": "1.9.10",
-      "date": "June 30, 2026",
+      "version": "1.9.11",
+      "date": "July 2, 2026",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "sections": [
+        {
+          "icon": "🐛",
+          "iconColor": "red",
+          "title": "Fix boardOwner injection breaking BPMN deploys with a process documentation element",
+          "items": [
+            "Deploying a process whose <bpmn:process> element carries a <bpmn:documentation> child (e.g. ThuisbatterijSubsidieAanvraagProcess) always failed with a bare \"Request failed with status code 400\", because the deploy-time boardOwner tagging spliced its <extensionElements> block in directly after the opening <process> tag — ahead of the existing documentation element. The BPMN/XSD schema requires documentation to precede extensionElements, so Operaton's schema validator rejected the resulting XML (ENGINE-09005 ParseException).",
+            "injectBoardOwner now skips past any leading <documentation> element(s) before inserting or locating extensionElements, preserving valid schema order. Deploys with a documented process now succeed identically to undocumented ones.",
+            "Deploy failures now surface Operaton's real error: the deployment service captures and logs the response body (operatonResponse/operatonStatus) instead of just the generic Axios message, and getErrorDetails() checks isAxiosError before the generic Error branch — previously dead code, since AxiosError extends Error and always matched the generic branch first, silently discarding response.data."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.10",
+      "date": "June 30, 2026",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "sections": [
         {
           "icon": "🔀",

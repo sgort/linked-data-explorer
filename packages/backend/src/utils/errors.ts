@@ -109,22 +109,25 @@ export function getErrorDetails(error: unknown): {
   response?: unknown;
   status?: number;
 } {
-  // Handle standard Error objects
-  if (isError(error)) {
-    return {
-      message: error.message,
-      stack: error.stack,
-      type: error.constructor.name,
-    };
-  }
-
-  // Handle Axios errors with additional context
+  // Handle Axios errors with additional context (checked before the generic
+  // Error branch below, since AxiosError extends Error and would otherwise
+  // always match first, silently dropping response.data/status)
   if (isAxiosError(error)) {
     return {
       message: error.message,
       type: 'AxiosError',
       response: error.response?.data,
       status: error.response?.status,
+      stack: isError(error) ? error.stack : undefined,
+    };
+  }
+
+  // Handle standard Error objects
+  if (isError(error)) {
+    return {
+      message: error.message,
+      stack: error.stack,
+      type: error.constructor.name,
     };
   }
 
