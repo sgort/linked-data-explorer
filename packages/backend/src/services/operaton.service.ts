@@ -731,7 +731,9 @@ export class OperatonService {
           ? operatonBody
           : operatonBody
             ? JSON.stringify(operatonBody)
-            : (error instanceof Error ? error.message : 'Unknown error');
+            : error instanceof Error
+              ? error.message
+              : 'Unknown error';
       throw new Error(`Process deployment failed: ${detail}`);
     }
   }
