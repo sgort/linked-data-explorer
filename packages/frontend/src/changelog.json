@@ -1,11 +1,30 @@
 {
   "versions": [
     {
-      "version": "1.9.11",
-      "date": "July 2, 2026",
+      "version": "1.9.12",
+      "date": "July 9, 2026",
       "status": "Latest",
       "statusColor": "emerald",
       "borderColor": "emerald",
+      "sections": [
+        {
+          "icon": "🔗",
+          "iconColor": "emerald",
+          "title": "Query library — rules and concepts now resolve for CPRMV 0.4.1 datasets",
+          "items": [
+            "The 'Rules with Their Services', 'Count Rules per Service' and 'Services with All Their Rules (Detailed)' queries joined ?rule cpsv:implements ?service directly. Since the CPSV-AP RuleShape change a cpsv:Rule's cpsv:implements points at an eli:LegalResource (the resource the service declares via cv:hasLegalResource), so datasets published in the newer shape (e.g. the Flevoland Thuisbatterij service) returned no rules. The queries now UNION over both link paths — the direct edge and the shared legal resource — and read validFrom/confidence from cprmv041: (was ronl:, a predicate the data never carried).",
+            "The 'NL-SBB Concepts and Services' query broke at the variable→DMN hop: a concept's dct:subject points at a bare DMN variable URI (<dmnUri>/input/N or /output/N) that newer exports emit without a cpsv:isRequiredBy / cpsv:produces edge, so the concept could not reach its DMN or service. It now keeps the explicit edge for older data and, when absent, derives the DMN URI from the variable URI (OPTIONAL edges + COALESCE with an IRI(REPLACE(...)) fallback), then matches cprmv:implements or cprmv041:implements.",
+            "Auto-generated DMN decision rules ('Decision rule <id>' placeholder titles) are filtered out of the rule listings, and SELECT DISTINCT de-duplicates. For the Thuisbatterij dataset this surfaces its 3 business rules (was hidden) and 21 concepts, and drops ~60 placeholder rows across the catalogue."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.9.11",
+      "date": "July 2, 2026",
+      "status": "Released",
+      "statusColor": "slate",
+      "borderColor": "slate",
       "sections": [
         {
           "icon": "🐛",

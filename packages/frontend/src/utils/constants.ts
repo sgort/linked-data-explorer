@@ -218,18 +218,22 @@ WHERE {
   {
     name: 'NL-SBB Concepts and Services',
     sparql: `${COMMON_PREFIXES}
-SELECT ?subject ?prefLabel ?exactMatch ?service ?serviceTitle
+SELECT DISTINCT ?subject ?prefLabel ?exactMatch ?service ?serviceTitle
 WHERE {
   ?subject skos:exactMatch ?exactMatch ;
            dct:subject ?variable .
 
   OPTIONAL { ?subject skos:prefLabel ?prefLabel . FILTER(LANG(?prefLabel) = "nl" || LANG(?prefLabel) = "") }
 
-  {
-    ?variable cpsv:isRequiredBy ?dmn .
-  } UNION {
-    ?variable cpsv:produces ?dmn .
-  }
+  # A concept's dct:subject points at a DMN variable. Older exports give that
+  # variable an explicit edge to the DMN (cpsv:isRequiredBy / cpsv:produces).
+  # Newer exports (CPRMV 0.4.1) emit a bare variable URI of the form
+  # <dmnUri>/input/N or <dmnUri>/output/N with no edge, so derive the DMN URI
+  # from the variable URI and fall back to it when no explicit edge exists.
+  OPTIONAL { ?variable cpsv:isRequiredBy ?dmnRequired . }
+  OPTIONAL { ?variable cpsv:produces ?dmnProduced . }
+  BIND(IRI(REPLACE(STR(?variable), "/(input|output)/[0-9]+$", "")) AS ?dmnFromUri)
+  BIND(COALESCE(?dmnRequired, ?dmnProduced, ?dmnFromUri) AS ?dmn)
 
   { ?dmn cprmv:implements ?service } UNION { ?dmn cprmv041:implements ?service }
   OPTIONAL { ?service dct:title ?serviceTitle . FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "") }
