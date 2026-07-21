@@ -6,7 +6,7 @@ YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
 NC='\033[0m'
 
-REQUIRED_CONTAINERS=("ronl-postgres")
+REQUIRED_CONTAINERS=("ronl-postgres" "ronl-operaton")
 
 echo ""
 echo "Checking Docker services..."
@@ -40,14 +40,13 @@ done
 echo ""
 
 if [ "$ALL_OK" = false ]; then
-  echo -e "${RED}Docker services are not ready.${NC} Start the postgres container:"
+  echo -e "${RED}Docker services are not ready.${NC} Start the missing containers:"
   echo ""
-  echo "  docker start ronl-postgres"
+  echo "  docker start ronl-postgres ronl-operaton"
   echo ""
-  echo "Or if it doesn't exist yet, create it (see .env.example for credentials):"
+  echo "Or if they don't exist yet, they're part of the ronl-business-api stack:"
   echo ""
-  echo "  docker run -d --name ronl-postgres -p 5432:5432 \\"
-  echo "    -e POSTGRES_PASSWORD=postgres postgres:15"
+  echo "  cd ../ronl-business-api && docker compose up -d postgres operaton"
   echo ""
   exit 1
 fi
