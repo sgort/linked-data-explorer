@@ -30,6 +30,30 @@ data doesn't have yet).
 > already the single source of truth for both mounting and the root page —
 > there's nothing to manually keep in sync.
 
+## Versioning: CalVer `YYYY.MM.patch`
+
+Released versions use CalVer, not SemVer — matching the Norm Editor's
+convention (`scripts/generate-changelog.mjs`'s release-tagging scheme) and
+the same adoption already done for the CPSV Editor:
+
+- `2026.07.0` — first release cut in July 2026
+- `2026.07.1` — a same-month follow-up release
+- `2026.08.0` — the first release of the next month (patch resets to `0`)
+
+To pick the next version: take the current date's `YYYY.MM`. If the most
+recent **Released** entry in `changelog.json` already has that same
+`YYYY.MM` prefix, increment its patch number by 1. Otherwise (first release
+of a new month, or no prior release at all this month) use patch `0`. This
+is a single, product-wide version sequence — it does not vary by `scope`;
+a backend-only release and a frontend-only release still share the same
+next-CalVer-in-sequence number.
+
+Note this is a CalVer _string_ only — no git tags are created, and nothing
+else about the release workflow changes (no `generate-changelog.mjs`, no
+commit-message enforcement, no `versions.json`). Historical entries already
+in `changelog.json` (SemVer strings like `1.9.13`, `1.9.12`) are left as-is;
+only new entries going forward use CalVer.
+
 ## Repo-specific process constraints (apply throughout, not just here)
 
 - **Branch off `acc` first.** Never implement directly on `acc` — create a
@@ -51,7 +75,7 @@ data doesn't have yet).
 ```jsonc
 {
   "format": "commits",
-  "version": "1.9.13",
+  "version": "2026.07.0", // CalVer YYYY.MM.patch — see "Versioning" above
   "status": "Upcoming", // bump-release flips this to "Released"
   "date": "23 jul 2026",
   "scope": "frontend", // "frontend" | "backend" | "both"
@@ -74,7 +98,9 @@ data doesn't have yet).
 - Read `packages/frontend/src/changelog.json`.
 - The first entry in `versions` is the one being released — extract its
   `version` string. If an explicit version was passed as an argument, use
-  that instead and find it in the array.
+  that instead and find it in the array. If no version was passed and a new
+  entry needs authoring, compute the next CalVer string per "Versioning"
+  above.
 - **If the first entry's `status` is already `Released` (or `Latest` — the
   pre-existing status label that historically marked "most recent", not a
   workflow state), there is no pending entry** — stop and author a new one
