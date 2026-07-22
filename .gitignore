@@ -45,8 +45,12 @@ dist-ssr
 *.sw?
 .claudesync
 
-# Claude Code local config & per-machine memory (machine-specific, not portable)
-.claude/
+# Claude Code local config & per-machine memory (machine-specific, not portable).
+# Exception: .claude/commands/ is shared tooling (e.g. bump-release), tracked
+# like ronl-business-api's convention — everything else here (settings,
+# per-project memory) stays local.
+.claude/*
+!.claude/commands/
 CLAUDE.md
 
 # Local env overrides (committed envs are .env.development / .acceptance / .production)

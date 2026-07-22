@@ -1,6 +1,26 @@
 {
   "versions": [
     {
+      "format": "commits",
+      "version": "1.9.13",
+      "status": "Released",
+      "date": "22 jul 2026",
+      "scope": "frontend",
+      "commits": [
+        {
+          "sha": "2650d7c",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Adopt per-commit changelog format, add repo-local bump-release",
+          "details": [
+            "Changelog.tsx now renders \"format\": \"commits\" entries (icon+color header per commit, sha/author trailer, scope badge, Upcoming/Released status badge) alongside the existing legacy \"sections\" shape, so releases can use the same per-commit changelog convention as ronl-business-api and the CPSV Editor. Needed a typed union cast at the changelog.json import boundary, since resolveJsonModule infers a literal type from the current data that doesn't include the new shape.",
+            "Adds a tailored .claude/commands/bump-release.md for this repo's real npm workspaces monorepo (frontend/backend scope, no packages/shared): no endpoint-map reconciliation step, since routes/registry.ts is already a self-maintaining single source of truth, and a note that packages/ropa-site has no package.json and is never version-bumped even though it deploys via its own path filter.",
+            ".gitignore gets a targeted carve-out (.claude/* + !.claude/commands/) rather than removing the exclusion outright, since .claude/projects/ here is a real (non-symlinked) per-project memory tree that should stay local — only commands/ becomes shared, tracked tooling."
+          ]
+        }
+      ]
+    },
+    {
       "version": "1.9.12",
       "date": "July 9, 2026",
       "status": "Latest",
