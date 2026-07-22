@@ -435,10 +435,60 @@ instead; (2) after picking a legal-basis lookup result, the newly-filled
 `title`, so `getByDisplayValue` matched both — fixed by querying via the
 `legalBasisLabel` input's own placeholder instead of its value.
 
+### `packages/frontend/src/components/DsoExplorer/DsoExplorer.test.tsx` — P6.3
+
+**21 tests · `jsdom` · `dsoService` mocked via `vi.mock` + `vi.importActual` (pure helpers kept real), `FormService` mocked**
+
+No third-party coupling, but the largest single-file component tested so
+far (1,464 lines, one default export covering three tabs — Concepts,
+Works, Activities — each with its own search/pagination/master-detail
+logic, plus nested non-exported components like `ApplicableRuleRow` and
+the two detail panels that can only be reached, and thus only tested,
+through the full `DsoExplorer` tree since nothing but the default export
+is exported from the file). `dsoService` is mocked with
+`vi.importActual` merged in so the pure helpers (`urnFromHref`,
+`sttrDownloadUrl`, `dmnDownloadUrl`) stay real — only the network-calling
+exports are replaced — while `FormService.saveForm` is mocked outright.
+
+- **Shell** — defaults to the Concepts tab, the env badge (pre-production
+  vs. production), and tab switching between all three.
+- **Concepts tab** — loads on mount, renders/empty/error states, search
+  (typed term + button, and Enter-to-search), pagination (prev disabled on
+  page 1, next disabled without `hasNext`, next advances the page).
+- **Works tab** — loads on mount, empty state, selecting a result opens the
+  `WerkzaamheidDetailPanel` (fetches version history), pagination.
+- **Activities tab** — loads on mount; a location preset (`Lelystad`)
+  switches to OIN mode and reveals the client-side name filter; the name
+  filter narrows results without a new network call; pasting a URN and
+  pressing Enter opens `ActivityDetailPanel` directly without going through
+  the list; selecting an activity shows authority/validity/refinable/rule-
+  type sections; a `conclusie`-typed applicable rule offers STTR/Extract
+  DMN/"Publish via CPSV Editor" links; an `indieningsvereisten` rule's
+  "Import into LDE" calls `FormService.saveForm` and flips its button to
+  "Imported"; child activities can be navigated into, updating the detail
+  panel's `getActiviteitDetail` call to the child's URN.
+
+Two DOM-query lessons surfaced here, worth carrying into the rest of P6:
+(1) a plain `<label>` with no `htmlFor` doesn't associate with its input,
+so `getByLabelText` finds nothing — use `getByText` for the label itself
+instead; (2) text split across sibling elements (e.g. `Refinable:
+<strong>Yes</strong>` — two separate text nodes) doesn't match a single
+`getByText` string — either scope the query to the specific element
+(`{ selector: 'strong' }`) or match on the substring that is actually one
+node.
+
+72.02%/68.02% line/branch coverage — deliberately not chased further:
+uncovered paths are the werkzaamheden-tab type-ahead suggestions dropdown
+(debounced via a real 300ms `setTimeout`, not exercised here), the
+werkzaamheden/activiteiten error branches (already proven once each on the
+Concepts tab, same code shape), and a few secondary pagination/no-results
+message variants — all real but lower-value repeats of patterns already
+covered elsewhere in this file, consistent with the "critical
+interactions, not exhaustive coverage" scoping this phase committed to.
+
 See `TESTING-GUIDE.md`'s "P6 breakdown" table — remaining scope
-(`DsoExplorer`, `ChainBuilder`, `FormEditor`, `BpmnModeler`,
-`DocumentComposer`, `App.tsx`, `Changelog.tsx` — P6.3 through P6.8) is not
-yet started.
+(`ChainBuilder`, `FormEditor`, `BpmnModeler`, `DocumentComposer`,
+`App.tsx`, `Changelog.tsx` — P6.4 through P6.8) is not yet started.
 
 ---
 
@@ -479,23 +529,23 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 --if-present"`) always prints both packages' current per-file tables:
 `packages/backend`'s `"test": "jest --coverage"` and
 `packages/frontend`'s `"test": "vitest run --coverage"`, both matching
-`ronl-business-api`'s conventions exactly. As of P6.2: **109 backend
-tests** across 14 suites, **215 frontend tests** across 22 files — 324
+`ronl-business-api`'s conventions exactly. As of P6.3: **109 backend
+tests** across 14 suites, **236 frontend tests** across 23 files — 345
 total. Every tested file across both packages is at or near 100% line +
 branch coverage; the only files noticeably below that are
 `health.routes.ts` (89.74%), the P5 service files (`bpmnService.ts`/
 `documentService.ts`/`formService.ts` at ~92-94% branch, `dsoService.ts` at
 ~90%/71% branch, `templateService.ts` at ~91%/79% branch, the two storage
-modules at ~84-90%), and the P6 `RopaEditor` files (`RopaEditor.tsx` at
-93.33%/70% branch, `RopaRecordEditor.tsx` at ~86%/81% branch — the largest
-component tested so far, with four tabs and several service integrations)
-— each gap is an uncovered defensive/edge branch or a genuinely
-lower-value permutation (e.g. every disabled-state combination), not an
-untested code path. Still a small slice of the ~12,371-line backend and
-~22,684-line frontend — a repo-wide number is premature until the
-remaining backend route files and the rest of P6 (P6.3 through P6.8 — see
-`TESTING-GUIDE.md`) are further along, same
-reasoning the CPSV Editor's guide used.
+modules at ~84-90%), and the P6 files (`RopaEditor.tsx` at 93.33%/70%
+branch, `RopaRecordEditor.tsx` at ~86%/81% branch, `DsoExplorer.tsx` at
+72.02%/68.02% branch — the largest component tested so far, one file with
+three full tabs) — each gap is an uncovered defensive/edge branch or a
+genuinely lower-value permutation (e.g. every disabled-state combination,
+or a debounced type-ahead dropdown), not an untested code path. Still a
+small slice of the ~12,371-line backend and ~22,684-line frontend — a
+repo-wide number is premature until the remaining backend route files and
+the rest of P6 (P6.4 through P6.8 — see `TESTING-GUIDE.md`) are further
+along, same reasoning the CPSV Editor's guide used.
 
 ## Adding tests
 
