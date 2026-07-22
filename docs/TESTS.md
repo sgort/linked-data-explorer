@@ -616,9 +616,103 @@ component that never really mounts the library.
   queue crashed on a later render with `forms` being `undefined`. Fixed by
   using a single persistent `mockReturnValue` instead.
 
+### `packages/frontend/src/components/BpmnModeler/*` — P6.6
+
+**78 tests across 9 files · `jsdom` · `bpmn-js/lib/Modeler` + `bpmn-js-properties-panel` mocked outright**
+
+The full canvas-editor phase — larger surface than P6.5's embedded form
+editor, since `BpmnCanvas.tsx` (956 lines, the biggest file in the app)
+both drives `bpmn-js` imperatively **and** injects React components
+(`DmnTemplateSelector`/`FormTemplateSelector`/`DocumentTemplateSelector`)
+into the library's own properties-panel DOM via `ReactDOM.createRoot`, on
+top of a full deploy-to-Operaton modal (resource discovery, board-owner
+derivation, language-mismatch detection). Tackled smallest/least-coupled
+first:
+
+- Five small selectors with no third-party coupling —
+  `FormTemplateSelector.test.tsx` (4), `RopaSelector.test.tsx` (6),
+  `DocumentTemplateSelector.test.tsx` (5), `DsoActiviteitSelector.test.tsx`
+  (6), `DmnTemplateSelector.test.tsx` (7) — each mocking its one backing
+  service/storage call and asserting the `modeling.updateProperties(...)`
+  payload it writes back to the (plain object, not real bpmn-js) `element`
+  it's given.
+- `BpmnProperties.test.tsx` (5) — pure presentational, no coupling.
+  Confirmed a real controlled-input quirk while writing this: since the
+  `name` field's `value` prop never changes in these tests (the component
+  doesn't hold its own state, it's fully prop-driven), typing one character
+  into an existing value re-renders the *same* prop value each keystroke,
+  so the `onUpdateElement` call after typing `'x'` into a `"Task"`-valued
+  field fires with `{ name: 'Taskx' }`, not `{ name: 'x' }` — asserted
+  against that actual behavior rather than an assumption about how
+  controlled inputs "should" work here.
+- `ProcessList.test.tsx` (12) — no third-party coupling; the same
+  shell/subprocess-nesting-by-organization shape as `FormList`/`RopaList`,
+  plus orphan-subprocess handling (calledElement pointing at a shell not
+  present in the current filtered bucket) and `.bpmn` file import with
+  process-name extraction from the XML. `RopaSelector`/`DsoActiviteitSelector`
+  are mocked here (both already covered on their own).
+- `BpmnCanvas.test.tsx` (17) — the real `bpmn-js` coupling.
+  `bpmn-js/lib/Modeler` is replaced with a small fake class (canvas/
+  eventBus/overlays/elementRegistry/propertiesPanel/modeling, each just
+  enough surface for what this component actually calls), built inside a
+  `vi.hoisted` block so the class exists before the hoisted `vi.mock`
+  factory needs it. The fake `propertiesPanel.attachTo()` creates a real
+  `.bio-properties-panel-scroll-container` div — the same CSS-class
+  selector `BpmnCanvas.tsx` queries via `document.querySelector` before
+  injecting a selector component — so the DMN/Form/Document selector
+  injection logic (mocked as stubs here, each already covered on its own)
+  can be exercised end-to-end through a simulated `eventBus.emit('selection
+  .changed', ...)`. Manually dispatching bpmn-js's own events outside of
+  `userEvent` needed each `emit(...)` wrapped in `@testing-library/react`'s
+  `act()` — without it, React's state update from the event handler hadn't
+  committed yet by the time the very next synchronous assertion ran,
+  producing flaky "element still there" failures. Covers: XML import on
+  mount, Save/Export/Close, zoom controls, element-type-driven selector
+  injection (`BusinessRuleTask` → DMN selector, `UserTask` → Form + Document
+  selectors, `StartEvent` → Form selector only, anything else → no
+  selector), and the full deploy modal (resource discovery from matched
+  form/document refs, the `ronl:ropaRef`-missing warning, board-owner
+  auto-detection from `candidateGroups` with deploy blocked until one is
+  picked, and both the success and failure deploy-endpoint responses).
+  One real (pre-existing, unrelated) quirk surfaced here rather than
+  "fixed": `handleOpenDeployModal`'s `doc.querySelector('process')` never
+  matches a namespace-prefixed `<bpmn:process>` element under jsdom's XML
+  parser — a bare CSS type selector only matches the null namespace,
+  regardless of whether the `bpmn:` prefix's namespace is declared — so the
+  component's own `?? 'process'` fallback always wins for XML shaped like
+  real bpmn-js output, and the deploy modal's "process key" is therefore
+  always the literal string `"process"` rather than the actual process id.
+  The test asserts this actual (fallback) behavior and documents it here
+  rather than silently working around it, since fixing it isn't in scope
+  for a test-writing pass.
+- `BpmnModeler.test.tsx` (16) — the top-level orchestrator, same
+  "mock the already-tested children as clickable stubs" pattern as
+  `ChainBuilder.test.tsx`/`FormEditor.test.tsx`. `ProcessList` and
+  `BpmnCanvas` are both replaced with stubs exposing their callback props;
+  `../../utils/bpmnTemplates`'s two XML constants are replaced with tiny
+  placeholders (the real file is confirmed-static template data, same
+  treatment as P4's `bpmnTemplates.ts` deferral). Covers: loading + server-
+  hydrating on mount; seeding exactly one of the seven versioned example
+  processes when `getStoredVersion` reports it stale; create/import/load/
+  save/rename/delete wiring; the shell→subprocess language/organization
+  propagation on save (a shell's own language/org always overwrites its
+  linked, non-readonly subprocesses'); the RoPA/DSO/language/organization
+  footer-draft plumbing and its effect on `hasFooterChanges`; and the
+  unsaved-changes confirm gate on both switching processes and closing.
+
+72.02%/60-69% branch coverage across the three biggest files
+(`BpmnCanvas.tsx`, `BpmnModeler.tsx`, `ProcessList.tsx`) — deliberately not
+chased further: the six other versioned example-seeding blocks in
+`BpmnModeler.tsx` all share the exact shape already proven once, and
+several `BpmnCanvas.tsx` branches (overlay badge refresh internals, the
+background PATCH after a successful deploy, every deploy-resource-warning
+combination) are lower-value repeats of patterns already covered, per the
+same "critical interactions, not exhaustive" scoping the rest of P6 has
+used throughout.
+
 See `TESTING-GUIDE.md`'s "P6 breakdown" table — remaining scope
-(`BpmnModeler`, `DocumentComposer`, `App.tsx`, `Changelog.tsx` — P6.6
-through P6.8) is not yet started.
+(`DocumentComposer`, `App.tsx`, `Changelog.tsx` — P6.7 and P6.8) is not yet
+started.
 
 ---
 
@@ -659,8 +753,8 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 --if-present"`) always prints both packages' current per-file tables:
 `packages/backend`'s `"test": "jest --coverage"` and
 `packages/frontend`'s `"test": "vitest run --coverage"`, both matching
-`ronl-business-api`'s conventions exactly. As of P6.5: **109 backend
-tests** across 14 suites, **374 frontend tests** across 39 files — 483
+`ronl-business-api`'s conventions exactly. As of P6.6: **109 backend
+tests** across 14 suites, **452 frontend tests** across 48 files — 561
 total. Every tested file across both packages is at or near 100% line +
 branch coverage; the only files noticeably below that are
 `health.routes.ts` (89.74%), the P5 service files (`bpmnService.ts`/
@@ -670,15 +764,17 @@ modules at ~84-90%), and the P6 files (`RopaEditor.tsx` at 93.33%/70%
 branch, `RopaRecordEditor.tsx` at ~86%/81% branch, `DsoExplorer.tsx` at
 72.02%/68.02% branch, `ChainConfig.tsx` at ~85%/81% branch, `ChainBuilder.tsx`
 at ~78%/57% branch — mainly the un-simulated `@dnd-kit` drag-gesture
-handlers — and the `FormEditor` trio all around 90%/65-80% branch) — each
-gap is an uncovered defensive/edge branch or a genuinely lower-value
-permutation (e.g. every disabled-state combination, a debounced type-ahead
-dropdown, or a real pointer-drag gesture), not an untested code path.
-Still a meaningful slice of the ~12,371-line backend and ~22,684-line
-frontend — a repo-wide number is premature until the remaining backend
-route files and the rest of P6 (P6.6 through P6.8 — see
-`TESTING-GUIDE.md`) are further along, same
-reasoning the CPSV Editor's guide used.
+handlers — the `FormEditor` trio all around 90%/65-80% branch, and
+`BpmnCanvas.tsx`/`BpmnModeler.tsx`/`ProcessList.tsx` at ~70-86%/60-88%
+branch) — each gap is an uncovered defensive/edge branch or a genuinely
+lower-value permutation (e.g. every disabled-state combination, a
+debounced type-ahead dropdown, a real pointer-drag gesture, or one of six
+near-identical example-seeding blocks already proven once), not an
+untested code path. Still a meaningful slice of the ~12,371-line backend
+and ~22,684-line frontend — a repo-wide number is premature until the
+remaining backend route files and the rest of P6 (P6.7 and P6.8 — see
+`TESTING-GUIDE.md`) are further along, same reasoning the CPSV Editor's
+guide used.
 
 ## Adding tests
 
