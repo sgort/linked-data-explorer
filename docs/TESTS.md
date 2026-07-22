@@ -119,6 +119,27 @@ mapped shape including `null → undefined` translation for
 `COALESCE($6, board_owner)` parameter handling. Same "pool is `null`"
 split-file pattern as `ropa.service`.
 
+### `packages/backend/src/routes/*.routes.test.ts` — P3
+
+**15 tests · route integration · `supertest` against a fresh `express()` app per file · service layer mocked**
+
+Five of the smallest routes, each mounted in isolation (`app.use('/path',
+theRouter)`) rather than the full `index.ts` app, so no unrelated
+middleware or config runs:
+
+| Route file                | Mocks                     | Covers                                                                                                                                                          |
+| ------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ropa.public.routes.ts`   | `ropa.service`            | Public ROPA list, `organisation` query param forwarding, 500 on service failure                                                                                 |
+| `assets.public.routes.ts` | `assets.service`          | Public bundle list, 500 on service failure                                                                                                                      |
+| `process.routes.ts`       | `operaton.service`        | Variable hints for a process key, 500 with a generic message on failure                                                                                         |
+| `dmn-xml.routes.ts`       | `operaton.service`        | XML content-type/disposition headers, 404 when not found, 500 with the real message, and the non-`Error`-rejection "Unknown error" fallback                     |
+| `health.routes.ts`        | `sparql.service`, `axios` | 200 healthy (both deps up); 503 degraded for TriplyDB down (both the reported-down and the thrown-exception cases), Operaton unreachable, and both down at once |
+
+`health.routes.ts`'s outermost `catch` block (wrapping the two already-caught
+inner health checks) is left uncovered — reaching it would mean `res.json`
+itself throwing, the same kind of defensive, effectively-unreachable branch
+`ronl-business-api`'s coverage table documents rather than forces.
+
 ---
 
 ## Bugs found and fixed
@@ -154,15 +175,18 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 
 ## Coverage
 
-No full coverage report has been generated yet — the seven files tested so
-far (`etag.ts`, `errors.ts`, `error.middleware.ts`, `version.middleware.ts`,
-`ropa.service.ts`, `vendor.service.ts`, `assets.service.ts`) are each at
-100% line + branch coverage, but that's a small slice of the
-~12,371-line backend and ~22,684-line frontend. Run
-`npm run test:coverage --workspace=@linked-data-explorer/backend` for the
-current per-file breakdown; a repo-wide number is premature until P3
-(backend routes) and the frontend phases are further along, same reasoning
-the CPSV Editor's guide used.
+No full coverage report has been generated yet. `npm test` (root
+`package.json`'s `"test": "npm run test --workspaces --if-present"`, and
+`packages/backend`'s own `"test": "jest --coverage"`, matching
+`ronl-business-api`'s backend convention exactly — plain Jest always runs
+once and exits, so there's no watch-mode coverage trap the way there was
+for the CPSV Editor's CRA setup) always prints the current per-file table.
+Of the twelve files tested so far, all but `health.routes.ts` (89.74% —
+one defensive, effectively-unreachable outer `catch`) are at 100% line +
+branch coverage. Still a small slice of the ~12,371-line backend and
+~22,684-line frontend — a repo-wide number is premature until the
+remaining P3 routes and the frontend phases are further along, same
+reasoning the CPSV Editor's guide used.
 
 ## Adding tests
 
