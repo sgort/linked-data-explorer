@@ -327,6 +327,42 @@ seeding.
 
 ---
 
+### `packages/frontend/src/components/common/*` — P6 (in progress)
+
+**20 tests · `jsdom` · `@testing-library/react` + `user-event`**
+
+First slice of P6 (frontend components) — `components/common` was picked
+first as the smallest, least third-party-coupled feature directory (no
+`bpmn-js`/`@tiptap/*`/`@dnd-kit/*` involved), to establish the RTL rendering
+pattern before tackling the editor-wrapping directories. Per the guide's
+"critical interactions only" scoping: renders with expected content, prop-
+driven display changes, and callback firing on user interaction — not
+exhaustive branch coverage.
+
+- `LanguageSelector.test.tsx` (5 tests) — every language option rendered,
+  the "matches every filter" hint shown only when unset, `onLanguageChange`
+  called with the selected code and with `undefined` when cleared back to
+  the default option, `disabled` prop reaching the `<select>`.
+- `OrganizationSelector.test.tsx` (5 tests) — same shape for the
+  organization free-text input. Note: an `<input list="...">` paired with a
+  `<datalist>` has an implicit ARIA role of **`combobox`**, not `textbox` —
+  `getByRole('textbox')` silently finds nothing; this was caught immediately
+  by all five assertions failing, not a subtle one to miss.
+- `ArtefactListToolbar.test.tsx` (10 tests) — the component itself (search
+  value + match/total count display, the clear button appearing only with a
+  non-empty search, the language-filter select firing `onLanguageFilterChange`)
+  plus the colocated pure `filterArtefacts` helper (language filter incl.
+  `'none'`/`'all'`, case-insensitive name/description search, the optional
+  `extraSearchKeys` callback, and combining both filters).
+
+Remaining P6 scope (`BpmnModeler`, `ChainBuilder`, `DocumentComposer`,
+`DsoExplorer`, `FormEditor`, `RopaEditor`, `Tutorial`, plus `App.tsx` and
+`Changelog.tsx`) is not yet started — those directories wrap `bpmn-js`,
+`@tiptap/*`, and `@dnd-kit/*` directly and will need each library mocked or
+scoped around before critical-interaction tests are worth writing.
+
+---
+
 ## Bugs found and fixed
 
 Both were found while getting the very first test file working — latent
@@ -364,18 +400,22 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 --if-present"`) always prints both packages' current per-file tables:
 `packages/backend`'s `"test": "jest --coverage"` and
 `packages/frontend`'s `"test": "vitest run --coverage"`, both matching
-`ronl-business-api`'s conventions exactly. As of P5: **109 backend tests**
-across 14 suites, **153 frontend tests** across 15 files — 262 total. Every
-tested file across both packages is at or near 100% line + branch coverage;
-the only files below that are `health.routes.ts` (89.74%), `logoResolver.ts`
-(98.18%), and a handful of the P5 service files (`bpmnService.ts`/
-`documentService.ts`/`formService.ts` at ~92-94% branch, `dsoService.ts` at
-~90%/71% branch, `templateService.ts` at ~91%/79% branch, and the two
-storage modules at ~84-90%) — each gap is an uncovered
-defensive/edge branch, not an untested code path. Still a small slice of
-the ~12,371-line backend and ~22,684-line frontend — a repo-wide number is
-premature until the remaining backend route files and P6 (frontend
-components) are further along, same reasoning the CPSV Editor's guide used.
+`ronl-business-api`'s conventions exactly. As of the first P6 slice:
+**109 backend tests** across 14 suites, **173 frontend tests** across 18
+files — 282 total. Every tested file across both packages is at or near
+100% line + branch coverage; the only files below that are
+`health.routes.ts` (89.74%), `logoResolver.ts` (98.18%), the P5 service
+files (`bpmnService.ts`/`documentService.ts`/`formService.ts` at ~92-94%
+branch, `dsoService.ts` at ~90%/71% branch, `templateService.ts` at
+~91%/79% branch, the two storage modules at ~84-90%), and the P6
+`components/common` files (`ArtefactListToolbar.tsx` at 94.73%/94.44%,
+`OrganizationSelector.tsx` at 100%/87.5% branch) — each gap is an
+uncovered defensive/edge branch, not an untested code path. Still a small
+slice of the ~12,371-line backend and ~22,684-line frontend — a repo-wide
+number is premature until the remaining backend route files and the rest
+of P6 (`BpmnModeler`, `ChainBuilder`, `DocumentComposer`, `DsoExplorer`,
+`FormEditor`, `RopaEditor`, `Tutorial`, `App.tsx`, `Changelog.tsx`) are
+further along, same reasoning the CPSV Editor's guide used.
 
 ## Adding tests
 
