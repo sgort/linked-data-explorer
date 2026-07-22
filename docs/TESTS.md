@@ -560,9 +560,65 @@ phase:
   preset-loading and remove/clear tests above; same "critical interactions,
   not exhaustive" call as the DsoExplorer debounce dropdown.
 
+### `packages/frontend/src/components/FormEditor/*` — P6.5
+
+**36 tests across 3 files · `jsdom` · `@bpmn-io/form-js` mocked outright**
+
+First full embedded-editor library phase. `FormCanvas.tsx` instantiates
+`new FormJsEditor({ container })` directly and drives it imperatively
+(`importSchema`/`saveSchema`/`on`/`off`/`destroy`) — exercising the real
+library in jsdom would mean a full canvas-editor mount (SVG/diagram-js
+internals), so `@bpmn-io/form-js` is mocked outright with a small fake
+class exposing the same four methods `FormCanvas` actually calls. The two
+CSS imports (`form-js.css`, `form-js-editor.css`) are mocked to empty
+modules too, since Vitest's CSS handling doesn't need to run for a
+component that never really mounts the library.
+
+- `FormList.test.tsx` (14 tests) — no third-party coupling; same
+  pure-presentational shape as `RopaList`/`DmnList`, one step up in size.
+  Empty/no-match states, organization grouping (ungrouped last) with
+  collapse/expand, status badges (EXAMPLE/WIP/DSO), select/delete (with the
+  readonly-disables-delete case), double-click-to-rename (blocked for
+  readonly forms), the toolbar search, `.form` file import via a real
+  `File`/`FileReader` (`userEvent.upload`) — including the language
+  inferred from the JSON payload winning over the filename suffix, and an
+  invalid JSON file alerting instead of crashing — and the footer
+  language/organization selectors only appearing once a form is active.
+- `FormCanvas.test.tsx` (8 tests) — using a `vi.hoisted` instance registry
+  so each test can grab the live mock editor and drive its `emit('changed')`
+  callback: schema import on mount, Save disabled until either the editor
+  reports a change or `hasFooterChanges` is true, Save calling `onSave`
+  with the saved schema and resetting the dirty flag (with a second edit
+  after save re-arming it), Export building a `.form` blob download with
+  the effective language/organization stamped in as wrapper metadata
+  (`URL.createObjectURL`/`<a>.click()`/`URL.revokeObjectURL` all
+  mocked/spied), Close, and the editor's `destroy()` firing on unmount.
+- `FormEditor.test.tsx` (14 tests) — the orchestrator. `FormService` and
+  `../../utils/exampleVersions` are mocked outright; `FormList`/`FormCanvas`
+  are replaced with minimal stubs (both already covered on their own) that
+  expose their callback props as clickable test buttons, same pattern as
+  the `ChainBuilder.test.tsx` orchestrator. Covers: loading forms on mount
+  then hydrating from the server; the "no form selected" placeholder;
+  seeding a stale example form (`getStoredVersion` mocked to report exactly
+  one of the ~17 example ids as outdated, so only that one triggers a real
+  `fetch` + `FormService.saveForm` + `setStoredVersion`) — this needed
+  `EXAMPLE_VERSIONS` mocked as a `Proxy` returning a constant so the
+  seeding `if (stored >= EXAMPLE_VERSIONS[id])` guard behaves for every
+  example id without hand-listing all of them; create/import/load/save/
+  rename/delete wiring; the example-form delete guard (alerts, no
+  `deleteForm` call); and the unsaved-changes confirm gate on both
+  switching forms and closing the canvas (skipped entirely when there are
+  no pending changes, shown and honored/declined otherwise). One fixture
+  bug caught while writing this: chaining `getForms.mockReturnValueOnce(...)`
+  twice broke, because `FormService.getForms()` is called as a `useState`
+  initializer argument on **every** render (not just the first, even
+  though only the first render's value is used) — exhausting a two-call
+  queue crashed on a later render with `forms` being `undefined`. Fixed by
+  using a single persistent `mockReturnValue` instead.
+
 See `TESTING-GUIDE.md`'s "P6 breakdown" table — remaining scope
-(`FormEditor`, `BpmnModeler`, `DocumentComposer`, `App.tsx`,
-`Changelog.tsx` — P6.5 through P6.8) is not yet started.
+(`BpmnModeler`, `DocumentComposer`, `App.tsx`, `Changelog.tsx` — P6.6
+through P6.8) is not yet started.
 
 ---
 
@@ -603,8 +659,8 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 --if-present"`) always prints both packages' current per-file tables:
 `packages/backend`'s `"test": "jest --coverage"` and
 `packages/frontend`'s `"test": "vitest run --coverage"`, both matching
-`ronl-business-api`'s conventions exactly. As of P6.4: **109 backend
-tests** across 14 suites, **338 frontend tests** across 36 files — 447
+`ronl-business-api`'s conventions exactly. As of P6.5: **109 backend
+tests** across 14 suites, **374 frontend tests** across 39 files — 483
 total. Every tested file across both packages is at or near 100% line +
 branch coverage; the only files noticeably below that are
 `health.routes.ts` (89.74%), the P5 service files (`bpmnService.ts`/
@@ -612,15 +668,16 @@ branch coverage; the only files noticeably below that are
 ~90%/72% branch, `templateService.ts` at ~91%/79% branch, the two storage
 modules at ~84-90%), and the P6 files (`RopaEditor.tsx` at 93.33%/70%
 branch, `RopaRecordEditor.tsx` at ~86%/81% branch, `DsoExplorer.tsx` at
-72.02%/68.02% branch, `ChainConfig.tsx` at ~85%/81% branch, and
-`ChainBuilder.tsx` at ~78%/57% branch — the last mainly the un-simulated
-`@dnd-kit` drag-gesture handlers) — each gap is an uncovered
-defensive/edge branch or a genuinely lower-value permutation (e.g. every
-disabled-state combination, a debounced type-ahead dropdown, or a real
-pointer-drag gesture), not an untested code path. Still a meaningful slice
-of the ~12,371-line backend and ~22,684-line frontend — a repo-wide number
-is premature until the remaining backend route files and the rest of P6
-(P6.5 through P6.8 — see `TESTING-GUIDE.md`) are further along, same
+72.02%/68.02% branch, `ChainConfig.tsx` at ~85%/81% branch, `ChainBuilder.tsx`
+at ~78%/57% branch — mainly the un-simulated `@dnd-kit` drag-gesture
+handlers — and the `FormEditor` trio all around 90%/65-80% branch) — each
+gap is an uncovered defensive/edge branch or a genuinely lower-value
+permutation (e.g. every disabled-state combination, a debounced type-ahead
+dropdown, or a real pointer-drag gesture), not an untested code path.
+Still a meaningful slice of the ~12,371-line backend and ~22,684-line
+frontend — a repo-wide number is premature until the remaining backend
+route files and the rest of P6 (P6.6 through P6.8 — see
+`TESTING-GUIDE.md`) are further along, same
 reasoning the CPSV Editor's guide used.
 
 ## Adding tests
