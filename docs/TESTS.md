@@ -383,9 +383,62 @@ glossary via the Quick Links button rather than the main header, i.e. the
 chase further given the "critical interactions, not exhaustive coverage"
 scoping this phase committed to.
 
-Remaining P6 scope (`RopaEditor`, `DsoExplorer`, `ChainBuilder`,
-`FormEditor`, `BpmnModeler`, `DocumentComposer`, `App.tsx`, `Changelog.tsx`
-— P6.2 through P6.8) is not yet started.
+### `packages/frontend/src/components/RopaEditor/*` — P6.2
+
+**60 tests · `jsdom` · `RopaService`/`BpmnService`/`FormService` mocked via `vi.mock`, `global.fetch` mocked directly**
+
+No third-party coupling — plain CRUD/data-editing forms, same shape as the
+P5 services' data models, one step up in size from `Tutorial`.
+
+- `RopaList.test.tsx` (6 tests) — pure presentational component, no
+  services involved: loading/empty states, shell records rendered with
+  subprocess records indented beneath them, clicking a card selects it,
+  clicking the delete icon deletes without also selecting (`e.stopPropagation()`),
+  the "New RoPA record" button.
+- `RopaEditor.test.tsx` (6 tests) — the container: loads the list on mount,
+  selecting a record opens the editor for it, "New RoPA record" opens a
+  blank editor, saving reloads the list and re-selects the saved record by
+  its returned id, deleting asks for `window.confirm` and does nothing when
+  cancelled, deleting the active record clears the selection once
+  confirmed. Two elements can share the same text once the editor is open
+  (the sidebar card title and the editor's own heading both render the
+  record's `title`) — tests scope queries to the sidebar's DOM subtree
+  (`within(card)`) or use `getAllByText(...)[0]` rather than a bare
+  `getByText`, to avoid an "multiple elements found" false ambiguity.
+- `RopaRecordEditor.test.tsx` (21 tests, the largest single component test
+  file so far) — the four-tab record editor: blank-record defaults vs. an
+  existing record's stored values; tab navigation (Record / Personal Data
+  Fields / BPMN Link / Status); Record-tab editing (title propagates to the
+  header, the third-country-transfers checkbox reveals its details
+  textarea); the legal-basis SPARQL lookup (`global.fetch` mocked
+  directly — success populates a picklist and picking an entry fills
+  `legalBasisUri`/`legalBasisLabel`, an empty result set shows "No legal
+  resources found", a non-ok response surfaces `HTTP <status>`); the
+  "Hydrate from forms" flow (disabled without a `bpmnProcessId`; reads the
+  linked `BpmnService` process's `camunda:formRef` ids, cross-references
+  `FormService.getForms()`, and appends only components with a `key` not
+  already present); editing a hydrated field row's label/category/special-
+  category checkbox; removing a field row; the BPMN Link tab (reads the
+  current `ronl:ropaRef` from the matching process XML on tab open; writing
+  the link adds both the `xmlns:ronl` declaration when missing and the
+  `ronl:ropaRef` attribute; removing the link strips it); the Status tab
+  (Draft/Archived apply immediately, Active requires `window.confirm` and
+  only applies when accepted); Save (calls `onSave` with the current
+  record, surfaces the error message on a rejected save) and Cancel.
+
+Two rounds of query-ambiguity fixes were needed while writing this file —
+worth noting since they'll recur in the remaining P6 phases: (1) a fixture
+field value (`'Belastingdienst'`) that happened to match two different
+inputs at once, fixed by asserting a value unique to the field under test
+instead; (2) after picking a legal-basis lookup result, the newly-filled
+`legalBasisLabel` input's value coincidentally equalled the record's
+`title`, so `getByDisplayValue` matched both — fixed by querying via the
+`legalBasisLabel` input's own placeholder instead of its value.
+
+See `TESTING-GUIDE.md`'s "P6 breakdown" table — remaining scope
+(`DsoExplorer`, `ChainBuilder`, `FormEditor`, `BpmnModeler`,
+`DocumentComposer`, `App.tsx`, `Changelog.tsx` — P6.3 through P6.8) is not
+yet started.
 
 ---
 
@@ -426,20 +479,22 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 --if-present"`) always prints both packages' current per-file tables:
 `packages/backend`'s `"test": "jest --coverage"` and
 `packages/frontend`'s `"test": "vitest run --coverage"`, both matching
-`ronl-business-api`'s conventions exactly. As of P6.1: **109 backend
-tests** across 14 suites, **182 frontend tests** across 19 files — 291
+`ronl-business-api`'s conventions exactly. As of P6.2: **109 backend
+tests** across 14 suites, **215 frontend tests** across 22 files — 324
 total. Every tested file across both packages is at or near 100% line +
-branch coverage; the only files below that are `health.routes.ts`
-(89.74%), `logoResolver.ts` (98.18%), the P5 service files
-(`bpmnService.ts`/`documentService.ts`/`formService.ts` at ~92-94% branch,
-`dsoService.ts` at ~90%/71% branch, `templateService.ts` at ~91%/79%
-branch, the two storage modules at ~84-90%), and the P6 files
-(`ArtefactListToolbar.tsx` at 94.73%/94.44%, `OrganizationSelector.tsx` at
-100%/87.5% branch, `Tutorial.tsx` at 100%/95.65% branch) — each gap is an
-uncovered defensive/edge branch, not an untested code path. Still a small
-slice of the ~12,371-line backend and ~22,684-line frontend — a repo-wide
-number is premature until the remaining backend route files and the rest
-of P6 (P6.2 through P6.8 — see `TESTING-GUIDE.md`) are further along, same
+branch coverage; the only files noticeably below that are
+`health.routes.ts` (89.74%), the P5 service files (`bpmnService.ts`/
+`documentService.ts`/`formService.ts` at ~92-94% branch, `dsoService.ts` at
+~90%/71% branch, `templateService.ts` at ~91%/79% branch, the two storage
+modules at ~84-90%), and the P6 `RopaEditor` files (`RopaEditor.tsx` at
+93.33%/70% branch, `RopaRecordEditor.tsx` at ~86%/81% branch — the largest
+component tested so far, with four tabs and several service integrations)
+— each gap is an uncovered defensive/edge branch or a genuinely
+lower-value permutation (e.g. every disabled-state combination), not an
+untested code path. Still a small slice of the ~12,371-line backend and
+~22,684-line frontend — a repo-wide number is premature until the
+remaining backend route files and the rest of P6 (P6.3 through P6.8 — see
+`TESTING-GUIDE.md`) are further along, same
 reasoning the CPSV Editor's guide used.
 
 ## Adding tests
