@@ -26,6 +26,9 @@ dist-ssr
 # Hand-authored ambient declarations (not generated output) — keep tracked
 !packages/backend/src/types/shacl-rdf.d.ts
 
+# Hand-authored Jest config (not generated output) — keep tracked
+!packages/backend/jest.config.js
+
 # But keep the source JSON
 !testData.json
 

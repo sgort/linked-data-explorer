@@ -14,6 +14,7 @@
     "preview": "npm run preview --workspace=@linked-data-explorer/frontend",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",
     "check-format": "npm run check-format --workspaces --if-present",
     "postinstall": "husky install || true"
