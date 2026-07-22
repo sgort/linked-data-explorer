@@ -486,9 +486,83 @@ message variants — all real but lower-value repeats of patterns already
 covered elsewhere in this file, consistent with the "critical
 interactions, not exhaustive coverage" scoping this phase committed to.
 
+### `packages/frontend/src/components/ChainBuilder/*` — P6.4
+
+**102 tests across 13 files · `jsdom` · first library-coupled phase (`@dnd-kit/core`/`sortable`/`utilities`)**
+
+The largest P6 directory by file count (13 files, ~3,558 lines). `@dnd-kit`
+turned out not to need any special test setup — `useDraggable` (`DmnList`)
+and `useSortable`/`useDroppable` (`ChainComposer`) both render fine with no
+`DndContext`/`SortableContext` wrapper in the test, since dnd-kit's context
+hooks fall back to sane defaults when no provider is present. Files were
+tackled smallest/simplest first, same ordering principle as every prior
+phase:
+
+- `ExecutionProgress.test.tsx` (2), `VendorBadge.test.tsx` (5),
+  `ValidationBadge.test.tsx` (5) — small presentational badges/progress
+  list. Locale-formatted dates (`toLocaleDateString('nl-NL', …)`) render
+  without the period after the abbreviated month in this environment's
+  ICU data (`5 mrt 2026`, not `5 mrt. 2026`) — asserted with a tolerant
+  regex rather than hard-coding either punctuation.
+- `ChainResults.test.tsx` (7), `InputForm.test.tsx` (9) — execution-result
+  display (success/failure, output truncation with a "show more" toggle,
+  collapsible steps, clipboard copy) and the dynamic per-type input form
+  (Boolean/Integer/Double/Date/String fields; "Fill with test data"
+  prefers each input's own `testValue` over `getCombinedTestData()` —
+  `../../utils/testData` mocked to verify the fallback is skipped when
+  unnecessary).
+- `SemanticView.test.tsx` (4), `TestCasePanel.test.tsx` (9) — `global.fetch`
+  mocked directly for the two semantic-analysis endpoints; `testCaseStorage`
+  service mocked for the save/load/delete test-case flow, including the
+  save-modal's required-name validation and the delete confirmation gate.
+- `VendorModal.test.tsx` (7), `ExportChain.test.tsx` (8) — `global.fetch`
+  mocked for the vendor lookup modal; `../../utils/exportService`'s two
+  named exports (`exportChain`, `validateChainForExport`) mocked outright
+  rather than exercised for real, since that module's DOM/Blob/JSZip
+  internals are the deliberately-deferred piece from P4 — this keeps
+  `ExportChain`'s own button-disabled-state/modal/format-selection logic
+  under test without pulling in that unrelated debt.
+- `DmnList.test.tsx` (8), `ChainComposer.test.tsx` (10) — the two
+  `@dnd-kit`-coupled panels. `VendorModal` is mocked out of both (already
+  covered on its own) to isolate the list/composer's own search-filtering,
+  used/DRD/vendor-badge display, and remove/clear wiring.
+- `ChainConfig.test.tsx` (16) — the largest single panel: the empty-chain
+  template browser (predefined vs. user templates, category filtering,
+  delete-with-confirm) and the populated-chain view (collapsible validation
+  section, wired `TestCasePanel`/`InputForm`/`ExecutionProgress`/
+  `ChainResults`/`ExportChain` — all five mocked as stubs here since each
+  has its own dedicated test file — Execute/Save button enablement, and the
+  save-template modal's sequential vs. DRD-deploy paths, including a failed
+  deploy keeping the modal open with the server's error). jsdom doesn't
+  implement `Element.scrollTo`, called by an effect that scrolls to the
+  execution area — stubbed with `Element.prototype.scrollTo = vi.fn()`.
+- `ChainBuilder.test.tsx` (13) — the top-level orchestrator. `DmnList`,
+  `ChainComposer`, `ChainConfig`, and `SemanticView` are all mocked as
+  minimal stubs (each already covered by its own file) that expose the
+  callback props (`onLoadPreset`, `onRemoveDmn`, `onClearChain`,
+  `onInputChange`, `onExecute`) as clickable test buttons, so the
+  orchestrator's own state machine can be driven without a real DOM drag.
+  Covers: loading `availableDmns`/semantic links on mount (and degrading to
+  empty on fetch failure); tab switching to Semantic Analysis; loading a
+  sequential preset (sets the chain + `defaultInputs`) and a DRD preset
+  (synthesizes a `DmnModel` from `drdEntryPointId`/`drdOutputs` and points
+  the chain at it); `validateChain`'s core outcome (a chain whose inputs are
+  all satisfied validates, one with a missing input does not); removing a
+  DMN or clearing the chain resets inputs/results/the loaded template;
+  executing without a valid chain alerts instead of calling the backend;
+  executing a valid chain posts to `/api/chains/execute` and stores the
+  result; a failed execution alerts with the server's error message.
+  **Deliberately not covered**: the actual `@dnd-kit` pointer-drag
+  interaction (`handleDragStart`/`handleDragEnd`, driven by dnd-kit's own
+  sensors) — simulating a real drag gesture in jsdom is high-effort and
+  low-value here, since `handleDragEnd`'s own branching logic (add-to-chain
+  vs. reorder) is plain array logic exercised indirectly through the
+  preset-loading and remove/clear tests above; same "critical interactions,
+  not exhaustive" call as the DsoExplorer debounce dropdown.
+
 See `TESTING-GUIDE.md`'s "P6 breakdown" table — remaining scope
-(`ChainBuilder`, `FormEditor`, `BpmnModeler`, `DocumentComposer`,
-`App.tsx`, `Changelog.tsx` — P6.4 through P6.8) is not yet started.
+(`FormEditor`, `BpmnModeler`, `DocumentComposer`, `App.tsx`,
+`Changelog.tsx` — P6.5 through P6.8) is not yet started.
 
 ---
 
@@ -529,23 +603,25 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 --if-present"`) always prints both packages' current per-file tables:
 `packages/backend`'s `"test": "jest --coverage"` and
 `packages/frontend`'s `"test": "vitest run --coverage"`, both matching
-`ronl-business-api`'s conventions exactly. As of P6.3: **109 backend
-tests** across 14 suites, **236 frontend tests** across 23 files — 345
+`ronl-business-api`'s conventions exactly. As of P6.4: **109 backend
+tests** across 14 suites, **338 frontend tests** across 36 files — 447
 total. Every tested file across both packages is at or near 100% line +
 branch coverage; the only files noticeably below that are
 `health.routes.ts` (89.74%), the P5 service files (`bpmnService.ts`/
 `documentService.ts`/`formService.ts` at ~92-94% branch, `dsoService.ts` at
-~90%/71% branch, `templateService.ts` at ~91%/79% branch, the two storage
+~90%/72% branch, `templateService.ts` at ~91%/79% branch, the two storage
 modules at ~84-90%), and the P6 files (`RopaEditor.tsx` at 93.33%/70%
 branch, `RopaRecordEditor.tsx` at ~86%/81% branch, `DsoExplorer.tsx` at
-72.02%/68.02% branch — the largest component tested so far, one file with
-three full tabs) — each gap is an uncovered defensive/edge branch or a
-genuinely lower-value permutation (e.g. every disabled-state combination,
-or a debounced type-ahead dropdown), not an untested code path. Still a
-small slice of the ~12,371-line backend and ~22,684-line frontend — a
-repo-wide number is premature until the remaining backend route files and
-the rest of P6 (P6.4 through P6.8 — see `TESTING-GUIDE.md`) are further
-along, same reasoning the CPSV Editor's guide used.
+72.02%/68.02% branch, `ChainConfig.tsx` at ~85%/81% branch, and
+`ChainBuilder.tsx` at ~78%/57% branch — the last mainly the un-simulated
+`@dnd-kit` drag-gesture handlers) — each gap is an uncovered
+defensive/edge branch or a genuinely lower-value permutation (e.g. every
+disabled-state combination, a debounced type-ahead dropdown, or a real
+pointer-drag gesture), not an untested code path. Still a meaningful slice
+of the ~12,371-line backend and ~22,684-line frontend — a repo-wide number
+is premature until the remaining backend route files and the rest of P6
+(P6.5 through P6.8 — see `TESTING-GUIDE.md`) are further along, same
+reasoning the CPSV Editor's guide used.
 
 ## Adding tests
 
