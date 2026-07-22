@@ -2,6 +2,172 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.07.0",
+      "status": "Upcoming",
+      "date": "22 jul 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "0d5a1ec",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Adopt CalVer (YYYY.MM.patch) versioning for /bump-release",
+          "details": [
+            "Patches .claude/commands/bump-release.md with the same CalVer scheme already adopted for the CPSV Editor: YYYY.MM.patch, patch resets to 0 on the first release of a new month, incremented for same-month follow-ups. Version-string convention only — no git tags, no generate-changelog.mjs, no versions.json — and applies only going forward; historical SemVer entries (1.9.13, 1.9.12, ...) are left as-is. The CalVer sequence is product-wide, not per-scope, so a backend-only and a frontend-only release still share the same next-in-sequence number."
+          ]
+        },
+        {
+          "sha": "373bcb7",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P6.6 — BpmnModeler component coverage (bpmn-js canvas phase)",
+          "details": [
+            "Adds 78 tests across BpmnModeler's 9 files. bpmn-js/lib/Modeler and bpmn-js-properties-panel are mocked outright — a small fake modeler class exposing just the canvas/eventBus/overlays/elementRegistry/propertiesPanel/modeling surface BpmnCanvas.tsx actually calls, built inside a vi.hoisted block so it exists before the hoisted vi.mock factory needs it. Covers XML import, Save/Export/Close, zoom controls, element-type-driven properties-panel injection (BusinessRuleTask → DMN selector, UserTask → Form+Document selectors, StartEvent → Form selector only), and the full deploy-to-Operaton modal (resource discovery, ronl:ropaRef-missing warning, board-owner auto-detection from candidateGroups, and both success/failure deploy responses).",
+            "The five small selector components (FormTemplateSelector, RopaSelector, DocumentTemplateSelector, DsoActiviteitSelector, DmnTemplateSelector) plus BpmnProperties/ProcessList have no third-party coupling and were tested first to establish the pattern. BpmnModeler.tsx itself (the orchestrator) mocks its already-tested ProcessList/BpmnCanvas children as clickable stubs, same pattern used for ChainBuilder/FormEditor — covering process CRUD, shell-to-subprocess language/organization propagation on save, footer-draft plumbing, and the seven versioned example-process seeding effect.",
+            "One pre-existing, unrelated quirk surfaced and documented rather than silently patched: the deploy modal's process-key extraction (doc.querySelector('process')) never matches a namespace-prefixed <bpmn:process> element under jsdom's XML parser — the component's own fallback to the literal string \"process\" always wins for XML shaped like real bpmn-js output."
+          ]
+        },
+        {
+          "sha": "ff28ac7",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P6.5 — FormEditor component coverage (first embedded-editor phase)",
+          "details": [
+            "Adds 36 tests across FormEditor's 3 files — the first full embedded-editor-library phase. @bpmn-io/form-js is mocked outright (a small fake editor class covering importSchema/saveSchema/on/off/destroy) since exercising the real library in jsdom would mean mounting a full canvas editor. Covers FormList (no third-party coupling — grouping, search, .form file import via a real File/FileReader), FormCanvas (dirty-state tracking via the editor's changed event, Save/Export/destroy-on-unmount), and FormEditor's own orchestration (create/import/load/save/rename/delete, the stale-example seeding effect, and the unsaved-changes confirm gate)."
+          ]
+        },
+        {
+          "sha": "ef0b160",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P6.4 — ChainBuilder component coverage (first dnd-kit phase)",
+          "details": [
+            "Adds 102 tests across ChainBuilder's 13 files — the first @dnd-kit-coupled phase. useDraggable/useSortable/useDroppable all render fine without a DndContext/SortableContext wrapper in tests, since dnd-kit's context hooks fall back to sane defaults with no provider present — no special setup needed for the drag-and-drop coupling itself.",
+            "Covers the smaller presentational pieces (badges, execution progress, results, input form, vendor modal, export modal, semantic view, test-case panel) plus DmnList/ChainComposer (the actual dnd-kit-coupled panels), ChainConfig (template browser + save-as-DRD flow), and ChainBuilder.tsx itself (DMN/semantic-link loading, chain validation, preset loading incl. synthetic DRD models, and chain execution) — with its children mocked as clickable stubs to isolate the orchestrator's own state machine. Deliberately not covered: the actual @dnd-kit pointer-drag gesture, since handleDragEnd's own logic is exercised indirectly through the preset-loading and remove/clear tests."
+          ]
+        },
+        {
+          "sha": "3e822ac",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P6.3 — DsoExplorer component coverage",
+          "details": [
+            "Adds 21 tests for DsoExplorer.tsx — the largest single-file component tested so far (1,464 lines, one default export covering three tabs: Concepts, Works, Activities). dsoService is mocked via vi.mock + vi.importActual so the pure URL/URN helpers stay real while only the network-calling exports are replaced. Covers all three tabs' search/pagination, the Works tab's master-detail werkzaamheid panel, and the Activities tab's location presets, OIN-mode name filter, direct URN inspection, and applicable-rules section (STTR/DMN download links, the CPSV Editor DMN-publish handoff, and the DSO-to-LDE form-scaffold import flow)."
+          ]
+        },
+        {
+          "sha": "ea605f2",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P6.2 — RopaEditor component coverage",
+          "details": [
+            "Adds 60 tests across RopaEditor's 3 files. RopaList and the RopaEditor container are straightforward; RopaRecordEditor (the four-tab record editor) is the largest single component test file at this point — record fields, the legal-basis SPARQL lookup, the \"hydrate from linked forms\" flow, the BPMN-link tab's ronl:ropaRef read/write, and the status tab's confirm-gated \"Set Active\" transition."
+          ]
+        },
+        {
+          "sha": "9818554",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P6.1 — Tutorial component coverage",
+          "details": [
+            "Adds 9 tests for the Tutorial component — no third-party coupling, picked as the smallest P6 target to establish the RTL rendering pattern. tutorial.json is mocked with a small fixture rather than asserted against the real ~5-tutorial content."
+          ]
+        },
+        {
+          "sha": "6652458",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P6.0 — components/common, plus the full P6 sub-phase breakdown",
+          "details": [
+            "Adds 20 tests for components/common (ArtefactListToolbar, LanguageSelector, OrganizationSelector) — the smallest, least third-party-coupled directory, picked first to establish the RTL rendering pattern before the editor-wrapping directories.",
+            "Patches TESTING-GUIDE.md with a full P6.0–P6.8 sub-phase breakdown, worked out once P6 actually started: coupling-severity groups first (none → a drag-and-drop utility → one embedded editor library → two), size ascending within each group, top-level integration components last."
+          ]
+        },
+        {
+          "sha": "d4fa63f",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P5 — service layer coverage (msw + localStorage)",
+          "details": [
+            "Adds 60 tests across the frontend's 11 service modules (ropaService, documentService, formService, bpmnService, assetService, templateService, sparqlService, dsoService, testCaseStorage, userTemplateStorage, defaultTestCases) — msw for the network-calling ones, plain jsdom localStorage for the two storage modules, raw fetch mocking for sparqlService's CORS-proxy fallback logic. Fixed a real cross-test-pollution bug in assetService.ts's module-level cache (tests now use distinct dataset names per test) and an msw path-param auto-decoding gotcha in the RopaService URL-encoding test."
+          ]
+        },
+        {
+          "sha": "6159d46",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P4 — Vitest bootstrap + pure-logic utils coverage",
+          "details": [
+            "Adds Vitest, @testing-library/react/jest-dom/user-event, jsdom, and msw as frontend devDependencies. vite.config.ts's defineConfig now comes from vitest/config; test.environment defaults to 'node' with a per-file // @vitest-environment jsdom opt-in, matching ronl-business-api's frontend convention. Adds exportFormats.test.ts, exampleVersions.test.ts, testData.test.ts, and logoResolver.test.ts (39 tests total, all but one genuinely unreachable defensive branch at 100% coverage).",
+            "exportService.ts and bpmnTemplates.ts are deliberately deferred and documented in TESTS.md rather than silently skipped: exportService.ts only exports 2 of 6 functions, the rest reachable only through real DOM manipulation + JSZip archive building; bpmnTemplates.ts is confirmed pure static XML template data.",
+            "package.json gets \"test\": \"vitest run --coverage\" and \"test:watch\", matching ronl-business-api's frontend exactly. .gitignore gets a coverage/ rule for both packages."
+          ]
+        },
+        {
+          "sha": "ac973ca",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Backend P3 — five smallest routes with supertest",
+          "details": [
+            "Adds route integration tests for ropa.public.routes.ts, assets.public.routes.ts, process.routes.ts, dmn-xml.routes.ts, and health.routes.ts (15 tests total) — each mounted in isolation (a fresh express() app per file, not the full index.ts), with the service layer mocked and supertest driving the requests.",
+            "health.routes.ts covers both the reported-down and thrown-exception cases for the TriplyDB check, Operaton unreachable, and both dependencies down at once; its outermost catch block (wrapping the two already-caught inner checks) is left uncovered as a defensive, effectively-unreachable branch, same as ronl-business-api's own documented convention for this kind of residue. All five at 100% coverage except health.routes.ts (89.74%)."
+          ]
+        },
+        {
+          "sha": "bb2b034",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Backend P2 — ropa, vendor, and assets service coverage",
+          "details": [
+            "Adds ropa.service.test.ts + ropa.service.no-pool.test.ts (15 tests, 100%): full CRUD plus upsertRopa's transaction and listPublicRopa's field-stripping. vendor.service.test.ts (18 tests, 100%): SPARQL binding mapping, dedup, error propagation, and all four resolveVendorLogo path shapes. assets.service.test.ts + assets.service.no-pool.test.ts (17 tests, 100%): BPMN/form/document CRUD, listPublicBundles' aggregated mapping, markDeployed's COALESCE handling.",
+            "The \"pool is null\" (DB-not-configured) branches for ropa/assets each live in a separate file with their own single static mock — jest.doMock inside isolateModulesAsync didn't reliably override a file's top-level jest.mock('../db/pool', ...) for a fresh import.",
+            "packages/backend/package.json: \"test\" now runs \"jest --coverage\", matching ronl-business-api's backend convention exactly."
+          ]
+        },
+        {
+          "sha": "40c86a3",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Backend P1 — errors, error.middleware, version.middleware",
+          "details": [
+            "Adds errors.test.ts (23 tests, 100%), error.middleware.test.ts (5 tests, logger.ts mocked to avoid its real winston/filesystem side effects), and version.middleware.test.ts (3 tests). Adds docs/TESTS.md documenting P0+P1: per-file test inventories and both tooling gaps found while getting the first test file working."
+          ]
+        },
+        {
+          "sha": "e965e2d",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Backend P0 — jest.config.js, first real test, fix two latent tooling gaps",
+          "details": [
+            "Adds packages/backend/jest.config.js (ts-jest preset, collectCoverageFrom across all of src/**/*.ts so untested files report as 0% instead of being omitted) and src/utils/etag.test.ts (11 tests). npm test now exits 0 with real assertions instead of \"No tests found, exiting with code 1\".",
+            "Two real pre-existing tooling gaps found and fixed, both latent because this repo had zero test files until now: tsconfig.eslint.json extended tsconfig.json without overriding its exclude (**/*.test.ts), so ESLint's type-aware parser couldn't see any test file; and .gitignore's blanket *.js rule (meant for compiled TS output) was also silently blocking jest.config.js from ever being tracked — fixed with a scoped exception matching the existing convention already used for a hand-authored .d.ts file.",
+            "Root package.json gets a \"test\": \"npm run test --workspaces --if-present\" script, matching ronl-business-api's convention exactly."
+          ]
+        },
+        {
+          "sha": "7ba8a87",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Add TESTING-GUIDE.md — phased testing strategy for backend + frontend",
+          "details": [
+            "Covers Analysis, Plan, and Phased approach, mirroring the CPSV Editor's guide but adapted for this repo's actual shape: a real Express backend (Jest already installed, zero tests, npm test currently exits 1 with \"no tests found\") alongside a Vite/React frontend with no test tooling at all but no bundler migration to sequence around either.",
+            "Backend testing plan mirrors ronl-business-api's Jest conventions directly. Frontend plan reuses ronl-business-api's Vitest/RTL/jsdom environment strategy but chooses msw over a plain fetch mock, since services/ here is 8 real API-wrapper modules — a genuinely larger surface than what justified the CPSV Editor's plain-mock choice.",
+            "Phased: P0 fixes the red \"no tests found\" state, P1–P3 cover the backend (small utils → services → routes), P4–P6 cover the frontend (utils → services w/ msw → components), P7 (coverage + CI wiring) is deferred until real coverage exists."
+          ]
+        },
+        {
+          "sha": "bf9202f",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Point local dev at the ronl-operaton container, and check for it in docker:check",
+          "details": [
+            "docker:check now verifies the ronl-operaton container (from the ronl-business-api stack) alongside ronl-postgres. OPERATON_BASE_URL / VITE_OPERATON_BASE_URL for local dev now point at localhost:8081, matching the container's published port, instead of the remote operaton.open-regels.nl instance."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "1.9.13",
       "status": "Released",
       "date": "22 jul 2026",
