@@ -327,7 +327,7 @@ seeding.
 
 ---
 
-### `packages/frontend/src/components/common/*` — P6 (in progress)
+### `packages/frontend/src/components/common/*` — P6.0
 
 **20 tests · `jsdom` · `@testing-library/react` + `user-event`**
 
@@ -355,11 +355,37 @@ exhaustive branch coverage.
   `'none'`/`'all'`, case-insensitive name/description search, the optional
   `extraSearchKeys` callback, and combining both filters).
 
-Remaining P6 scope (`BpmnModeler`, `ChainBuilder`, `DocumentComposer`,
-`DsoExplorer`, `FormEditor`, `RopaEditor`, `Tutorial`, plus `App.tsx` and
-`Changelog.tsx`) is not yet started — those directories wrap `bpmn-js`,
-`@tiptap/*`, and `@dnd-kit/*` directly and will need each library mocked or
-scoped around before critical-interaction tests are worth writing.
+See [`TESTING-GUIDE.md`](./TESTING-GUIDE.md)'s "P6 breakdown" table for the
+full P6.0–P6.8 ordering (coupling-severity groups first, size ascending
+within each group) worked out once this phase actually started.
+
+### `packages/frontend/src/components/Tutorial/Tutorial.test.tsx` — P6.1
+
+**9 tests · `jsdom` · `tutorial.json` mocked via `vi.mock`**
+
+No third-party coupling — picked as the smallest remaining P6.1 target.
+`tutorial.json` is mocked with a small two-tutorial, two-glossary-term
+fixture (one tutorial deliberately using an unrecognized `difficulty` and
+`iconColor` value) rather than asserted against the real ~5-tutorial
+content, for isolation from a dataset that changes independently of this
+test. Covers: title/subtitle + every Quick Links entry rendering; the
+first tutorial expanded by default; clicking a collapsed tutorial's header
+opens it and collapses the previously-open one; clicking the currently
+open one's header closes it; a Quick Links button expands its tutorial;
+the Quick Links glossary button and the main Glossary header button both
+open the glossary (two separate code paths — `Element.prototype
+.scrollIntoView` is stubbed globally since jsdom doesn't implement it);
+unknown `difficulty`/`iconColor` values fall back to the default styling
+without crashing; a step with empty `details`/`tip` renders without those
+optional sections. 100% line coverage; one uncovered branch (closing the
+glossary via the Quick Links button rather than the main header, i.e. the
+`if (!showGlossary)` guard's `false` arm) — a real but low-value branch to
+chase further given the "critical interactions, not exhaustive coverage"
+scoping this phase committed to.
+
+Remaining P6 scope (`RopaEditor`, `DsoExplorer`, `ChainBuilder`,
+`FormEditor`, `BpmnModeler`, `DocumentComposer`, `App.tsx`, `Changelog.tsx`
+— P6.2 through P6.8) is not yet started.
 
 ---
 
@@ -400,22 +426,21 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 --if-present"`) always prints both packages' current per-file tables:
 `packages/backend`'s `"test": "jest --coverage"` and
 `packages/frontend`'s `"test": "vitest run --coverage"`, both matching
-`ronl-business-api`'s conventions exactly. As of the first P6 slice:
-**109 backend tests** across 14 suites, **173 frontend tests** across 18
-files — 282 total. Every tested file across both packages is at or near
-100% line + branch coverage; the only files below that are
-`health.routes.ts` (89.74%), `logoResolver.ts` (98.18%), the P5 service
-files (`bpmnService.ts`/`documentService.ts`/`formService.ts` at ~92-94%
-branch, `dsoService.ts` at ~90%/71% branch, `templateService.ts` at
-~91%/79% branch, the two storage modules at ~84-90%), and the P6
-`components/common` files (`ArtefactListToolbar.tsx` at 94.73%/94.44%,
-`OrganizationSelector.tsx` at 100%/87.5% branch) — each gap is an
+`ronl-business-api`'s conventions exactly. As of P6.1: **109 backend
+tests** across 14 suites, **182 frontend tests** across 19 files — 291
+total. Every tested file across both packages is at or near 100% line +
+branch coverage; the only files below that are `health.routes.ts`
+(89.74%), `logoResolver.ts` (98.18%), the P5 service files
+(`bpmnService.ts`/`documentService.ts`/`formService.ts` at ~92-94% branch,
+`dsoService.ts` at ~90%/71% branch, `templateService.ts` at ~91%/79%
+branch, the two storage modules at ~84-90%), and the P6 files
+(`ArtefactListToolbar.tsx` at 94.73%/94.44%, `OrganizationSelector.tsx` at
+100%/87.5% branch, `Tutorial.tsx` at 100%/95.65% branch) — each gap is an
 uncovered defensive/edge branch, not an untested code path. Still a small
 slice of the ~12,371-line backend and ~22,684-line frontend — a repo-wide
 number is premature until the remaining backend route files and the rest
-of P6 (`BpmnModeler`, `ChainBuilder`, `DocumentComposer`, `DsoExplorer`,
-`FormEditor`, `RopaEditor`, `Tutorial`, `App.tsx`, `Changelog.tsx`) are
-further along, same reasoning the CPSV Editor's guide used.
+of P6 (P6.2 through P6.8 — see `TESTING-GUIDE.md`) are further along, same
+reasoning the CPSV Editor's guide used.
 
 ## Adding tests
 
