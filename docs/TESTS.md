@@ -76,6 +76,49 @@ Covers `versionMiddleware` (sets `API-Version` from `package.json`, calls
 for the given successor path; confirms each call returns an independent
 middleware function, not a shared closure).
 
+### `packages/backend/src/services/ropa.service.test.ts` + `ropa.service.no-pool.test.ts` — P2
+
+**15 tests · unit · mocked `../db/pool`, 100% coverage**
+
+Covers every CRUD function (`listRopa`, `getRopaById`,
+`getRopaByBpmnProcessId`, `upsertRopa`, `deleteRopa`, `listPublicRopa`)
+against a mocked `pg` pool — including `upsertRopa`'s transaction (`BEGIN`
+→ insert → delete-then-reinsert fields → `COMMIT`, and `ROLLBACK` +
+rethrow on failure) and `listPublicRopa`'s field-stripping (no
+`schemaVersion`/`controllerContact`/`dpoContact` in the public shape). The
+"pool is `null`" (DB-not-configured) branches are covered in a **separate**
+file with its own single static mock — `jest.doMock` inside
+`isolateModulesAsync` didn't reliably override this file's top-level
+`jest.mock('../db/pool', ...)` for a fresh import, so splitting into two
+files was simpler and more reliable than fighting that.
+
+### `packages/backend/src/services/vendor.service.test.ts` — P2
+
+**18 tests · unit · mocked `./sparql.service`, `axios`, `../utils/logger` · 100% coverage**
+
+Covers `getAllVendorServices` (mapping SPARQL bindings, deduplication by
+vendor URI, the `'Unknown Vendor'` fallback, error propagation) and
+`getVendorServicesForDmn` (matching by `basedOnIdentifier`, exact
+`basedOn`, or a `/{dmnId}/dmn` suffix). The private `resolveVendorLogo`
+method is exercised indirectly through `getAllVendorServices`'s
+`providerLogo` binding, covering all four logo-path shapes: a complete
+TriplyDB versioned URL (returned as-is, no HTTP call), an external
+non-TriplyDB URL (same), an incomplete TriplyDB URL (resolved via one
+`axios.get` to the assets API), and the edge cases (no extractable
+filename, unresolvable endpoint, no matching asset, and the assets API
+call itself failing — each degrades to `undefined` rather than throwing).
+
+### `packages/backend/src/services/assets.service.test.ts` + `assets.service.no-pool.test.ts` — P2
+
+**17 tests · unit · mocked `../db/pool`, 100% coverage**
+
+Covers every BPMN/form/document CRUD function plus `listPublicBundles`
+(the aggregated shell+subprocess+forms+documents query — asserts the
+mapped shape including `null → undefined` translation for
+`operaton_url`/`operaton_deployment_id`) and `markDeployed`'s
+`COALESCE($6, board_owner)` parameter handling. Same "pool is `null`"
+split-file pattern as `ropa.service`.
+
 ---
 
 ## Bugs found and fixed
@@ -111,14 +154,15 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 
 ## Coverage
 
-No full coverage report has been generated yet — the four files tested so
-far (`etag.ts`, `errors.ts`, `error.middleware.ts`, `version.middleware.ts`)
-are each at 100% line + branch coverage, but that's a small slice of the
+No full coverage report has been generated yet — the seven files tested so
+far (`etag.ts`, `errors.ts`, `error.middleware.ts`, `version.middleware.ts`,
+`ropa.service.ts`, `vendor.service.ts`, `assets.service.ts`) are each at
+100% line + branch coverage, but that's a small slice of the
 ~12,371-line backend and ~22,684-line frontend. Run
 `npm run test:coverage --workspace=@linked-data-explorer/backend` for the
-current per-file breakdown; a repo-wide number is premature until P2/P3
-(backend services + routes) are further along, same reasoning the CPSV
-Editor's guide used.
+current per-file breakdown; a repo-wide number is premature until P3
+(backend routes) and the frontend phases are further along, same reasoning
+the CPSV Editor's guide used.
 
 ## Adding tests
 
