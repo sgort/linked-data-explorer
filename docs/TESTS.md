@@ -230,6 +230,101 @@ deferred to a dedicated pass (naturally alongside P5's `msw` setup, since
 confirmed to be almost entirely static XML template string constants (no
 real functions) — same "skip, it's data" treatment as `constants.ts`.
 
+### `packages/frontend/src/services/documentService.test.ts`, `bpmnService.test.ts`, `formService.test.ts` — P5
+
+**27 tests (9 each) · `jsdom` · mocked via `msw`**
+
+All three services share the same shape: CRUD over `localStorage` plus a
+fire-and-forget background sync POST/DELETE to the backend. Each file
+covers: empty-state reads, save creates vs. updates-in-place (no
+duplicate), the background POST firing (and its readonly-skip case),
+delete removing the record locally while firing a background DELETE, and
+`hydrateFromServer` merging local readonly examples with server data (with
+a fallback-to-local-on-failure case). `documentService.test.ts`
+additionally covers "does not throw when the background save fails", since
+its save path doesn't await the network call.
+
+### `packages/frontend/src/services/ropaService.test.ts` — P5
+
+**9 tests · unit · mocked via `msw`**
+
+Covers `listRopa`, `getRopaByBpmnProcessId` (found / 404 → null /
+URL-encoding), `upsertRopa`, and `deleteRopa` — each including its `HTTP
+<status>` throw-on-failure branch. The URL-encoding test asserts against
+the raw `request.url` rather than the handler's `params.id`, since msw's
+path-param matcher auto-decodes for handler convenience — checking the
+decoded param would give a false pass even if `encodeURIComponent` were
+removed from the call site.
+
+### `packages/frontend/src/services/assetService.test.ts` — P5
+
+**9 tests · unit · mocked via `msw`**
+
+Covers `fetchAssets` (success, an unparseable endpoint short-circuits
+without fetching, non-ok response, fetch failure, the in-memory TTL cache
+hitting on a second call, `forceRefresh` bypassing it) and
+`fetchVariableHints` (success, non-ok, fetch failure). `fetchAssets` caches
+per-endpoint in a module-level `Map` with no exported reset hook; rather
+than reset it between tests, each test uses a distinct dataset name via an
+`endpointFor()` helper so cache entries never collide — this was a real
+cross-test-pollution bug found while first writing this file (four tests
+failed sharing one endpoint before the helper was introduced).
+
+### `packages/frontend/src/services/templateService.test.ts` — P5
+
+**9 tests · unit · mocked via `msw`**
+
+Covers `getAllTemplates` (success, endpoint query-param forwarding,
+`success: false` → `[]`, request failure → `[]` not a throw),
+`getTemplatesByCategory` (category filter + query param, failure → `[]`),
+and `getTemplateById` (found, `success: false` → null, failure → null).
+
+### `packages/frontend/src/services/sparqlService.test.ts` — P5
+
+**8 tests · unit · mocked `global.fetch` directly (no `msw`)**
+
+Covers `executeSparqlQuery`'s direct POST path (form-urlencoded body, JSON
+vs. raw-text error messages on a non-ok response) and its CORS-proxy
+fallback: a remote (non-localhost) endpoint auto-retries via the
+`allorigins` proxy on a `TypeError` network failure; a localhost endpoint
+does not retry, surfacing a Jena Fuseki/TripleDB-specific hint instead;
+proxy-unreachable and empty-proxy-content are distinct thrown errors; a
+non-network-shaped error rethrows unchanged. Uses raw `global.fetch`
+mocking rather than `msw` here, since the fallback logic itself branches on
+whether the thrown error is a network-failure `TypeError` — easier to
+construct directly than through msw's response layer.
+
+### `packages/frontend/src/services/dsoService.test.ts` — P5
+
+**23 tests · unit · mocked via `msw`**
+
+The largest and most varied P5 file. Covers the pure URN/URL helpers
+(`urnFromHref` extraction, URL-decoding, non-matching passthrough;
+`sttrDownloadUrl`/`dmnDownloadUrl` environment-suffix behavior) plus every
+HAL-envelope-parsing endpoint (`searchBegrippen`, `getActiviteitenByOin`,
+`zoekActiviteiten`, `getActiviteiten`, `zoekWerkzaamheden`,
+`suggereerWerkzaamheden`, `getWerkzaamheidDetail`, `getActiviteitDetail`,
+`fetchToepasbareRegels`, `fetchFormScaffold`) — each asserting the
+`_embedded`/`_links.next`/`page` HAL-shape parsing, the fallback to `[]` /
+a default page when those keys are absent, and the `HTTP <status>` /
+`DSO request failed` error branches.
+
+### `packages/frontend/src/services/testCaseStorage.test.ts`, `userTemplateStorage.test.ts`, `defaultTestCases.test.ts` — P5
+
+**28 tests combined · `jsdom` · pure `localStorage`, no network**
+
+`testCaseStorage`/`userTemplateStorage` are near-identical
+localStorage-backed CRUD stores — no `msw` involved, no network calls at
+all here. Covers empty-state reads, recovery from invalid stored JSON,
+create/update/delete against a suite keyed by chain id (DMN-order-
+independent for `testCaseStorage`), per-endpoint isolation, and
+export/import round-tripping (including invalid-JSON import leaving
+storage untouched). `defaultTestCases.test.ts` covers
+`initializeDefaultTestCases` seeding every template's test cases on a
+fresh endpoint idempotently (no duplication on a second call), and
+`getTemplateTestCases` returning `[]` for an unknown template id or before
+seeding.
+
 ---
 
 ## Bugs found and fixed
@@ -265,19 +360,22 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 
 ## Coverage
 
-No full coverage report has been generated yet for either package. `npm
-test` (root `package.json`'s `"test": "npm run test --workspaces
+`npm test` (root `package.json`'s `"test": "npm run test --workspaces
 --if-present"`) always prints both packages' current per-file tables:
 `packages/backend`'s `"test": "jest --coverage"` and
 `packages/frontend`'s `"test": "vitest run --coverage"`, both matching
-`ronl-business-api`'s conventions exactly. Of the sixteen files tested so
-far across both packages, all but `health.routes.ts` (89.74%) and
-`logoResolver.ts` (98.18%) — each with one documented, effectively-
-unreachable defensive branch — are at 100% line + branch coverage. Still
-a small slice of the ~12,371-line backend and ~22,684-line frontend — a
-repo-wide number is premature until the remaining P3 routes and P5/P6
-frontend phases are further along, same reasoning the CPSV Editor's guide
-used.
+`ronl-business-api`'s conventions exactly. As of P5: **109 backend tests**
+across 14 suites, **153 frontend tests** across 15 files — 262 total. Every
+tested file across both packages is at or near 100% line + branch coverage;
+the only files below that are `health.routes.ts` (89.74%), `logoResolver.ts`
+(98.18%), and a handful of the P5 service files (`bpmnService.ts`/
+`documentService.ts`/`formService.ts` at ~92-94% branch, `dsoService.ts` at
+~90%/71% branch, `templateService.ts` at ~91%/79% branch, and the two
+storage modules at ~84-90%) — each gap is an uncovered
+defensive/edge branch, not an untested code path. Still a small slice of
+the ~12,371-line backend and ~22,684-line frontend — a repo-wide number is
+premature until the remaining backend route files and P6 (frontend
+components) are further along, same reasoning the CPSV Editor's guide used.
 
 ## Adding tests
 
