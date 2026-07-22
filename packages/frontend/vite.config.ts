@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { loadEnv } from 'vite';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig(({ mode }) => {
   return {
@@ -17,6 +18,17 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, '.'),
       },
       dedupe: ['preact', 'preact/hooks', 'preact/compat'],
+    },
+    test: {
+      environment: 'node',
+      globals: true,
+      setupFiles: ['./src/test/setup.ts'],
+      exclude: [...configDefaults.exclude],
+      coverage: {
+        provider: 'v8',
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx', 'src/vite-env.d.ts', 'src/test/**'],
+      },
     },
   };
 });

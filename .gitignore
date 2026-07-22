@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Test coverage reports (Jest + Vitest, both packages)
+coverage
+
 # Keep committed (environment configs)
 # .env.development
 # .env.acceptance
