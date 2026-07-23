@@ -1,6 +1,6 @@
 {
   "name": "@linked-data-explorer/backend",
-  "version": "0.1.0",
+  "version": "2026.07.0",
   "description": "Backend orchestration service for DMN chain execution",
   "main": "dist/index.js",
   "scripts": {

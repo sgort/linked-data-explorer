@@ -3,10 +3,42 @@
     {
       "format": "commits",
       "version": "2026.07.0",
-      "status": "Upcoming",
+      "status": "Released",
       "date": "22 jul 2026",
       "scope": "both",
       "commits": [
+        {
+          "sha": "acf7a51",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "P7 — coverage report + CI-wiring deferral decision",
+          "details": [
+            "Closes out the testing plan with a real --coverage run across both packages: 109 backend tests but only 13.82% backend statement coverage (the tested files are near-100%, but large route/service files — dmn.routes.ts, operaton.service.ts, sparql.service.ts, dmn-validation.service.ts, dso.service.ts and others — remain entirely untested), against 557 frontend tests at 74.03% statement coverage across 59 files, where P4–P6 reached every component/page/service directory at least once.",
+            "Decision: no CI test step is added to the Azure workflows yet, blocking or non-blocking — the same call ronl-business-api made at 83.39% coverage with its full P1–P11 backlog done, applied here specifically because the backend gap is breadth (whole files never touched) rather than depth (dense sub-branches in already-tested files). Documented in TESTING-GUIDE.md's new \"CI roadmap (P7)\" section, with the condition for revisiting it: once backend breadth improves, or the team decides breadth alone is an acceptable bar to gate on."
+          ]
+        },
+        {
+          "sha": "9210f0d",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P6.8 — App.tsx + Changelog.tsx integration coverage (P6 complete)",
+          "details": [
+            "Adds 31 tests across the final P6 phase — the top-level integration components that route between everything else. App.tsx (838 lines) renders 12 feature components plus executeSparqlQuery, all mocked as clickable/inspectable stubs, isolating the orchestrator's own state machine: sidebar navigation across all 12 views, localStorage viewMode persistence (with fallback on an invalid stored value), the always-mounted-but-CSS-hidden DmnValidator/ShaclValidator panes, the SPARQL run/error/auto-visualize-on-?s-?p-?o flow, the sample-query library, the settings panel (endpoint add/delete/reset, the DSO pre/prod toggle persisting to its own localStorage key), Orchestration-view cache refresh, and CSV export.",
+            "Changelog.tsx (5 tests) mocks changelog.json with a small two-entry fixture — one commits-format entry, one legacy sections-format entry — rather than asserting against the real, constantly-growing release data, covering both rendering paths plus expand/collapse.",
+            "One pre-existing, unrelated quirk surfaced and documented rather than fixed: the error overlay lives inside App's \"Right Panel,\" which is itself hidden whenever viewMode is Orchestration — so a failed cache-refresh (triggered only from that view) sets the error state correctly but has no visible surface until the user navigates elsewhere."
+          ]
+        },
+        {
+          "sha": "ef2bae7",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Frontend P6.7 — DocumentComposer component coverage (tiptap + dnd-kit phase)",
+          "details": [
+            "Adds 74 tests across DocumentComposer's 9 files — the heaviest remaining directory, coupling both @tiptap/react and @dnd-kit together. TextBlockEditor.tsx exercises real @tiptap/react/ProseMirror rather than mocking it outright (unlike bpmn-js/@bpmn-io/form-js in P6.5/P6.6), since ProseMirror is DOM/contenteditable-based and works under jsdom once two gaps are polyfilled locally: Range.prototype.getClientRects/getBoundingClientRect (called by EditorView.scrollToSelection on every transaction) and document.elementFromPoint (called by ProseMirror's mousedown handler via posAtCoords).",
+            "DocumentCanvas.tsx turned out to have no direct dnd-kit hook coupling of its own — it receives dragEndEvent/dragOverEvent as props computed by the parent's DndContext and resolves drops in a plain useEffect — so its full drag-end resolution matrix (new-block-add, cross-zone move, same-zone reorder, cross-zone reorder-to-position) was tested by constructing fake DragEndEvent objects and driving the effect via rerender(), no dnd-kit gesture simulation needed. DocumentComposer.tsx itself (the orchestrator) follows the same mocked-children-as-stubs pattern as ChainBuilder/FormEditor/BpmnModeler, covering bootstrap seeding, template CRUD, Save/Save As/Export/Close, and binding management.",
+            "One fixture-ordering bug caught while writing the orchestrator's tests: an early version of the \"Save As does nothing when the prompt is cancelled\" test seeded its mock store with only one template, not accounting for the component's own bootstrap effect seeding the two missing DEFAULT_TEMPLATES entries on mount — calling saveTemplate twice before the user ever clicked anything. Fixed by seeding the store with all defaults already present, matching the baseline the other CRUD tests use."
+          ]
+        },
         {
           "sha": "0d5a1ec",
           "author": "Steven Gort",
