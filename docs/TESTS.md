@@ -912,6 +912,33 @@ remain untested — each mocked as a stub wherever it's consumed (P6.8's
 scoping the rest of P6 used throughout; picking them up is a future
 extension of the backlog, not part of the P6.0–P6.8 plan as scoped.
 
+### P7 — real coverage run + CI-wiring decision
+
+The repo-wide number deferred above is now in: a full `npm test` run across
+both packages (P0–P6 complete) gives **13.82% backend statement coverage**
+(109 tests) against **74.03% frontend statement coverage** (557 tests, 59
+files). The gap is expected and matches how the two backlogs were scoped —
+P1–P3 deliberately covered only the smallest/most self-contained backend
+files (`utils/etag.ts`, `utils/errors.ts`, both middleware files,
+`ropa.service.ts`, `assets.service.ts`, `vendor.service.ts`, 5 small
+routes), leaving the backend's largest route/service files
+(`dmn.routes.ts`, `triplydb.routes.ts`, `operaton.service.ts`,
+`sparql.service.ts`, `dmn-validation.service.ts`, `dso.service.ts`,
+`norms.*`, `edocs.*`, and others) entirely at 0% — real, live, untested
+surface, not dead code. The frontend's P4–P6 backlog, by contrast, reached
+every component/page/service directory at least once, so its number
+already reflects genuine breadth.
+
+**Decision: no CI test step is being added yet, blocking or non-blocking.**
+Neither `azure-backend-*.yml` nor `azure-frontend-*.yml` currently run
+`npm test`, and that stays as-is for now — the same call
+`ronl-business-api` made at 83.39% coverage with its full P1–P11 backlog
+done, applied here at a much earlier point specifically because the
+backend gap is breadth (whole files never touched), not depth (dense
+sub-branches in already-tested files). See `TESTING-GUIDE.md`'s "CI
+roadmap (P7)" section for the full reasoning and the condition for
+revisiting it.
+
 ## Adding tests
 
 Test files are colocated with the source they cover (`foo.ts` →

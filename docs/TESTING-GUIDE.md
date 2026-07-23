@@ -144,7 +144,7 @@ library-wrapping component.
 | **P3** | Backend: route-level `supertest` tests, service layer mocked — start with `health.routes.ts` (already the simplest, smallest route in the CPSV Editor's world too) and the smaller routes, working up to `dmn.routes.ts` (486 lines) and `triplydb.routes.ts` (516 lines).                                                                                                               | Same route-then-service pattern `ronl-business-api` used; needs P2's mocking conventions in place first.                                                               |
 | **P4** | Frontend tooling bootstrap (Vitest + RTL + jsdom + `msw`) + `src/utils/` pure-logic tests (`exportFormats.ts`, `exampleVersions.ts`, `testData.ts`, `logoResolver.ts`; `constants.ts` likely skipped as static data, matching the CPSV Editor's `constants.js` call; `exportService.ts`/`bpmnTemplates.ts` triaged function-by-function for pure vs. DOM-touching pieces once in scope). | Highest-value, lowest-cost frontend layer — no tooling investment beyond the one-time bootstrap, same "pure logic first" principle as every prior phase in both repos. |
 | **P5** | Frontend `src/services/` — `msw`-mocked network tests for the API wrappers, plain jsdom `localStorage` tests for `testCaseStorage.ts`/`userTemplateStorage.ts`.                                                                                                                                                                                                                          | The real "network-touching, larger surface" phase this repo's `msw` choice was made for.                                                                               |
-| **P6** | Frontend components — critical-interaction-only tests for the 8 feature directories plus `App.tsx` and `Changelog.tsx`, roughly smallest/least-third-party-coupled first. Broken into sub-phases **P6.0–P6.8** (see below) once the directory-by-directory coupling was actually surveyed.                                                                                              | Highest effort, most third-party-library coupling; last among unit-level work, same ordering principle as the CPSV Editor's DMNTab.jsx-last choice.                    |
+| **P6** | Frontend components — critical-interaction-only tests for the 8 feature directories plus `App.tsx` and `Changelog.tsx`, roughly smallest/least-third-party-coupled first. Broken into sub-phases **P6.0–P6.8** (see below) once the directory-by-directory coupling was actually surveyed.                                                                                               | Highest effort, most third-party-library coupling; last among unit-level work, same ordering principle as the CPSV Editor's DMNTab.jsx-last choice.                    |
 | **P7** | Coverage report + CI wiring — generate a real `--coverage` run for both packages once P1–P6 are substantially through, then decide whether/how to add a (non-blocking, at first) test step to the path-filtered Azure workflows.                                                                                                                                                         | Deferred for the same reason the CPSV Editor deferred it: a coverage number this early would measure how little is covered, not how well the covered parts are tested. |
 
 ### P6 breakdown
@@ -157,17 +157,17 @@ severity groups first (none → a drag-and-drop utility → one embedded
 editor library → two), size ascending within each group, top-level
 integration components last:
 
-| Sub-phase | Scope                                        | Why this position                                                                                                                                     |
-| --------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **P6.0**  | `components/common` (`ArtefactListToolbar.tsx`, `LanguageSelector.tsx`, `OrganizationSelector.tsx`) | No third-party coupling, smallest directory (3 files) — establishes the RTL rendering pattern before anything library-coupled. **Done.**                                                       |
-| **P6.1**  | `components/Tutorial` (`Tutorial.tsx`, 378 lines)                                                   | No third-party coupling; smallest remaining single-file component.                                                                                                                             |
-| **P6.2**  | `components/RopaEditor` (`RopaEditor.tsx`, `RopaList.tsx`, `RopaRecordEditor.tsx`; ~990 lines)       | No third-party coupling — plain CRUD/data-editing forms, same shape as the P5 services' data models.                                                                                          |
-| **P6.3**  | `components/DsoExplorer` (`DsoExplorer.tsx`, 1,464 lines — one file)                                 | No third-party coupling, but the largest single-file component — worth its own phase rather than folding into a "no-coupling" catch-all.                                                       |
-| **P6.4**  | `components/ChainBuilder` (13 files, ~4,058 lines; `@dnd-kit/core`/`sortable`/`utilities`)           | First library-coupled phase, but `@dnd-kit` is a drag-and-drop utility (hooks/wrappers), not a full embedded editor — lighter to mock than what follows.                                       |
-| **P6.5**  | `components/FormEditor` (`FormCanvas.tsx`, `FormEditor.tsx`, `FormList.tsx`; ~896 lines; `@bpmn-io/form-js`)                                                                                             | First full embedded-editor library; smaller surface than BpmnModeler.                                                                                                                          |
-| **P6.6**  | `components/BpmnModeler` (9 files, ~2,709 lines; `bpmn-js/lib/Modeler`)                              | Full canvas-editor library, larger surface than FormEditor.                                                                                                                                    |
-| **P6.7**  | `components/DocumentComposer` (10 files, ~4,381 lines; `@tiptap/react` + `@dnd-kit/*`)                | Heaviest: two coupled libraries (a rich-text editor plus drag-and-drop) in the same directory — last among the feature directories.                                                            |
-| **P6.8**  | `App.tsx` (838 lines) + `Changelog.tsx`                                                              | Top-level integration components that route between everything above — same "last, ties it all together" position the original P6 row already gave them.                                     |
+| Sub-phase | Scope                                                                                                        | Why this position                                                                                                                                        |
+| --------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P6.0**  | `components/common` (`ArtefactListToolbar.tsx`, `LanguageSelector.tsx`, `OrganizationSelector.tsx`)          | No third-party coupling, smallest directory (3 files) — establishes the RTL rendering pattern before anything library-coupled. **Done.**                 |
+| **P6.1**  | `components/Tutorial` (`Tutorial.tsx`, 378 lines)                                                            | No third-party coupling; smallest remaining single-file component.                                                                                       |
+| **P6.2**  | `components/RopaEditor` (`RopaEditor.tsx`, `RopaList.tsx`, `RopaRecordEditor.tsx`; ~990 lines)               | No third-party coupling — plain CRUD/data-editing forms, same shape as the P5 services' data models.                                                     |
+| **P6.3**  | `components/DsoExplorer` (`DsoExplorer.tsx`, 1,464 lines — one file)                                         | No third-party coupling, but the largest single-file component — worth its own phase rather than folding into a "no-coupling" catch-all.                 |
+| **P6.4**  | `components/ChainBuilder` (13 files, ~4,058 lines; `@dnd-kit/core`/`sortable`/`utilities`)                   | First library-coupled phase, but `@dnd-kit` is a drag-and-drop utility (hooks/wrappers), not a full embedded editor — lighter to mock than what follows. |
+| **P6.5**  | `components/FormEditor` (`FormCanvas.tsx`, `FormEditor.tsx`, `FormList.tsx`; ~896 lines; `@bpmn-io/form-js`) | First full embedded-editor library; smaller surface than BpmnModeler.                                                                                    |
+| **P6.6**  | `components/BpmnModeler` (9 files, ~2,709 lines; `bpmn-js/lib/Modeler`)                                      | Full canvas-editor library, larger surface than FormEditor.                                                                                              |
+| **P6.7**  | `components/DocumentComposer` (10 files, ~4,381 lines; `@tiptap/react` + `@dnd-kit/*`)                       | Heaviest: two coupled libraries (a rich-text editor plus drag-and-drop) in the same directory — last among the feature directories.                      |
+| **P6.8**  | `App.tsx` (838 lines) + `Changelog.tsx`                                                                      | Top-level integration components that route between everything above — same "last, ties it all together" position the original P6 row already gave them. |
 
 ### Not in scope (deliberately deferred)
 
@@ -178,3 +178,51 @@ integration components last:
   reference.
 - **Blocking CI test gates** — same reasoning as both sibling repos: added
   only once coverage is meaningful, never as a side effect of this plan.
+
+## CI roadmap (P7)
+
+None of `azure-backend-acc.yml`/`azure-backend-production.yml` or
+`azure-frontend-acc.yml`/`azure-frontend-production.yml` run `npm test` for
+either package — the backend workflows run `npm run lint` before building,
+but nothing runs the test suite; the frontend workflows deploy straight via
+the Azure Static Web Apps action with no explicit build/test step to hook
+one into. **No CI test step is being added now, blocking or non-blocking** —
+this was a deliberate decision (not an oversight), made even though P0–P6 are
+fully complete, for the same reason `ronl-business-api` gave when it made the
+identical call at a **far** higher coverage level (888 tests, 83.39%
+statement coverage, full P1–P11 backlog done): a test step is only as
+trustworthy as what it's actually checking, and this repo's coverage is
+still breadth-limited, not just depth-limited.
+
+As of P7 (see `TESTS.md`'s "Coverage" section for the full per-file table):
+**109 backend tests** across 14 suites but only **13.82% backend statement
+coverage overall** — the tested files (P0–P4: `etag.ts`, `errors.ts`, both
+middleware files, `ropa.service.ts`, `assets.service.ts`, `vendor.service.ts`,
+5 small routes) are all at or near 100%, but real, live, untested surfaces
+remain entirely at 0%: `dmn.routes.ts` (486 lines), `triplydb.routes.ts`
+(516 lines), `operaton.service.ts` (849 lines), `sparql.service.ts` (1,090
+lines), `dmn-validation.service.ts` (1,065 lines), `dso.service.ts` (667
+lines), `norms.routes.ts`/`norms.service.ts`, `edocs.routes.ts`/
+`edocs.service.ts`, `shacl.routes.ts`, `template.routes.ts`,
+`vendor.routes.ts`, `chain.routes.ts`, `cache.routes.ts`, and
+`externalTaskWorker.service.ts` — this is a **breadth** gap (whole files
+never touched), not the **depth** gap (dense sub-branches inside
+already-tested files) that `ronl-business-api` was down to when it made the
+same "not yet" call. A CI gate — even a non-blocking one that just reports
+results — would be reporting "green" on a suite that exercises roughly one
+in seven backend statements; that's worse than no signal at all, since it
+invites false confidence. The frontend side is in much better shape (557
+tests across 59 files, every component/page directory has at least one test
+file, P6.0–P6.8 fully done) but is still paired with the backend in the same
+monorepo's overall story, and doesn't change the backend-breadth argument on
+its own.
+
+**Revisit this once the backend's remaining route/service files (the P8+
+extension of this backlog, not yet planned in detail) bring statement
+coverage into the same ballpark P1–P6 already reached for their own files**,
+or once the team decides breadth alone is an acceptable bar to gate on. When
+ready, add a non-blocking `npm test` step to each Azure workflow before its
+build step (mirroring how the backend workflows already run `npm run lint`
+first) — start non-blocking on both packages, the same "visibility without
+risk" middle ground `ronl-business-api`'s own CI roadmap note leaves open,
+before ever considering a blocking gate.
