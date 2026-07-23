@@ -788,8 +788,59 @@ discipline as every prior P6.x phase:
   worked. Fixed by seeding the store with all defaults already present, the
   same baseline the other CRUD tests use.
 
-See `TESTING-GUIDE.md`'s "P6 breakdown" table — remaining scope (`App.tsx`,
-`Changelog.tsx` — P6.8) is not yet started.
+### `packages/frontend/src/App.tsx` + `src/components/Changelog.tsx` — P6.8
+
+**31 tests across 2 files · `jsdom` · every heavy child component mocked as a clickable/inspectable stub**
+
+The final P6 phase — the top-level integration components that route
+between everything above. `App.tsx` (838 lines) renders 12 feature
+components (`BpmnModeler`, `ChainBuilder`, `Changelog`, `DmnValidator`,
+`DocumentComposer`, `DsoExplorer`, `FormEditor`, `GraphView`,
+`ResultsTable`, `RopaEditor`, `ShaclValidator`, `Tutorial`) plus
+`executeSparqlQuery`, all mocked — same "isolate the orchestrator's own
+state machine" pattern used for every other P6.x top-level component.
+
+- `App.test.tsx` (26) — covers sidebar navigation (each of the 12 nav
+  icons renders its mocked view, with `endpoint`/`apiBaseUrl`/`env` props
+  passed through correctly), `viewMode` persistence to `localStorage`
+  (round-trips across a remount; an invalid stored value falls back to the
+  default `QUERY` view), the always-mounted-but-CSS-hidden `DmnValidator`/
+  `ShaclValidator` panes, the SPARQL query flow (`Run Query` calling
+  `executeSparqlQuery` with the current endpoint/query and rendering
+  results; a query containing `?s ?p ?o` auto-switching to the Visualize
+  view on success; a rejected query surfacing a dismissible error overlay;
+  the sample-query library selecting/highlighting and manual edits clearing
+  that highlight), the settings panel (add/delete session endpoints, Reset
+  Defaults gated on `window.confirm`, the DSO pre/prod toggle persisting to
+  its own `localStorage` key), the Orchestration view's cache-refresh flow
+  (success and failure), and CSV export (`URL.createObjectURL`/
+  `<a>.click()`/`URL.revokeObjectURL`, same pattern as `DocumentComposer`'s
+  Export test in P6.7). One real (pre-existing, unrelated) quirk surfaced
+  and documented rather than fixed: the error overlay lives inside App's
+  "Right Panel," which is itself hidden whenever `viewMode ===
+ORCHESTRATION` — so a failed cache-refresh (triggered from the
+  Orchestration view, the only view with a Refresh Cache button) sets the
+  error state correctly but has no visible surface until the user
+  navigates to a different view. The test asserts this actual behavior
+  (error invisible on Orchestration, appears after switching to the SPARQL
+  Editor view) rather than an assumption that it should show immediately.
+  A second, smaller gotcha: several endpoint names appear twice in the DOM
+  at once (once as a `<div>` row in the settings panel, once as an
+  `<option>` in the header's `<datalist>`), so plain `getByText` throws on
+  ambiguity — worked around with a small `endpointRow()` helper that scopes
+  to the `<div>` match.
+- `Changelog.test.tsx` (5) — mocks `../changelog.json` with a small
+  two-entry fixture (one `format: 'commits'` entry, one legacy
+  `sections`-format entry) rather than using the real, constantly-growing
+  changelog data, so the test doesn't churn every time a release is cut.
+  Covers the header/footer static content, the first (most recent) version
+  starting expanded while others start collapsed, toggle expand/collapse,
+  and both rendering paths — the commits-format entry's scope badge/commit
+  count/commit blocks, and the legacy sections-format entry's absence of a
+  scope badge plus its section/item rendering.
+
+All of P6 (P6.0–P6.8) is now complete — see `TESTING-GUIDE.md`'s "P6
+breakdown" table.
 
 ---
 
@@ -830,11 +881,11 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 --if-present"`) always prints both packages' current per-file tables:
 `packages/backend`'s `"test": "jest --coverage"` and
 `packages/frontend`'s `"test": "vitest run --coverage"`, both matching
-`ronl-business-api`'s conventions exactly. As of P6.7: **109 backend
-tests** across 14 suites, **526 frontend tests** across 57 files — 635
-total. Every tested file across both packages is at or near 100% line +
-branch coverage; the only files noticeably below that are
-`health.routes.ts` (89.74%), the P5 service files (`bpmnService.ts`/
+`ronl-business-api`'s conventions exactly. As of P6.8 — **all of P6 is now
+complete**: **109 backend tests** across 14 suites, **557 frontend tests**
+across 59 files — 666 total. Every tested file across both packages is at
+or near 100% line + branch coverage; the only files noticeably below that
+are `health.routes.ts` (89.74%), the P5 service files (`bpmnService.ts`/
 `documentService.ts`/`formService.ts` at ~92-94% branch, `dsoService.ts` at
 ~90%/72% branch, `templateService.ts` at ~91%/79% branch, the two storage
 modules at ~84-90%), and the P6 files (`RopaEditor.tsx` at 93.33%/70%
@@ -843,17 +894,23 @@ branch, `RopaRecordEditor.tsx` at ~86%/81% branch, `DsoExplorer.tsx` at
 at ~78%/57% branch — mainly the un-simulated `@dnd-kit` drag-gesture
 handlers — the `FormEditor` trio all around 90%/65-80% branch,
 `BpmnCanvas.tsx`/`BpmnModeler.tsx`/`ProcessList.tsx` at ~70-86%/60-88%
-branch, and the P6.7 `DocumentComposer` files at ~73-91%/62-89% branch,
-`TextBlockEditor.tsx` lowest at ~68%/85% — the un-simulated portions of the
-TipTap toolbar) — each gap is an uncovered defensive/edge branch or a
-genuinely lower-value permutation (e.g. every disabled-state combination, a
-debounced type-ahead dropdown, a real pointer-drag gesture, or one of six
-near-identical example-seeding blocks already proven once), not an
-untested code path. Still a meaningful slice of the ~12,371-line backend
-and ~22,684-line frontend — a repo-wide number is premature until the
-remaining backend route files and the rest of P6 (P6.8 — see
-`TESTING-GUIDE.md`) are further along, same reasoning the CPSV Editor's
-guide used.
+branch, the P6.7 `DocumentComposer` files at ~73-91%/62-89% branch
+(`TextBlockEditor.tsx` lowest at ~68%/85% — the un-simulated portions of
+the TipTap toolbar), and P6.8's `App.tsx` at ~92%/88% branch — a handful of
+settings-panel/DSO-toggle edge combinations not individually exercised) —
+each gap is an uncovered defensive/edge branch or a genuinely lower-value
+permutation (e.g. every disabled-state combination, a debounced type-ahead
+dropdown, a real pointer-drag gesture, or one of six near-identical
+example-seeding blocks already proven once), not an untested code path.
+Still a meaningful slice of the ~12,371-line backend and ~22,684-line
+frontend — a repo-wide number is premature until the remaining backend
+route files are further along, same reasoning the CPSV Editor's guide
+used. `DmnValidator.tsx`, `GraphView.tsx`, `ResultsTable.tsx`,
+`ShaclValidator.tsx`, `OrganizationCard.tsx`, and `OrganizationsView.tsx`
+remain untested — each mocked as a stub wherever it's consumed (P6.8's
+`App.test.tsx`), matching the "critical interactions, not exhaustive"
+scoping the rest of P6 used throughout; picking them up is a future
+extension of the backlog, not part of the P6.0–P6.8 plan as scoped.
 
 ## Adding tests
 
