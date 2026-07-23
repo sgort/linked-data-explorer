@@ -2,6 +2,26 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.07.1",
+      "status": "Released",
+      "date": "23 jul 2026",
+      "scope": "backend",
+      "commits": [
+        {
+          "sha": "bd1d53a",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "DMN validator misses id-attribute deploy failures, false-positives on multi-word FEEL names",
+          "details": [
+            "Adds BIZ-010 through BIZ-014, flagging <input>/<output>/<rule>/<inputEntry>/<outputEntry> elements missing the id attribute as errors. Operaton's DMN transformer requires id on these decision-table clause elements even though the DMN 1.3 XSD marks it optional, and rejects such files with DMN-02011 at deploy time — a class of failure this validator previously reported as fully valid.",
+            "Fixes two false-positive sources in INT-007. FEEL names may legally contain spaces, and a bare <inputExpression> that is itself one multi-word declared name (e.g. \"natuurlijke persoon.woonachtig in de gemeente waar wordt aangevraagd\") was being shredded word-by-word by the identifier tokenizer, with every word flagged as an unresolved variable; a whole-string match against declared/produced names is now tried first, before falling back to tokenization. Separately, FEEL_RESERVED was missing the single-word FEEL date/time component functions (year, month, day, hour, minute, second) alongside the already-excluded date/time/duration/number/string built-ins, so year(...) calls were flagging \"year\" itself as unresolved.",
+            "Found while debugging amsterdam/individuele-inkomenstoeslag-iknow.dmn's Operaton deploy failure in the CPSV Editor (ttl-editor) repo — together these fixes reduced that file's Interaction Rules warnings from 83 to 12. The residual 12 (multi-word names embedded inside compound expressions rather than as bare references, plus one likely real DRD-wiring gap in the source DMN) are documented as open issues rather than fixed, since closing them properly needs a materially larger longest-match tokenizer change."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.07.0",
       "status": "Released",
       "date": "22 jul 2026",
