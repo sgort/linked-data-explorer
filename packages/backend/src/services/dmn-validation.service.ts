@@ -229,6 +229,16 @@ const FEEL_RESERVED = new Set([
   'duration',
   'number',
   'string',
+  // Single-word FEEL date/time component-extraction functions — same
+  // "built-in wrapper" category as date()/time()/duration() above. Confirmed
+  // against individuele-inkomenstoeslag-iknow.dmn: year(peildatum) was
+  // flagging "year" itself as an unresolved variable reference.
+  'year',
+  'month',
+  'day',
+  'hour',
+  'minute',
+  'second',
 ]);
 /**
  * Extract the variable identifiers referenced by a FEEL inputExpression text.
@@ -576,6 +586,41 @@ function validateBusinessLayer(doc: XmlElement): LayerResult {
     }
   }
 
+  // BIZ-010–BIZ-014 — decision table clause elements missing the 'id' attribute.
+  //
+  // The DMN 1.3 XSD marks 'id' optional on <input>, <output>, <rule>,
+  // <inputEntry>, and <outputEntry> — but Operaton's DMN transformer requires
+  // it on all five and throws DMN-02011 ("... must have a 'id' attribute set")
+  // at deploy time if it is absent. A file missing these ids parses as valid
+  // DMN XML and reports no errors here otherwise, yet still fails to deploy —
+  // exactly the gap that let individuele-inkomenstoeslag-iknow.dmn (a Camunda
+  // Modeler 5.45.0 / iKnow export) through undetected. Confirmed against a
+  // local Operaton instance: it rejects the file until every clause element
+  // below has an id, and deploys cleanly once they do.
+  const CLAUSE_ID_CHECKS: Array<{ tag: string; code: string }> = [
+    { tag: 'input', code: 'BIZ-010' },
+    { tag: 'output', code: 'BIZ-011' },
+    { tag: 'rule', code: 'BIZ-012' },
+    { tag: 'inputEntry', code: 'BIZ-013' },
+    { tag: 'outputEntry', code: 'BIZ-014' },
+  ];
+  for (const { tag, code } of CLAUSE_ID_CHECKS) {
+    for (const el of find(doc, `//d:${tag}`)) {
+      if (!el.attr('id')?.value()) {
+        const decision = get(el, 'ancestor::d:decision');
+        issues.push(
+          iss(
+            'error',
+            code,
+            `<${tag}> is missing the 'id' attribute. Operaton requires it on decision table ` +
+              `clause elements and will reject this file with DMN-02011 at deploy time.`,
+            decision ? elLoc(decision) : elLoc(el)
+          )
+        );
+      }
+    }
+  }
+
   return { label: 'Business Rules', issues };
 }
 
@@ -855,8 +900,8 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
   // Editor cannot discover the input contract and generates an empty request
   // body on deploy.
   //
-  // Two false-positive classes are fixed here, both reproduced against a DMN
-  // that deploys and evaluates correctly on Operaton:
+  // Three false-positive classes are fixed here, all reproduced against DMNs
+  // that deploy and evaluate correctly on Operaton:
   //   1. requiredDecision outputs were not resolved. A variable that is the
   //      <decision><variable name> or decision-table <output name> of a
   //      requiredDecision target is satisfied — the same resolution INT-001
@@ -866,6 +911,21 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
   //   2. the whole <text> was treated as one variable name. FEEL expressions
   //      (e.g. "date and time(aanvraagDatum)" or operator expressions) are now
   //      parsed into identifier references via extractFeelIdentifiers().
+  //   3. FEEL names may legally contain spaces — a bare-reference
+  //      <inputExpression> is often one multi-word name in its entirety (e.g.
+  //      "natuurlijke persoon.woonachtig in de gemeente waar wordt
+  //      aangevraagd", declared verbatim as a single <inputData name="...">).
+  //      extractFeelIdentifiers() cannot tell that apart from a compound
+  //      expression and shreds it into individual Dutch words ("natuurlijke",
+  //      "persoon", "de", "gemeente", ...), each reported as an unresolved
+  //      reference. Before tokenizing, the exact trimmed text is now checked
+  //      against the declared/produced name set as a single literal name;
+  //      only when that whole-string match fails do we fall back to
+  //      word-level tokenization, which is the correct signal that the
+  //      expression is actually compound. (Reference:
+  //      individuele-inkomenstoeslag-iknow.dmn — every <inputExpression> that
+  //      is a bare multi-word input name previously produced one INT-007 per
+  //      word.)
   //
   // Decision output variables are, by construction, never external inputs, so
   // they are excluded from the "must have matching inputData" requirement.
@@ -910,6 +970,8 @@ function validateInteractionLayer(doc: XmlElement): LayerResult {
         if (produced) for (const n of produced) satisfied.add(n);
       }
     }
+
+    if (satisfied.has(exprText)) continue;
 
     for (const ident of extractFeelIdentifiers(exprText)) {
       if (satisfied.has(ident)) continue;
