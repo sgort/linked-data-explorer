@@ -640,7 +640,7 @@ first:
   Confirmed a real controlled-input quirk while writing this: since the
   `name` field's `value` prop never changes in these tests (the component
   doesn't hold its own state, it's fully prop-driven), typing one character
-  into an existing value re-renders the *same* prop value each keystroke,
+  into an existing value re-renders the _same_ prop value each keystroke,
   so the `onUpdateElement` call after typing `'x'` into a `"Task"`-valued
   field fires with `{ name: 'Taskx' }`, not `{ name: 'x' }` — asserted
   against that actual behavior rather than an assumption about how
@@ -662,7 +662,7 @@ first:
   injecting a selector component — so the DMN/Form/Document selector
   injection logic (mocked as stubs here, each already covered on its own)
   can be exercised end-to-end through a simulated `eventBus.emit('selection
-  .changed', ...)`. Manually dispatching bpmn-js's own events outside of
+.changed', ...)`. Manually dispatching bpmn-js's own events outside of
   `userEvent` needed each `emit(...)` wrapped in `@testing-library/react`'s
   `act()` — without it, React's state update from the event handler hadn't
   committed yet by the time the very next synchronous assertion ran,
@@ -700,19 +700,96 @@ first:
   footer-draft plumbing and its effect on `hasFooterChanges`; and the
   unsaved-changes confirm gate on both switching processes and closing.
 
-72.02%/60-69% branch coverage across the three biggest files
-(`BpmnCanvas.tsx`, `BpmnModeler.tsx`, `ProcessList.tsx`) — deliberately not
-chased further: the six other versioned example-seeding blocks in
-`BpmnModeler.tsx` all share the exact shape already proven once, and
-several `BpmnCanvas.tsx` branches (overlay badge refresh internals, the
-background PATCH after a successful deploy, every deploy-resource-warning
-combination) are lower-value repeats of patterns already covered, per the
-same "critical interactions, not exhaustive" scoping the rest of P6 has
-used throughout.
+  72.02%/60-69% branch coverage across the three biggest files
+  (`BpmnCanvas.tsx`, `BpmnModeler.tsx`, `ProcessList.tsx`) — deliberately not
+  chased further: the six other versioned example-seeding blocks in
+  `BpmnModeler.tsx` all share the exact shape already proven once, and
+  several `BpmnCanvas.tsx` branches (overlay badge refresh internals, the
+  background PATCH after a successful deploy, every deploy-resource-warning
+  combination) are lower-value repeats of patterns already covered, per the
+  same "critical interactions, not exhaustive" scoping the rest of P6 has
+  used throughout.
 
-See `TESTING-GUIDE.md`'s "P6 breakdown" table — remaining scope
-(`DocumentComposer`, `App.tsx`, `Changelog.tsx` — P6.7 and P6.8) is not yet
-started.
+### `packages/frontend/src/components/DocumentComposer/*` — P6.7
+
+**74 tests across 9 files · `jsdom` · `@tiptap/react` exercised for real, `@dnd-kit` exercised for real where possible**
+
+The heaviest remaining directory — both `@tiptap/react` and `@dnd-kit`
+coupling together — tackled smallest/least-coupled first, same ordering
+discipline as every prior P6.x phase:
+
+- `DocumentList.test.tsx` (14) — no third-party coupling; the same
+  org-grouped-list shape as `FormList`/`ProcessList`/`RopaList`, plus
+  `.document` file import via a real `File`/`FileReader` (language inferred
+  from filename) and invalid-JSON import alerts.
+- `BindingPanel.test.tsx` (8) — mocks `fetchVariableHints`. Covers
+  process-key-gated variable discovery, clickable hint chips that prefill
+  the add-binding form, bare-placeholder auto-wrapping in `{{ }}` on Add,
+  and binding list/delete.
+- `ContentLibrary.test.tsx` (2) and `AssetLibrary.test.tsx` (5) — trivial
+  static block-type palette, and an image-only-filtering asset picker
+  (mocks `fetchAssets`) respectively.
+- `BlockItem.test.tsx` (7) — mocks `./TextBlockEditor` as a stub. Covers
+  every `BlockType` rendering (text/image/variable/separator/spacer),
+  delete wiring, and readonly hiding the drag-handle/delete.
+- `ZonePanel.test.tsx` (6) — mocks `./BlockItem` as a stub. Covers block
+  count display, empty-zone placeholder, delete wiring, and header-click
+  collapse toggling.
+- `TextBlockEditor.test.tsx` (6) — **exercises real `@tiptap/react`/
+  ProseMirror**, unlike `bpmn-js`/`@bpmn-io/form-js` in P6.5/P6.6 (both
+  canvas/SVG-heavy and mocked outright there); ProseMirror is DOM/
+  `contenteditable`-based and works fine under jsdom once two gaps are
+  polyfilled locally in the test file (not globally in `setup.ts`, to avoid
+  affecting unrelated tests): `Range.prototype.getClientRects`/
+  `getBoundingClientRect` (called by `EditorView.scrollToSelection()` on
+  every transaction) and `document.elementFromPoint` (called by
+  ProseMirror's mousedown handler via `posAtCoords()`). One query fix:
+  `data-placeholder` lives on the empty paragraph node inside `.ProseMirror`,
+  not on `.ProseMirror` itself. Covers toolbar/content rendering, placeholder
+  text, readonly hiding the toolbar and setting `contenteditable="false"`,
+  Bold-toggle active-state styling, and real typed text propagating to
+  `onChange` as TipTap JSON.
+- `DocumentCanvas.test.tsx` (12) — a discovery changed the approach here:
+  `DocumentCanvas.tsx` has **no direct dnd-kit hook coupling** — it receives
+  `dragEndEvent`/`dragOverEvent` as props, computed by the parent's
+  `DndContext`, and does pure state-transition logic in a `useEffect` keyed
+  on `[dragEndEvent]`. That meant the full drag-end resolution matrix could
+  be tested by constructing fake `DragEndEvent` objects and driving the
+  effect via `rerender()` with a new object reference — no dnd-kit gesture
+  simulation needed at all (unlike `ChainBuilder.test.tsx`/P6.4, where that
+  simulation was deliberately skipped). Covers toolbar wiring, all 6
+  mandatory zones + the conditional annex zone, and every drop case:
+  new-block-onto-zone (appends), no-op on an unrecognized drop target,
+  ignored entirely when readonly, existing-block moved to a different
+  zone's droppable (appended to the end), existing-block reordered within
+  the same zone (via `arrayMove`), and existing-block moved to a specific
+  position in a different zone.
+- `DocumentComposer.test.tsx` (18) — the top-level orchestrator, same
+  "mock the already-tested children as clickable stubs" pattern as
+  `ChainBuilder.test.tsx`/`FormEditor.test.tsx`/`BpmnModeler.test.tsx`.
+  `DocumentService` is mocked with an in-test mutable array backing
+  `getTemplates`/`saveTemplate`/`getTemplate`/`deleteTemplate` for
+  realistic stateful behavior across multiple calls within one test.
+  Covers bootstrap default-template seeding (and not reseeding when
+  already present); create/import/load/rename/delete CRUD, including the
+  example-delete alert-without-deleting case and the dirty-load confirm
+  gate; Save (merging pending footer-draft edits), Save As (`window.prompt`
+  spied, including the cancelled-prompt no-op path), Export (`.document`
+  blob download via `URL.createObjectURL`/`<a>.click()`/
+  `URL.revokeObjectURL`), and Close's dirty-confirm gate; binding add/
+  delete and process-key propagation; and the Content/Logos left-panel tab
+  switch. One fixture-ordering bug caught while writing this: an early
+  version of the "Save As does nothing when the prompt is cancelled" test
+  seeded its store with only one template, not realizing the component's
+  own bootstrap effect would then seed the two missing `DEFAULT_TEMPLATES`
+  entries on mount — calling the mocked `saveTemplate` twice before the
+  user ever clicked anything, which made `expect(saveTemplate).not
+.toHaveBeenCalled()` fail regardless of whether the Save As cancel guard
+  worked. Fixed by seeding the store with all defaults already present, the
+  same baseline the other CRUD tests use.
+
+See `TESTING-GUIDE.md`'s "P6 breakdown" table — remaining scope (`App.tsx`,
+`Changelog.tsx` — P6.8) is not yet started.
 
 ---
 
@@ -753,8 +830,8 @@ this repo's `.gitignore` already uses for a hand-authored `.d.ts` file.
 --if-present"`) always prints both packages' current per-file tables:
 `packages/backend`'s `"test": "jest --coverage"` and
 `packages/frontend`'s `"test": "vitest run --coverage"`, both matching
-`ronl-business-api`'s conventions exactly. As of P6.6: **109 backend
-tests** across 14 suites, **452 frontend tests** across 48 files — 561
+`ronl-business-api`'s conventions exactly. As of P6.7: **109 backend
+tests** across 14 suites, **526 frontend tests** across 57 files — 635
 total. Every tested file across both packages is at or near 100% line +
 branch coverage; the only files noticeably below that are
 `health.routes.ts` (89.74%), the P5 service files (`bpmnService.ts`/
@@ -764,15 +841,17 @@ modules at ~84-90%), and the P6 files (`RopaEditor.tsx` at 93.33%/70%
 branch, `RopaRecordEditor.tsx` at ~86%/81% branch, `DsoExplorer.tsx` at
 72.02%/68.02% branch, `ChainConfig.tsx` at ~85%/81% branch, `ChainBuilder.tsx`
 at ~78%/57% branch — mainly the un-simulated `@dnd-kit` drag-gesture
-handlers — the `FormEditor` trio all around 90%/65-80% branch, and
+handlers — the `FormEditor` trio all around 90%/65-80% branch,
 `BpmnCanvas.tsx`/`BpmnModeler.tsx`/`ProcessList.tsx` at ~70-86%/60-88%
-branch) — each gap is an uncovered defensive/edge branch or a genuinely
-lower-value permutation (e.g. every disabled-state combination, a
+branch, and the P6.7 `DocumentComposer` files at ~73-91%/62-89% branch,
+`TextBlockEditor.tsx` lowest at ~68%/85% — the un-simulated portions of the
+TipTap toolbar) — each gap is an uncovered defensive/edge branch or a
+genuinely lower-value permutation (e.g. every disabled-state combination, a
 debounced type-ahead dropdown, a real pointer-drag gesture, or one of six
 near-identical example-seeding blocks already proven once), not an
 untested code path. Still a meaningful slice of the ~12,371-line backend
 and ~22,684-line frontend — a repo-wide number is premature until the
-remaining backend route files and the rest of P6 (P6.7 and P6.8 — see
+remaining backend route files and the rest of P6 (P6.8 — see
 `TESTING-GUIDE.md`) are further along, same reasoning the CPSV Editor's
 guide used.
 
