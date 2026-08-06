@@ -2,6 +2,25 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.08.0",
+      "status": "Released",
+      "date": "6 aug 2026",
+      "scope": "frontend",
+      "commits": [
+        {
+          "sha": "9071732",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Add Ede and Gelderland to DSO Viewer location presets",
+          "details": [
+            "Extends the DSO Viewer's activities-tab LOCATION_PRESETS with the municipality of Ede and the province of Gelderland, alongside the existing Lelystad and Flevoland entries. This one array drives both the location filter buttons and the authority-name lookup used when importing forms, so no other code changes were needed.",
+            "OINs were sourced from overheid.nl's Identificatiecodes records for each organization and cross-checked structurally: each OIN embeds the org's own RSIN, and both new values follow the same 00000001<RSIN>000 pattern as the existing Lelystad/Flevoland entries."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.07.1",
       "status": "Released",
       "date": "23 jul 2026",
