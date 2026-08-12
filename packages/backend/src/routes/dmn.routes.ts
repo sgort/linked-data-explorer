@@ -8,7 +8,6 @@ import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { operatonService } from '../services/operaton.service';
 import { dmnValidationService } from '../services/dmn-validation.service';
-import { writeDeployedBundleToRepo } from '../services/assets.service';
 
 const router = Router();
 
@@ -250,7 +249,7 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       operatonPassword?: string;
       /** Owning board for the deployed process; auto-derived from candidate groups when omitted. */
       boardOwner?: string;
-      /** Tenant tag, mandatory — becomes Operaton's native tenant-id and the deployed/ repo-sync path segment. */
+      /** Tenant tag, mandatory — becomes Operaton's native tenant-id. */
       organization?: string;
     };
 
@@ -291,21 +290,11 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       organization
     );
 
-    const repoSync = await writeDeployedBundleToRepo({
-      organization,
-      definitionKey: deploymentName,
-      bpmnXml,
-      subProcesses,
-      forms,
-      documents,
-    });
-
     res.json({
       success: true,
       data: {
         deploymentId: result.deploymentId,
         resourceCount: result.resourceCount,
-        repoSync,
       },
       timestamp: new Date().toISOString(),
     });

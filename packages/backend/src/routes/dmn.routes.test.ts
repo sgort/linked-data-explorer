@@ -8,16 +8,11 @@ jest.mock('../utils/logger', () => ({
 jest.mock('../services/operaton.service', () => ({
   operatonService: { deployProcess: jest.fn() },
 }));
-jest.mock('../services/assets.service', () => ({
-  writeDeployedBundleToRepo: jest.fn(),
-}));
 
 import { operatonService } from '../services/operaton.service';
-import { writeDeployedBundleToRepo } from '../services/assets.service';
 import dmnRoutes from './dmn.routes';
 
 const mockDeployProcess = operatonService.deployProcess as jest.Mock;
-const mockWriteBundle = writeDeployedBundleToRepo as jest.Mock;
 
 function makeApp() {
   const app = express();
@@ -28,7 +23,6 @@ function makeApp() {
 
 beforeEach(() => {
   mockDeployProcess.mockReset();
-  mockWriteBundle.mockReset();
 });
 
 describe('POST /api/dmns/process/deploy', () => {
@@ -53,12 +47,8 @@ describe('POST /api/dmns/process/deploy', () => {
     expect(res.body.error.code).toBe('INVALID_INPUT');
   });
 
-  test('passes organization through to deployProcess and includes repoSync on success', async () => {
+  test('passes organization through to deployProcess as the tenant-id tag', async () => {
     mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 3 });
-    mockWriteBundle.mockResolvedValue({
-      written: true,
-      path: '/repo/deployed/flevoland/RipR21Process',
-    });
 
     const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
       bpmnXml: '<bpmn:definitions/>',
@@ -67,10 +57,7 @@ describe('POST /api/dmns/process/deploy', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.repoSync).toEqual({
-      written: true,
-      path: '/repo/deployed/flevoland/RipR21Process',
-    });
+    expect(res.body.data).toEqual({ deploymentId: 'dep-1', resourceCount: 3 });
     expect(mockDeployProcess).toHaveBeenCalledWith(
       '<bpmn:definitions/>',
       'RipR21Process',
@@ -83,36 +70,5 @@ describe('POST /api/dmns/process/deploy', () => {
       undefined,
       'flevoland'
     );
-    expect(mockWriteBundle).toHaveBeenCalledWith({
-      organization: 'flevoland',
-      definitionKey: 'RipR21Process',
-      bpmnXml: '<bpmn:definitions/>',
-      subProcesses: [],
-      forms: [],
-      documents: [],
-    });
-  });
-
-  test('a failed repo-sync write does not fail the deploy response', async () => {
-    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
-    mockWriteBundle.mockResolvedValue({
-      written: false,
-      path: '/repo/deployed/flevoland/RipR21Process',
-      error: 'EACCES',
-    });
-
-    const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
-      bpmnXml: '<bpmn:definitions/>',
-      deploymentName: 'RipR21Process',
-      organization: 'flevoland',
-    });
-
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.repoSync).toEqual({
-      written: false,
-      path: '/repo/deployed/flevoland/RipR21Process',
-      error: 'EACCES',
-    });
   });
 });
