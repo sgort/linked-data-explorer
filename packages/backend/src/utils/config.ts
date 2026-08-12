@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +59,17 @@ export const config = {
   displayEnv: formatDeploymentEnv(rawDeploymentEnv),
   port: parseInt(process.env.PORT || '3001', 10),
   host: process.env.HOST || 'localhost',
+
+  // Absolute path to the repo root, used to write deployed BPMN bundles to
+  // deployed/<organization>/<definitionKey>/ on successful deploy (see
+  // assets.service.ts's writeDeployedBundleToRepo). Defaults to a path
+  // resolved from this file's own location — packages/backend/src/utils/
+  // is four directories below the repo root (utils → src → backend →
+  // packages → root), true whether running from src/ or the compiled
+  // dist/ output, since both sit at the same depth under packages/backend.
+  // Overridable via REPO_ROOT for deployment topologies where that
+  // relative assumption doesn't hold.
+  repoRoot: process.env.REPO_ROOT || path.resolve(__dirname, '../../../../'),
 
   corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:3000').split(','),
 
