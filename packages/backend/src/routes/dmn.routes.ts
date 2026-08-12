@@ -8,6 +8,7 @@ import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { operatonService } from '../services/operaton.service';
 import { dmnValidationService } from '../services/dmn-validation.service';
+import { writeDeployedBundleToRepo } from '../services/assets.service';
 
 const router = Router();
 
@@ -237,6 +238,7 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       operatonUsername,
       operatonPassword,
       boardOwner,
+      organization,
     } = req.body as {
       bpmnXml: string;
       deploymentName: string;
@@ -248,6 +250,8 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       operatonPassword?: string;
       /** Owning board for the deployed process; auto-derived from candidate groups when omitted. */
       boardOwner?: string;
+      /** Tenant tag, mandatory — becomes Operaton's native tenant-id and the deployed/ repo-sync path segment. */
+      organization?: string;
     };
 
     if (!bpmnXml?.trim()) {
@@ -266,6 +270,14 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       });
     }
 
+    if (!organization?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'organization is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     const result = await operatonService.deployProcess(
       bpmnXml,
       deploymentName,
@@ -275,14 +287,25 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       operatonUrl,
       operatonUsername,
       operatonPassword,
-      boardOwner
+      boardOwner,
+      organization
     );
+
+    const repoSync = await writeDeployedBundleToRepo({
+      organization,
+      definitionKey: deploymentName,
+      bpmnXml,
+      subProcesses,
+      forms,
+      documents,
+    });
 
     res.json({
       success: true,
       data: {
         deploymentId: result.deploymentId,
         resourceCount: result.resourceCount,
+        repoSync,
       },
       timestamp: new Date().toISOString(),
     });
