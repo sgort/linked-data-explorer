@@ -1,5 +1,32 @@
 # Design: Mandatory organization/tenantId at BPMN deploy time, with repo sync
 
+> **Rolled back (2026-08-12):** the "repo sync" half of this design —
+> `config.repoRoot`, `writeDeployedBundleToRepo`, and the route's
+> `repoSync` response field — was implemented, individually task-reviewed,
+> and then removed after the final whole-branch review found an
+> unauthenticated path-traversal vulnerability: `organization`,
+> `deploymentName`, and every form/document/subprocess filename in the
+> deploy request body flowed unsanitized into a filesystem path, with no
+> auth in front of the route at all. Made worse by `config.repoRoot`
+> resolving to filesystem root under the real Azure deployment layout
+> (the shipped app root is `dist/`, not the full repo checkout), the
+> reachable write target included the running application's own served
+> files — an unauthenticated remote-code-execution path on acc/prod. This
+> was a genuine gap in the design below, not an implementation error: the
+> design never considered that `organization`/`definitionKey`/filenames
+> are user-editable BPMN values reaching a filesystem write, or that
+> `packages/backend`'s deployed root differs from its local dev layout.
+>
+> The **mandatory organization/tenantId** half of this design (Sections
+> 1-2 below) had no such issue and shipped as designed — it's a pure
+> client+server validation and an Operaton API parameter, no filesystem
+> access. Section 3 ("Successful deploy writes the bundle to the repo")
+> is kept below as the historical record of what was designed and why it
+> was reverted, not as a description of current behavior. A repo-sync
+> mechanism may be revisited later, but next time needs an explicit
+> threat model for attacker-controlled path segments and a route
+> authentication story — neither existed for this branch.
+
 ## Problem
 
 `linked-data-explorer` (LDE) is the single source of truth for deployment
