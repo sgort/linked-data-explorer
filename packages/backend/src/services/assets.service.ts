@@ -1,11 +1,7 @@
-import { promises as fs } from 'fs';
-import path from 'path';
 import pool from '../db/pool';
 import { BpmnRow, FormRow, DocumentRow } from '../db/types';
 import { Bpmn, Form, Document } from '../domain/types';
 import { mapBpmn, mapForm, mapDocument } from '../db/mappers';
-import { config } from '../utils/config';
-import logger from '../utils/logger';
 
 // ─── BPMN ────────────────────────────────────────────────────────────────────
 
@@ -347,62 +343,4 @@ export async function upsertDocument(d: {
 export async function deleteDocument(id: string): Promise<void> {
   if (!pool) return;
   await pool.query('DELETE FROM document_templates WHERE id = $1', [id]);
-}
-
-/**
- * Writes the exact bundle a successful deploy sent to Operaton to
- * deployed/<organization>/<definitionKey>/ in this repo's working tree —
- * same filenames as the Operaton FormData, so the folder is a literal
- * mirror of what's live as of the last deploy. Write-only: never runs git
- * itself: a human reviews and commits the resulting change.
- *
- * Never throws — a filesystem failure here must not turn an already-
- * successful Operaton deploy into a failed response. Callers surface
- * `written: false` as a non-fatal note instead.
- */
-export async function writeDeployedBundleToRepo(params: {
-  organization: string;
-  definitionKey: string;
-  bpmnXml: string;
-  subProcesses: { filename: string; xml: string }[];
-  forms: { id: string; schema: Record<string, unknown> }[];
-  documents: { id: string; template: Record<string, unknown> }[];
-}): Promise<{ written: boolean; path: string; error?: string }> {
-  const dir = path.join(config.repoRoot, 'deployed', params.organization, params.definitionKey);
-
-  try {
-    await fs.mkdir(dir, { recursive: true });
-
-    await fs.writeFile(path.join(dir, `${params.definitionKey}.bpmn`), params.bpmnXml, 'utf-8');
-
-    for (const sp of params.subProcesses) {
-      await fs.writeFile(path.join(dir, sp.filename), sp.xml, 'utf-8');
-    }
-
-    for (const form of params.forms) {
-      await fs.writeFile(
-        path.join(dir, `${form.id}.form`),
-        JSON.stringify(form.schema, null, 2),
-        'utf-8'
-      );
-    }
-
-    for (const doc of params.documents) {
-      await fs.writeFile(
-        path.join(dir, `${doc.id}.document`),
-        JSON.stringify(doc.template, null, 2),
-        'utf-8'
-      );
-    }
-
-    logger.info('Wrote deployed bundle to repo', { path: dir });
-    return { written: true, path: dir };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    logger.warn('Failed to write deployed bundle to repo — deploy itself still succeeded', {
-      path: dir,
-      error: message,
-    });
-    return { written: false, path: dir, error: message };
-  }
 }

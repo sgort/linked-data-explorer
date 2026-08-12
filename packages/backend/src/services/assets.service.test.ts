@@ -1,6 +1,3 @@
-import { promises as fs } from 'fs';
-import os from 'os';
-import path from 'path';
 import { BpmnRow, DocumentRow, FormRow } from '../db/types';
 
 const mockQuery = jest.fn();
@@ -10,7 +7,6 @@ jest.mock('../db/pool', () => ({
   default: { query: (...args: unknown[]) => mockQuery(...args) },
 }));
 
-import * as configModule from '../utils/config';
 import {
   deleteBpmn,
   deleteDocument,
@@ -24,7 +20,6 @@ import {
   upsertBpmn,
   upsertDocument,
   upsertForm,
-  writeDeployedBundleToRepo,
 } from './assets.service';
 
 function bpmnRow(overrides: Partial<BpmnRow> = {}): BpmnRow {
@@ -304,88 +299,5 @@ describe('Documents', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
     await deleteDocument('d1');
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('DELETE'), ['d1']);
-  });
-});
-
-describe('writeDeployedBundleToRepo', () => {
-  const tmpRoot = path.join(os.tmpdir(), `lde-repo-sync-test-${Date.now()}`);
-  // config.repoRoot is a plain data property (not a getter), so it can't be
-  // spied on via jest.spyOn(obj, 'repoRoot', 'get') — that throws "Property
-  // `repoRoot` does not have access type get" regardless of OS. Swap it out
-  // by direct assignment and restore the original value afterward instead.
-  const originalRepoRoot = configModule.config.repoRoot;
-
-  beforeEach(() => {
-    configModule.config.repoRoot = tmpRoot;
-  });
-
-  afterEach(async () => {
-    configModule.config.repoRoot = originalRepoRoot;
-    await fs.rm(tmpRoot, { recursive: true, force: true });
-  });
-
-  test('writes the bpmn, subprocess bpmns, forms, and documents to deployed/<organization>/<definitionKey>/', async () => {
-    const result = await writeDeployedBundleToRepo({
-      organization: 'flevoland',
-      definitionKey: 'RipR21Process',
-      bpmnXml: '<bpmn:definitions/>',
-      subProcesses: [{ filename: 'SubProcess.bpmn', xml: '<bpmn:definitions/>' }],
-      forms: [{ id: 'rip-intake', schema: { id: 'rip-intake', type: 'default' } }],
-      documents: [{ id: 'rip-pdp', template: { id: 'rip-pdp', zones: [] } }],
-    });
-
-    const dir = path.join(tmpRoot, 'deployed', 'flevoland', 'RipR21Process');
-    expect(result).toEqual({ written: true, path: dir });
-
-    expect(await fs.readFile(path.join(dir, 'RipR21Process.bpmn'), 'utf-8')).toBe(
-      '<bpmn:definitions/>'
-    );
-    expect(await fs.readFile(path.join(dir, 'SubProcess.bpmn'), 'utf-8')).toBe(
-      '<bpmn:definitions/>'
-    );
-    const formContent = await fs.readFile(path.join(dir, 'rip-intake.form'), 'utf-8');
-    expect(JSON.parse(formContent)).toEqual({ id: 'rip-intake', type: 'default' });
-    const docContent = await fs.readFile(path.join(dir, 'rip-pdp.document'), 'utf-8');
-    expect(JSON.parse(docContent)).toEqual({ id: 'rip-pdp', zones: [] });
-  });
-
-  test('overwrites a previous deploy of the same definitionKey', async () => {
-    await writeDeployedBundleToRepo({
-      organization: 'flevoland',
-      definitionKey: 'RipR21Process',
-      bpmnXml: '<old/>',
-      subProcesses: [],
-      forms: [],
-      documents: [],
-    });
-    await writeDeployedBundleToRepo({
-      organization: 'flevoland',
-      definitionKey: 'RipR21Process',
-      bpmnXml: '<new/>',
-      subProcesses: [],
-      forms: [],
-      documents: [],
-    });
-
-    const filePath = path.join(tmpRoot, 'deployed', 'flevoland', 'RipR21Process', 'RipR21Process.bpmn');
-    expect(await fs.readFile(filePath, 'utf-8')).toBe('<new/>');
-  });
-
-  test('returns written: false with an error message instead of throwing when the target is not writable', async () => {
-    // A file where a directory needs to be created makes mkdir fail with ENOTDIR.
-    await fs.mkdir(tmpRoot, { recursive: true });
-    await fs.writeFile(path.join(tmpRoot, 'deployed'), 'not a directory');
-
-    const result = await writeDeployedBundleToRepo({
-      organization: 'flevoland',
-      definitionKey: 'RipR21Process',
-      bpmnXml: '<bpmn:definitions/>',
-      subProcesses: [],
-      forms: [],
-      documents: [],
-    });
-
-    expect(result.written).toBe(false);
-    expect(result.error).toBeTruthy();
   });
 });
