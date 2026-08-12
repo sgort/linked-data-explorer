@@ -70,6 +70,11 @@ const deriveBoardOwnerFromXml = (xml: string): string | null => {
   return found;
 };
 
+/** Extract the organization tag from a BPMN's ronl:organization attribute, or null if unset. */
+const extractOrganizationFromXml = (xml: string): string | null => {
+  return xml.match(/ronl:organization="([^"]+)"/)?.[1] ?? null;
+};
+
 const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   xml,
   endpoint,
@@ -109,6 +114,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   // `boardAuto` is the auto-detected suggestion shown alongside the Auto option.
   const [boardChoice, setBoardChoice] = useState<BoardChoice>('auto');
   const [boardAuto, setBoardAuto] = useState<string | null>(null);
+  const [deployOrganization, setDeployOrganization] = useState<string | null>(null);
 
   const [selectedElement, setSelectedElement] = useState<any>(null);
 
@@ -498,6 +504,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     // Pre-fill the board-ownership picker with the auto-detected board.
     setBoardAuto(deriveBoardOwnerFromXml(xml));
     setBoardChoice('auto');
+    setDeployOrganization(extractOrganizationFromXml(xml));
     setDeployResult(null);
     setShowDeployModal(true);
   };
@@ -512,6 +519,14 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       setDeployResult({
         success: false,
         message: 'Select a board — boardOwner is required before deploying.',
+      });
+      return;
+    }
+
+    if (!deployOrganization) {
+      setDeployResult({
+        success: false,
+        message: 'Set an organization in the sidebar — organization is required before deploying.',
       });
       return;
     }
@@ -583,6 +598,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           subProcesses: subProcessXmls,
           operatonUrl: operatonUrl.trim() || undefined,
           boardOwner,
+          organization: deployOrganization,
         }),
       });
 
@@ -809,6 +825,24 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
               )}
             </div>
 
+            {/* Organization — deploy-time tenant-id tag */}
+            <div className="mb-4 p-3 rounded-lg border-2 bg-slate-50 border-slate-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold text-sm text-slate-800">🏢 Organization</div>
+                {deployOrganization ? (
+                  <span className="text-xs font-mono text-slate-700">{deployOrganization}</span>
+                ) : (
+                  <span className="text-xs text-slate-400">not set</span>
+                )}
+              </div>
+              {!deployOrganization && (
+                <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                  ⚠️ An organization is required. Set one in the sidebar&apos;s Organization field
+                  before deploying.
+                </div>
+              )}
+            </div>
+
             {/* Resources preview */}
             <div className="mb-4 p-3 rounded-lg border-2 bg-blue-50 border-blue-200">
               <div className="font-semibold text-sm text-blue-800 mb-2">🚀 Resources to deploy</div>
@@ -921,7 +955,12 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={handleDeploy}
-                disabled={isDeploying || deployResult?.success === true || !resolvedBoard}
+                disabled={
+                  isDeploying ||
+                  deployResult?.success === true ||
+                  !resolvedBoard ||
+                  !deployOrganization
+                }
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isDeploying ? (

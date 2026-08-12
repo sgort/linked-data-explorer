@@ -391,11 +391,51 @@ describe('BpmnCanvas — deploy modal', () => {
     expect(modalDeployButton).toBeDisabled();
   });
 
+  test('blocks deploy when the BPMN has no ronl:organization attribute', async () => {
+    await renderCanvas({ xml: SIMPLE_XML });
+    await userEvent.click(screen.getByText('Deploy'));
+
+    expect(await screen.findByText('not set')).toBeTruthy();
+    expect(screen.getByText(/An organization is required/)).toBeTruthy();
+    const modalDeployButton = screen.getAllByRole('button', { name: /Deploy/ })[1];
+    expect(modalDeployButton).toBeDisabled();
+  });
+
+  test('reads organization from the BPMN and sends it in the deploy request', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({ success: true, data: { deploymentId: 'dep-123' } }),
+    });
+    const xmlWithOrg = SIMPLE_XML.replace(
+      '<bpmn:process',
+      '<bpmn:process ronl:organization="flevoland"'
+    );
+    await renderCanvas({ xml: xmlWithOrg });
+    await userEvent.click(screen.getByText('Deploy'));
+
+    await screen.findByText('flevoland');
+    await userEvent.click(screen.getByRole('button', { name: 'Infra-board' }));
+    const modalDeployButton = screen.getAllByRole('button', { name: /Deploy/ })[1];
+    expect(modalDeployButton).not.toBeDisabled();
+
+    await userEvent.click(modalDeployButton);
+
+    await vi.waitFor(() =>
+      expect(screen.getAllByText(/Deployment ID: dep-123/).length).toBeGreaterThan(0)
+    );
+    const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(options.body as string);
+    expect(body.organization).toBe('flevoland');
+  });
+
   test('picking a board option enables Deploy and posts to the deploy endpoint on success', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       json: async () => ({ success: true, data: { deploymentId: 'dep-123' } }),
     });
-    await renderCanvas();
+    // organization is mandatory too — give this XML one so the scenario under
+    // test (board picking) isn't masked by the unrelated organization block.
+    await renderCanvas({
+      xml: SIMPLE_XML.replace('<bpmn:process', '<bpmn:process ronl:organization="flevoland"'),
+    });
     await userEvent.click(screen.getByText('Deploy'));
     await screen.findByText('no board auto-detected');
 
@@ -418,7 +458,11 @@ describe('BpmnCanvas — deploy modal', () => {
     global.fetch = vi.fn().mockResolvedValue({
       json: async () => ({ success: false, error: { message: 'Operaton unreachable' } }),
     });
-    await renderCanvas();
+    // organization is mandatory too — give this XML one so the scenario under
+    // test (server-side failure) isn't masked by the unrelated organization block.
+    await renderCanvas({
+      xml: SIMPLE_XML.replace('<bpmn:process', '<bpmn:process ronl:organization="flevoland"'),
+    });
     await userEvent.click(screen.getByText('Deploy'));
     await screen.findByText('no board auto-detected');
     await userEvent.click(screen.getByRole('button', { name: 'Infra-board' }));
