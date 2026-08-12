@@ -104,7 +104,7 @@ export async function writeDeployedBundleToRepo(params: {
 }): Promise<{ written: boolean; path: string; error?: string }>
 ```
 
-Writes to `examples/<organization>/<definitionKey>/` relative to the repo
+Writes to `deployed/<organization>/<definitionKey>/` relative to the repo
 root, resolved via a new `config.repoRoot` entry in `utils/config.ts`:
 defaults to `path.resolve(__dirname, '../../../../')` from
 `assets.service.ts`'s own location (`packages/backend/src/services/` is
@@ -126,7 +126,7 @@ relative assumption doesn't hold.
   pretty-printing.
 
 This is a **literal mirror of the deployed bundle** — same filenames, same
-content — so `examples/<organization>/<definitionKey>/` always reflects
+content — so `deployed/<organization>/<definitionKey>/` always reflects
 exactly what's live in Operaton as of the last successful deploy, once a
 human commits the resulting working-tree change.
 
