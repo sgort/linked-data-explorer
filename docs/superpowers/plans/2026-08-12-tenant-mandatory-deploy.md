@@ -2,6 +2,23 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Rolled back (2026-08-12):** Tasks 1 and 2 below (`config.repoRoot`,
+> `writeDeployedBundleToRepo`) were implemented, individually task-reviewed
+> as clean, and then reverted after the final whole-branch review found an
+> unauthenticated path-traversal vulnerability — `organization`,
+> `deploymentName`, and every form/document/subprocess filename in the
+> deploy request body flowed unsanitized into a filesystem path, on a
+> route with no authentication in front of it, made worse by
+> `config.repoRoot` resolving to filesystem root under the real Azure
+> deployment layout. See `docs/superpowers/specs/2026-08-12-tenant-mandatory-deploy-design.md`'s
+> rollback note for the full writeup. Tasks 3 and 5, and the
+> organization-mandatory-validation half of Task 4, had no such issue and
+> shipped as written; Task 4's repo-sync call/response field was removed
+> in a follow-up commit after the revert. This document is kept as the
+> historical record of what was designed and built, not a description of
+> current behavior — see the actual commit history
+> (`git log 634dc11..HEAD`) for what's really on the branch.
+
 **Goal:** Make `organization` mandatory (client- and server-validated) when
 deploying a BPMN process from LDE's BPMN Modeler, wire it through to
 Operaton's native `tenant-id` deployment field, and write the exact
