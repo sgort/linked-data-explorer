@@ -644,7 +644,9 @@ export class OperatonService {
     operatonUrl?: string,
     operatonUsername?: string,
     operatonPassword?: string,
-    boardOwner?: string
+    boardOwner?: string,
+    /** Operaton's native tenant-id deployment field. Omitted entirely when unset. */
+    organization?: string
   ): Promise<{ deploymentId: string; resourceCount: number }> {
     try {
       // Stamp the owning board onto the process definition (deploy-time tag).
@@ -676,6 +678,9 @@ export class OperatonService {
       const formData = new FormData();
       formData.append('deployment-name', deploymentName);
       formData.append('enable-duplicate-filtering', 'false');
+      if (organization) {
+        formData.append('tenant-id', organization);
+      }
 
       // Main BPMN
       const mainFilename = `${deploymentName}.bpmn`;
