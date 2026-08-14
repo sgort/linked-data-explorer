@@ -2,6 +2,79 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.08.1",
+      "status": "Released",
+      "date": "14 aug 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "36cba79",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Fix an E2E fixture's BPMN schema error",
+          "details": [
+            "Operaton's BPMN parser rejected TreeFellingPermitSubProcessE2E.bpmn (ENGINE-09005, a businessRuleTask found where an artifact-group element was expected) because the fixture-warning textAnnotation/association pair immediately preceded the file's first businessRuleTask. Every other fixture with the same annotation pattern has a scriptTask in that position instead, which validates fine, so this specific adjacency had never been submitted to Operaton for real parsing before. Fixed by moving the annotation to the end of the process body — after all flow elements, before the closing tag — which is also the more conventional placement for BPMN artifacts."
+          ]
+        },
+        {
+          "sha": "faca7f0",
+          "author": "Steven Gort",
+          "type": "refactor",
+          "subject": "Give e2e-fixtures sub-processes their own Operaton keys",
+          "details": [
+            "TreeFellingPermitSubProcess and ZorgtoeslagProvisionalSubProcess renamed to TreeFellingPermitSubProcessE2E / ZorgtoeslagProvisionalSubProcessE2E (filename, bpmn:process id, and the calling shell's callActivity calledElement). Prevents LDE's own process catalog from conflating the e2e-fixtures copy with the seeded-examples copy of the same sub-process — both previously shared the same bpmn:process id, so importing/redeploying the fixture could silently reuse the example's stale content instead. Shells (AwbShellProcess, AwbZorgtoeslagProcess) and RipR21Process are unaffected."
+          ]
+        },
+        {
+          "sha": "0e273dd",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Resolve shared DMN decisions as untenanted from tenant-scoped business-rule-tasks",
+          "details": [
+            "Confirmed empirically against a live Operaton instance: by default, a business-rule-task's camunda:decisionRef resolves against a decision definition under the exact same tenant-id as the calling process instance, with no fallback to a shared, untenanted decision even when one exists. camunda:decisionRefTenantId can override this, but only as an EL expression evaluating to null (${null}) — a literal empty string is silently ignored. Applied to all 7 business-rule-tasks across the 4 fixture BPMNs that reference genuinely tenant-agnostic, shared regulatory-logic DMN tables, so they keep resolving correctly now that the calling processes themselves carry a real tenant-id."
+          ]
+        },
+        {
+          "sha": "0d6dca7",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Fix a copy-paste processKey bug and nest sub-process fixtures under their shell",
+          "details": [
+            "ZORGTOESLAG_PROVISIONAL_BESCHIKKING's processKey read 'AwbShellProcess' — copy-pasted from the tree-felling document template above it — corrected to 'AwbZorgtoeslagProcess', the process it actually belongs to; the regenerated .document fixture matches the corrected source exactly.",
+            "AwbShellProcess calls TreeFellingPermitSubProcess and AwbZorgtoeslagProcess calls ZorgtoeslagProvisionalSubProcess via a BPMN callActivity, which BpmnModeler.tsx auto-detects and bundles into a single deployment call — the manifest now nests each sub-process's fixture entry under its shell's own subProcesses array instead of listing it as a flat sibling, with a new test asserting each shell's BPMN genuinely contains a calledElement matching its declared nested sub-process keys."
+          ]
+        },
+        {
+          "sha": "aaa369e",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Assemble the e2e-fixtures test bundle",
+          "details": [
+            "A new, dedicated e2e-fixtures/<tenant>/ directory with a manifest.json and an integrity test, replacing two pre-existing, already-diverged 'examples' locations (broad stale reference material, and the general-purpose seeded-example store used by the BPMN Modeler's load-example buttons) as the single source of truth for ronl-business-api's E2E test suite. AwbShellProcess, TreeFellingPermitSubProcess, and AwbZorgtoeslagProcess/ZorgtoeslagProvisionalSubProcess are seeded from the proven-freshest examples copy; RipR21Process is assembled by merging two divergent draft folders (a swimlane redesign missing several of its own form files, filled in from an older, complete draft) and renamed from RipPhase1Process. Also adds the two decision-document fixtures (example_treefelling_beschikking, example_zorgtoeslag_provisional_beschikking) that both seeded BPMNs reference but had no corresponding .document file for anywhere in the repo, converted from their DocumentTemplate source objects."
+          ]
+        },
+        {
+          "sha": "323e3af",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Make organization mandatory when deploying a BPMN process",
+          "details": [
+            "The BPMN Modeler's Deploy action now requires an Organization value before it will submit a deployment, sent to Operaton as its native tenant-id (POST /deployment/create's tenant-id field) — closing the gap where a process could be deployed with no tenant-id at all, invisible to any tenant-scoped lookup an application later needs to make against it."
+          ]
+        },
+        {
+          "sha": "f584383",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Spec: mandatory organization/tenantId at BPMN deploy time",
+          "details": [
+            "Design doc for making organization mandatory at deploy time and sending it to Operaton as native tenant-id, the foundation this release's e2e-fixtures work and ronl-business-api's own tenant-mandatory adoption both build on."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.08.0",
       "status": "Released",
       "date": "6 aug 2026",
