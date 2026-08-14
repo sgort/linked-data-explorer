@@ -1,0 +1,54 @@
+{
+  "flevoland": [
+    {
+      "processDefinitionKey": "AwbShellProcess",
+      "bpmn": "AwbShellProcess.bpmn",
+      "forms": ["kapvergunning-start.form", "awb-notify-applicant.form"],
+      "documents": [],
+      "source": "packages/frontend/public/examples/flevoland/AwbShellProcess.bpmn (seeded, unchanged)"
+    },
+    {
+      "processDefinitionKey": "TreeFellingPermitSubProcess",
+      "bpmn": "TreeFellingPermitSubProcess.bpmn",
+      "forms": ["tree-felling-review.form"],
+      "documents": [],
+      "source": "packages/frontend/public/examples/flevoland/TreeFellingPermitSubProcess.bpmn (seeded, unchanged)"
+    },
+    {
+      "processDefinitionKey": "RipR21Process",
+      "bpmn": "RipR21Process.bpmn",
+      "forms": [
+        "rip-intake.form",
+        "rip-kwaliteit-verbetering.form",
+        "rip-intake-meeting.form",
+        "rip-risk-file.form",
+        "rip-planning.form",
+        "rip-intake-report.form",
+        "rip-psu-organize.form",
+        "rip-pdp-aanvullen.form",
+        "rip-uitvoer-intake.form",
+        "rip-approval.form",
+        "rip-psu-execution.form",
+        "rip-overleg-vo.form"
+      ],
+      "documents": ["rip-intake-report.document", "rip-pdp.document", "rip-psu-report.document"],
+      "source": "merged from examples/organizations/flevoland/rip-phase1-swimlanes/ (BPMN + 5 forms + 3 documents) and examples/organizations/flevoland/rip-phase1/ (7 forms unchanged between drafts); renamed RipPhase1Process -> RipR21Process"
+    }
+  ],
+  "toeslagen": [
+    {
+      "processDefinitionKey": "AwbZorgtoeslagProcess",
+      "bpmn": "AwbZorgtoeslagProcess.bpmn",
+      "forms": ["zorgtoeslag-provisional-start.form", "zorgtoeslag-notify-applicant.form"],
+      "documents": [],
+      "source": "packages/frontend/public/examples/toeslagen/AwbZorgtoeslagProcess.bpmn (seeded, unchanged)"
+    },
+    {
+      "processDefinitionKey": "ZorgtoeslagProvisionalSubProcess",
+      "bpmn": "ZorgtoeslagProvisionalSubProcess.bpmn",
+      "forms": ["zorgtoeslag-provisional-review.form"],
+      "documents": [],
+      "source": "packages/frontend/public/examples/toeslagen/ZorgtoeslagProvisionalSubProcess.bpmn (seeded, unchanged)"
+    }
+  ]
+}
