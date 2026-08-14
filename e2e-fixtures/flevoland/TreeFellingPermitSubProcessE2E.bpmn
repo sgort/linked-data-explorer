@@ -13,7 +13,7 @@
   exporterVersion="5.36.0">
 
   <!--
-    TreeFellingPermitSubProcess
+    TreeFellingPermitSubProcessE2E
     ===========================
     Material law layer for the Tree Felling Permit.
     Called by the AWB Shell Process (AwbShellProcess) via a Call Activity.
@@ -44,7 +44,7 @@
     Legal basis: APV (Local Government By-law) - material law
   -->
 
-  <bpmn:process id="TreeFellingPermitSubProcess" name="Tree Felling Permit - Processing and Decision" isExecutable="true" camunda:historyTimeToLive="180" ronl:dsoActiviteitUrn="nl.imow-gm0995.activiteit.HoutopstandVellen">
+  <bpmn:process id="TreeFellingPermitSubProcessE2E" name="Tree Felling Permit - Processing and Decision" isExecutable="true" camunda:historyTimeToLive="180" ronl:dsoActiviteitUrn="nl.imow-gm0995.activiteit.HoutopstandVellen">
 
     <!-- No form on StartEvent - variables come from AWB parent Call Activity -->
     <bpmn:startEvent id="SubStart" name="Start processing">
@@ -161,7 +161,7 @@
   </bpmn:process>
 
   <bpmndi:BPMNDiagram id="BPMNDiagram_Sub">
-    <bpmndi:BPMNPlane id="BPMNPlane_Sub" bpmnElement="TreeFellingPermitSubProcess">
+    <bpmndi:BPMNPlane id="BPMNPlane_Sub" bpmnElement="TreeFellingPermitSubProcessE2E">
       <bpmndi:BPMNShape id="SubStart_di" bpmnElement="SubStart">
         <dc:Bounds x="152" y="182" width="36" height="36" />
         <bpmndi:BPMNLabel><dc:Bounds x="130" y="225" width="80" height="27" /></bpmndi:BPMNLabel>

@@ -8,11 +8,11 @@
       "source": "packages/frontend/public/examples/flevoland/AwbShellProcess.bpmn (seeded, unchanged)",
       "subProcesses": [
         {
-          "processDefinitionKey": "TreeFellingPermitSubProcess",
-          "bpmn": "TreeFellingPermitSubProcess.bpmn",
+          "processDefinitionKey": "TreeFellingPermitSubProcessE2E",
+          "bpmn": "TreeFellingPermitSubProcessE2E.bpmn",
           "forms": ["tree-felling-review.form"],
           "documents": [],
-          "source": "packages/frontend/public/examples/flevoland/TreeFellingPermitSubProcess.bpmn (seeded, unchanged); called via AwbShellProcess's callActivity calledElement=\"TreeFellingPermitSubProcess\" — deployed together with the shell in one LDE Modeler action, not separately"
+          "source": "based on packages/frontend/public/examples/flevoland/TreeFellingPermitSubProcess.bpmn, renamed to TreeFellingPermitSubProcessE2E (id + filename) to give this fixture its own Operaton key, distinct from the seeded example — LDE's own catalog otherwise conflates the two by shared process id, silently redeploying stale content; called via AwbShellProcess's callActivity calledElement=\"TreeFellingPermitSubProcessE2E\" — deployed together with the shell in one LDE Modeler action, not separately"
         }
       ]
     },
@@ -46,11 +46,11 @@
       "source": "packages/frontend/public/examples/toeslagen/AwbZorgtoeslagProcess.bpmn (seeded, unchanged)",
       "subProcesses": [
         {
-          "processDefinitionKey": "ZorgtoeslagProvisionalSubProcess",
-          "bpmn": "ZorgtoeslagProvisionalSubProcess.bpmn",
+          "processDefinitionKey": "ZorgtoeslagProvisionalSubProcessE2E",
+          "bpmn": "ZorgtoeslagProvisionalSubProcessE2E.bpmn",
           "forms": ["zorgtoeslag-provisional-review.form"],
           "documents": [],
-          "source": "packages/frontend/public/examples/toeslagen/ZorgtoeslagProvisionalSubProcess.bpmn (seeded, unchanged); called via AwbZorgtoeslagProcess's callActivity calledElement=\"ZorgtoeslagProvisionalSubProcess\" — deployed together with the shell in one LDE Modeler action, not separately"
+          "source": "based on packages/frontend/public/examples/toeslagen/ZorgtoeslagProvisionalSubProcess.bpmn, renamed to ZorgtoeslagProvisionalSubProcessE2E (id + filename) to give this fixture its own Operaton key, distinct from the seeded example — LDE's own catalog otherwise conflates the two by shared process id, silently redeploying stale content; called via AwbZorgtoeslagProcess's callActivity calledElement=\"ZorgtoeslagProvisionalSubProcessE2E\" — deployed together with the shell in one LDE Modeler action, not separately"
         }
       ]
     }

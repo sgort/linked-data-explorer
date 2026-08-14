@@ -77,7 +77,7 @@
         execution.setVariable("decisionType", "Refused");
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:callActivity id="Task_Phase45_Process" name="Phase 4+5: Processing and Decision" calledElement="ZorgtoeslagProvisionalSubProcess">
+    <bpmn:callActivity id="Task_Phase45_Process" name="Phase 4+5: Processing and Decision" calledElement="ZorgtoeslagProvisionalSubProcessE2E">
       <bpmn:extensionElements>
         <camunda:in variables="all" />
         <camunda:out variables="all" />

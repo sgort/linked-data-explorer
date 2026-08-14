@@ -78,7 +78,7 @@
         execution.setVariable("replacementInfo", "N/A");
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:callActivity id="Task_Phase45_Process" name="Phase 4+5: Processing and Decision" calledElement="TreeFellingPermitSubProcess">
+    <bpmn:callActivity id="Task_Phase45_Process" name="Phase 4+5: Processing and Decision" calledElement="TreeFellingPermitSubProcessE2E">
       <bpmn:extensionElements>
         <camunda:in variables="all" />
         <camunda:out variables="all" />
