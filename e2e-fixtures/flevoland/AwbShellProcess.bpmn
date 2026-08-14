@@ -4,6 +4,10 @@
     <bpmn:startEvent id="StartEvent_AWB" name="Application submitted" camunda:formRef="kapvergunning-start" camunda:formRefBinding="latest">
       <bpmn:outgoing>Flow_Start_Phase1</bpmn:outgoing>
     </bpmn:startEvent>
+    <bpmn:textAnnotation id="Annotation_E2EFixture">
+      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="StartEvent_AWB" />
     <bpmn:scriptTask id="Task_Phase1_Identity" name="Phase 1: Determine legal relationship (identification)" scriptFormat="javascript">
       <bpmn:incoming>Flow_Start_Phase1</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase1_Phase2</bpmn:outgoing>
@@ -189,6 +193,13 @@
           <dc:Bounds x="151" y="342" width="54" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Annotation_E2EFixture_di" bpmnElement="Annotation_E2EFixture">
+        <dc:Bounds x="100" y="120" width="320" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_E2EFixture_di" bpmnElement="Association_E2EFixture">
+        <di:waypoint x="260" y="220" />
+        <di:waypoint x="178" y="299" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Task_Phase1_Identity_di" bpmnElement="Task_Phase1_Identity">
         <dc:Bounds x="246" y="277" width="160" height="80" />
       </bpmndi:BPMNShape>
