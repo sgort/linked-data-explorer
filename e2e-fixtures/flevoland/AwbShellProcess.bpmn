@@ -46,7 +46,7 @@
         execution.setVariable("phase2Complete", true);
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:businessRuleTask id="Task_Phase3_Completeness" name="Phase 3: Admissibility check (Awb 2:3)" camunda:resultVariable="completenessResult" camunda:decisionRef="AwbCompletenessCheck" camunda:mapDecisionResult="singleResult">
+    <bpmn:businessRuleTask id="Task_Phase3_Completeness" name="Phase 3: Admissibility check (Awb 2:3)" camunda:resultVariable="completenessResult" camunda:decisionRef="AwbCompletenessCheck" camunda:decisionRefTenantId="${null}" camunda:mapDecisionResult="singleResult">
       <bpmn:incoming>Flow_Phase2_Phase3</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase3_Gateway</bpmn:outgoing>
     </bpmn:businessRuleTask>
@@ -117,7 +117,7 @@
         execution.setVariable("chainForwardComplete", true);
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:businessRuleTask id="Task_ArchivesDMN" name="Archiving: retention and destruction period (Archives Act)" camunda:resultVariable="archivingResult" camunda:decisionRef="ArchivesActRetention" camunda:mapDecisionResult="singleResult">
+    <bpmn:businessRuleTask id="Task_ArchivesDMN" name="Archiving: retention and destruction period (Archives Act)" camunda:resultVariable="archivingResult" camunda:decisionRef="ArchivesActRetention" camunda:decisionRefTenantId="${null}" camunda:mapDecisionResult="singleResult">
       <bpmn:incoming>Flow_Chain_No</bpmn:incoming>
       <bpmn:incoming>Flow_ChainTask_Archives</bpmn:incoming>
       <bpmn:outgoing>Flow_ArchivesDMN_Record</bpmn:outgoing>

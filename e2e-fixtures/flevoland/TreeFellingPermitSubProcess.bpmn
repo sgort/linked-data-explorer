@@ -51,13 +51,13 @@
       <bpmn:outgoing>Flow_Sub_Start_Assess</bpmn:outgoing>
     </bpmn:startEvent>
 
-    <bpmn:businessRuleTask id="Sub_AssessPermit" name="Assess tree felling permit (APV)" camunda:resultVariable="permitDecision" camunda:decisionRef="TreeFellingDecision" camunda:mapDecisionResult="singleEntry">
+    <bpmn:businessRuleTask id="Sub_AssessPermit" name="Assess tree felling permit (APV)" camunda:resultVariable="permitDecision" camunda:decisionRef="TreeFellingDecision" camunda:decisionRefTenantId="${null}" camunda:mapDecisionResult="singleEntry">
       <bpmn:incoming>Flow_Sub_Start_Assess</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Assess_Replacement</bpmn:outgoing>
     </bpmn:businessRuleTask>
 
     <!-- Always evaluate replacement requirement so caseworker has full picture -->
-    <bpmn:businessRuleTask id="Sub_AssessReplacement" name="Assess replacement tree requirement" camunda:resultVariable="replacementDecision" camunda:decisionRef="ReplacementTreeDecision" camunda:mapDecisionResult="singleEntry">
+    <bpmn:businessRuleTask id="Sub_AssessReplacement" name="Assess replacement tree requirement" camunda:resultVariable="replacementDecision" camunda:decisionRef="ReplacementTreeDecision" camunda:decisionRefTenantId="${null}" camunda:mapDecisionResult="singleEntry">
       <bpmn:incoming>Flow_Sub_Assess_Replacement</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Replacement_Review</bpmn:outgoing>
     </bpmn:businessRuleTask>
