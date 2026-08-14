@@ -5,14 +5,16 @@
       "bpmn": "AwbShellProcess.bpmn",
       "forms": ["kapvergunning-start.form", "awb-notify-applicant.form"],
       "documents": ["example_treefelling_beschikking.document"],
-      "source": "packages/frontend/public/examples/flevoland/AwbShellProcess.bpmn (seeded, unchanged)"
-    },
-    {
-      "processDefinitionKey": "TreeFellingPermitSubProcess",
-      "bpmn": "TreeFellingPermitSubProcess.bpmn",
-      "forms": ["tree-felling-review.form"],
-      "documents": [],
-      "source": "packages/frontend/public/examples/flevoland/TreeFellingPermitSubProcess.bpmn (seeded, unchanged)"
+      "source": "packages/frontend/public/examples/flevoland/AwbShellProcess.bpmn (seeded, unchanged)",
+      "subProcesses": [
+        {
+          "processDefinitionKey": "TreeFellingPermitSubProcess",
+          "bpmn": "TreeFellingPermitSubProcess.bpmn",
+          "forms": ["tree-felling-review.form"],
+          "documents": [],
+          "source": "packages/frontend/public/examples/flevoland/TreeFellingPermitSubProcess.bpmn (seeded, unchanged); called via AwbShellProcess's callActivity calledElement=\"TreeFellingPermitSubProcess\" — deployed together with the shell in one LDE Modeler action, not separately"
+        }
+      ]
     },
     {
       "processDefinitionKey": "RipR21Process",
@@ -41,14 +43,16 @@
       "bpmn": "AwbZorgtoeslagProcess.bpmn",
       "forms": ["zorgtoeslag-provisional-start.form", "zorgtoeslag-notify-applicant.form"],
       "documents": ["example_zorgtoeslag_provisional_beschikking.document"],
-      "source": "packages/frontend/public/examples/toeslagen/AwbZorgtoeslagProcess.bpmn (seeded, unchanged)"
-    },
-    {
-      "processDefinitionKey": "ZorgtoeslagProvisionalSubProcess",
-      "bpmn": "ZorgtoeslagProvisionalSubProcess.bpmn",
-      "forms": ["zorgtoeslag-provisional-review.form"],
-      "documents": [],
-      "source": "packages/frontend/public/examples/toeslagen/ZorgtoeslagProvisionalSubProcess.bpmn (seeded, unchanged)"
+      "source": "packages/frontend/public/examples/toeslagen/AwbZorgtoeslagProcess.bpmn (seeded, unchanged)",
+      "subProcesses": [
+        {
+          "processDefinitionKey": "ZorgtoeslagProvisionalSubProcess",
+          "bpmn": "ZorgtoeslagProvisionalSubProcess.bpmn",
+          "forms": ["zorgtoeslag-provisional-review.form"],
+          "documents": [],
+          "source": "packages/frontend/public/examples/toeslagen/ZorgtoeslagProvisionalSubProcess.bpmn (seeded, unchanged); called via AwbZorgtoeslagProcess's callActivity calledElement=\"ZorgtoeslagProvisionalSubProcess\" — deployed together with the shell in one LDE Modeler action, not separately"
+        }
+      ]
     }
   ]
 }
