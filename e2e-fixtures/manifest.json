@@ -4,7 +4,7 @@
       "processDefinitionKey": "AwbShellProcess",
       "bpmn": "AwbShellProcess.bpmn",
       "forms": ["kapvergunning-start.form", "awb-notify-applicant.form"],
-      "documents": [],
+      "documents": ["example_treefelling_beschikking.document"],
       "source": "packages/frontend/public/examples/flevoland/AwbShellProcess.bpmn (seeded, unchanged)"
     },
     {
@@ -40,7 +40,7 @@
       "processDefinitionKey": "AwbZorgtoeslagProcess",
       "bpmn": "AwbZorgtoeslagProcess.bpmn",
       "forms": ["zorgtoeslag-provisional-start.form", "zorgtoeslag-notify-applicant.form"],
-      "documents": [],
+      "documents": ["example_zorgtoeslag_provisional_beschikking.document"],
       "source": "packages/frontend/public/examples/toeslagen/AwbZorgtoeslagProcess.bpmn (seeded, unchanged)"
     },
     {
