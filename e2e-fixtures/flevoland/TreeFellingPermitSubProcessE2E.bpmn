@@ -50,10 +50,6 @@
     <bpmn:startEvent id="SubStart" name="Start processing">
       <bpmn:outgoing>Flow_Sub_Start_Assess</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:textAnnotation id="Annotation_E2EFixture">
-      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
-    </bpmn:textAnnotation>
-    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="SubStart" />
 
     <bpmn:businessRuleTask id="Sub_AssessPermit" name="Assess tree felling permit (APV)" camunda:resultVariable="permitDecision" camunda:decisionRef="TreeFellingDecision" camunda:decisionRefTenantId="${null}" camunda:mapDecisionResult="singleEntry">
       <bpmn:incoming>Flow_Sub_Start_Assess</bpmn:incoming>
@@ -157,6 +153,11 @@
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Sub_Granted_End"  sourceRef="Sub_SetGranted"  targetRef="SubEnd" />
     <bpmn:sequenceFlow id="Flow_Sub_Rejected_End" sourceRef="Sub_SetRejected" targetRef="SubEnd" />
+
+    <bpmn:textAnnotation id="Annotation_E2EFixture">
+      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="SubStart" />
 
   </bpmn:process>
 
