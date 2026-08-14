@@ -2,7 +2,7 @@
   "id": "example_zorgtoeslag_provisional_beschikking",
   "name": "Zorgtoeslag Voorlopige Beschikking (Example)",
   "description": "Formele beschikking Awb voor de voorlopige zorgtoeslag — ZorgtoeslagProvisionalSubProcess",
-  "processKey": "AwbShellProcess",
+  "processKey": "AwbZorgtoeslagProcess",
   "serviceId": "ZorgtoeslagProvisional",
   "schemaVersion": 1,
   "readonly": false,

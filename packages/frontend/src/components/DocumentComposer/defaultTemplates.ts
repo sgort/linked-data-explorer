@@ -293,7 +293,7 @@ export const ZORGTOESLAG_PROVISIONAL_BESCHIKKING: DocumentTemplate = {
   name: 'Zorgtoeslag Voorlopige Beschikking (Example)',
   description:
     'Formele beschikking Awb voor de voorlopige zorgtoeslag — ZorgtoeslagProvisionalSubProcess',
-  processKey: 'AwbShellProcess',
+  processKey: 'AwbZorgtoeslagProcess',
   serviceId: 'ZorgtoeslagProvisional',
   schemaVersion: 1,
   readonly: false,
