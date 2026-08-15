@@ -402,103 +402,230 @@ describe('layer 3 — execution rules (CPRMV)', () => {
 });
 
 /**
- * DEFECT — every rule below is currently inert.
- *
- * cprmvAttr() tries `el.attr({ name, ns: CPRMV_NS })` first. In libxmljs2 0.37
- * that object form does NOT perform a namespaced lookup: it *sets* attributes
- * literally named "name" and "ns" on the element, and returns a value with no
- * .value() method — so the call throws. The function's own try/catch swallows
- * that throw and returns null, which means the attrs() fallback underneath it
- * (which does work) is never reached.
- *
- * Consequences: EXEC-002…EXEC-010 and CON-001…CON-003 never fire, and every
- * inspected element is silently mutated with two junk attributes.
- *
- * Fix: drop the object-form attempt and keep only the attrs() scan.
- *
- * These tests pin the behaviour as it stands today so the suite is honest.
- * They are written to FAIL the moment the defect is fixed — that failure is
- * the signal to invert each assertion to the code named in its title.
+ * These all depend on cprmvAttr() resolving a CPRMV-namespaced attribute.
+ * They are grouped together because they shared a single root cause: an
+ * `el.attr({ name, ns })` fast path that libxmljs2 0.37 does not implement as a
+ * namespaced lookup, which left every rule below permanently inert. Keep them
+ * together so a regression in that helper shows up as one obvious cluster
+ * rather than a dozen scattered failures.
  */
-describe('CPRMV attribute rules — inert until cprmvAttr is fixed', () => {
-  test.each([
-    [
-      'EXEC-002',
-      'an invalid cprmv:rulesetType',
-      decision({ attrs: ' cprmv:rulesetType="lookup-table"' }),
-    ],
-    [
-      'EXEC-003',
-      'a non-BWB cprmv:implements',
-      decision({ attrs: ' cprmv:implements="Participatiewet"' }),
-    ],
-    [
-      'EXEC-004',
-      'an invalid cprmv:ruleType',
-      decision({
-        table: `<decisionTable id="dt_1"><rule id="r1" cprmv:ruleType="guesswork" /></decisionTable>`,
-      }),
-    ],
-    [
-      'EXEC-005',
-      'an invalid cprmv:confidence',
-      decision({
-        table: `<decisionTable id="dt_1"><rule id="r1" cprmv:confidence="certain" /></decisionTable>`,
-      }),
-    ],
-    [
-      'EXEC-006',
-      'a malformed cprmv:validFrom',
-      decision({
-        table: `<decisionTable id="dt_1"><rule id="r1" cprmv:validFrom="01-01-2026" /></decisionTable>`,
-      }),
-    ],
-    [
-      'EXEC-007',
-      'a malformed cprmv:validUntil',
-      decision({
-        table: `<decisionTable id="dt_1"><rule id="r1" cprmv:validUntil="2026/01/01" /></decisionTable>`,
-      }),
-    ],
-    [
-      'EXEC-008',
-      'a backwards validity window',
-      decision({
-        table: `<decisionTable id="dt_1"><rule id="r1" cprmv:validFrom="2026-06-01" cprmv:validUntil="2026-01-01" /></decisionTable>`,
-      }),
-    ],
-    [
-      'EXEC-009',
-      'a temporal-period rule with no validFrom',
-      decision({
-        table: `<decisionTable id="dt_1"><rule id="r1" cprmv:ruleType="temporal-period" /></decisionTable>`,
-      }),
-    ],
-  ])('%s does not fire for %s', async (code, _label, body) => {
-    expect(await codes(doc(body), 'execution')).not.toContain(code);
+describe('CPRMV attribute rules', () => {
+  describe('decision-level (layer 3)', () => {
+    test('rejects an unknown cprmv:rulesetType', async () => {
+      const xml = doc(decision({ attrs: ' cprmv:rulesetType="lookup-table"' }));
+
+      expect(await codes(xml, 'execution')).toContain('EXEC-002');
+    });
+
+    test.each([
+      'decision-table',
+      'conditional-calculation',
+      'constraint-table',
+      'derivation-table',
+    ])('accepts the %s ruleset type', async (type) => {
+      const xml = doc(decision({ attrs: ` cprmv:rulesetType="${type}"` }));
+
+      expect(await codes(xml, 'execution')).not.toContain('EXEC-002');
+    });
+
+    test('warns when cprmv:implements is not a BWB id', async () => {
+      const xml = doc(decision({ attrs: ' cprmv:implements="Participatiewet"' }));
+
+      expect(await codes(xml, 'execution')).toContain('EXEC-003');
+    });
+
+    test('accepts a well-formed BWB id', async () => {
+      const xml = doc(decision({ attrs: ' cprmv:implements="BWBR0015703"' }));
+
+      expect(await codes(xml, 'execution')).not.toContain('EXEC-003');
+    });
   });
 
-  test('CON-001 does not fire for an empty cprmv:title', async () => {
-    expect(await codes(doc(decision({ attrs: ' cprmv:title=""' })), 'content')).not.toContain(
-      'CON-001'
-    );
+  describe('rule-level (layer 3)', () => {
+    /** A decision whose single rule carries the given cprmv attributes. */
+    const ruleWith = (attrs: string) =>
+      doc(
+        decision({
+          table: `<decisionTable id="dt_1"><rule id="r1"${attrs} /></decisionTable>`,
+        })
+      );
+
+    test('rejects an unknown cprmv:ruleType', async () => {
+      expect(await codes(ruleWith(' cprmv:ruleType="guesswork"'), 'execution')).toContain(
+        'EXEC-004'
+      );
+    });
+
+    test.each([
+      'temporal-period',
+      'conditional',
+      'derivation',
+      'constraint',
+      'decision-rule',
+      'default',
+    ])('accepts the %s rule type', async (type) => {
+      const issues = await codes(
+        ruleWith(
+          ` cprmv:ruleType="${type}" cprmv:validFrom="2026-01-01" cprmv:validUntil="2026-06-01"`
+        ),
+        'execution'
+      );
+
+      expect(issues).not.toContain('EXEC-004');
+    });
+
+    test('rejects an unknown cprmv:confidence', async () => {
+      expect(await codes(ruleWith(' cprmv:confidence="certain"'), 'execution')).toContain(
+        'EXEC-005'
+      );
+    });
+
+    test.each(['low', 'medium', 'high'])('accepts a %s confidence', async (conf) => {
+      expect(await codes(ruleWith(` cprmv:confidence="${conf}"`), 'execution')).not.toContain(
+        'EXEC-005'
+      );
+    });
+
+    test('rejects a malformed cprmv:validFrom', async () => {
+      expect(await codes(ruleWith(' cprmv:validFrom="01-01-2026"'), 'execution')).toContain(
+        'EXEC-006'
+      );
+    });
+
+    test('rejects an impossible date that still looks ISO-shaped', async () => {
+      expect(await codes(ruleWith(' cprmv:validFrom="2026-13-01"'), 'execution')).toContain(
+        'EXEC-006'
+      );
+    });
+
+    test('rejects a malformed cprmv:validUntil', async () => {
+      expect(await codes(ruleWith(' cprmv:validUntil="2026/01/01"'), 'execution')).toContain(
+        'EXEC-007'
+      );
+    });
+
+    test('rejects a validity window that does not move forward in time', async () => {
+      const issues = await codes(
+        ruleWith(' cprmv:validFrom="2026-06-01" cprmv:validUntil="2026-01-01"'),
+        'execution'
+      );
+
+      expect(issues).toContain('EXEC-008');
+    });
+
+    test('rejects a validity window whose ends are equal', async () => {
+      const issues = await codes(
+        ruleWith(' cprmv:validFrom="2026-01-01" cprmv:validUntil="2026-01-01"'),
+        'execution'
+      );
+
+      expect(issues).toContain('EXEC-008');
+    });
+
+    test('accepts a validity window in the right order', async () => {
+      const issues = await codes(
+        ruleWith(' cprmv:validFrom="2026-01-01" cprmv:validUntil="2026-06-01"'),
+        'execution'
+      );
+
+      expect(issues).not.toContain('EXEC-008');
+    });
+
+    test('warns when a temporal-period rule omits its validity dates', async () => {
+      const issues = await codes(ruleWith(' cprmv:ruleType="temporal-period"'), 'execution');
+
+      expect(issues).toContain('EXEC-009');
+      expect(issues).toContain('EXEC-010');
+    });
+
+    test('warns about only the missing end of a half-dated temporal-period rule', async () => {
+      const issues = await codes(
+        ruleWith(' cprmv:ruleType="temporal-period" cprmv:validFrom="2026-01-01"'),
+        'execution'
+      );
+
+      expect(issues).not.toContain('EXEC-009');
+      expect(issues).toContain('EXEC-010');
+    });
   });
 
-  test('CON-002 does not fire for an empty cprmv:description on inputData', async () => {
-    const inputData = `  <inputData id="InputData_1" name="bsn" cprmv:description="">
+  describe('content quality (layer 5)', () => {
+    test('warns about an empty cprmv:title on a decision', async () => {
+      const xml = doc(decision({ attrs: ' cprmv:title=""' }));
+
+      expect(await codes(xml, 'content')).toContain('CON-001');
+    });
+
+    test('warns about a whitespace-only cprmv:description on a decision', async () => {
+      const xml = doc(decision({ attrs: ' cprmv:description="   "' }));
+
+      expect(await codes(xml, 'content')).toContain('CON-001');
+    });
+
+    test('accepts a populated cprmv:title', async () => {
+      const xml = doc(decision({ attrs: ' cprmv:title="Zorgtoeslag"' }));
+
+      expect(await codes(xml, 'content')).not.toContain('CON-001');
+    });
+
+    test('warns about an empty cprmv:description on inputData', async () => {
+      const inputData = `  <inputData id="InputData_1" name="bsn" cprmv:description="">
     <variable id="v" name="bsn" typeRef="string" />
   </inputData>`;
-    const xml = doc(`${inputData}\n${decision({ requirements: IR_INPUT })}`);
+      const xml = doc(`${inputData}\n${decision({ requirements: IR_INPUT })}`);
 
-    expect(await codes(xml, 'content')).not.toContain('CON-002');
+      expect(await codes(xml, 'content')).toContain('CON-002');
+    });
+
+    test('accepts a populated cprmv:description on inputData', async () => {
+      const inputData = `  <inputData id="InputData_1" name="bsn" cprmv:description="Het BSN">
+    <variable id="v" name="bsn" typeRef="string" />
+  </inputData>`;
+      const xml = doc(`${inputData}\n${decision({ requirements: IR_INPUT })}`);
+
+      expect(await codes(xml, 'content')).not.toContain('CON-002');
+    });
+
+    test('notes an empty cprmv:note on a rule', async () => {
+      const xml = doc(
+        decision({
+          table: `<decisionTable id="dt_1"><rule id="r1" cprmv:note="" /></decisionTable>`,
+        })
+      );
+
+      expect(await codes(xml, 'content')).toContain('CON-003');
+    });
+
+    test('accepts a populated cprmv:note', async () => {
+      const xml = doc(
+        decision({
+          table: `<decisionTable id="dt_1"><rule id="r1" cprmv:note="Toelichting" /></decisionTable>`,
+        })
+      );
+
+      expect(await codes(xml, 'content')).not.toContain('CON-003');
+    });
   });
 
-  test('CON-003 does not fire for an empty cprmv:note on a rule', async () => {
+  test('an attribute in another namespace is not mistaken for a CPRMV one', async () => {
     const xml = doc(
-      decision({ table: `<decisionTable id="dt_1"><rule id="r1" cprmv:note="" /></decisionTable>` })
+      decision({ attrs: ' xmlns:other="https://other.example/" other:rulesetType="lookup-table"' })
     );
 
-    expect(await codes(xml, 'content')).not.toContain('CON-003');
+    expect(await codes(xml, 'execution')).not.toContain('EXEC-002');
+  });
+
+  test('reading a CPRMV attribute does not mutate the element', async () => {
+    // The old el.attr({ name, ns }) path silently added attributes literally
+    // called "name" and "ns" to every element it inspected.
+    const xml = doc(decision({ attrs: ' cprmv:rulesetType="decision-table"' }));
+
+    const result = await validateDmnContent(xml);
+
+    const locations = Object.values(result.layers).flatMap((l) =>
+      l.issues.map((i) => i.location ?? '')
+    );
+    expect(locations.join(' ')).not.toContain('name="rulesetType"');
   });
 });
 
