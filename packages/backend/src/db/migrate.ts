@@ -37,7 +37,17 @@ export async function migrate(): Promise<void> {
       ADD COLUMN IF NOT EXISTS deployed_documents     TEXT[] NOT NULL DEFAULT '{}',
       ADD COLUMN IF NOT EXISTS language               VARCHAR(2),
       ADD COLUMN IF NOT EXISTS organization           VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS board_owner            VARCHAR(50);
+      ADD COLUMN IF NOT EXISTS board_owner            VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS shell_id               VARCHAR(255);
+
+      -- Widen the status CHECK to allow 'e2e' (e2e-fixtures imports). Drop
+      -- and recreate rather than a bare ADD, so this block stays safe to
+      -- run repeatedly.
+      ALTER TABLE process_definitions
+        DROP CONSTRAINT IF EXISTS process_definitions_status_check;
+      ALTER TABLE process_definitions
+        ADD CONSTRAINT process_definitions_status_check
+        CHECK (status IN ('example', 'wip', 'e2e'));
 
       CREATE INDEX IF NOT EXISTS idx_pd_bpmn_process_id
         ON process_definitions (bpmn_process_id);

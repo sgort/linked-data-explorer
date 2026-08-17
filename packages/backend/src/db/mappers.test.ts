@@ -13,6 +13,7 @@ function bpmnRow(overrides: Partial<BpmnRow> = {}): BpmnRow {
     xml: '<bpmn/>',
     process_role: 'shell',
     called_element: 'ZorgtoeslagSub',
+    shell_id: null,
     linked_dmn_templates: ['dmn-a'],
     status: 'example',
     readonly: true,
@@ -97,6 +98,7 @@ describe('mapBpmn', () => {
       xml: '<bpmn/>',
       processRole: 'shell',
       calledElement: 'ZorgtoeslagSub',
+      shellId: undefined,
       linkedDmnTemplates: ['dmn-a'],
       status: 'example',
       readonly: true,
@@ -113,6 +115,7 @@ describe('mapBpmn', () => {
       bpmnRow({
         description: null,
         called_element: null,
+        shell_id: null,
         language: null,
         organization: null,
       })
@@ -120,8 +123,14 @@ describe('mapBpmn', () => {
 
     expect(mapped.description).toBeUndefined();
     expect(mapped.calledElement).toBeUndefined();
+    expect(mapped.shellId).toBeUndefined();
     expect(mapped.language).toBeUndefined();
     expect(mapped.organization).toBeUndefined();
+  });
+
+  test('maps a non-null shell_id through to shellId', () => {
+    const mapped = mapBpmn(bpmnRow({ shell_id: 'shell1' }));
+    expect(mapped.shellId).toBe('shell1');
   });
 
   test('defaults a null linked_dmn_templates array to empty, so callers can map over it', () => {
