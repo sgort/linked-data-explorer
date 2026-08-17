@@ -14,7 +14,7 @@ const CONFIG: Record<ArtefactStatus, { label: string; className: string }> = {
   example: { label: 'EXAMPLE', className: 'bg-blue-100 text-blue-700' },
   wip: { label: 'WIP', className: 'bg-amber-100 text-amber-700' },
   dso: { label: 'DSO', className: 'bg-green-100 text-green-700' },
-  e2e: { label: 'E2E', className: 'bg-indigo-100 text-indigo-700' },
+  e2e: { label: 'E2E', className: 'bg-orange-100 text-orange-700' },
 };
 
 /** Small pill badge for an artefact's status. Shared by ProcessList, FormList, DocumentList. */
