@@ -101,6 +101,7 @@ describe('ProcessList', () => {
           process({ id: 'p2', name: 'Wip', status: 'wip' }),
           process({ id: 'p3', name: 'Shell', processRole: 'shell' }),
           process({ id: 'p4', name: 'Sub', processRole: 'subprocess' }),
+          process({ id: 'p5', name: 'E2E fixture', status: 'e2e' }),
         ]}
       />
     );
@@ -108,6 +109,53 @@ describe('ProcessList', () => {
     expect(screen.getByText('WIP')).toBeTruthy();
     expect(screen.getByText('SHELL')).toBeTruthy();
     expect(screen.getByText('SUB')).toBeTruthy();
+    expect(screen.getByText('E2E')).toBeTruthy();
+  });
+
+  test('does not duplicate a subprocess under a shell it is not linked to, even when both shells share a bpmnProcessId', () => {
+    // Mirrors an e2e-fixtures shell sharing its bpmnProcessId with the seeded
+    // example shell it was copied from (same production Operaton key, by design).
+    render(
+      <ProcessList
+        {...baseProps}
+        processes={[
+          process({
+            id: 'seeded-shell',
+            name: 'Seeded Shell (Example)',
+            processRole: 'shell',
+            bpmnProcessId: 'AwbShellProcess',
+            organization: 'flevoland',
+          }),
+          process({
+            id: 'seeded-sub',
+            name: 'Seeded Sub (Example)',
+            processRole: 'subprocess',
+            calledElement: 'AwbShellProcess',
+            shellId: 'seeded-shell',
+            organization: 'flevoland',
+          }),
+          process({
+            id: 'e2e-shell',
+            name: 'E2E Shell',
+            processRole: 'shell',
+            bpmnProcessId: 'AwbShellProcess',
+            organization: 'flevoland',
+          }),
+          process({
+            id: 'e2e-sub',
+            name: 'E2E Sub',
+            processRole: 'subprocess',
+            calledElement: 'AwbShellProcess',
+            shellId: 'e2e-shell',
+            organization: 'flevoland',
+          }),
+        ]}
+      />
+    );
+
+    // Each sub-process card renders exactly once, not once per shell.
+    expect(screen.getAllByText('Seeded Sub (Example)')).toHaveLength(1);
+    expect(screen.getAllByText('E2E Sub')).toHaveLength(1);
   });
 
   test('the toolbar search filters the visible processes', async () => {
