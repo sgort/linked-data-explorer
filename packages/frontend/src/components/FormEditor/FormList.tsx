@@ -8,6 +8,7 @@ import ArtefactListToolbar, {
 } from '../common/ArtefactListToolbar';
 import LanguageSelector, { LanguageCode } from '../common/LanguageSelector';
 import OrganizationSelector from '../common/OrganizationSelector';
+import StatusBadge from '../common/StatusBadge';
 
 /** Organization key used when a form has no `organization` set. */
 const UNGROUPED = '__ungrouped__';
@@ -24,7 +25,8 @@ interface FormListProps {
     schema: Record<string, unknown>,
     name: string,
     inferredLanguage?: string,
-    inferredOrganization?: string
+    inferredOrganization?: string,
+    isE2EFixture?: boolean
   ) => void;
   onLoadForm: (formId: string) => void;
   onDeleteForm: (formId: string) => void;
@@ -108,8 +110,10 @@ const FormList: React.FC<FormListProps> = ({
           const parsed = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
           // Strip LDE wrapper keys before handing the schema to form-js — they
           // aren't part of the form-js spec. They flow back via the inferred
-          // language / organization params.
-          const { language: jsonLang, organization: jsonOrg, ...schema } = parsed;
+          // language / organization / e2e-fixture params. e2eFixture is a
+          // marker baked into e2e-fixtures/**/*.form files (see manifest.json) —
+          // self-describing, so no manifest lookup is needed at import time.
+          const { language: jsonLang, organization: jsonOrg, e2eFixture, ...schema } = parsed;
 
           const baseName = file.name.replace(/\.form$/i, '');
           const langMatch = baseName.match(/\.(en|nl|de)$/i);
@@ -123,7 +127,8 @@ const FormList: React.FC<FormListProps> = ({
             schema as Record<string, unknown>,
             name,
             inferredLanguage,
-            jsonOrg as string | undefined
+            jsonOrg as string | undefined,
+            e2eFixture === true
           );
         } catch {
           alert(`Invalid .form file — could not parse JSON: ${file.name}`);
@@ -176,21 +181,7 @@ const FormList: React.FC<FormListProps> = ({
           <div className="flex-1" onDoubleClick={() => handleStartEdit(form)}>
             <div className="flex items-center gap-2">
               <h3 className="font-medium text-slate-800 text-sm">{form.name}</h3>
-              {form.status === 'example' && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
-                  EXAMPLE
-                </span>
-              )}
-              {form.status === 'wip' && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
-                  WIP
-                </span>
-              )}
-              {form.status === 'dso' && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">
-                  DSO
-                </span>
-              )}
+              <StatusBadge status={form.status} />
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {new Date(form.updatedAt).toLocaleDateString()}

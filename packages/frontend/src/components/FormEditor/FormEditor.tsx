@@ -265,7 +265,8 @@ const FormEditor: React.FC = () => {
     schema: Record<string, unknown>,
     name: string,
     inferredLanguage?: string,
-    inferredOrganization?: string
+    inferredOrganization?: string,
+    isE2EFixture?: boolean
   ) => {
     const newForm: FormSchema = {
       id: `form_${Date.now()}`,
@@ -273,7 +274,7 @@ const FormEditor: React.FC = () => {
       schema,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      status: 'wip',
+      status: isE2EFixture ? 'e2e' : 'wip',
       language: inferredLanguage as FormSchema['language'] | undefined,
       organization: inferredOrganization,
     };

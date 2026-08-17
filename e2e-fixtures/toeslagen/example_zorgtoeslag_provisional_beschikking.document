@@ -6,7 +6,7 @@
   "serviceId": "ZorgtoeslagProvisional",
   "schemaVersion": 1,
   "readonly": false,
-  "status": "example",
+  "status": "e2e",
   "language": "en",
   "organization": "toeslagen",
   "createdAt": "2026-03-17T00:00:00.000Z",

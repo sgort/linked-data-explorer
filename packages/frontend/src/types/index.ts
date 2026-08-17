@@ -191,10 +191,20 @@ export interface BpmnProcess {
   updatedAt: string;
   linkedDmnTemplates: string[];
   readonly?: boolean;
-  status?: 'example' | 'wip';
+  status?: 'example' | 'wip' | 'e2e';
   bpmnProcessId?: string;
   processRole?: 'shell' | 'subprocess' | 'standalone';
   calledElement?: string;
+  /**
+   * Local record id of the specific shell this subprocess belongs to. Set
+   * alongside `calledElement` so shell/sub matching isn't ambiguous when two
+   * shell records share the same `bpmnProcessId` (e.g. an e2e-fixtures copy
+   * of a seeded example, which intentionally keeps the same production
+   * Operaton key). Prefer this over `calledElement`/`bpmnProcessId` matching
+   * wherever both are available; fall back to the old string match for
+   * records saved before this field existed.
+   */
+  shellId?: string;
   language?: 'en' | 'nl' | 'de';
   organization?: string;
 }
@@ -266,7 +276,7 @@ export interface FormSchema {
   createdAt: string;
   updatedAt: string;
   readonly?: boolean;
-  status?: 'example' | 'wip' | 'dso';
+  status?: 'example' | 'wip' | 'dso' | 'e2e';
   language?: 'en' | 'nl' | 'de';
   organization?: string;
 }

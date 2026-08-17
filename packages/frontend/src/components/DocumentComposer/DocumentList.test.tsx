@@ -64,18 +64,20 @@ describe('DocumentList', () => {
     expect(screen.getByText('Ungrouped')).toBeTruthy();
   });
 
-  test('a status badge is shown for example/wip templates', () => {
+  test('a status badge is shown for example/wip/e2e templates', () => {
     render(
       <DocumentList
         {...baseProps}
         templates={[
           template({ id: 't1', name: 'Example doc', status: 'example' }),
           template({ id: 't2', name: 'Draft doc', status: 'wip' }),
+          template({ id: 't3', name: 'E2E doc', status: 'e2e' }),
         ]}
       />
     );
     expect(screen.getByText('EXAMPLE')).toBeTruthy();
     expect(screen.getByText('DRAFT')).toBeTruthy();
+    expect(screen.getByText('E2E')).toBeTruthy();
   });
 
   test('clicking a card calls onLoadTemplate with its id', async () => {
@@ -160,6 +162,44 @@ describe('DocumentList', () => {
     await vi.waitFor(() =>
       expect(onImportTemplate).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'imported', language: 'nl', status: 'wip' })
+      )
+    );
+  });
+
+  test('importing a .document file declaring status "e2e" preserves it, unlike other statuses', async () => {
+    const onImportTemplate = vi.fn();
+    render(<DocumentList {...baseProps} templates={[]} onImportTemplate={onImportTemplate} />);
+
+    const file = new File(
+      [JSON.stringify(template({ id: 'e2e-doc', status: 'e2e' }))],
+      'example_treefelling_beschikking.document',
+      { type: 'application/json' }
+    );
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, file);
+
+    await vi.waitFor(() =>
+      expect(onImportTemplate).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'e2e-doc', status: 'e2e' })
+      )
+    );
+  });
+
+  test('importing a .document file declaring an untrusted status (e.g. "example") falls back to "wip"', async () => {
+    const onImportTemplate = vi.fn();
+    render(<DocumentList {...baseProps} templates={[]} onImportTemplate={onImportTemplate} />);
+
+    const file = new File(
+      [JSON.stringify(template({ id: 'stray-example', status: 'example' }))],
+      'stray.document',
+      { type: 'application/json' }
+    );
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, file);
+
+    await vi.waitFor(() =>
+      expect(onImportTemplate).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'stray-example', status: 'wip' })
       )
     );
   });
