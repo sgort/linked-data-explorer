@@ -8,6 +8,7 @@ import ArtefactListToolbar, {
 } from '../common/ArtefactListToolbar';
 import LanguageSelector, { LanguageCode } from '../common/LanguageSelector';
 import OrganizationSelector from '../common/OrganizationSelector';
+import StatusBadge from '../common/StatusBadge';
 
 /** Organization key used when a document has no `organization` set. */
 const UNGROUPED = '__ungrouped__';
@@ -109,13 +110,17 @@ const DocumentList: React.FC<DocumentListProps> = ({
             | DocumentTemplate['language']
             | undefined;
 
+          // e2e-fixtures .document files declare status: "e2e" directly (see
+          // manifest.json) — trust only that exact sentinel; any other
+          // declared status (e.g. a stray 'example') is not trusted and
+          // falls back to 'wip', same as before this file had a marker.
           onImportTemplate({
             ...template,
             language: template.language ?? inferredLanguage,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             readonly: false,
-            status: 'wip',
+            status: template.status === 'e2e' ? 'e2e' : 'wip',
           });
         } catch {
           alert(`Invalid .document file — could not parse JSON: ${file.name}`);
@@ -171,16 +176,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
           <div className="flex-1 min-w-0" onDoubleClick={() => handleStartEdit(template)}>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-medium text-slate-800 text-sm truncate">{template.name}</span>
-              {template.status === 'example' && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium flex-shrink-0">
-                  EXAMPLE
-                </span>
-              )}
-              {template.status === 'wip' && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex-shrink-0">
-                  DRAFT
-                </span>
-              )}
+              <StatusBadge status={template.status} wipLabel="DRAFT" size="xs" />
             </div>
             {template.processKey && (
               <p className="text-[10px] text-slate-400 mt-0.5 truncate">{template.processKey}</p>

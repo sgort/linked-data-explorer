@@ -86,6 +86,16 @@ vi.mock('./ProcessList', () => ({
       >
         import-process
       </button>
+      <button
+        onClick={() =>
+          onImportProcess(
+            '<bpmn:definitions><bpmn:process id="E2EImportedProc"><bpmn:textAnnotation id="Annotation_E2EFixture"><bpmn:text>fixture warning</bpmn:text></bpmn:textAnnotation></bpmn:process></bpmn:definitions>',
+            'Imported E2E process'
+          )
+        }
+      >
+        import-e2e-process
+      </button>
       {processes.map((p) => (
         <button key={p.id} onClick={() => onLoadProcess(p.id)}>
           load-{p.id}
@@ -229,7 +239,55 @@ describe('BpmnModeler — create / import / load / save / delete', () => {
         name: 'Imported process',
         bpmnProcessId: 'ImportedProc',
         language: 'nl',
+        status: 'wip',
       })
+    );
+  });
+
+  test('importing a process carrying the e2e-fixtures textAnnotation marker saves it with status "e2e"', async () => {
+    getProcesses.mockReturnValue([]);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([]);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('import-e2e-process'));
+
+    expect(saveProcess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Imported E2E process',
+        bpmnProcessId: 'E2EImportedProc',
+        status: 'e2e',
+      })
+    );
+  });
+
+  test('reclassifying standalone processes on hydrate sets shellId on the promoted subprocess, not just calledElement', async () => {
+    const shell = process({
+      id: 'shell1',
+      processRole: 'standalone',
+      bpmnProcessId: 'ShellProc',
+      xml: '<bpmn:definitions><bpmn:process id="ShellProc"><bpmn:callActivity calledElement="SubProc"/></bpmn:process></bpmn:definitions>',
+    });
+    const sub = process({
+      id: 'sub1',
+      processRole: 'standalone',
+      bpmnProcessId: 'SubProc',
+      xml: '<bpmn:definitions><bpmn:process id="SubProc"/></bpmn:definitions>',
+    });
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([shell, sub]);
+    getProcesses.mockReturnValue([shell, sub]);
+    render(<BpmnModeler endpoint="e" />);
+
+    await vi.waitFor(() =>
+      expect(saveProcess).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'sub1',
+          processRole: 'subprocess',
+          calledElement: 'ShellProc',
+          shellId: 'shell1',
+        })
+      )
     );
   });
 
@@ -319,6 +377,45 @@ describe('BpmnModeler — create / import / load / save / delete', () => {
     expect(saveProcess).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'sub1', organization: 'flevoland' })
     );
+  });
+
+  test('saving a shell process does not propagate to a subprocess of an unrelated shell that shares the same bpmnProcessId', async () => {
+    // Mirrors an e2e-fixtures shell sharing its bpmnProcessId with the seeded
+    // example shell it was copied from (same production Operaton key, by design).
+    const savingShell = process({
+      id: 'e2e-shell',
+      processRole: 'shell',
+      bpmnProcessId: 'AwbShellProcess',
+      xml: '<bpmn:definitions><bpmn:process id="AwbShellProcess"/></bpmn:definitions>',
+    });
+    const ownSub = process({
+      id: 'e2e-sub',
+      processRole: 'subprocess',
+      calledElement: 'AwbShellProcess',
+      shellId: 'e2e-shell',
+      xml: '<bpmn:definitions><bpmn:process id="E2ESub"/></bpmn:definitions>',
+    });
+    const unrelatedSub = process({
+      id: 'seeded-sub',
+      processRole: 'subprocess',
+      calledElement: 'AwbShellProcess',
+      shellId: 'seeded-shell',
+      xml: '<bpmn:definitions><bpmn:process id="SeededSub"/></bpmn:definitions>',
+    });
+    getProcesses.mockReturnValue([savingShell, ownSub, unrelatedSub]);
+    getProcess.mockReturnValue(savingShell);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([savingShell, ownSub, unrelatedSub]);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-e2e-shell'));
+    await userEvent.click(screen.getByText('set-org'));
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveProcess).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'e2e-sub', organization: 'flevoland' })
+    );
+    expect(saveProcess).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'seeded-sub' }));
   });
 
   test('renaming an active process calls BpmnService.saveProcess with the new name', async () => {

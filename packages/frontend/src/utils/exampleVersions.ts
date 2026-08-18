@@ -18,10 +18,10 @@
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
   example_awb_process: 4, // v4: organization=flevoland tagging
-  example_tree_felling: 6, // v6: ronl:dsoActiviteitUrn=nl.imow-gm0995.activiteit.HoutopstandVellen
+  example_tree_felling: 7, // v7: shellId added (fixes stale copies rendering under the wrong shell)
   example_awb_zorgtoeslag: 3, // v3: organization=toeslagen tagging
-  example_zorgtoeslag_provisional: 4, // v4: organization=toeslagen tagging
-  example_zorgtoeslag_final: 4, // v4: organization=toeslagen tagging
+  example_zorgtoeslag_provisional: 5, // v5: shellId added (fixes stale copies rendering under the wrong shell)
+  example_zorgtoeslag_final: 5, // v5: shellId added (fixes stale copies rendering under the wrong shell)
   example_hr_capacity_nl: 1, // v1: HR-capacity Dutch BPMN sibling (multilingualism release)
 
   // Camunda Forms

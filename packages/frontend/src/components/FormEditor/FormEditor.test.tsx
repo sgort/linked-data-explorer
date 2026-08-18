@@ -42,7 +42,13 @@ vi.mock('./FormList', () => ({
     forms: { id: string }[];
     activeFormId: string | null;
     onCreateForm: () => void;
-    onImportForm: (schema: unknown, name: string, lang?: string, org?: string) => void;
+    onImportForm: (
+      schema: unknown,
+      name: string,
+      lang?: string,
+      org?: string,
+      isE2EFixture?: boolean
+    ) => void;
     onLoadForm: (id: string) => void;
     onDeleteForm: (id: string) => void;
     onUpdateFormName: (id: string, name: string) => void;
@@ -55,6 +61,13 @@ vi.mock('./FormList', () => ({
       <button onClick={onCreateForm}>create-form</button>
       <button onClick={() => onImportForm({ components: [] }, 'Imported form', 'nl', 'flevoland')}>
         import-form
+      </button>
+      <button
+        onClick={() =>
+          onImportForm({ components: [] }, 'Imported E2E form', 'nl', 'flevoland', true)
+        }
+      >
+        import-e2e-form
       </button>
       {forms.map((f) => (
         <button key={f.id} onClick={() => onLoadForm(f.id)}>
@@ -216,7 +229,21 @@ describe('FormEditor — create / import / load / save / delete', () => {
         schema: { components: [] },
         language: 'nl',
         organization: 'flevoland',
+        status: 'wip',
       })
+    );
+  });
+
+  test('importing an e2e-fixtures form saves it with status "e2e" instead of "wip"', async () => {
+    getForms.mockReturnValue([]);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([]);
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('import-e2e-form'));
+
+    expect(saveForm).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Imported E2E form', status: 'e2e' })
     );
   });
 

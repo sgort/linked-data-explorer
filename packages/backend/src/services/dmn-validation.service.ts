@@ -187,14 +187,18 @@ function elLoc(el: XmlElement): string {
   }
 }
 
-/** Get CPRMV-namespaced attribute value, trying both prefixed and namespace forms. */
+/**
+ * Get a CPRMV-namespaced attribute value by scanning the element's attributes.
+ *
+ * Do NOT reintroduce an `el.attr({ name, ns })` fast path here. In libxmljs2
+ * 0.37 that object form is not a namespaced lookup: it *sets* attributes
+ * literally called "name" and "ns" on the element and returns a value with no
+ * .value() method, so the call throws. With the throw swallowed by the catch
+ * below, every caller silently received null and EXEC-002..010 / CON-001..003
+ * never fired.
+ */
 function cprmvAttr(el: XmlElement, name: string): string | null {
   try {
-    // libxmljs2's `.attr({name, ns})` (object form) is a SETTER, not a getter --
-    // it creates/sets an attribute and returns the element itself for chaining,
-    // which has no `.value()`. Calling it here would throw (caught below,
-    // silently returning null) and never actually read anything, so namespace-
-    // aware lookup is done by scanning attrs and checking name + namespace URI.
     for (const a of el.attrs()) {
       if (a.name() === name && CPRMV_NAMESPACES.has(a.namespace()?.href() ?? '')) return a.value();
     }
