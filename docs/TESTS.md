@@ -939,6 +939,36 @@ sub-branches in already-tested files). See `TESTING-GUIDE.md`'s "CI
 roadmap (P7)" section for the full reasoning and the condition for
 revisiting it.
 
+### P7.1 — `dmn-validation.service.ts` gets its first real coverage
+
+Added while implementing ttl-editor's cell-level legislative grounding
+feature (`cprmv-cell-level-linking-prototype.md`, Layer 4): 3 new EXEC-\*
+checks (`dct:source` and `cprmv:isBasedOn` format on grounded
+`<inputEntry>`/`<outputEntry>` cells, and `cprmv:extends`' format, never
+checked before) needed test coverage to build with confidence, and this file
+had none — see
+[`dmn-validation.service.cellGrounding.test.ts`](../packages/backend/src/services/dmn-validation.service.cellGrounding.test.ts)
+(12 tests).
+
+Writing those tests surfaced a real, previously undiscovered defect:
+`cprmvAttr()`'s namespace-aware lookup called `el.attr({ name, ns })` —
+libxmljs2's **setter** form (it creates/sets an attribute and returns the
+element itself for chaining, which has no `.value()`). Calling `.value()` on
+that return threw inside the function's own `try` block, was silently
+swallowed by its `catch { return null }`, and the "fallback: scan raw
+attributes" code right below it was consequently unreachable dead code. Net
+effect: `cprmvAttr()` has always returned `null`, meaning **EXEC-002 through
+EXEC-010 — every rule-level and decision-level CPRMV validation check this
+service has ever shipped — never actually fired, for any DMN, since this
+file was written.** Fixed by dropping the broken setter-form branch entirely
+and reading attributes via the scan (`el.attrs()` + `.namespace()?.href()`),
+which the debug session confirmed does work correctly. Also fixed in the
+same pass: `CPRMV_NS` was hardcoded to the legacy `cprmv.open-regels.nl/0.3.0/`
+namespace, so a DMN using the current `standaarden.open-regels.nl/standards/cprmv/0.4.1#`
+namespace (what ttl-editor's `ttlGenerator.js` actually emits) would have its
+whole Execution layer short-circuit on an `EXEC-001` "CPRMV not declared" —
+now `CPRMV_NAMESPACES` accepts both.
+
 ## Adding tests
 
 Test files are colocated with the source they cover (`foo.ts` →

@@ -61,7 +61,18 @@ export interface DmnValidationResult {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DMN_NS = 'https://www.omg.org/spec/DMN/20191111/MODEL/';
-const CPRMV_NS = 'https://cprmv.open-regels.nl/0.3.0/';
+// CPRMV namespace URIs this validator recognizes as CPRMV extension attributes.
+// 0.3.0 is the legacy value some existing example DMNs (e.g.
+// RONL_BerekenLeeftijden_CPRMV.dmn) still declare; 0.4.1 is current -- it's
+// what ttl-editor's ttlGenerator.js actually emits by default and what DMNs
+// fixed to use it declare (e.g. Amsterdam's individuele inkomenstoeslag DMN's
+// cell-level cprmv:*/dct:source grounding attributes). Both are accepted so
+// neither generation of file is silently treated as "CPRMV not declared".
+const CPRMV_NAMESPACES = new Set([
+  'https://cprmv.open-regels.nl/0.3.0/',
+  'https://standaarden.open-regels.nl/standards/cprmv/0.4.1#',
+]);
+const DCT_NS = 'http://purl.org/dc/terms/';
 const NS = { d: DMN_NS };
 
 const VALID_HIT_POLICIES = new Set([
@@ -112,6 +123,19 @@ const VALID_CPRMV_RULESET_TYPES = new Set([
 
 const ISO_DATE_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 const BWB_ID_RE = /^[A-Z]{4}\d{7}$/;
+
+// A bare iKnow annotation registry id, as used in dct:source on
+// <inputEntry>/<outputEntry> -- see ttl-editor's
+// cprmv-cell-level-linking-prototype.md, Layer 1.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// A JuriConnect (JCI) citation string, e.g.
+// "jci1.3:c:BWBR0015703&hoofdstuk=4&paragraaf=4.1&artikel=36&z=2026-07-01" or
+// "jci1.31:c:NoBWBnumber&hoofdstuk=ontbrekende nummer&artikel=4" -- Amsterdam's
+// own annotation data has both a real BWB id and a placeholder "NoBWBnumber",
+// and both a clean value and one with an embedded space in a &key=value pair,
+// so both id shapes and both value shapes are accepted here.
+const JCI_RE = /^jci\d+\.\d+:[a-z]:[^&]*(&[a-zA-Z][\w-]*=[^&]*)*$/i;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -166,18 +190,87 @@ function elLoc(el: XmlElement): string {
 /** Get CPRMV-namespaced attribute value, trying both prefixed and namespace forms. */
 function cprmvAttr(el: XmlElement, name: string): string | null {
   try {
-    // Try namespace-aware lookup first
-    const nsAttr = el.attr({ name, ns: CPRMV_NS });
-    if (nsAttr) return nsAttr.value();
-    // Fallback: scan raw attributes for cprmv:name prefix
-    const attrs = el.attrs();
-    for (const a of attrs) {
-      if (a.name() === name && a.namespace()?.href() === CPRMV_NS) return a.value();
+    // libxmljs2's `.attr({name, ns})` (object form) is a SETTER, not a getter --
+    // it creates/sets an attribute and returns the element itself for chaining,
+    // which has no `.value()`. Calling it here would throw (caught below,
+    // silently returning null) and never actually read anything, so namespace-
+    // aware lookup is done by scanning attrs and checking name + namespace URI.
+    for (const a of el.attrs()) {
+      if (a.name() === name && CPRMV_NAMESPACES.has(a.namespace()?.href() ?? '')) return a.value();
     }
     return null;
   } catch {
     return null;
   }
+}
+
+/** Get a Dublin Core (dct:) namespaced attribute value. See cprmvAttr's note on why
+ * this scans attrs directly rather than using `.attr({name, ns})`. */
+function dctAttr(el: XmlElement, name: string): string | null {
+  try {
+    for (const a of el.attrs()) {
+      if (a.name() === name && a.namespace()?.href() === DCT_NS) return a.value();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** True when `value` parses as an absolute http(s) URL. */
+function isHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/** True when `value` is an http(s) URL on the iKnow annotation tool's own domain. */
+function isPnaWebUrl(value: string): boolean {
+  if (!isHttpUrl(value)) return false;
+  try {
+    return new URL(value).hostname.toLowerCase().includes('pna-web.com');
+  } catch {
+    return false;
+  }
+}
+
+/** dct:source on a grounded cell should be a bare annotation-registry id or an
+ * already-resolved pna-web.com URL -- see cprmv-cell-level-linking-prototype.md. */
+function isValidDctSource(value: string): boolean {
+  return UUID_RE.test(value) || isPnaWebUrl(value);
+}
+
+/** cprmv:isBasedOn / cprmv:extends should be a JuriConnect citation or a plain
+ * citation URL -- Amsterdam's own data uses both, so neither is mandated. */
+function isValidCitation(value: string): boolean {
+  return JCI_RE.test(value) || isHttpUrl(value);
+}
+
+/**
+ * Enumerate the (dct:source, cprmv:isBasedOn) grounding pairs on one
+ * <inputEntry>/<outputEntry> cell: the unnumbered shorthand (a single
+ * grounding, label '') plus any numbered attribute family members
+ * (dct:source1/cprmv:isBasedOn1, dct:source2/cprmv:isBasedOn2, ...) used for
+ * compound cells with more than one grounding -- see
+ * cprmv-cell-level-linking-prototype.md, "Multiple groundings per cell".
+ */
+function cellGroundings(
+  el: XmlElement
+): Array<{ source: string | null; isBasedOn: string | null; label: string }> {
+  const out: Array<{ source: string | null; isBasedOn: string | null; label: string }> = [];
+  const source0 = dctAttr(el, 'source');
+  const isBasedOn0 = cprmvAttr(el, 'isBasedOn');
+  if (source0 || isBasedOn0) out.push({ source: source0, isBasedOn: isBasedOn0, label: '' });
+  for (let n = 1; ; n++) {
+    const source = dctAttr(el, `source${n}`);
+    const isBasedOn = cprmvAttr(el, `isBasedOn${n}`);
+    if (!source && !isBasedOn) break;
+    out.push({ source, isBasedOn, label: String(n) });
+  }
+  return out;
 }
 
 /** Find elements by XPath, returning empty array on any error. */
@@ -629,7 +722,9 @@ function validateBusinessLayer(doc: XmlElement): LayerResult {
 function validateExecutionLayer(doc: XmlElement, xmlContent: string): LayerResult {
   const issues: ValidationIssue[] = [];
 
-  const cprmvDeclared = xmlContent.includes('cprmv.open-regels.nl');
+  const cprmvDeclared =
+    xmlContent.includes('cprmv.open-regels.nl') ||
+    xmlContent.includes('standaarden.open-regels.nl/standards/cprmv');
 
   if (!cprmvDeclared) {
     issues.push(
@@ -755,6 +850,56 @@ function validateExecutionLayer(doc: XmlElement, xmlContent: string): LayerResul
             elLoc(rule)
           )
         );
+    }
+
+    // cprmv:extends' format has never been checked before -- close that gap,
+    // using the same citation grammar the cell-level cprmv:isBasedOn checks
+    // below use (JuriConnect or a plain citation URL).
+    const extendsVal = cprmvAttr(rule, 'extends');
+    if (extendsVal !== null && !isValidCitation(extendsVal)) {
+      issues.push(
+        iss(
+          'warning',
+          'EXEC-013',
+          `cprmv:extends "${extendsVal}" matches neither JuriConnect (JCI) grammar nor a plain citation URL.`,
+          elLoc(rule)
+        )
+      );
+    }
+  }
+
+  // Cell-level legislative grounding (dct:source / cprmv:sourceQuote /
+  // cprmv:isBasedOn on <inputEntry>/<outputEntry>) -- see ttl-editor's
+  // cprmv-cell-level-linking-prototype.md. dct:source should resolve back to
+  // the iKnow annotation registry (a bare UUID id, or an already-resolved
+  // pna-web.com URL); cprmv:isBasedOn is a legislative citation, either a
+  // JuriConnect (JCI) string or a plain citation URL -- Amsterdam's own data
+  // uses both, so neither is mandated over the other. Both the unnumbered
+  // shorthand and the numbered attribute family (compound cells with more
+  // than one grounding) are checked.
+  for (const cell of find(doc, '//d:inputEntry | //d:outputEntry')) {
+    for (const g of cellGroundings(cell)) {
+      const suffix = g.label ? ` (grounding ${g.label})` : '';
+      if (g.source && !isValidDctSource(g.source)) {
+        issues.push(
+          iss(
+            'warning',
+            'EXEC-011',
+            `dct:source${g.label} "${g.source}" is neither a well-formed UUID nor a pna-web.com URL${suffix}.`,
+            elLoc(cell)
+          )
+        );
+      }
+      if (g.isBasedOn && !isValidCitation(g.isBasedOn)) {
+        issues.push(
+          iss(
+            'warning',
+            'EXEC-012',
+            `cprmv:isBasedOn${g.label} "${g.isBasedOn}" matches neither JuriConnect (JCI) grammar nor a plain citation URL${suffix}.`,
+            elLoc(cell)
+          )
+        );
+      }
     }
   }
 
