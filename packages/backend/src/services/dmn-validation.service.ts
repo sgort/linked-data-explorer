@@ -332,6 +332,17 @@ const FEEL_RESERVED = new Set([
   'hour',
   'minute',
   'second',
+  // Plural forms — these are the two words of the built-in function name
+  // "years and months duration(...)" itself (as opposed to the ".years"/
+  // ".months" property access on its result, already handled by the
+  // preceding-dot check below). Confirmed against
+  // HvA_full_dmn_export-patched.dmn: "(years and months
+  // duration(npGeboortedatum, peildatum)).years" was flagging "years" and
+  // "months" as unresolved variable references — the leading "years"/
+  // "months" aren't preceded by a dot, so only the reserved-word check
+  // catches them.
+  'years',
+  'months',
 ]);
 /**
  * Extract the variable identifiers referenced by a FEEL inputExpression text.
