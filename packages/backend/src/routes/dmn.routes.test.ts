@@ -468,9 +468,7 @@ describe('POST /api/dmns/evaluate/:decisionKey', () => {
     });
     operaton.evaluateRaw.mockRejectedValue(axiosError);
 
-    const res = await request(makeApp())
-      .post('/api/dmns/evaluate/bad-key')
-      .send({ variables: {} });
+    const res = await request(makeApp()).post('/api/dmns/evaluate/bad-key').send({ variables: {} });
 
     expect(res.status).toBe(500);
     expect(res.body).toEqual({

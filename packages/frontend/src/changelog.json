@@ -2,6 +2,134 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.08.2",
+      "status": "Released",
+      "date": "18 aug 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "45392ee",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "\"years and months duration(...)\" built-in name false-flagged as an unresolved variable (INT-007)",
+          "details": [
+            "FEEL_RESERVED had the singular year/month/day/hour/minute/second (for year(...)/month(...) single-word built-ins) but not the plural years/months -- the two words of the \"years and months duration(...)\" built-in's own name. Its leading words aren't preceded by a dot, so only the reserved-word check catches them; the pre-existing dot-check already handled the trailing .years/.months property access on the duration result correctly.",
+            "Reproduced live against HvA_full_dmn_export-patched.dmn: 12 INT-007 warnings across 6 decisions, all false positives from this exact construct (e.g. \"(years and months duration(npGeboortedatum, peildatum)).years\")."
+          ]
+        },
+        {
+          "sha": "ff8b87f",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "POST /v1/dmns/evaluate/:decisionKey -- raw passthrough evaluate proxy",
+          "details": [
+            "The CPSV Editor's DMN tab called Operaton's evaluate endpoint directly from the browser, which CORS blocks for a local dev origin. This route proxies the call server-side instead, forwarding Operaton's response byte-for-byte and status-for-status (success array or exception object) rather than the usual {success, data, error} envelope, since the DMN tab reads Operaton's raw JSON directly.",
+            "New evaluateRaw() on operatonService passes variables straight through, without the plain-JS-value type inference evaluateDecision() does for its own (different) caller contract -- the DMN tab already constructs Operaton-shaped request bodies itself, so re-wrapping them would double-wrap and break the request."
+          ]
+        },
+        {
+          "sha": "c491f08",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "POST /v1/dmns/deploy -- ad-hoc raw DMN XML deploy",
+          "details": [
+            "Deploys DMN content directly, without requiring pre-registered LDE norm identifiers first -- built for the CPSV Editor's DMN tab, which has an uploaded/generated DMN file with no registry entry of its own. A thin wrapper around the already-proven operatonService.deployDrd(), routing the CPSV Editor's own Deploy button through this backend instead of calling Operaton directly from the browser -- same CORS reasoning as the evaluate proxy above."
+          ]
+        },
+        {
+          "sha": "3e4dc66",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "dmn-validation.service.ts EXEC-* checks were all dead code",
+          "details": [
+            "cprmvAttr()'s primary namespace-aware lookup called el.attr({ name, ns }) -- libxmljs2's setter overload, not a getter: it creates/sets an attribute and returns the element itself for chaining, which has no .value(). The throw was silently swallowed by the function's own catch, so EXEC-002 through EXEC-010 -- every rule-level and decision-level CPRMV validation check this service had ever shipped -- never actually fired, for any DMN, since the file was written. Fixed by dropping the broken setter-form branch and reading attributes via a direct attrs() scan.",
+            "Also fixed: CPRMV_NS was hardcoded to the legacy cprmv.open-regels.nl/0.3.0/ namespace, so a DMN using the current standaarden.open-regels.nl/standards/cprmv/0.4.1# namespace would short-circuit on an EXEC-001 \"CPRMV not declared\" before reaching any check -- CPRMV_NAMESPACES now accepts both.",
+            "New EXEC-011/EXEC-012 checks validate cell-level dct:source/cprmv:isBasedOn format on grounded DMN cells; EXEC-013 closes a pre-existing gap where cprmv:extends' format was never checked at all."
+          ]
+        },
+        {
+          "sha": "a591f80",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Bump seed versions so shellId reaches existing users' example sub-processes",
+          "details": [
+            "example_tree_felling, example_zorgtoeslag_provisional, and example_zorgtoeslag_final's seed data got shellId added in an earlier commit, but their EXAMPLE_VERSIONS entries weren't bumped, so seed() skipped re-saving them for existing users -- both localStorage and Postgres kept the shellId-less copy, which falls back to the old ambiguous bpmnProcessId match and renders under every shell sharing that id."
+          ]
+        },
+        {
+          "sha": "d0bf4c7",
+          "author": "Steven Gort",
+          "type": "other",
+          "subject": "E2E badge color changed from indigo to orange",
+          "details": [
+            "Indigo read too close to EXAMPLE's blue in practice. Orange is clearly distinct from every other badge color in use (blue/amber/green/violet/teal)."
+          ]
+        },
+        {
+          "sha": "3ff77be",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Persist shellId and e2e status through Postgres, not just localStorage",
+          "details": [
+            "Both bugs traced to the same cause: hydrateFromServer() treats the Postgres-backed server list as authoritative and replaces local state with it on every BpmnModeler mount. The two fields added for the e2e-fixtures work in the previous two commits never reached the database, so they didn't survive that replace.",
+            "process_definitions.status had CHECK (status IN ('example', 'wip')) -- no 'e2e'. Saving an e2e-status BPMN process violated the constraint and the save failed silently (fetch() doesn't reject on non-2xx responses). shellId was never part of the DB schema, upsert, or list query, so every hydrate overwrote the local, correctly-classified copy with the server's shellId-less one -- the shell/subprocess duplication fix from the previous two commits never actually held past the first render.",
+            "Adds shell_id to process_definitions (additive, idempotent) and widens the status CHECK to include 'e2e'. Threads shellId through the mapper, upsert, list query, and the frontend's save request."
+          ]
+        },
+        {
+          "sha": "747d211",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Disambiguate shell/subprocess matching by shellId, not just bpmnProcessId",
+          "details": [
+            "Shell/subprocess matching keyed purely on calledElement === shell.bpmnProcessId, a string that's no longer unique once a shell is deliberately duplicated -- an e2e-fixtures copy of a seeded example shell intentionally keeps the same bpmnProcessId, since that's the real production Operaton key. ProcessList's catalog grouping rendered every subprocess under *every* shell sharing its bpmnProcessId instead of just its own.",
+            "Adds shellId (holding the parent shell's own local record id) alongside the existing calledElement; grouping and BpmnModeler's language/organization propagation now prefer shellId when present, falling back to the old match for records saved before this field existed. Also wires E2E badge detection for imported BPMN processes off the existing e2e-fixtures textAnnotation marker."
+          ]
+        },
+        {
+          "sha": "0ac1848",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "E2E status badge for imported e2e-fixtures forms and documents",
+          "details": [
+            "Imported e2e-fixtures files rendered as generic WIP/DRAFT, indistinguishable from arbitrary in-progress work. Adds a new 'e2e' status, detected at import time from a self-describing marker baked into each fixture file: a wrapper key on forms (stripped before handing the schema to form-js) and the fixture's own status field on documents.",
+            "Extracts a shared StatusBadge component used by ProcessList, FormList and DocumentList, replacing three near-identical inline badge blocks and adding the new E2E badge to all three in one place."
+          ]
+        },
+        {
+          "sha": "e5758ce",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Normalise line endings to LF via .gitattributes",
+          "details": [
+            "The backend's .prettierrc sets endOfLine: lf, but the repo had no .gitattributes, so a Windows checkout with core.autocrlf=true produced CRLF working files and npm run format:check failed on already-correctly-formatted content -- a loop no commit could fix, since Git kept renormalising files straight back to CRLF. Forcing LF in the working tree closes the loop; batch files stay pinned to CRLF and images are marked binary."
+          ]
+        },
+        {
+          "sha": "8be3fc5",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Make CPRMV attribute rules actually fire (cprmvAttr namespaced lookup was broken)",
+          "details": [
+            "cprmvAttr() tried el.attr({ name, ns: CPRMV_NS }) before falling back to a scan of el.attrs(). In libxmljs2 0.37 that object form is not a namespaced lookup: it sets attributes literally called \"name\" and \"ns\" on the element and returns a value with no .value() method, so the call threw. The function's own try/catch swallowed the throw and returned null, so the working attrs() fallback beneath it was never reached -- EXEC-002..EXEC-010 and CON-001..CON-003 never fired for any input, so ten validation rules were dead while reporting a clean result, and every inspected element was mutated with two junk attributes.",
+            "Dropping the object-form fast path is the whole fix. Verified against all 16 tracked .dmn files: no newly-reported issues, since none carried cprmv:* attributes at the time -- the rules now work for RONL DMN+ files that do."
+          ]
+        },
+        {
+          "sha": "de4bf07",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Raise backend statement coverage from 17% to 98%",
+          "details": [
+            "Adds 31 test files covering every previously-untested backend module and extends 3 existing ones. No production code changed. Statements 16.79% -> 98.06%, branches 18.10% -> 89.18%, tests 118 -> 1078 across 48 suites.",
+            "Previously at 0%: all 11 untested route modules, routes/index and routes/registry, 8 untested services, db/pool, db/migrate, utils/logger and utils/rootViews. Module-level singletons (db/pool, utils/logger, utils/config) are re-imported per test case via jest.isolateModules with a patched environment; @rdfjs/dataset and rdf-validate-shacl (ESM-only) are stubbed so the SHACL suite exercises layer loading and issue mapping rather than the RDF libraries themselves.",
+            "Documented (not fixed here, as a testing-scope decision) the cprmvAttr() defect fixed two commits later in this release: calling el.attr({ name, ns }) throws in libxmljs2 0.37 instead of performing a namespaced lookup, leaving ten validation rules permanently inert."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.08.1",
       "status": "Released",
       "date": "14 aug 2026",
