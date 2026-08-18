@@ -309,6 +309,65 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /v1/dmns/deploy
+ * Deploy raw, ad-hoc DMN XML content directly to Operaton.
+ *
+ * Unlike `/drd/deploy`, this takes the DMN content as-is rather than
+ * assembling it from pre-registered LDE norm identifiers -- built for the
+ * CPSV Editor's own DMN tab, which has an uploaded/generated DMN file with
+ * no registry entry of its own. Routing the deploy through this backend
+ * instead of calling Operaton directly from the browser sidesteps CORS:
+ * `operatonService.deployDrd`'s multipart POST is server-to-server, which
+ * browsers' CORS preflight checks never apply to.
+ *
+ * Body: { xml: string, deploymentName: string, filename?: string }
+ */
+router.post('/deploy', async (req: Request, res: Response) => {
+  try {
+    const { xml, deploymentName, filename } = req.body as {
+      xml: string;
+      deploymentName: string;
+      filename?: string;
+    };
+
+    if (!xml?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'xml is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!deploymentName?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'deploymentName is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const result = await operatonService.deployDrd(
+      xml,
+      deploymentName,
+      filename?.trim() || `${deploymentName}.dmn`
+    );
+
+    res.json({
+      success: true,
+      data: { deploymentId: result.deploymentId },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    logger.error('DMN deploy error', getErrorDetails(error));
+    res.status(500).json({
+      success: false,
+      error: { code: 'DMN_DEPLOY_FAILED', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
  * GET /v1/dmns/:identifier/xml
  * Fetch the deployed DMN XML content from Operaton.
  *
