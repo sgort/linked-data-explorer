@@ -6,7 +6,7 @@ jest.mock('../utils/logger', () => ({
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
 }));
 jest.mock('../services/operaton.service', () => ({
-  operatonService: { deployProcess: jest.fn(), deployDrd: jest.fn() },
+  operatonService: { deployProcess: jest.fn(), deployDrd: jest.fn(), evaluateRaw: jest.fn() },
 }));
 
 import { operatonService } from '../services/operaton.service';
@@ -14,6 +14,7 @@ import dmnRoutes from './dmn.routes';
 
 const mockDeployProcess = operatonService.deployProcess as jest.Mock;
 const mockDeployDrd = operatonService.deployDrd as jest.Mock;
+const mockEvaluateRaw = operatonService.evaluateRaw as jest.Mock;
 
 function makeApp() {
   const app = express();
@@ -25,6 +26,64 @@ function makeApp() {
 beforeEach(() => {
   mockDeployProcess.mockReset();
   mockDeployDrd.mockReset();
+  mockEvaluateRaw.mockReset();
+});
+
+describe('POST /api/dmns/evaluate/:decisionKey', () => {
+  test('passes the decision key and variables through, returning Operaton’s raw result array', async () => {
+    mockEvaluateRaw.mockResolvedValue([{ aanspraak: { value: true, type: 'Boolean' } }]);
+
+    const res = await request(makeApp())
+      .post('/api/dmns/evaluate/_bca439b7-fdb8-40e3-8a1d-3bb95571c65c')
+      .send({ variables: { woonachtig: { value: true, type: 'Boolean' } } });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([{ aanspraak: { value: true, type: 'Boolean' } }]);
+    expect(mockEvaluateRaw).toHaveBeenCalledWith('_bca439b7-fdb8-40e3-8a1d-3bb95571c65c', {
+      woonachtig: { value: true, type: 'Boolean' },
+    });
+  });
+
+  test('treats a missing variables object as an empty one rather than failing', async () => {
+    mockEvaluateRaw.mockResolvedValue([]);
+
+    const res = await request(makeApp()).post('/api/dmns/evaluate/some-key').send({});
+
+    expect(res.status).toBe(200);
+    expect(mockEvaluateRaw).toHaveBeenCalledWith('some-key', {});
+  });
+
+  test('forwards an Operaton exception body and status verbatim (e.g. a RestException)', async () => {
+    const axiosError = Object.assign(new Error('Request failed with status code 500'), {
+      isAxiosError: true,
+      response: {
+        status: 500,
+        data: { type: 'RestException', message: 'Unknown property used in expression' },
+      },
+    });
+    mockEvaluateRaw.mockRejectedValue(axiosError);
+
+    const res = await request(makeApp())
+      .post('/api/dmns/evaluate/bad-key')
+      .send({ variables: {} });
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      type: 'RestException',
+      message: 'Unknown property used in expression',
+    });
+  });
+
+  test('falls back to a ProxyError shape for a non-axios failure', async () => {
+    mockEvaluateRaw.mockRejectedValue(new Error('ECONNREFUSED'));
+
+    const res = await request(makeApp())
+      .post('/api/dmns/evaluate/some-key')
+      .send({ variables: {} });
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ type: 'ProxyError', message: 'ECONNREFUSED' });
+  });
 });
 
 describe('POST /api/dmns/deploy', () => {

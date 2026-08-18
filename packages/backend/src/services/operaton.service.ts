@@ -100,6 +100,31 @@ export class OperatonService {
   }
 
   /**
+   * Evaluate a DMN decision with variables already in Operaton's native wire
+   * format ({value, type, valueInfo}) -- unlike evaluateDecision() above,
+   * this does NOT infer types from plain JS values via
+   * transformVariablesToOperatonFormat, since the caller has already built
+   * an Operaton-shaped request body itself (the CPSV Editor's DMN tab
+   * constructs and stores these directly; re-wrapping them here would
+   * double-wrap and break the request).
+   *
+   * Deliberately does not catch/rewrap errors -- the caller (the /evaluate
+   * route) needs the raw axios error's `.response.status`/`.response.data`
+   * to forward Operaton's actual exception body (e.g. a RestException)
+   * verbatim, matching what a direct browser call to Operaton would have
+   * returned before being proxied through this backend for CORS reasons.
+   */
+  async evaluateRaw(
+    decisionKey: string,
+    operatonVariables: Record<string, unknown>
+  ): Promise<OperatonEvaluationResponse | OperatonEvaluationResponse[]> {
+    const response = await this.client.post(`/decision-definition/key/${decisionKey}/evaluate`, {
+      variables: operatonVariables,
+    });
+    return response.data;
+  }
+
+  /**
    * Transform plain variables to Operaton format
    * Each variable needs to be wrapped with value and type
    */

@@ -5,7 +5,7 @@ import { Router, Request, Response } from 'express';
 import { sparqlService } from '../services/sparql.service';
 import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
-import { getErrorMessage, getErrorDetails } from '../utils/errors';
+import { getErrorMessage, getErrorDetails, isAxiosError } from '../utils/errors';
 import { operatonService } from '../services/operaton.service';
 import { dmnValidationService } from '../services/dmn-validation.service';
 
@@ -364,6 +364,42 @@ router.post('/deploy', async (req: Request, res: Response) => {
       error: { code: 'DMN_DEPLOY_FAILED', message: getErrorMessage(error) },
       timestamp: new Date().toISOString(),
     });
+  }
+});
+
+/**
+ * POST /v1/dmns/evaluate/:decisionKey
+ * Evaluate a decision against variables already in Operaton's native wire
+ * format ({value, type, valueInfo}), passed straight through -- no
+ * plain-JS-value type inference (that's evaluateDecision(), used elsewhere
+ * for a different caller contract).
+ *
+ * Routed through this backend instead of calling Operaton directly from the
+ * browser for the same CORS reason `/deploy` above is -- see the CPSV
+ * Editor's DMNTab.jsx (handleEvaluateDMN and friends).
+ *
+ * Unlike every other route in this file, the response is Operaton's raw
+ * evaluate response forwarded byte-for-byte (success or failure), not the
+ * `{success, data, error}` envelope -- the DMN tab reads Operaton's raw JSON
+ * directly (e.g. checking a failed response's body for `"type":
+ * "RestException"`), exactly as it did calling Operaton directly before
+ * being proxied through here, so no frontend response-parsing changes were
+ * needed beyond the URL.
+ *
+ * Body: { variables: Record<string, {value, type, valueInfo?}> }
+ */
+router.post('/evaluate/:decisionKey', async (req: Request, res: Response) => {
+  const { decisionKey } = req.params;
+  try {
+    const result = await operatonService.evaluateRaw(decisionKey, req.body?.variables ?? {});
+    res.json(result);
+  } catch (error: unknown) {
+    if (isAxiosError(error) && error.response) {
+      res.status(error.response.status ?? 500).json(error.response.data);
+      return;
+    }
+    logger.error('DMN evaluate error', getErrorDetails(error));
+    res.status(500).json({ type: 'ProxyError', message: getErrorMessage(error) });
   }
 });
 
