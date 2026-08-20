@@ -24,6 +24,26 @@ import DocumentTemplateSelector from './DocumentTemplateSelector';
 import FormTemplateSelector from './FormTemplateSelector';
 import ronlModdleDescriptor from './ronlModdleDescriptor.json';
 
+/**
+ * Find the `<process>` element in a parsed BPMN document, whatever namespace
+ * prefix it carries.
+ *
+ * The previous lookup used a CSS *type* selector, which matches only the null
+ * namespace — so it never matched the `<bpmn:process>` that real bpmn-js output
+ * always emits, and every caller silently fell through to its own fallback. The
+ * visible consequence was a deployment posting the literal string "process" as
+ * its process key instead of the model's actual id, and sub-process lookups by
+ * `calledElement` never matching.
+ *
+ * `getElementsByTagNameNS` matches on local name across every namespace, which
+ * is what BPMN needs. There is no prefix-as-tag-name fallback because there is
+ * nothing to fall back to: `DOMParser` rejects an undeclared prefix outright and
+ * hands back a `<parsererror>` document, so a malformed model has no process
+ * element to find under any lookup.
+ */
+const findProcessElement = (doc: Document): Element | null =>
+  doc.getElementsByTagNameNS('*', 'process')[0] ?? null;
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 interface BpmnCanvasProps {
@@ -411,7 +431,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(xml, 'text/xml');
-    const processKey = doc.querySelector('process')?.getAttribute('id') ?? 'process';
+    const processKey = findProcessElement(doc)?.getAttribute('id') ?? 'process';
 
     const extractFormRefs = (bpmnXml: string) => [
       ...new Set([...bpmnXml.matchAll(/camunda:formRef="([^"]+)"/g)].map((m) => m[1])),
@@ -432,7 +452,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     for (const calledElement of calledElements) {
       const match = allProcesses.find((p) => {
         const d = new DOMParser().parseFromString(p.xml, 'text/xml');
-        return d.querySelector('process')?.getAttribute('id') === calledElement;
+        return findProcessElement(d)?.getAttribute('id') === calledElement;
       });
       if (match) subProcessXmls.push({ filename: `${calledElement}.bpmn`, xml: match.xml });
     }
@@ -554,7 +574,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       for (const calledElement of extractCalledElements(xml)) {
         const match = allProcesses.find((p) => {
           const d = new DOMParser().parseFromString(p.xml, 'text/xml');
-          return d.querySelector('process')?.getAttribute('id') === calledElement;
+          return findProcessElement(d)?.getAttribute('id') === calledElement;
         });
         if (match) subProcessXmls.push({ filename: `${calledElement}.bpmn`, xml: match.xml });
       }
@@ -584,8 +604,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
       const parser = new DOMParser();
       const doc = parser.parseFromString(xml, 'text/xml');
-      const processKey =
-        doc.querySelector('process')?.getAttribute('id') ?? `process-${Date.now()}`;
+      const processKey = findProcessElement(doc)?.getAttribute('id') ?? `process-${Date.now()}`;
 
       const response = await fetch(`${API_BASE_URL}/api/dmns/process/deploy`, {
         method: 'POST',

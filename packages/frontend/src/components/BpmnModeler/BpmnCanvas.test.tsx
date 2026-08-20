@@ -346,16 +346,18 @@ describe('BpmnCanvas — properties panel element selectors', () => {
 
 describe('BpmnCanvas — deploy modal', () => {
   test('opening the modal lists the process key and matched form/document resources', async () => {
-    // NOTE: `doc.querySelector('process')` in BpmnCanvas.tsx never matches a
-    // namespace-prefixed `<bpmn:process>` element in jsdom's XML parser — a plain
-    // CSS type selector only matches the null namespace, prefix or not. The
-    // component's own `?? 'process'` fallback kicks in here every time, so the
-    // process key is always the literal string "process" for XML shaped like
-    // real bpmn-js output. Asserting the actual (fallback) behavior rather than
-    // the intended one — this looks like a pre-existing, unrelated bug, flagged
-    // in docs/TESTS.md rather than silently "fixed" as part of writing this test.
+    // The process key comes from the `<bpmn:process>` element's own id.
+    //
+    // This used to assert the literal string "process", the component's
+    // fallback, for two compounding reasons. BpmnCanvas looked the element up
+    // with a CSS type selector, which matches only the null namespace and so
+    // never found a prefixed `<bpmn:process>` — a real defect against real
+    // bpmn-js output, now fixed by `findProcessElement`. And the fixture below
+    // declared none of the prefixes it used, so `DOMParser` rejected it and
+    // returned a `<parsererror>` document in which nothing was findable at all.
+    // The namespace declarations are now present, as bpmn-js always emits them.
     const xml =
-      '<bpmn:definitions><bpmn:process id="MyProcess"><bpmn:userTask camunda:formRef="form-1" ronl:documentRef="doc-1" /></bpmn:process></bpmn:definitions>';
+      '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:ronl="https://regels.overheid.nl/schema"><bpmn:process id="MyProcess"><bpmn:userTask camunda:formRef="form-1" ronl:documentRef="doc-1" /></bpmn:process></bpmn:definitions>';
     await renderCanvas({
       xml,
       forms: [{ id: 'f1', schema: { id: 'form-1' } }],
@@ -366,7 +368,7 @@ describe('BpmnCanvas — deploy modal', () => {
 
     await screen.findByText('Deploy to Operaton');
     await vi.waitFor(() => {
-      expect(document.body.textContent).toContain('process.bpmn');
+      expect(document.body.textContent).toContain('MyProcess.bpmn');
       expect(document.body.textContent).toContain('form-1.form');
       expect(document.body.textContent).toContain('doc-1.document');
     });
