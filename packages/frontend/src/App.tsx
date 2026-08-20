@@ -428,6 +428,25 @@ const App: React.FC = () => {
 
         {/* Workspace Panels */}
         <div className="flex-1 flex overflow-hidden relative">
+          {/* Error Overlay — a direct child of the workspace container rather than
+              of the Right Panel, which is hidden in Orchestration, BPMN, Form,
+              Document, ROPA, DSO and both validator views. handleRefreshCache can
+              only be triggered from Orchestration, so its failures used to set the
+              error state correctly and then have nowhere to render. */}
+          {error && (
+            <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+              <div className="text-sm whitespace-pre-wrap font-medium flex-1">{error}</div>
+              <button
+                onClick={() => setError(null)}
+                className="ml-auto text-red-400 hover:text-red-700 text-xl font-bold leading-none"
+                aria-label="Dismiss error"
+              >
+                &times;
+              </button>
+            </div>
+          )}
+
           {/* Tutorial View (Full Width) */}
           {viewMode === ViewMode.TUTORIAL && (
             <div className="flex-1 overflow-hidden">
@@ -776,21 +795,6 @@ const App: React.FC = () => {
             viewMode !== ViewMode.VALIDATE &&
             viewMode !== ViewMode.SHACL && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
-                {/* Error Overlay */}
-                {error && (
-                  <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
-                    <div className="text-sm whitespace-pre-wrap font-medium flex-1">{error}</div>
-                    <button
-                      onClick={() => setError(null)}
-                      className="ml-auto text-red-400 hover:text-red-700 text-xl font-bold leading-none"
-                      aria-label="Dismiss error"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                )}
-
                 {viewMode === ViewMode.VISUALIZE ? (
                   <div className="flex-1 p-4 h-full overflow-hidden">
                     <GraphView data={sparqlResult} />

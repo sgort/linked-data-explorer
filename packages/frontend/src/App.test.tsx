@@ -287,20 +287,24 @@ describe('App — cache refresh (Orchestration view)', () => {
     );
   });
 
-  test('a failed cache-clear request sets an error, but it stays invisible until leaving Orchestration', async () => {
-    // The error overlay lives inside the "Right Panel", which is itself hidden
-    // while viewMode === ORCHESTRATION (App.tsx's own exclusion list) — so a
-    // cache-clear failure has no visible surface on the view that triggered it.
+  test('a failed cache-clear request shows its error on the view that caused it', async () => {
+    // Regression test. The error overlay used to live inside the "Right Panel",
+    // which App.tsx hides while viewMode === ORCHESTRATION — the only view from
+    // which Refresh Cache can be triggered. The error state was set correctly
+    // and had nowhere to render, so the failure was silent until the user
+    // happened to navigate elsewhere. The overlay is now a child of the
+    // workspace container and renders in every view.
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
     render(<App />);
 
     await userEvent.click(screen.getByTitle('DMN Orchestration'));
     await userEvent.click(screen.getByText('Refresh Cache'));
-    await waitFor(() => expect(screen.getByText('Refresh Cache')).toBeTruthy());
-    expect(screen.queryByText('Failed to clear cache')).toBeNull();
 
-    await userEvent.click(screen.getByTitle('SPARQL Editor'));
     expect(await screen.findByText('Failed to clear cache')).toBeTruthy();
+
+    // ...and it is still dismissible from here.
+    await userEvent.click(screen.getByLabelText('Dismiss error'));
+    await waitFor(() => expect(screen.queryByText('Failed to clear cache')).toBeNull());
   });
 });
 
