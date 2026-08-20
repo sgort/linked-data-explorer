@@ -2,6 +2,95 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.08.3",
+      "status": "Released",
+      "date": "20 aug 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "00b0669",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "bump-release now versions the lockfile, not just package.json",
+          "details": [
+            "The release step said “set `version` in each in-scope package.json” and nothing more, so no release ever touched `package-lock.json`. Through v2026.08.2 it still recorded the root at `1.9.13` and `packages/backend` at `0.1.0`, while every `package.json` in the repo had reached `2026.08.2`.",
+            "The step now uses `npm version <ver> --no-git-tag-version`, once for the root and once per in-scope workspace, which writes each `package.json` and its lockfile entry together. The drift was never fatal — `npm ci` validates dependency satisfiability, and the root depends on its workspaces by path rather than by version range, so those `version` fields are never checked — but the lockfile is what CI installs from and what SBOM, audit and provenance tooling reads, so all of it reported the wrong versions."
+          ]
+        },
+        {
+          "sha": "960043d",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "E2E fixture BPMNs were undeployable — artifacts placed before flow elements",
+          "details": [
+            "BPMN 2.0’s `tProcess` is an ordered sequence — `laneSet*`, `flowElement*`, `artifact*`, `resourceRole*`, `correlationSubscription*`, `supports*` — so once an artifact appears, no further flow element may follow it. Operaton validates against the XSD on deploy and rejects the entire deployment when it doesn’t hold, with `cvc-complex-type.2.4.a: Invalid content was found starting with element '{…}:scriptTask'`.",
+            "The commit that added the on-canvas “E2E FIXTURE” warning inserted its `textAnnotation` and `association` directly after the first flow element, leaving four of the five fixtures undeployable. Each banner moves to just before `</bpmn:process>`, matching `TreeFellingPermitSubProcessE2E` — the one file that had it right and the only one that deployed. A pure move: no content changes, DI untouched, and all five now validate against `bpmn-moddle`’s `BPMN20.xsd`.",
+            "Nothing caught this because the integrity test checked file existence, process ids and `calledElement` references but never whether the BPMN was deployable at all. These fixtures are hand-edited and never round-trip through bpmn-js, which would have re-serialised them into schema order and silently repaired the mistake. A fifth test now asserts the ordering rule directly."
+          ]
+        },
+        {
+          "sha": "6e2ebfd",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "BPMN process key was always the literal string “process”",
+          "details": [
+            "`doc.querySelector('process')` is a CSS *type* selector, which matches only the null namespace — so it never found the `<bpmn:process>` element that real bpmn-js output always emits, and all four call sites in `BpmnCanvas` fell through to their own fallbacks every time. Every deployment posted `“process”` as its process key instead of the model’s actual id, and sub-process lookups by `calledElement` never matched.",
+            "A new `findProcessElement` helper uses `getElementsByTagNameNS` to match on local name across namespaces, and all four call sites route through it. The test covering this had asserted the fallback as correct, attributing it to a jsdom quirk — that reading was half right: the fixture behind it declared none of the prefixes it used, so `DOMParser` rejected the document outright and returned a `<parsererror>` in which nothing was findable under any lookup, masking the real defect underneath."
+          ]
+        },
+        {
+          "sha": "ad6967c",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Error overlay was unreachable from the view that raised it",
+          "details": [
+            "The overlay lived inside `App`’s right panel, which is hidden whenever `viewMode` is Orchestration, BPMN, Form, Document, ROPA, DSO or either validator. `handleRefreshCache` can only be triggered from Orchestration, so a failed cache clear set the error state correctly and then had nowhere to render — silent until the user happened to navigate elsewhere, where a stale error appeared out of context.",
+            "The overlay is now a direct child of the workspace container, which is already positioned relative, so it renders in every view. `App.test.tsx` previously asserted the broken behaviour explicitly; it now asserts the error appears on the view that caused it and is dismissible there."
+          ]
+        },
+        {
+          "sha": "6a8d821",
+          "author": "Steven Gort",
+          "type": "other",
+          "subject": "Every deploy now gated on lint and the test suite",
+          "details": [
+            "None of the six Azure workflows ran a test step, blocking or otherwise. That was a deliberate P7 decision taken when backend coverage was first measured at 13.82% statements — gating on a number that low would have been theatre — recorded as conditional on backend breadth improving. v2026.08.2 took the backend from 16.79% to 98.06%, meeting the condition.",
+            "The backend workflows already installed and linted, so the test step slots in beside the existing `npm run lint`. The frontend workflows had no npm steps at all, because the Static Web Apps action builds inside its own container and runs none of this repository’s scripts; they gain an explicit install, lint and test sequence ahead of the deploy action. The two `ropa-site` workflows are deliberately untouched — that package is a static `index.html` with no build and no test script to run."
+          ]
+        },
+        {
+          "sha": "211f5da",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Repo-side test documentation retired in favour of the documentation site",
+          "details": [
+            "Deletes `docs/TESTS.md` (982 lines) and `docs/TESTING-GUIDE.md` (228 lines). The IOU Architecture documentation site is now the single source of truth for test documentation, at `linked-data-explorer/developer/testing`; the repo-side copies had drifted from what the suites actually do and are not maintained."
+          ]
+        },
+        {
+          "sha": "305ccbe",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "lint-staged skipped backend files at pre-commit",
+          "details": [
+            "Companion to the `check-format` fix below — the same blind spot, one stage earlier. `lint-staged` was configured with a single glob for `packages/frontend/**`, so committing a backend file ran neither Prettier nor ESLint over it.",
+            "Adds `packages/backend/src/**/*.ts` with the backend’s own `eslint.config.js`. The scope is deliberately `src/**/*.ts` rather than the whole package: that is exactly what the backend’s `check-format` gates, so pre-commit and pre-push now agree rather than one rewriting files the other never checks."
+          ]
+        },
+        {
+          "sha": "73756f4",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Root check-format silently skipped the backend",
+          "details": [
+            "The two workspaces named their Prettier check differently — backend `format:check`, frontend `check-format` — while the root script runs `npm run check-format --workspaces --if-present`. Because `--if-present` skips a missing script rather than failing, the backend was quietly dropped from every root `check-format` run.",
+            "`.husky/pre-push` runs exactly that root script, so backend formatting was never actually gated on push. The gap was silent in both directions: the root command exited 0, and its output listed only the frontend. The backend now defines `check-format` as its canonical name, with `format:check` retained as an alias."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.08.2",
       "status": "Released",
       "date": "18 aug 2026",
