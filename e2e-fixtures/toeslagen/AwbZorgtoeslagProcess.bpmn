@@ -4,10 +4,6 @@
     <bpmn:startEvent id="StartEvent_AWB" name="Application submitted" camunda:formRef="zorgtoeslag-provisional-start" camunda:formRefBinding="latest">
       <bpmn:outgoing>Flow_Start_Phase1</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:textAnnotation id="Annotation_E2EFixture">
-      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
-    </bpmn:textAnnotation>
-    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="StartEvent_AWB" />
     <bpmn:scriptTask id="Task_Phase1_Identity" name="Phase 1: Determine legal relationship (identification)" scriptFormat="javascript">
       <bpmn:incoming>Flow_Start_Phase1</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase1_Phase2</bpmn:outgoing>
@@ -186,6 +182,10 @@
     <bpmn:sequenceFlow id="Flow_ChainTask_Archives" sourceRef="Task_Phase8_Forward" targetRef="Task_ArchivesDMN" />
     <bpmn:sequenceFlow id="Flow_ArchivesDMN_Record" sourceRef="Task_ArchivesDMN" targetRef="Task_ArchiveRecord" />
     <bpmn:sequenceFlow id="Flow_Archive_End" sourceRef="Task_ArchiveRecord" targetRef="EndEvent_AWB" />
+    <bpmn:textAnnotation id="Annotation_E2EFixture">
+      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="StartEvent_AWB" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_AWB">
     <bpmndi:BPMNPlane id="BPMNPlane_AWB" bpmnElement="AwbZorgtoeslagProcess">

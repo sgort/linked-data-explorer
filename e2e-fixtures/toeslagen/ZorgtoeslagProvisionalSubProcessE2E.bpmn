@@ -4,10 +4,6 @@
     <bpmn:startEvent id="SubStart" name="Start processing">
       <bpmn:outgoing>Flow_Sub_Start_Validate</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:textAnnotation id="Annotation_E2EFixture">
-      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
-    </bpmn:textAnnotation>
-    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="SubStart" />
     <bpmn:scriptTask id="Sub_ValidateApplication" name="Validate application data" scriptFormat="javascript">
       <bpmn:incoming>Flow_Sub_Start_Validate</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Validate_Retrieve</bpmn:outgoing>
@@ -128,6 +124,10 @@
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Sub_Granted_End" sourceRef="Sub_SetGranted" targetRef="SubEnd" />
     <bpmn:sequenceFlow id="Flow_Sub_Rejected_End" sourceRef="Sub_SetRejected" targetRef="SubEnd" />
+    <bpmn:textAnnotation id="Annotation_E2EFixture">
+      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="SubStart" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_Sub">
     <bpmndi:BPMNPlane id="BPMNPlane_Sub" bpmnElement="ZorgtoeslagProvisionalSubProcessE2E">

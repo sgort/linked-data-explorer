@@ -46,10 +46,6 @@
     <bpmn:startEvent id="StartEvent_RipPhase1" name="Start RIP fase 1">
       <bpmn:outgoing>Flow_Start_Aanlevren</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:textAnnotation id="Annotation_E2EFixture">
-      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
-    </bpmn:textAnnotation>
-    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="StartEvent_RipPhase1" />
     <bpmn:userTask id="Task_AanlevrenProjectplan" name="Aanleveren Projectplan&#10;1. Intake-formulier" camunda:formRef="rip-intake" camunda:formRefBinding="latest" camunda:candidateGroups="rip-aandrager">
       <bpmn:incoming>Flow_Start_Aanlevren</bpmn:incoming>
       <bpmn:outgoing>Flow_Aanlevren_Organiseren</bpmn:outgoing>
@@ -160,6 +156,10 @@
     <bpmn:sequenceFlow id="Flow_Akkoord4Approved_End" name="akkoord" sourceRef="Gateway_Akkoord4" targetRef="EndEvent_Phase1Complete">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approvalStatus == "approved"}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
+    <bpmn:textAnnotation id="Annotation_E2EFixture">
+      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="StartEvent_RipPhase1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_RipPhase1">
     <bpmndi:BPMNPlane id="BPMNPlane_RipPhase1" bpmnElement="Collaboration_RipPhase1">
