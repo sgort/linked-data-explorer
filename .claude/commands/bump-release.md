@@ -154,16 +154,48 @@ Set `"status": "Released"`. No separate color fields on the commit-format
 shape — `Changelog.tsx` derives the badge/border color from the `status`
 string itself. Do not add color keys to a commit-format entry.
 
-### 4. Bump the in-scope package.json files
+### 4. Bump the in-scope package.json files and the lockfile
 
-Read each file before editing. Set `"version"` to the released version in:
+Use `npm version` rather than hand-editing, once per package being
+released. Each invocation writes that package's `package.json` **and** its
+entry in the root `package-lock.json`:
 
-- `package.json` (repo root) — **always**
-- `packages/frontend/package.json` — only if scope is `frontend` or `both`
-- `packages/backend/package.json` — only if scope is `backend` or `both`
+```bash
+# root — always
+npm version <released-version> --no-git-tag-version
 
-Leave an out-of-scope package.json untouched — its version legitimately
-lags at the last release that changed it.
+# then one per in-scope workspace
+npm version <released-version> --no-git-tag-version --workspace=packages/frontend
+npm version <released-version> --no-git-tag-version --workspace=packages/backend
+```
+
+Which ones to run:
+
+- root — **always**
+- `packages/frontend` — only if scope is `frontend` or `both`
+- `packages/backend` — only if scope is `backend` or `both`
+
+Leave an out-of-scope package untouched — its version legitimately lags at
+the last release that changed it, and that is true of its lockfile entry
+too.
+
+`--no-git-tag-version` is required: without it `npm version` creates its
+own commit and tag, and this repo tags nothing. There are no
+`preversion` / `version` / `postversion` scripts to account for.
+
+**Why this is spelled out.** This step used to say "set `version` in each
+in-scope package.json" and nothing more, so no release ever updated the
+lockfile. Through v2026.08.2 it still recorded the root at `1.9.13` and
+`packages/backend` at `0.1.0`, while every `package.json` in the repo had
+reached `2026.08.2`.
+
+The drift is not fatal: `npm ci` validates dependency satisfiability, and
+the root depends on its workspaces by path rather than by version range,
+so those `version` fields are never checked — it exits 0 either way
+(verified against the drifted state). But the lockfile is what CI installs
+from and what SBOM, audit and provenance tooling reads, so all of it
+reported the wrong versions — and the first plain `npm install` afterwards
+drops a spurious three-version diff into whatever unrelated commit follows.
 
 ### 5. Normalize formatting
 
