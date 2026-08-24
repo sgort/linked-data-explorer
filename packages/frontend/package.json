@@ -1,7 +1,7 @@
 {
   "name": "@linked-data-explorer/frontend",
   "private": true,
-  "version": "2026.08.0",
+  "version": "2026.08.3",
   "type": "module",
   "scripts": {
     "dev": "vite",

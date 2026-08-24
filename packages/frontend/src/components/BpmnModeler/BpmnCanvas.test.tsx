@@ -346,16 +346,18 @@ describe('BpmnCanvas — properties panel element selectors', () => {
 
 describe('BpmnCanvas — deploy modal', () => {
   test('opening the modal lists the process key and matched form/document resources', async () => {
-    // NOTE: `doc.querySelector('process')` in BpmnCanvas.tsx never matches a
-    // namespace-prefixed `<bpmn:process>` element in jsdom's XML parser — a plain
-    // CSS type selector only matches the null namespace, prefix or not. The
-    // component's own `?? 'process'` fallback kicks in here every time, so the
-    // process key is always the literal string "process" for XML shaped like
-    // real bpmn-js output. Asserting the actual (fallback) behavior rather than
-    // the intended one — this looks like a pre-existing, unrelated bug, flagged
-    // in docs/TESTS.md rather than silently "fixed" as part of writing this test.
+    // The process key comes from the `<bpmn:process>` element's own id.
+    //
+    // This used to assert the literal string "process", the component's
+    // fallback, for two compounding reasons. BpmnCanvas looked the element up
+    // with a CSS type selector, which matches only the null namespace and so
+    // never found a prefixed `<bpmn:process>` — a real defect against real
+    // bpmn-js output, now fixed by `findProcessElement`. And the fixture below
+    // declared none of the prefixes it used, so `DOMParser` rejected it and
+    // returned a `<parsererror>` document in which nothing was findable at all.
+    // The namespace declarations are now present, as bpmn-js always emits them.
     const xml =
-      '<bpmn:definitions><bpmn:process id="MyProcess"><bpmn:userTask camunda:formRef="form-1" ronl:documentRef="doc-1" /></bpmn:process></bpmn:definitions>';
+      '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:ronl="https://regels.overheid.nl/schema"><bpmn:process id="MyProcess"><bpmn:userTask camunda:formRef="form-1" ronl:documentRef="doc-1" /></bpmn:process></bpmn:definitions>';
     await renderCanvas({
       xml,
       forms: [{ id: 'f1', schema: { id: 'form-1' } }],
@@ -366,7 +368,7 @@ describe('BpmnCanvas — deploy modal', () => {
 
     await screen.findByText('Deploy to Operaton');
     await vi.waitFor(() => {
-      expect(document.body.textContent).toContain('process.bpmn');
+      expect(document.body.textContent).toContain('MyProcess.bpmn');
       expect(document.body.textContent).toContain('form-1.form');
       expect(document.body.textContent).toContain('doc-1.document');
     });
@@ -391,11 +393,51 @@ describe('BpmnCanvas — deploy modal', () => {
     expect(modalDeployButton).toBeDisabled();
   });
 
+  test('blocks deploy when the BPMN has no ronl:organization attribute', async () => {
+    await renderCanvas({ xml: SIMPLE_XML });
+    await userEvent.click(screen.getByText('Deploy'));
+
+    expect(await screen.findByText('not set')).toBeTruthy();
+    expect(screen.getByText(/An organization is required/)).toBeTruthy();
+    const modalDeployButton = screen.getAllByRole('button', { name: /Deploy/ })[1];
+    expect(modalDeployButton).toBeDisabled();
+  });
+
+  test('reads organization from the BPMN and sends it in the deploy request', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({ success: true, data: { deploymentId: 'dep-123' } }),
+    });
+    const xmlWithOrg = SIMPLE_XML.replace(
+      '<bpmn:process',
+      '<bpmn:process ronl:organization="flevoland"'
+    );
+    await renderCanvas({ xml: xmlWithOrg });
+    await userEvent.click(screen.getByText('Deploy'));
+
+    await screen.findByText('flevoland');
+    await userEvent.click(screen.getByRole('button', { name: 'Infra-board' }));
+    const modalDeployButton = screen.getAllByRole('button', { name: /Deploy/ })[1];
+    expect(modalDeployButton).not.toBeDisabled();
+
+    await userEvent.click(modalDeployButton);
+
+    await vi.waitFor(() =>
+      expect(screen.getAllByText(/Deployment ID: dep-123/).length).toBeGreaterThan(0)
+    );
+    const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(options.body as string);
+    expect(body.organization).toBe('flevoland');
+  });
+
   test('picking a board option enables Deploy and posts to the deploy endpoint on success', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       json: async () => ({ success: true, data: { deploymentId: 'dep-123' } }),
     });
-    await renderCanvas();
+    // organization is mandatory too — give this XML one so the scenario under
+    // test (board picking) isn't masked by the unrelated organization block.
+    await renderCanvas({
+      xml: SIMPLE_XML.replace('<bpmn:process', '<bpmn:process ronl:organization="flevoland"'),
+    });
     await userEvent.click(screen.getByText('Deploy'));
     await screen.findByText('no board auto-detected');
 
@@ -418,7 +460,11 @@ describe('BpmnCanvas — deploy modal', () => {
     global.fetch = vi.fn().mockResolvedValue({
       json: async () => ({ success: false, error: { message: 'Operaton unreachable' } }),
     });
-    await renderCanvas();
+    // organization is mandatory too — give this XML one so the scenario under
+    // test (server-side failure) isn't masked by the unrelated organization block.
+    await renderCanvas({
+      xml: SIMPLE_XML.replace('<bpmn:process', '<bpmn:process ronl:organization="flevoland"'),
+    });
     await userEvent.click(screen.getByText('Deploy'));
     await screen.findByText('no board auto-detected');
     await userEvent.click(screen.getByRole('button', { name: 'Infra-board' }));

@@ -61,6 +61,12 @@ const reclassifyProcessRoles = (all: BpmnProcess[]): boolean => {
         ...p,
         processRole: 'subprocess',
         calledElement: parent.bpmnProcessId,
+        // Record the specific parent record's own id, not just its
+        // bpmnProcessId — two shell records can share a bpmnProcessId (an
+        // e2e-fixtures copy of a seeded example intentionally keeps the same
+        // production Operaton key), and calledElement alone can't tell them
+        // apart. See BpmnProcess.shellId.
+        shellId: parent.id,
       });
       changed = true;
     }
@@ -189,6 +195,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           processRole: 'subprocess',
           organization: 'flevoland',
           calledElement: 'AwbShellProcess',
+          shellId: awbId,
         };
         BpmnService.saveProcess(treeFellingExample);
         setStoredVersion(treeId, EXAMPLE_VERSIONS[treeId]);
@@ -246,6 +253,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           processRole: 'subprocess',
           organization: 'toeslagen',
           calledElement: 'AwbZorgtoeslagProcess',
+          shellId: awbZorgId,
         };
         BpmnService.saveProcess(zorgProvisionalExample);
         setStoredVersion(zorgProvisionalId, EXAMPLE_VERSIONS[zorgProvisionalId]);
@@ -273,6 +281,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           processRole: 'subprocess',
           organization: 'toeslagen',
           calledElement: 'AwbZorgtoeslagProcess',
+          shellId: awbZorgId,
         };
         BpmnService.saveProcess(zorgFinalExample);
         setStoredVersion(zorgFinalId, EXAMPLE_VERSIONS[zorgFinalId]);
@@ -400,6 +409,9 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     const xmlLanguage = xml.match(/ronl:language="([^"]+)"/)?.[1];
     const language = (xmlLanguage ?? inferredLanguage) as BpmnProcess['language'] | undefined;
     const organization = xml.match(/ronl:organization="([^"]+)"/)?.[1];
+    // e2e-fixtures BPMN files carry a stable textAnnotation marker (see
+    // e2e-fixtures/manifest.json) — self-describing, so no manifest lookup needed.
+    const isE2EFixture = xml.includes('id="Annotation_E2EFixture"');
 
     const newProcess: BpmnProcess = {
       id: `process_${Date.now()}`,
@@ -408,7 +420,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       linkedDmnTemplates: [],
-      status: 'wip',
+      status: isE2EFixture ? 'e2e' : 'wip',
       bpmnProcessId: extractBpmnProcessId(xml),
       processRole: 'standalone',
       language,
@@ -471,10 +483,15 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       merged.bpmnProcessId &&
       (merged.language || merged.organization)
     ) {
+      // Prefer shellId (unambiguous) over bpmnProcessId — two shell records
+      // can share a bpmnProcessId (an e2e-fixtures copy keeps a seeded
+      // example's production Operaton key), and matching by that string alone
+      // would cascade this shell's language/organization onto an unrelated
+      // shell's subprocess. Fall back for records saved before shellId existed.
       const linkedSubs = BpmnService.getProcesses().filter(
         (p) =>
           p.processRole === 'subprocess' &&
-          p.calledElement === merged.bpmnProcessId &&
+          (p.shellId ? p.shellId === merged.id : p.calledElement === merged.bpmnProcessId) &&
           !p.readonly &&
           p.id !== merged.id
       );

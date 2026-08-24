@@ -2,6 +2,296 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.08.3",
+      "status": "Released",
+      "date": "20 aug 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "00b0669",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "bump-release now versions the lockfile, not just package.json",
+          "details": [
+            "The release step said “set `version` in each in-scope package.json” and nothing more, so no release ever touched `package-lock.json`. Through v2026.08.2 it still recorded the root at `1.9.13` and `packages/backend` at `0.1.0`, while every `package.json` in the repo had reached `2026.08.2`.",
+            "The step now uses `npm version <ver> --no-git-tag-version`, once for the root and once per in-scope workspace, which writes each `package.json` and its lockfile entry together. The drift was never fatal — `npm ci` validates dependency satisfiability, and the root depends on its workspaces by path rather than by version range, so those `version` fields are never checked — but the lockfile is what CI installs from and what SBOM, audit and provenance tooling reads, so all of it reported the wrong versions."
+          ]
+        },
+        {
+          "sha": "960043d",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "E2E fixture BPMNs were undeployable — artifacts placed before flow elements",
+          "details": [
+            "BPMN 2.0’s `tProcess` is an ordered sequence — `laneSet*`, `flowElement*`, `artifact*`, `resourceRole*`, `correlationSubscription*`, `supports*` — so once an artifact appears, no further flow element may follow it. Operaton validates against the XSD on deploy and rejects the entire deployment when it doesn’t hold, with `cvc-complex-type.2.4.a: Invalid content was found starting with element '{…}:scriptTask'`.",
+            "The commit that added the on-canvas “E2E FIXTURE” warning inserted its `textAnnotation` and `association` directly after the first flow element, leaving four of the five fixtures undeployable. Each banner moves to just before `</bpmn:process>`, matching `TreeFellingPermitSubProcessE2E` — the one file that had it right and the only one that deployed. A pure move: no content changes, DI untouched, and all five now validate against `bpmn-moddle`’s `BPMN20.xsd`.",
+            "Nothing caught this because the integrity test checked file existence, process ids and `calledElement` references but never whether the BPMN was deployable at all. These fixtures are hand-edited and never round-trip through bpmn-js, which would have re-serialised them into schema order and silently repaired the mistake. A fifth test now asserts the ordering rule directly."
+          ]
+        },
+        {
+          "sha": "6e2ebfd",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "BPMN process key was always the literal string “process”",
+          "details": [
+            "`doc.querySelector('process')` is a CSS *type* selector, which matches only the null namespace — so it never found the `<bpmn:process>` element that real bpmn-js output always emits, and all four call sites in `BpmnCanvas` fell through to their own fallbacks every time. Every deployment posted `“process”` as its process key instead of the model’s actual id, and sub-process lookups by `calledElement` never matched.",
+            "A new `findProcessElement` helper uses `getElementsByTagNameNS` to match on local name across namespaces, and all four call sites route through it. The test covering this had asserted the fallback as correct, attributing it to a jsdom quirk — that reading was half right: the fixture behind it declared none of the prefixes it used, so `DOMParser` rejected the document outright and returned a `<parsererror>` in which nothing was findable under any lookup, masking the real defect underneath."
+          ]
+        },
+        {
+          "sha": "ad6967c",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Error overlay was unreachable from the view that raised it",
+          "details": [
+            "The overlay lived inside `App`’s right panel, which is hidden whenever `viewMode` is Orchestration, BPMN, Form, Document, ROPA, DSO or either validator. `handleRefreshCache` can only be triggered from Orchestration, so a failed cache clear set the error state correctly and then had nowhere to render — silent until the user happened to navigate elsewhere, where a stale error appeared out of context.",
+            "The overlay is now a direct child of the workspace container, which is already positioned relative, so it renders in every view. `App.test.tsx` previously asserted the broken behaviour explicitly; it now asserts the error appears on the view that caused it and is dismissible there."
+          ]
+        },
+        {
+          "sha": "6a8d821",
+          "author": "Steven Gort",
+          "type": "other",
+          "subject": "Every deploy now gated on lint and the test suite",
+          "details": [
+            "None of the six Azure workflows ran a test step, blocking or otherwise. That was a deliberate P7 decision taken when backend coverage was first measured at 13.82% statements — gating on a number that low would have been theatre — recorded as conditional on backend breadth improving. v2026.08.2 took the backend from 16.79% to 98.06%, meeting the condition.",
+            "The backend workflows already installed and linted, so the test step slots in beside the existing `npm run lint`. The frontend workflows had no npm steps at all, because the Static Web Apps action builds inside its own container and runs none of this repository’s scripts; they gain an explicit install, lint and test sequence ahead of the deploy action. The two `ropa-site` workflows are deliberately untouched — that package is a static `index.html` with no build and no test script to run."
+          ]
+        },
+        {
+          "sha": "211f5da",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Repo-side test documentation retired in favour of the documentation site",
+          "details": [
+            "Deletes `docs/TESTS.md` (982 lines) and `docs/TESTING-GUIDE.md` (228 lines). The IOU Architecture documentation site is now the single source of truth for test documentation, at `linked-data-explorer/developer/testing`; the repo-side copies had drifted from what the suites actually do and are not maintained."
+          ]
+        },
+        {
+          "sha": "305ccbe",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "lint-staged skipped backend files at pre-commit",
+          "details": [
+            "Companion to the `check-format` fix below — the same blind spot, one stage earlier. `lint-staged` was configured with a single glob for `packages/frontend/**`, so committing a backend file ran neither Prettier nor ESLint over it.",
+            "Adds `packages/backend/src/**/*.ts` with the backend’s own `eslint.config.js`. The scope is deliberately `src/**/*.ts` rather than the whole package: that is exactly what the backend’s `check-format` gates, so pre-commit and pre-push now agree rather than one rewriting files the other never checks."
+          ]
+        },
+        {
+          "sha": "73756f4",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Root check-format silently skipped the backend",
+          "details": [
+            "The two workspaces named their Prettier check differently — backend `format:check`, frontend `check-format` — while the root script runs `npm run check-format --workspaces --if-present`. Because `--if-present` skips a missing script rather than failing, the backend was quietly dropped from every root `check-format` run.",
+            "`.husky/pre-push` runs exactly that root script, so backend formatting was never actually gated on push. The gap was silent in both directions: the root command exited 0, and its output listed only the frontend. The backend now defines `check-format` as its canonical name, with `format:check` retained as an alias."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
+      "version": "2026.08.2",
+      "status": "Released",
+      "date": "18 aug 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "45392ee",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "\"years and months duration(...)\" built-in name false-flagged as an unresolved variable (INT-007)",
+          "details": [
+            "FEEL_RESERVED had the singular year/month/day/hour/minute/second (for year(...)/month(...) single-word built-ins) but not the plural years/months -- the two words of the \"years and months duration(...)\" built-in's own name. Its leading words aren't preceded by a dot, so only the reserved-word check catches them; the pre-existing dot-check already handled the trailing .years/.months property access on the duration result correctly.",
+            "Reproduced live against HvA_full_dmn_export-patched.dmn: 12 INT-007 warnings across 6 decisions, all false positives from this exact construct (e.g. \"(years and months duration(npGeboortedatum, peildatum)).years\")."
+          ]
+        },
+        {
+          "sha": "ff8b87f",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "POST /v1/dmns/evaluate/:decisionKey -- raw passthrough evaluate proxy",
+          "details": [
+            "The CPSV Editor's DMN tab called Operaton's evaluate endpoint directly from the browser, which CORS blocks for a local dev origin. This route proxies the call server-side instead, forwarding Operaton's response byte-for-byte and status-for-status (success array or exception object) rather than the usual {success, data, error} envelope, since the DMN tab reads Operaton's raw JSON directly.",
+            "New evaluateRaw() on operatonService passes variables straight through, without the plain-JS-value type inference evaluateDecision() does for its own (different) caller contract -- the DMN tab already constructs Operaton-shaped request bodies itself, so re-wrapping them would double-wrap and break the request."
+          ]
+        },
+        {
+          "sha": "c491f08",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "POST /v1/dmns/deploy -- ad-hoc raw DMN XML deploy",
+          "details": [
+            "Deploys DMN content directly, without requiring pre-registered LDE norm identifiers first -- built for the CPSV Editor's DMN tab, which has an uploaded/generated DMN file with no registry entry of its own. A thin wrapper around the already-proven operatonService.deployDrd(), routing the CPSV Editor's own Deploy button through this backend instead of calling Operaton directly from the browser -- same CORS reasoning as the evaluate proxy above."
+          ]
+        },
+        {
+          "sha": "3e4dc66",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "dmn-validation.service.ts EXEC-* checks were all dead code",
+          "details": [
+            "cprmvAttr()'s primary namespace-aware lookup called el.attr({ name, ns }) -- libxmljs2's setter overload, not a getter: it creates/sets an attribute and returns the element itself for chaining, which has no .value(). The throw was silently swallowed by the function's own catch, so EXEC-002 through EXEC-010 -- every rule-level and decision-level CPRMV validation check this service had ever shipped -- never actually fired, for any DMN, since the file was written. Fixed by dropping the broken setter-form branch and reading attributes via a direct attrs() scan.",
+            "Also fixed: CPRMV_NS was hardcoded to the legacy cprmv.open-regels.nl/0.3.0/ namespace, so a DMN using the current standaarden.open-regels.nl/standards/cprmv/0.4.1# namespace would short-circuit on an EXEC-001 \"CPRMV not declared\" before reaching any check -- CPRMV_NAMESPACES now accepts both.",
+            "New EXEC-011/EXEC-012 checks validate cell-level dct:source/cprmv:isBasedOn format on grounded DMN cells; EXEC-013 closes a pre-existing gap where cprmv:extends' format was never checked at all."
+          ]
+        },
+        {
+          "sha": "a591f80",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Bump seed versions so shellId reaches existing users' example sub-processes",
+          "details": [
+            "example_tree_felling, example_zorgtoeslag_provisional, and example_zorgtoeslag_final's seed data got shellId added in an earlier commit, but their EXAMPLE_VERSIONS entries weren't bumped, so seed() skipped re-saving them for existing users -- both localStorage and Postgres kept the shellId-less copy, which falls back to the old ambiguous bpmnProcessId match and renders under every shell sharing that id."
+          ]
+        },
+        {
+          "sha": "d0bf4c7",
+          "author": "Steven Gort",
+          "type": "other",
+          "subject": "E2E badge color changed from indigo to orange",
+          "details": [
+            "Indigo read too close to EXAMPLE's blue in practice. Orange is clearly distinct from every other badge color in use (blue/amber/green/violet/teal)."
+          ]
+        },
+        {
+          "sha": "3ff77be",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Persist shellId and e2e status through Postgres, not just localStorage",
+          "details": [
+            "Both bugs traced to the same cause: hydrateFromServer() treats the Postgres-backed server list as authoritative and replaces local state with it on every BpmnModeler mount. The two fields added for the e2e-fixtures work in the previous two commits never reached the database, so they didn't survive that replace.",
+            "process_definitions.status had CHECK (status IN ('example', 'wip')) -- no 'e2e'. Saving an e2e-status BPMN process violated the constraint and the save failed silently (fetch() doesn't reject on non-2xx responses). shellId was never part of the DB schema, upsert, or list query, so every hydrate overwrote the local, correctly-classified copy with the server's shellId-less one -- the shell/subprocess duplication fix from the previous two commits never actually held past the first render.",
+            "Adds shell_id to process_definitions (additive, idempotent) and widens the status CHECK to include 'e2e'. Threads shellId through the mapper, upsert, list query, and the frontend's save request."
+          ]
+        },
+        {
+          "sha": "747d211",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Disambiguate shell/subprocess matching by shellId, not just bpmnProcessId",
+          "details": [
+            "Shell/subprocess matching keyed purely on calledElement === shell.bpmnProcessId, a string that's no longer unique once a shell is deliberately duplicated -- an e2e-fixtures copy of a seeded example shell intentionally keeps the same bpmnProcessId, since that's the real production Operaton key. ProcessList's catalog grouping rendered every subprocess under *every* shell sharing its bpmnProcessId instead of just its own.",
+            "Adds shellId (holding the parent shell's own local record id) alongside the existing calledElement; grouping and BpmnModeler's language/organization propagation now prefer shellId when present, falling back to the old match for records saved before this field existed. Also wires E2E badge detection for imported BPMN processes off the existing e2e-fixtures textAnnotation marker."
+          ]
+        },
+        {
+          "sha": "0ac1848",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "E2E status badge for imported e2e-fixtures forms and documents",
+          "details": [
+            "Imported e2e-fixtures files rendered as generic WIP/DRAFT, indistinguishable from arbitrary in-progress work. Adds a new 'e2e' status, detected at import time from a self-describing marker baked into each fixture file: a wrapper key on forms (stripped before handing the schema to form-js) and the fixture's own status field on documents.",
+            "Extracts a shared StatusBadge component used by ProcessList, FormList and DocumentList, replacing three near-identical inline badge blocks and adding the new E2E badge to all three in one place."
+          ]
+        },
+        {
+          "sha": "e5758ce",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Normalise line endings to LF via .gitattributes",
+          "details": [
+            "The backend's .prettierrc sets endOfLine: lf, but the repo had no .gitattributes, so a Windows checkout with core.autocrlf=true produced CRLF working files and npm run format:check failed on already-correctly-formatted content -- a loop no commit could fix, since Git kept renormalising files straight back to CRLF. Forcing LF in the working tree closes the loop; batch files stay pinned to CRLF and images are marked binary."
+          ]
+        },
+        {
+          "sha": "8be3fc5",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Make CPRMV attribute rules actually fire (cprmvAttr namespaced lookup was broken)",
+          "details": [
+            "cprmvAttr() tried el.attr({ name, ns: CPRMV_NS }) before falling back to a scan of el.attrs(). In libxmljs2 0.37 that object form is not a namespaced lookup: it sets attributes literally called \"name\" and \"ns\" on the element and returns a value with no .value() method, so the call threw. The function's own try/catch swallowed the throw and returned null, so the working attrs() fallback beneath it was never reached -- EXEC-002..EXEC-010 and CON-001..CON-003 never fired for any input, so ten validation rules were dead while reporting a clean result, and every inspected element was mutated with two junk attributes.",
+            "Dropping the object-form fast path is the whole fix. Verified against all 16 tracked .dmn files: no newly-reported issues, since none carried cprmv:* attributes at the time -- the rules now work for RONL DMN+ files that do."
+          ]
+        },
+        {
+          "sha": "de4bf07",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Raise backend statement coverage from 17% to 98%",
+          "details": [
+            "Adds 31 test files covering every previously-untested backend module and extends 3 existing ones. No production code changed. Statements 16.79% -> 98.06%, branches 18.10% -> 89.18%, tests 118 -> 1078 across 48 suites.",
+            "Previously at 0%: all 11 untested route modules, routes/index and routes/registry, 8 untested services, db/pool, db/migrate, utils/logger and utils/rootViews. Module-level singletons (db/pool, utils/logger, utils/config) are re-imported per test case via jest.isolateModules with a patched environment; @rdfjs/dataset and rdf-validate-shacl (ESM-only) are stubbed so the SHACL suite exercises layer loading and issue mapping rather than the RDF libraries themselves.",
+            "Documented (not fixed here, as a testing-scope decision) the cprmvAttr() defect fixed two commits later in this release: calling el.attr({ name, ns }) throws in libxmljs2 0.37 instead of performing a namespaced lookup, leaving ten validation rules permanently inert."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
+      "version": "2026.08.1",
+      "status": "Released",
+      "date": "14 aug 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "36cba79",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Fix an E2E fixture's BPMN schema error",
+          "details": [
+            "Operaton's BPMN parser rejected TreeFellingPermitSubProcessE2E.bpmn (ENGINE-09005, a businessRuleTask found where an artifact-group element was expected) because the fixture-warning textAnnotation/association pair immediately preceded the file's first businessRuleTask. Every other fixture with the same annotation pattern has a scriptTask in that position instead, which validates fine, so this specific adjacency had never been submitted to Operaton for real parsing before. Fixed by moving the annotation to the end of the process body — after all flow elements, before the closing tag — which is also the more conventional placement for BPMN artifacts."
+          ]
+        },
+        {
+          "sha": "faca7f0",
+          "author": "Steven Gort",
+          "type": "refactor",
+          "subject": "Give e2e-fixtures sub-processes their own Operaton keys",
+          "details": [
+            "TreeFellingPermitSubProcess and ZorgtoeslagProvisionalSubProcess renamed to TreeFellingPermitSubProcessE2E / ZorgtoeslagProvisionalSubProcessE2E (filename, bpmn:process id, and the calling shell's callActivity calledElement). Prevents LDE's own process catalog from conflating the e2e-fixtures copy with the seeded-examples copy of the same sub-process — both previously shared the same bpmn:process id, so importing/redeploying the fixture could silently reuse the example's stale content instead. Shells (AwbShellProcess, AwbZorgtoeslagProcess) and RipR21Process are unaffected."
+          ]
+        },
+        {
+          "sha": "0e273dd",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Resolve shared DMN decisions as untenanted from tenant-scoped business-rule-tasks",
+          "details": [
+            "Confirmed empirically against a live Operaton instance: by default, a business-rule-task's camunda:decisionRef resolves against a decision definition under the exact same tenant-id as the calling process instance, with no fallback to a shared, untenanted decision even when one exists. camunda:decisionRefTenantId can override this, but only as an EL expression evaluating to null (${null}) — a literal empty string is silently ignored. Applied to all 7 business-rule-tasks across the 4 fixture BPMNs that reference genuinely tenant-agnostic, shared regulatory-logic DMN tables, so they keep resolving correctly now that the calling processes themselves carry a real tenant-id."
+          ]
+        },
+        {
+          "sha": "0d6dca7",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Fix a copy-paste processKey bug and nest sub-process fixtures under their shell",
+          "details": [
+            "ZORGTOESLAG_PROVISIONAL_BESCHIKKING's processKey read 'AwbShellProcess' — copy-pasted from the tree-felling document template above it — corrected to 'AwbZorgtoeslagProcess', the process it actually belongs to; the regenerated .document fixture matches the corrected source exactly.",
+            "AwbShellProcess calls TreeFellingPermitSubProcess and AwbZorgtoeslagProcess calls ZorgtoeslagProvisionalSubProcess via a BPMN callActivity, which BpmnModeler.tsx auto-detects and bundles into a single deployment call — the manifest now nests each sub-process's fixture entry under its shell's own subProcesses array instead of listing it as a flat sibling, with a new test asserting each shell's BPMN genuinely contains a calledElement matching its declared nested sub-process keys."
+          ]
+        },
+        {
+          "sha": "aaa369e",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Assemble the e2e-fixtures test bundle",
+          "details": [
+            "A new, dedicated e2e-fixtures/<tenant>/ directory with a manifest.json and an integrity test, replacing two pre-existing, already-diverged 'examples' locations (broad stale reference material, and the general-purpose seeded-example store used by the BPMN Modeler's load-example buttons) as the single source of truth for ronl-business-api's E2E test suite. AwbShellProcess, TreeFellingPermitSubProcess, and AwbZorgtoeslagProcess/ZorgtoeslagProvisionalSubProcess are seeded from the proven-freshest examples copy; RipR21Process is assembled by merging two divergent draft folders (a swimlane redesign missing several of its own form files, filled in from an older, complete draft) and renamed from RipPhase1Process. Also adds the two decision-document fixtures (example_treefelling_beschikking, example_zorgtoeslag_provisional_beschikking) that both seeded BPMNs reference but had no corresponding .document file for anywhere in the repo, converted from their DocumentTemplate source objects."
+          ]
+        },
+        {
+          "sha": "323e3af",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Make organization mandatory when deploying a BPMN process",
+          "details": [
+            "The BPMN Modeler's Deploy action now requires an Organization value before it will submit a deployment, sent to Operaton as its native tenant-id (POST /deployment/create's tenant-id field) — closing the gap where a process could be deployed with no tenant-id at all, invisible to any tenant-scoped lookup an application later needs to make against it."
+          ]
+        },
+        {
+          "sha": "f584383",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Spec: mandatory organization/tenantId at BPMN deploy time",
+          "details": [
+            "Design doc for making organization mandatory at deploy time and sending it to Operaton as native tenant-id, the foundation this release's e2e-fixtures work and ronl-business-api's own tenant-mandatory adoption both build on."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.08.0",
       "status": "Released",
       "date": "6 aug 2026",

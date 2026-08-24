@@ -1,0 +1,108 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "zorgtoeslag-notify-applicant",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Phase 6 – Notify applicant of decision (Awb 3:6)"
+    },
+    {
+      "id": "Text_AppDetails",
+      "type": "text",
+      "text": "## Application details"
+    },
+    {
+      "id": "Field_DossierReference",
+      "type": "textfield",
+      "label": "Dossier reference",
+      "key": "dossierReference",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_HealthInsurer",
+      "type": "textfield",
+      "label": "Health insurer",
+      "key": "healthInsurer",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Text_Decision",
+      "type": "text",
+      "text": "## Decision information"
+    },
+    {
+      "id": "Field_ProvisionalDecision",
+      "type": "textfield",
+      "label": "Provisional entitlement decision",
+      "key": "provisionalDecision",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_ProvisionalAmount",
+      "type": "number",
+      "label": "Monthly amount (EUR)",
+      "key": "provisionalAmount",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_FinalMessage",
+      "type": "textarea",
+      "label": "Decision message",
+      "key": "finalMessage",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Text_Action",
+      "type": "text",
+      "text": "## Notification action"
+    },
+    {
+      "id": "Field_NotificationMethod",
+      "type": "select",
+      "label": "Notification method",
+      "key": "notificationMethod",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Email", "value": "email" },
+        { "label": "Letter (Post)", "value": "letter" },
+        { "label": "Phone call", "value": "phone" },
+        { "label": "Citizen portal", "value": "portal" }
+      ],
+      "description": "How should the applicant be informed of this decision?"
+    },
+    {
+      "id": "Field_NotificationNotes",
+      "type": "textarea",
+      "label": "Additional notes",
+      "key": "notificationNotes",
+      "description": "Optional. These notes will be included in the notification to the applicant."
+    },
+    {
+      "id": "Field_ApplicantNotified",
+      "type": "checkbox",
+      "label": "I confirm the applicant will be notified",
+      "key": "applicantNotified",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Confirm notification",
+      "action": "submit"
+    }
+  ]
+}

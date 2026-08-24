@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_ZorgtoeslagProvisional" targetNamespace="http://example.com/zorgtoeslag" exporter="Camunda Modeler" exporterVersion="5.43.1">
+  <bpmn:process id="ZorgtoeslagProvisionalSubProcessE2E" name="Zorgtoeslag — Provisional Entitlement Assessment" isExecutable="true" camunda:historyTimeToLive="365">
+    <bpmn:startEvent id="SubStart" name="Start processing">
+      <bpmn:outgoing>Flow_Sub_Start_Validate</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:scriptTask id="Sub_ValidateApplication" name="Validate application data" scriptFormat="javascript">
+      <bpmn:incoming>Flow_Sub_Start_Validate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Validate_Retrieve</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        // Stub validation — in production: call RvIG identity API.
+        execution.setVariable("applicationValid", true);
+        execution.setVariable("validationMessage", "Application validated (stub).");
+        execution.setVariable("validationTimestamp", new Date().toISOString());
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:scriptTask id="Sub_RetrieveData" name="Retrieve income and household data" scriptFormat="javascript">
+      <bpmn:incoming>Flow_Sub_Validate_Retrieve</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Retrieve_Calc</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        // Coerce types that the zorgtoeslag DRD is strict about.
+        // form-js submits number fields as Integer when no decimal is entered;
+        // the DRD expects Double for income/factor and null (absent) for overlijdensdatum.
+        var income = execution.getVariable("toetsingsinkomen");
+        if (income != null) execution.setVariable("toetsingsinkomen", income * 1.0);
+
+        var factor = execution.getVariable("woonlandfactorBuitenland");
+        if (factor != null) execution.setVariable("woonlandfactorBuitenland", factor * 1.0);
+
+        // Treat empty string overlijdensdatum as absent (null cannot be set directly).
+        var od = execution.getVariable("overlijdensdatum");
+        if (od != null && String(od).trim() === "") execution.removeVariable("overlijdensdatum");
+
+        execution.setVariable("dataRetrievalTimestamp", new Date().toISOString());
+        execution.setVariable("dataSource", "stub");
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:businessRuleTask id="Sub_CalcProvisional" name="Calculate provisional entitlement (Wzt)" camunda:resultVariable="provisionalResult" camunda:decisionRef="zorgtoeslag_resultaat" camunda:decisionRefTenantId="${null}" camunda:mapDecisionResult="singleResult">
+      <bpmn:incoming>Flow_Sub_Retrieve_Calc</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Calc_Extract</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:scriptTask id="Sub_ExtractResult" name="Extract DMN result" scriptFormat="javascript">
+      <bpmn:incoming>Flow_Sub_Calc_Extract</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Extract_Review</bpmn:outgoing>
+      <bpmn:script>
+        var result = execution.getVariable("provisionalResult");
+        var eligible = result.get("eligible");
+        var amountYear = result.get("amountYear");
+        execution.setVariable("provisionalDecision", eligible == true ? "Granted" : "Rejected");
+        execution.setVariable("provisionalAmount",
+          amountYear != null ? (Number(amountYear) / 12.0) : 0.0);
+        execution.setVariable("eligible", eligible);
+        execution.setVariable("amountYear", amountYear != null ? Number(amountYear) : 0);
+      </bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:userTask id="Sub_CaseReview" name="Case review: provisional entitlement decision" camunda:formRef="zorgtoeslag-provisional-review" camunda:formRefBinding="latest" camunda:candidateGroups="caseworker">
+      <bpmn:incoming>Flow_Sub_Extract_Review</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Review_Resolve</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:scriptTask id="Sub_ResolveDecision" name="Resolve final provisional decision" scriptFormat="javascript">
+      <bpmn:incoming>Flow_Sub_Review_Resolve</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Resolve_Gateway</bpmn:outgoing>
+      <bpmn:script>
+        if (execution.hasVariable("reviewAction") &amp;&amp;
+            execution.getVariable("reviewAction") === "change") {
+          if (execution.hasVariable("reviewEntitlementDecision")) {
+            execution.setVariable(
+              "provisionalDecision",
+              execution.getVariable("reviewEntitlementDecision")
+            );
+          }
+        }
+      </bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:exclusiveGateway id="Sub_FinalGateway" name="Entitlement granted?">
+      <bpmn:incoming>Flow_Sub_Resolve_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Final_Granted</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Sub_Final_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Sub_SetGranted" name="Set outcome: provisional grant" scriptFormat="javascript">
+      <bpmn:incoming>Flow_Sub_Final_Granted</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Granted_End</bpmn:outgoing>
+      <bpmn:script>
+        execution.setVariable("provisionalDecision", "Granted");
+        execution.setVariable("decisionType", "Granted");
+        execution.setVariable("finalMessage",
+          "Your zorgtoeslag provisional entitlement has been GRANTED. " +
+          "Monthly payments will commence shortly. " +
+          "A final settlement will follow after your annual income is confirmed. " +
+          "You may appeal within 6 weeks (Awb 6:7).");
+        execution.setVariable("paymentRequired", true);      // → AWB Task_Phase7_Payment
+        execution.setVariable("chainProcessRequired", true); // → AWB Task_Phase8_Forward
+      </bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:scriptTask id="Sub_SetRejected" name="Set outcome: provisional rejection" scriptFormat="javascript">
+      <bpmn:incoming>Flow_Sub_Final_Rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sub_Rejected_End</bpmn:outgoing>
+      <bpmn:script>
+        execution.setVariable("provisionalDecision", "Rejected");
+        execution.setVariable("decisionType", "Rejected");
+        execution.setVariable("finalMessage",
+          "Your zorgtoeslag provisional entitlement has been REJECTED. " +
+          "You may appeal within 6 weeks (Awb 6:7).");
+        execution.setVariable("paymentRequired", false);
+        execution.setVariable("chainProcessRequired", false);
+      </bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="SubEnd" name="Decision ready">
+      <bpmn:incoming>Flow_Sub_Granted_End</bpmn:incoming>
+      <bpmn:incoming>Flow_Sub_Rejected_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Sub_Start_Validate" sourceRef="SubStart" targetRef="Sub_ValidateApplication" />
+    <bpmn:sequenceFlow id="Flow_Sub_Validate_Retrieve" sourceRef="Sub_ValidateApplication" targetRef="Sub_RetrieveData" />
+    <bpmn:sequenceFlow id="Flow_Sub_Retrieve_Calc" sourceRef="Sub_RetrieveData" targetRef="Sub_CalcProvisional" />
+    <bpmn:sequenceFlow id="Flow_Sub_Calc_Extract" sourceRef="Sub_CalcProvisional" targetRef="Sub_ExtractResult" />
+    <bpmn:sequenceFlow id="Flow_Sub_Extract_Review" sourceRef="Sub_ExtractResult" targetRef="Sub_CaseReview" />
+    <bpmn:sequenceFlow id="Flow_Sub_Review_Resolve" sourceRef="Sub_CaseReview" targetRef="Sub_ResolveDecision" />
+    <bpmn:sequenceFlow id="Flow_Sub_Resolve_Gateway" sourceRef="Sub_ResolveDecision" targetRef="Sub_FinalGateway" />
+    <bpmn:sequenceFlow id="Flow_Sub_Final_Granted" sourceRef="Sub_FinalGateway" targetRef="Sub_SetGranted">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${provisionalDecision == "Granted"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Sub_Final_Rejected" sourceRef="Sub_FinalGateway" targetRef="Sub_SetRejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${provisionalDecision == "Rejected"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Sub_Granted_End" sourceRef="Sub_SetGranted" targetRef="SubEnd" />
+    <bpmn:sequenceFlow id="Flow_Sub_Rejected_End" sourceRef="Sub_SetRejected" targetRef="SubEnd" />
+    <bpmn:textAnnotation id="Annotation_E2EFixture">
+      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="SubStart" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Sub">
+    <bpmndi:BPMNPlane id="BPMNPlane_Sub" bpmnElement="ZorgtoeslagProvisionalSubProcessE2E">
+      <bpmndi:BPMNShape id="SubStart_di" bpmnElement="SubStart">
+        <dc:Bounds x="152" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="130" y="225" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Annotation_E2EFixture_di" bpmnElement="Annotation_E2EFixture">
+        <dc:Bounds x="90" y="10" width="320" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_E2EFixture_di" bpmnElement="Association_E2EFixture">
+        <di:waypoint x="250" y="110" />
+        <di:waypoint x="170" y="182" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Sub_ValidateApplication_di" bpmnElement="Sub_ValidateApplication">
+        <dc:Bounds x="240" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_RetrieveData_di" bpmnElement="Sub_RetrieveData">
+        <dc:Bounds x="460" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_CalcProvisional_di" bpmnElement="Sub_CalcProvisional">
+        <dc:Bounds x="680" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_ExtractResult_di" bpmnElement="Sub_ExtractResult">
+        <dc:Bounds x="900" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_CaseReview_di" bpmnElement="Sub_CaseReview">
+        <dc:Bounds x="1120" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_ResolveDecision_di" bpmnElement="Sub_ResolveDecision">
+        <dc:Bounds x="1340" y="160" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_FinalGateway_di" bpmnElement="Sub_FinalGateway" isMarkerVisible="true">
+        <dc:Bounds x="1560" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1542" y="151" width="87" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_SetGranted_di" bpmnElement="Sub_SetGranted">
+        <dc:Bounds x="1670" y="94" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_SetRejected_di" bpmnElement="Sub_SetRejected">
+        <dc:Bounds x="1670" y="270" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SubEnd_di" bpmnElement="SubEnd">
+        <dc:Bounds x="1892" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1868" y="225" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Sub_Start_Validate_di" bpmnElement="Flow_Sub_Start_Validate">
+        <di:waypoint x="188" y="200" />
+        <di:waypoint x="240" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Validate_Retrieve_di" bpmnElement="Flow_Sub_Validate_Retrieve">
+        <di:waypoint x="400" y="200" />
+        <di:waypoint x="460" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Retrieve_Calc_di" bpmnElement="Flow_Sub_Retrieve_Calc">
+        <di:waypoint x="620" y="200" />
+        <di:waypoint x="680" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Calc_Extract_di" bpmnElement="Flow_Sub_Calc_Extract">
+        <di:waypoint x="840" y="200" />
+        <di:waypoint x="900" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Extract_Review_di" bpmnElement="Flow_Sub_Extract_Review">
+        <di:waypoint x="1060" y="200" />
+        <di:waypoint x="1120" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Review_Resolve_di" bpmnElement="Flow_Sub_Review_Resolve">
+        <di:waypoint x="1280" y="200" />
+        <di:waypoint x="1340" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Resolve_Gateway_di" bpmnElement="Flow_Sub_Resolve_Gateway">
+        <di:waypoint x="1500" y="200" />
+        <di:waypoint x="1560" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Final_Granted_di" bpmnElement="Flow_Sub_Final_Granted">
+        <di:waypoint x="1585" y="175" />
+        <di:waypoint x="1585" y="134" />
+        <di:waypoint x="1670" y="134" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Final_Rejected_di" bpmnElement="Flow_Sub_Final_Rejected">
+        <di:waypoint x="1585" y="225" />
+        <di:waypoint x="1585" y="310" />
+        <di:waypoint x="1670" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Granted_End_di" bpmnElement="Flow_Sub_Granted_End">
+        <di:waypoint x="1830" y="134" />
+        <di:waypoint x="1910" y="134" />
+        <di:waypoint x="1910" y="182" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Rejected_End_di" bpmnElement="Flow_Sub_Rejected_End">
+        <di:waypoint x="1830" y="310" />
+        <di:waypoint x="1910" y="310" />
+        <di:waypoint x="1910" y="218" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

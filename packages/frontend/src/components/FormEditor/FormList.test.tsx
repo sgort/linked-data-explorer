@@ -63,7 +63,7 @@ describe('FormList', () => {
     expect(screen.queryByText('Flevoland form')).toBeNull();
   });
 
-  test('a status badge is shown for example/wip/dso forms', () => {
+  test('a status badge is shown for example/wip/dso/e2e forms', () => {
     render(
       <FormList
         {...baseProps}
@@ -71,12 +71,14 @@ describe('FormList', () => {
           form({ id: 'f1', name: 'Example form', status: 'example' }),
           form({ id: 'f2', name: 'WIP form', status: 'wip' }),
           form({ id: 'f3', name: 'DSO form', status: 'dso' }),
+          form({ id: 'f4', name: 'E2E form', status: 'e2e' }),
         ]}
       />
     );
     expect(screen.getByText('EXAMPLE')).toBeTruthy();
     expect(screen.getByText('WIP')).toBeTruthy();
     expect(screen.getByText('DSO')).toBeTruthy();
+    expect(screen.getByText('E2E')).toBeTruthy();
   });
 
   test('clicking a card calls onLoadForm with its id', async () => {
@@ -169,9 +171,35 @@ describe('FormList', () => {
         expect.objectContaining({ id: 'imported-schema' }),
         'imported-schema',
         'nl',
-        undefined
+        undefined,
+        false
       )
     );
+  });
+
+  test('importing a .form file carrying the e2eFixture marker calls onImportForm with isE2EFixture true, and strips the marker from the schema', async () => {
+    const onImportForm = vi.fn();
+    render(<FormList {...baseProps} forms={[]} onImportForm={onImportForm} />);
+
+    const file = new File(
+      [JSON.stringify({ id: 'e2e-schema', components: [], e2eFixture: true })],
+      'tree-felling-review.form',
+      { type: 'application/json' }
+    );
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, file);
+
+    await vi.waitFor(() =>
+      expect(onImportForm).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'e2e-schema' }),
+        'e2e-schema',
+        undefined,
+        undefined,
+        true
+      )
+    );
+    const [[schema]] = onImportForm.mock.calls;
+    expect(schema).not.toHaveProperty('e2eFixture');
   });
 
   test('importing an invalid .form file alerts instead of crashing', async () => {

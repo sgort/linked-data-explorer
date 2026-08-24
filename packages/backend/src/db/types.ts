@@ -6,6 +6,7 @@ export type BpmnRow = {
   xml: string;
   process_role: string;
   called_element: string | null;
+  shell_id: string | null;
   linked_dmn_templates: string[] | null;
   status: string;
   readonly: boolean;

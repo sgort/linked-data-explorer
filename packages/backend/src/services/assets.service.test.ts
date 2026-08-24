@@ -31,6 +31,7 @@ function bpmnRow(overrides: Partial<BpmnRow> = {}): BpmnRow {
     xml: '<bpmn/>',
     process_role: 'standalone',
     called_element: null,
+    shell_id: null,
     linked_dmn_templates: [],
     status: 'wip',
     readonly: false,
@@ -110,6 +111,7 @@ describe('BPMN', () => {
         '<bpmn/>',
         'standalone',
         null,
+        null,
         [],
         'wip',
         null,
@@ -118,6 +120,23 @@ describe('BPMN', () => {
         '2026-06-01T00:00:00.000Z',
       ]
     );
+  });
+
+  test('upsertBpmn passes shellId through when given', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    await upsertBpmn({
+      id: 'sub1',
+      name: 'Tree Felling Permit',
+      xml: '<bpmn/>',
+      calledElement: 'AwbShellProcess',
+      shellId: 'shell1',
+      linkedDmnTemplates: [],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-06-01T00:00:00.000Z',
+    });
+
+    const [, params] = mockQuery.mock.calls[0];
+    expect(params).toContain('shell1');
   });
 
   test('deleteBpmn issues a DELETE for the given lde_id', async () => {

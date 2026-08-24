@@ -1,6 +1,6 @@
 {
   "name": "linked-data-explorer-monorepo",
-  "version": "2026.08.0",
+  "version": "2026.08.3",
   "private": true,
   "description": "Monorepo for Linked Data Explorer - RONL DMN Orchestration Platform",
   "workspaces": [
@@ -28,6 +28,10 @@
     "packages/frontend/**/*.{js,jsx,ts,tsx,json,css,md}": [
       "prettier --write",
       "eslint --config packages/frontend/eslint.config.js --fix"
+    ],
+    "packages/backend/src/**/*.ts": [
+      "prettier --write",
+      "eslint --config packages/backend/eslint.config.js --fix"
     ]
   },
   "engines": {

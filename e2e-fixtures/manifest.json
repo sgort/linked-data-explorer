@@ -1,0 +1,58 @@
+{
+  "flevoland": [
+    {
+      "processDefinitionKey": "AwbShellProcess",
+      "bpmn": "AwbShellProcess.bpmn",
+      "forms": ["kapvergunning-start.form", "awb-notify-applicant.form"],
+      "documents": ["example_treefelling_beschikking.document"],
+      "source": "packages/frontend/public/examples/flevoland/AwbShellProcess.bpmn (seeded, unchanged)",
+      "subProcesses": [
+        {
+          "processDefinitionKey": "TreeFellingPermitSubProcessE2E",
+          "bpmn": "TreeFellingPermitSubProcessE2E.bpmn",
+          "forms": ["tree-felling-review.form"],
+          "documents": [],
+          "source": "based on packages/frontend/public/examples/flevoland/TreeFellingPermitSubProcess.bpmn, renamed to TreeFellingPermitSubProcessE2E (id + filename) to give this fixture its own Operaton key, distinct from the seeded example — LDE's own catalog otherwise conflates the two by shared process id, silently redeploying stale content; called via AwbShellProcess's callActivity calledElement=\"TreeFellingPermitSubProcessE2E\" — deployed together with the shell in one LDE Modeler action, not separately"
+        }
+      ]
+    },
+    {
+      "processDefinitionKey": "RipR21Process",
+      "bpmn": "RipR21Process.bpmn",
+      "forms": [
+        "rip-intake.form",
+        "rip-kwaliteit-verbetering.form",
+        "rip-intake-meeting.form",
+        "rip-risk-file.form",
+        "rip-planning.form",
+        "rip-intake-report.form",
+        "rip-psu-organize.form",
+        "rip-pdp-aanvullen.form",
+        "rip-uitvoer-intake.form",
+        "rip-approval.form",
+        "rip-psu-execution.form",
+        "rip-overleg-vo.form"
+      ],
+      "documents": ["rip-intake-report.document", "rip-pdp.document", "rip-psu-report.document"],
+      "source": "merged from examples/organizations/flevoland/rip-phase1-swimlanes/ (BPMN + 5 forms + 3 documents) and examples/organizations/flevoland/rip-phase1/ (7 forms unchanged between drafts); renamed RipPhase1Process -> RipR21Process"
+    }
+  ],
+  "toeslagen": [
+    {
+      "processDefinitionKey": "AwbZorgtoeslagProcess",
+      "bpmn": "AwbZorgtoeslagProcess.bpmn",
+      "forms": ["zorgtoeslag-provisional-start.form", "zorgtoeslag-notify-applicant.form"],
+      "documents": ["example_zorgtoeslag_provisional_beschikking.document"],
+      "source": "packages/frontend/public/examples/toeslagen/AwbZorgtoeslagProcess.bpmn (seeded, unchanged)",
+      "subProcesses": [
+        {
+          "processDefinitionKey": "ZorgtoeslagProvisionalSubProcessE2E",
+          "bpmn": "ZorgtoeslagProvisionalSubProcessE2E.bpmn",
+          "forms": ["zorgtoeslag-provisional-review.form"],
+          "documents": [],
+          "source": "based on packages/frontend/public/examples/toeslagen/ZorgtoeslagProvisionalSubProcess.bpmn, renamed to ZorgtoeslagProvisionalSubProcessE2E (id + filename) to give this fixture its own Operaton key, distinct from the seeded example — LDE's own catalog otherwise conflates the two by shared process id, silently redeploying stale content; called via AwbZorgtoeslagProcess's callActivity calledElement=\"ZorgtoeslagProvisionalSubProcessE2E\" — deployed together with the shell in one LDE Modeler action, not separately"
+        }
+      ]
+    }
+  ]
+}

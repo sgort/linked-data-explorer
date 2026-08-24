@@ -154,16 +154,40 @@ Set `"status": "Released"`. No separate color fields on the commit-format
 shape — `Changelog.tsx` derives the badge/border color from the `status`
 string itself. Do not add color keys to a commit-format entry.
 
-### 4. Bump the in-scope package.json files
+### 4. Bump the in-scope package.json files and the lockfile
 
-Read each file before editing. Set `"version"` to the released version in:
+Set `"version"` by hand in each in-scope `package.json` **and** in the matching
+entries of the root `package-lock.json`:
 
 - `package.json` (repo root) — **always**
 - `packages/frontend/package.json` — only if scope is `frontend` or `both`
 - `packages/backend/package.json` — only if scope is `backend` or `both`
+- `package-lock.json` — the top-level `version`, `packages[""].version`, and
+  `packages["packages/<ws>"].version` for each workspace bumped above
 
-Leave an out-of-scope package.json untouched — its version legitimately
-lags at the last release that changed it.
+Leave an out-of-scope package untouched — its version legitimately lags at the
+last release that changed it, and that is true of its lockfile entry too.
+
+**Do not use `npm version`.** It coerces its argument to strict SemVer, and a
+zero-padded CalVer month is not a valid SemVer numeric identifier — so
+`npm version 2026.08.3` silently writes **`2026.8.3`**, to every file it
+touches. That was tried during the v2026.08.3 release and reverted. There is no
+flag to disable the coercion. `npm pkg set version=...` preserves the string but
+does not touch the lockfile, so it solves only half the problem.
+
+**Why the lockfile is called out.** This step used to name only the
+`package.json` files, so no release ever updated the lockfile. Through
+v2026.08.2 it still recorded the root at `1.9.13` and `packages/backend` at
+`0.1.0`, while every `package.json` in the repo had reached `2026.08.2`.
+
+The drift is not fatal: `npm ci` validates dependency satisfiability, and the
+root depends on its workspaces by path rather than by version range, so those
+`version` fields are never checked — it exits 0 either way (verified against the
+drifted state). But the lockfile is what CI installs from and what SBOM, audit
+and provenance tooling reads, so all of it reported the wrong versions — and the
+first plain `npm install` afterwards drops a spurious multi-version diff into
+whatever unrelated commit follows. Re-run `npm ci --dry-run` after editing, to
+confirm the lockfile still resolves.
 
 ### 5. Normalize formatting
 
