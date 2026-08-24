@@ -2,7 +2,7 @@
   "id": "rip-psu-report",
   "name": "RIP — PSU Report (Column 3)",
   "description": "Project start-up report. Records PSU outcomes, team roles, and action points. Saved to eDOCS after PSU execution.",
-  "processKey": "RipPhase1Process",
+  "processKey": "RipR21Process",
   "serviceId": "RipPhase1",
   "schemaVersion": 1,
   "readonly": false,
@@ -197,7 +197,7 @@
       ]
     },
     "closing": { "blocks": [] },
-    "signoff": {
+    "signOff": {
       "blocks": [
         {
           "id": "so1",
@@ -218,7 +218,7 @@
         }
       ]
     },
-    "contactInfo": { "blocks": [] },
+    "contactInformation": { "blocks": [] },
     "annex": { "blocks": [] }
   }
 }

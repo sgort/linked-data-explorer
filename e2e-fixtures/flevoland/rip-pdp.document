@@ -2,7 +2,7 @@
   "id": "rip-pdp",
   "name": "RIP — Preliminary Design Principles (Column 4)",
   "description": "Principles of the preliminary design phase. Requires approval from contributor and official client before the preliminary design phase begins.",
-  "processKey": "RipPhase1Process",
+  "processKey": "RipR21Process",
   "serviceId": "RipPhase1",
   "schemaVersion": 1,
   "readonly": false,
@@ -210,7 +210,7 @@
         }
       ]
     },
-    "signoff": {
+    "signOff": {
       "blocks": [
         {
           "id": "so1",
@@ -245,7 +245,7 @@
         }
       ]
     },
-    "contactInfo": { "blocks": [] },
+    "contactInformation": { "blocks": [] },
     "annex": { "blocks": [] }
   }
 }
