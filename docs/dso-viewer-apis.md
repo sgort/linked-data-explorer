@@ -100,8 +100,7 @@ Flevoland `00000001006203243000`, Ede `00000001001104524000`, Gelderland
 `00000001001825100000`. The OIN→name map exists because the RTR only returns the
 authority code (e.g. `GM0995`), never a readable name.
 
-**Detail + hierarchy.** Selecting an activity — and, in the same pass, each of its
-`_links.onderliggendeActiviteiten` children — fetches:
+**Detail.** Selecting an activity fetches:
 
 | Layer | Call |
 |-------|------|
@@ -109,7 +108,42 @@ authority code (e.g. `GM0995`), never a readable name.
 | LDE | `GET /v1/dso/activiteiten/:urn?datum` |
 | DSO | **API 2** `GET /activiteiten/{urn}?datum` |
 
-The detail response carries `regelBeheerObjecten`, which is what unlocks §2.4.
+The detail response carries `regelBeheerObjecten` (which unlocks §2.4) and
+`_links.onderliggendeActiviteiten` — a list of HAL hrefs and nothing else.
+
+**Child-activity fan-out (1 + N requests).** Because the RTR returns bare hrefs
+for children, with no `omschrijving`, the panel cannot label them without asking
+the API about each one individually. So as soon as the parent resolves,
+`ActivityDetailPanel` fires **one additional activity-detail request per child,
+all in parallel**, purely to read each child's name:
+
+```
+GET /v1/dso/activiteiten/{parent-urn}       ->  1 request
+  |- GET /v1/dso/activiteiten/{child-1}     -+
+  |- GET /v1/dso/activiteiten/{child-2}      |-  N requests, fired together
+  |- ...                                    -+
+```
+
+Every one of these is the same endpoint chain as the parent — LDE
+`GET /v1/dso/activiteiten/:urn` → **API 2** `GET /activiteiten/{urn}?datum` — so a
+single click costs `1 + N` upstream RTR calls. N is whatever the parent declares:
+an activity such as *Bedrijfsactiviteiten* with 23 children means 24 requests to
+render one detail panel.
+
+Behaviour worth knowing:
+
+- The fan-out uses `Promise.allSettled`, so one failing child never breaks the
+  panel or the other lookups.
+- Children that resolve render as a named blue link; children that fail, or that
+  return no `omschrijving`, fall back to the raw URN — still clickable, just
+  unlabelled. This is why a panel can show a mix of names and URNs.
+- The `Child activities (N)` heading counts the *href list*, not the resolved
+  names, so the count stays correct even when some lookups fail.
+- Each child request inherits the parent's `datum` and `env`.
+- Names live in local component state, cleared and re-fetched on every
+  `urn` / `datum` / `env` change. There is **no cache and no concurrency cap**:
+  navigating into a child issues its own fan-out, and re-opening an activity you
+  already visited fetches everything again.
 
 Dates in the UI are ISO (`YYYY-MM-DD`) and converted to the DSO's `dd-MM-yyyy` before
 being sent; when omitted, the backend defaults to today.
@@ -198,6 +232,10 @@ query parameter (header takes precedence); anything else falls back to `pre`.
   WGS84 point (`geometrie` + `crs=epsg:4326`) and is implemented and tested end to
   end in both the backend and `dsoService.ts`, but no UI calls it — the Activities
   tab uses date and OIN modes only. It is ready for a map/point-selection feature.
+- **The child fan-out is the viewer's heaviest interaction.** Opening one activity
+  issues `1 + N` RTR requests with no batching, caching or concurrency limit
+  (see §2.3). It exists only to turn hrefs into readable names. If child counts
+  grow or DSO rate limiting appears, this is the first thing to memoise.
 - **Timeout on production requests** uses `config.dso.timeout`; `config.dsoProd` has
   no `timeout` field of its own, so both environments share the pre-production value.
 - **Doc drift:** the route comments for `/begrippen` and `/activiteiten` say the
