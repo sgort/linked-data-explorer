@@ -42,7 +42,7 @@
 
 **Modified:**
 - `e2e-fixtures/manifest.json` — new `RipR22Process` entry; `RipR21Process`'s `source` field repointed at the renamed directory
-- `packages/frontend/src/changelog.json` — new entry; old-path reference repointed
+- `packages/frontend/src/changelog.json` — new entry (Task 6 only)
 
 ---
 
@@ -51,7 +51,6 @@
 **Files:**
 - Rename: `examples/organizations/flevoland/rip-phase1-swimlanes/` → `examples/organizations/flevoland/rip-phase-21/`
 - Modify: `e2e-fixtures/manifest.json` (the `RipR21Process` entry's `source` field)
-- Modify: `packages/frontend/src/changelog.json` (one reference to the old path)
 
 **Interfaces:**
 - Consumes: nothing.
@@ -63,7 +62,7 @@ Run:
 ```bash
 grep -rn "rip-phase1-swimlanes" --include='*.ts' --include='*.tsx' --include='*.js' packages/*/src
 ```
-Expected: no output. The only references live in `manifest.json` and `changelog.json` (descriptive prose) and in the gitignored `packages/frontend/dist/` build output. If this prints anything under `src/`, stop — the rename is not safe and the plan needs revisiting.
+Expected: no output. The only reference lives in `manifest.json` (descriptive prose) and in the gitignored `packages/frontend/dist/` build output. If this prints anything under `src/`, stop — the rename is not safe and the plan needs revisiting.
 
 - [ ] **Step 2: Rename the directory**
 
@@ -76,7 +75,7 @@ git mv examples/organizations/flevoland/rip-phase1-swimlanes examples/organizati
 Run: `git status --porcelain`
 Expected: 16 lines all beginning with `R ` (renamed). If they show as `D`/`A` pairs the content changed accidentally — investigate before continuing.
 
-- [ ] **Step 4: Repoint the two prose references**
+- [ ] **Step 4: Repoint the prose reference**
 
 In `e2e-fixtures/manifest.json`, the `RipR21Process` entry's `source` field currently reads:
 
@@ -90,7 +89,6 @@ Replace with:
 "authored in examples/organizations/flevoland/rip-phase-21/ (BPMN + 12 forms + 3 documents); process renamed RipPhase1Process -> RipR21Process, directory renamed rip-phase1-swimlanes -> rip-phase-21 once the competing rip-phase1/ draft was deleted"
 ```
 
-In `packages/frontend/src/changelog.json`, find the entry containing `rip-phase1-swimlanes` and change that substring to `rip-phase-21`. Change nothing else in that file.
 
 - [ ] **Step 5: Run the fixture tests**
 

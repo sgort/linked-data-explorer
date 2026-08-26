@@ -34,7 +34,7 @@
         "rip-overleg-vo.form"
       ],
       "documents": ["rip-intake-report.document", "rip-pdp.document", "rip-psu-report.document"],
-      "source": "merged from examples/organizations/flevoland/rip-phase1-swimlanes/ (BPMN + 5 forms + 3 documents) and examples/organizations/flevoland/rip-phase1/ (7 forms unchanged between drafts); renamed RipPhase1Process -> RipR21Process"
+      "source": "authored in examples/organizations/flevoland/rip-phase-21/ (BPMN + 12 forms + 3 documents); process renamed RipPhase1Process -> RipR21Process, directory renamed rip-phase1-swimlanes -> rip-phase-21 once the competing rip-phase1/ draft was deleted"
     }
   ],
   "toeslagen": [

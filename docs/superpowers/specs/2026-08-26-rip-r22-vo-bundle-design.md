@@ -32,11 +32,13 @@ examples/organizations/flevoland/rip-phase1-swimlanes/  ->  rip-phase-21/
 (`RipR21Process`), and the new bundle becomes an obvious sibling
 (`rip-phase-22/` holding `RipR22Process`).
 
-Two references to the old path exist and both are descriptive prose, not
-lookups: the `source` field of the `RipR21Process` entry in
-`e2e-fixtures/manifest.json`, and an entry in
-`packages/frontend/src/changelog.json`. Both get updated so they don't point at
-a path that no longer exists. Nothing resolves this directory at runtime — the
+One reference to the old path exists, and it is descriptive prose rather than a
+lookup: the `source` field of the `RipR21Process` entry in
+`e2e-fixtures/manifest.json`. It gets updated so it does not point at a path
+that no longer exists. `packages/frontend/src/changelog.json` mentions the
+older `rip-phase1/` directory and the `RipPhase1Process` -> `RipR21Process`
+rename, but only inside historical release entries, which describe what was
+true when they were written and are not retro-edited. Nothing resolves this directory at runtime — the
 app serves examples from `packages/frontend/public/examples/`, which has never
 contained the RIP bundles.
 
