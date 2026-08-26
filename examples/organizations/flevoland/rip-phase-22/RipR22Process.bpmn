@@ -145,7 +145,7 @@
     </bpmn:textAnnotation>
     <bpmn:association id="Association_CO1_Netbeheerder" sourceRef="Task_OpstellenDefinitiefVO" targetRef="Annotation_CO1_Netbeheerder" />
     <bpmn:textAnnotation id="Annotation_JoinTerugkeer">
-      <bpmn:text>Alle vijf takken keren hier terug. De PDF toont Inventariseren kabels en leidingen en Aanvragen raamvergunning het pool verlaten zonder terugkeer; letterlijk gemodelleerd blokkeert deze join. De terugkeer is toegevoegd om het proces uitvoerbaar te maken.</bpmn:text>
+      <bpmn:text>Alle vijf takken keren hier terug. De PDF toont dat Inventariseren kabels en leidingen en Aanvragen raamvergunning de pool verlaten zonder terugkeer; letterlijk gemodelleerd blokkeert deze join. De terugkeer is toegevoegd om het proces uitvoerbaar te maken.</bpmn:text>
     </bpmn:textAnnotation>
     <bpmn:association id="Association_JoinTerugkeer" sourceRef="Gateway_UitgangspuntenJoin" targetRef="Annotation_JoinTerugkeer" />
   </bpmn:process>
