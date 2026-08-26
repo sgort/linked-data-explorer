@@ -13,8 +13,7 @@
   "bindings": [
     { "id": "b1", "placeholder": "{{projectNumber}}", "variableKey": "projectNumber", "source": "process", "label": "Project number" },
     { "id": "b2", "placeholder": "{{projectName}}", "variableKey": "projectName", "source": "process", "label": "Project name" },
-    { "id": "b3", "placeholder": "{{projectType}}", "variableKey": "projectType", "source": "process", "label": "Project type" },
-    { "id": "b4", "placeholder": "{{objectenboomReferentie}}", "variableKey": "objectenboomReferentie", "source": "process", "label": "Object tree reference" }
+    { "id": "b3", "placeholder": "{{objectenboomReferentie}}", "variableKey": "objectenboomReferentie", "source": "process", "label": "Object tree reference" }
   ],
   "zones": {
     "letterhead": {

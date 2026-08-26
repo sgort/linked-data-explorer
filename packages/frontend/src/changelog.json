@@ -36,7 +36,7 @@
           "subject": "R2.2 document templates were unattached — RipR22Process shipped without ronl:documentRef",
           "details": [
             "R2.1 wires each document template to the task that produces it with `ronl:documentRef` — the attribute `DocumentTemplateSelector` writes and `BpmnCanvas` reads to render the document badge on a task in the Modeler. The R2.2 spec never mentioned it, so RipR22Process shipped without it and the five templates added alongside it would have imported but attached to nothing.",
-            "The attribute is single-valued, so a task can carry at most one template. Four of the five bind: Task_VerzamelenKlanteisen → rip-kes, Task_OpstellenConceptVO → rip-ontwerptoelichting, Task_BesprekenConceptVO → rip-bevindingenformulier, Task_OpstellenDefinitiefVO → rip-hoeveelheidsbepaling. `rip-objectenboom` stays unattached on purpose — it is the “Format objectenboom (Relatics)” artifact, maintained in Relatics rather than authored in this process, so no R2.2 task produces it.",
+            "The attribute is single-valued, so a task can carry at most one template. Four of the five bind: Task_VerzamelenKlanteisen → rip-kes, Task_OpstellenConceptVO → rip-ontwerptoelichting, Task_BesprekenConceptVO → rip-bevindingenformulier, Task_OpstellenDefinitiefVO → rip-hoeveelheidsbepaling. `rip-objectenboom` stays unattached on purpose — Task_OpstellenConceptVO produces both the Ontwerptoelichting and the Objectenboom, and its one slot went to the Ontwerptoelichting; the Objectenboom still ships and imports normally, it simply carries no task badge. Its reference is additionally maintained in Relatics.",
             "Values are bare template ids with no `.document` suffix, matching R2.1. Both the `examples/` and `e2e-fixtures/` copies are updated so the parity test stays green."
           ]
         },
@@ -57,7 +57,7 @@
           "type": "test",
           "subject": "New parity test locks each RIP bundle's examples/ and e2e-fixtures/ copies together",
           "details": [
-            "Each RIP bundle exists twice on disk: authored under `examples/`, imported and deployed from `e2e-fixtures/`. Nothing stopped the two drifting, and they have — 39a49bb repaired the document zone keys in the `e2e-fixtures` copies only, and the `examples` copies kept the dead `signoff`/`contactInfo` keys until 44d1cb4 re-pasted them by hand.",
+            "Each RIP bundle exists twice on disk: authored under `examples/`, imported and deployed from `e2e-fixtures/`. Nothing stopped the two drifting, and they have — 49832d2 repaired the document zone keys in the `e2e-fixtures` copies only, and the `examples` copies kept the dead `signoff`/`contactInfo` keys until 44d1cb4 re-pasted them by hand.",
             "A new test asserts every file in a mirrored bundle is byte-identical to its twin. New bundles opt in by adding an entry to `MIRRORED_BUNDLES`."
           ]
         },

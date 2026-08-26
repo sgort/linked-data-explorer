@@ -8,7 +8,7 @@ const FIXTURES_ROOT = path.join(REPO_ROOT, 'e2e-fixtures');
 /**
  * Bundles authored under examples/ and mirrored into e2e-fixtures/.
  * examples/ is where a bundle is written; e2e-fixtures/ is what LDE imports
- * and deploys. The two must stay byte-identical - 39a49bb fixed the document
+ * and deploys. The two must stay byte-identical - 49832d2 fixed the document
  * zone keys in the fixtures copy alone and the examples copy stayed broken
  * until 44d1cb4 re-pasted it by hand.
  */

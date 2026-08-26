@@ -13,11 +13,10 @@
   "bindings": [
     { "id": "b1", "placeholder": "{{projectNumber}}", "variableKey": "projectNumber", "source": "process", "label": "Project number" },
     { "id": "b2", "placeholder": "{{projectName}}", "variableKey": "projectName", "source": "process", "label": "Project name" },
-    { "id": "b3", "placeholder": "{{projectType}}", "variableKey": "projectType", "source": "process", "label": "Project type" },
-    { "id": "b4", "placeholder": "{{vastgesteldProjectplan}}", "variableKey": "vastgesteldProjectplan", "source": "process", "label": "Adopted project plan" },
-    { "id": "b5", "placeholder": "{{conceptVoReferentie}}", "variableKey": "conceptVoReferentie", "source": "process", "label": "Concept VO reference" },
-    { "id": "b6", "placeholder": "{{voReferentie}}", "variableKey": "voReferentie", "source": "process", "label": "VO reference" },
-    { "id": "b7", "placeholder": "{{conditionerendeOnderzoeken}}", "variableKey": "conditionerendeOnderzoeken", "source": "process", "label": "Conditioning studies" }
+    { "id": "b3", "placeholder": "{{vastgesteldProjectplan}}", "variableKey": "vastgesteldProjectplan", "source": "process", "label": "Adopted project plan" },
+    { "id": "b4", "placeholder": "{{conceptVoReferentie}}", "variableKey": "conceptVoReferentie", "source": "process", "label": "Concept VO reference" },
+    { "id": "b5", "placeholder": "{{voReferentie}}", "variableKey": "voReferentie", "source": "process", "label": "VO reference" },
+    { "id": "b6", "placeholder": "{{conditionerendeOnderzoeken}}", "variableKey": "conditionerendeOnderzoeken", "source": "process", "label": "Conditioning studies" }
   ],
   "zones": {
     "letterhead": {

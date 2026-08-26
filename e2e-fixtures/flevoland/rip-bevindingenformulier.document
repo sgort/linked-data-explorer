@@ -13,10 +13,9 @@
   "bindings": [
     { "id": "b1", "placeholder": "{{projectNumber}}", "variableKey": "projectNumber", "source": "process", "label": "Project number" },
     { "id": "b2", "placeholder": "{{projectName}}", "variableKey": "projectName", "source": "process", "label": "Project name" },
-    { "id": "b3", "placeholder": "{{projectType}}", "variableKey": "projectType", "source": "process", "label": "Project type" },
-    { "id": "b4", "placeholder": "{{conceptVoBevindingen}}", "variableKey": "conceptVoBevindingen", "source": "process", "label": "Concept VO findings" },
-    { "id": "b5", "placeholder": "{{verwerkteBevindingen}}", "variableKey": "verwerkteBevindingen", "source": "process", "label": "Processed findings" },
-    { "id": "b6", "placeholder": "{{knelpuntenanalyse}}", "variableKey": "knelpuntenanalyse", "source": "process", "label": "Bottleneck analysis" }
+    { "id": "b3", "placeholder": "{{conceptVoBevindingen}}", "variableKey": "conceptVoBevindingen", "source": "process", "label": "Concept VO findings" },
+    { "id": "b4", "placeholder": "{{verwerkteBevindingen}}", "variableKey": "verwerkteBevindingen", "source": "process", "label": "Processed findings" },
+    { "id": "b5", "placeholder": "{{knelpuntenanalyse}}", "variableKey": "knelpuntenanalyse", "source": "process", "label": "Bottleneck analysis" }
   ],
   "zones": {
     "letterhead": {

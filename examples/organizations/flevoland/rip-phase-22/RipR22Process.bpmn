@@ -144,6 +144,10 @@
       <bpmn:text>CO1. Voeren overleg netbeheerder</bpmn:text>
     </bpmn:textAnnotation>
     <bpmn:association id="Association_CO1_Netbeheerder" sourceRef="Task_OpstellenDefinitiefVO" targetRef="Annotation_CO1_Netbeheerder" />
+    <bpmn:textAnnotation id="Annotation_JoinTerugkeer">
+      <bpmn:text>Alle vijf takken keren hier terug. De PDF toont Inventariseren kabels en leidingen en Aanvragen raamvergunning het pool verlaten zonder terugkeer; letterlijk gemodelleerd blokkeert deze join. De terugkeer is toegevoegd om het proces uitvoerbaar te maken.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_JoinTerugkeer" sourceRef="Gateway_UitgangspuntenJoin" targetRef="Annotation_JoinTerugkeer" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_RipR22">
     <bpmndi:BPMNPlane id="BPMNPlane_RipR22" bpmnElement="Collaboration_RipR22">
@@ -234,6 +238,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Annotation_CO1_Netbeheerder_di" bpmnElement="Annotation_CO1_Netbeheerder">
         <dc:Bounds x="1380" y="420" width="220" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Annotation_JoinTerugkeer_di" bpmnElement="Annotation_JoinTerugkeer">
+        <dc:Bounds x="860" y="85" width="220" height="55" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_StartEvent_R22_Gateway_UitgangspuntenSplit_di" bpmnElement="Flow_StartEvent_R22_Gateway_UitgangspuntenSplit">
         <di:waypoint x="268" y="170" />
@@ -354,6 +361,10 @@
       <bpmndi:BPMNEdge id="Association_CO1_Netbeheerder_di" bpmnElement="Association_CO1_Netbeheerder">
         <di:waypoint x="1460" y="390" />
         <di:waypoint x="1460" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_JoinTerugkeer_di" bpmnElement="Association_JoinTerugkeer">
+        <di:waypoint x="705" y="145" />
+        <di:waypoint x="860" y="115" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

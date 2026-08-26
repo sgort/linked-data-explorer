@@ -124,7 +124,7 @@ MSG
 
 ## Task 2: Parity test locking `examples/` and `e2e-fixtures/` together
 
-The bundle exists twice on disk by design — authored in `examples/`, imported from `e2e-fixtures/`. Nothing currently stops the copies drifting, and they already have: `39a49bb` fixed the zone keys in the `e2e-fixtures/` copies only, and the `examples/` copies stayed broken until a separate manual re-paste in `44d1cb4`. This test closes that gap. It is an addition beyond the spec, justified by that history.
+The bundle exists twice on disk by design — authored in `examples/`, imported from `e2e-fixtures/`. Nothing currently stops the copies drifting, and they already have: `49832d2` fixed the zone keys in the `e2e-fixtures/` copies only, and the `examples/` copies stayed broken until a separate manual re-paste in `44d1cb4`. This test closes that gap. It is an addition beyond the spec, justified by that history.
 
 **Files:**
 - Create: `packages/backend/src/example-fixture-parity.test.ts`
@@ -148,7 +148,7 @@ const FIXTURES_ROOT = path.join(REPO_ROOT, 'e2e-fixtures');
 /**
  * Bundles authored under examples/ and mirrored into e2e-fixtures/.
  * examples/ is where a bundle is written; e2e-fixtures/ is what LDE imports
- * and deploys. The two must stay byte-identical - 39a49bb fixed the document
+ * and deploys. The two must stay byte-identical - 49832d2 fixed the document
  * zone keys in the fixtures copy alone and the examples copy stayed broken
  * until 44d1cb4 re-pasted it by hand.
  */
@@ -227,7 +227,7 @@ test: lock examples/ and e2e-fixtures/ bundle copies together
 
 Each RIP bundle exists twice on disk: authored under examples/, imported
 and deployed from e2e-fixtures/. Nothing stopped the two drifting, and
-they have. 39a49bb repaired the document zone keys in the e2e-fixtures
+they have. 49832d2 repaired the document zone keys in the e2e-fixtures
 copies only; the examples copies kept the dead "signoff" / "contactInfo"
 keys until 44d1cb4 re-pasted them by hand. Anyone fixing one copy could
 silently leave the other wrong again.

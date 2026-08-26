@@ -93,9 +93,11 @@ and the value is the bare template id with no `.document` suffix:
 | `Task_BesprekenConceptVO` | `rip-bevindingenformulier` |
 | `Task_OpstellenDefinitiefVO` | `rip-hoeveelheidsbepaling` |
 
-`rip-objectenboom` is deliberately left unattached. It is the "Format
-objectenboom (Relatics)" artifact — maintained in Relatics rather than authored
-in this process — so no task in R2.2 produces it and it binds to nothing.
+`rip-objectenboom` is deliberately left unattached. `ronl:documentRef` is
+single-valued, `Task_OpstellenConceptVO` produces both the Ontwerptoelichting
+and the Objectenboom, and its one slot went to the Ontwerptoelichting; the
+Objectenboom still ships and imports normally, it simply carries no task
+badge. Note that its reference is additionally maintained in Relatics.
 
 **Control flow — five parallel gateways**, mirroring the diagram's bars:
 
