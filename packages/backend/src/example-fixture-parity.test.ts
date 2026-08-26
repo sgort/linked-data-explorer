@@ -14,6 +14,7 @@ const FIXTURES_ROOT = path.join(REPO_ROOT, 'e2e-fixtures');
  */
 const MIRRORED_BUNDLES: Array<{ examples: string; fixtures: string }> = [
   { examples: 'flevoland/rip-phase-21', fixtures: 'flevoland' },
+  { examples: 'flevoland/rip-phase-22', fixtures: 'flevoland' },
 ];
 
 describe('examples/ and e2e-fixtures/ copies stay identical', () => {

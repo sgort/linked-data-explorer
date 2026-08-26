@@ -35,6 +35,29 @@
       ],
       "documents": ["rip-intake-report.document", "rip-pdp.document", "rip-psu-report.document"],
       "source": "authored in examples/organizations/flevoland/rip-phase-21/ (BPMN + 12 forms + 3 documents); process renamed RipPhase1Process -> RipR21Process, directory renamed rip-phase1-swimlanes -> rip-phase-21 once the competing rip-phase1/ draft was deleted"
+    },
+    {
+      "processDefinitionKey": "RipR22Process",
+      "bpmn": "RipR22Process.bpmn",
+      "forms": [
+        "rip-conditionerende-onderzoeken.form",
+        "rip-concept-vo.form",
+        "rip-definitief-vo.form",
+        "rip-bespreken-concept-vo.form",
+        "rip-bespreken-klanteisen-kl.form",
+        "rip-verzamelen-klanteisen.form",
+        "rip-inventariseren-kabels-leidingen.form",
+        "rip-aanvragen-raamvergunning.form",
+        "rip-terugkoppelen-klanteisen.form"
+      ],
+      "documents": [
+        "rip-kes.document",
+        "rip-ontwerptoelichting.document",
+        "rip-objectenboom.document",
+        "rip-bevindingenformulier.document",
+        "rip-hoeveelheidsbepaling.document"
+      ],
+      "source": "authored in examples/organizations/flevoland/rip-phase-22/ from rip-phases-left/R2 Planvoorbereiding/R2_2 - VO.pdf (rev. 21-11-2024)"
     }
   ],
   "toeslagen": [
