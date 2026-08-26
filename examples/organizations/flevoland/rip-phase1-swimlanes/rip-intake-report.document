@@ -2,7 +2,7 @@
   "id": "rip-intake-report",
   "name": "RIP — Intake Report (Column 2)",
   "description": "Formal intake report for a Regular Infrastructure Project. Generated after intake meeting approval and saved to eDOCS.",
-  "processKey": "RipPhase1Process",
+  "processKey": "RipR21Process",
   "serviceId": "RipPhase1",
   "schemaVersion": 1,
   "readonly": false,
@@ -228,7 +228,7 @@
         }
       ]
     },
-    "signoff": {
+    "signOff": {
       "blocks": [
         {
           "id": "so1",
@@ -256,7 +256,7 @@
         }
       ]
     },
-    "contactInfo": { "blocks": [] },
+    "contactInformation": { "blocks": [] },
     "annex": { "blocks": [] }
   }
 }
