@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:ronl="http://ronl.nl/schema/1.0" id="Definitions_RipPhase1" targetNamespace="http://example.com/rip-phase1" exporter="Camunda Modeler" exporterVersion="5.45.0">
   <bpmn:collaboration id="Collaboration_RipPhase1">
-    <bpmn:participant id="Participant_RipPhase1" name="RIP Fase 1 — R2.1 Projectplan Planvoorbereiding" processRef="RipPhase1Process" />
+    <bpmn:participant id="Participant_RipPhase1" name="RIP Fase 1 — R2.1 Projectplan Planvoorbereiding" processRef="RipR21Process" />
   </bpmn:collaboration>
-  <bpmn:process id="RipPhase1Process" name="RIP Fase 1 — R2.1 Projectplan Planvoorbereiding" isExecutable="true" camunda:historyTimeToLive="365">
+  <bpmn:process id="RipR21Process" name="RIP Fase 1 — R2.1 Projectplan Planvoorbereiding" isExecutable="true" camunda:historyTimeToLive="365">
     <bpmn:laneSet id="LaneSet_1">
       <bpmn:lane id="Lane_PL_Aandrager_AO" name="Projectleider, Aandrager, AO">
         <bpmn:flowNodeRef>Task_AccorderenProjectplan4</bpmn:flowNodeRef>
@@ -156,6 +156,10 @@
     <bpmn:sequenceFlow id="Flow_Akkoord4Approved_End" name="akkoord" sourceRef="Gateway_Akkoord4" targetRef="EndEvent_Phase1Complete">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approvalStatus == "approved"}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
+    <bpmn:textAnnotation id="Annotation_E2EFixture">
+      <bpmn:text>⚠️ E2E FIXTURE — source of truth: linked-data-explorer/e2e-fixtures/. Edits here diverge from ronl-business-api's E2E test suite. See e2e-fixtures/manifest.json.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="StartEvent_RipPhase1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_RipPhase1">
     <bpmndi:BPMNPlane id="BPMNPlane_RipPhase1" bpmnElement="Collaboration_RipPhase1">
@@ -196,6 +200,13 @@
           <dc:Bounds x="266" y="1145" width="78" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Annotation_E2EFixture_di" bpmnElement="Annotation_E2EFixture">
+        <dc:Bounds x="230" y="920" width="320" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_E2EFixture_di" bpmnElement="Association_E2EFixture">
+        <di:waypoint x="390" y="1020" />
+        <di:waypoint x="305" y="1102" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Task_AanlevrenProjectplan_di" bpmnElement="Task_AanlevrenProjectplan">
         <dc:Bounds x="405" y="1080" width="160" height="80" />
       </bpmndi:BPMNShape>

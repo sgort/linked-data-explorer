@@ -1,4 +1,5 @@
 {
+  "e2eFixture": true,
   "schemaVersion": 16,
   "type": "default",
   "id": "rip-psu-organize",
