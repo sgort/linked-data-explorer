@@ -77,6 +77,26 @@ section so the diagram opens in Camunda Modeler and renders in LDE.
 `rip-ontwerper`, `rip-omgevingsmanager` and `rip-adviseur` are new groups;
 `rip-projectleider`, `rip-team` and `rip-aandrager` already exist in R2.1.
 
+Four of these tasks additionally carry `ronl:documentRef`, binding the task to
+the document template it produces — the same wiring R2.1 uses on
+`Task_AanvullenProjectplan2`, `Task_AanvullenProjectplan4` and
+`Task_UitvoerenPSU`, and what renders the document badge on the task in the
+Modeler. Without it the templates import but attach to nothing. The attribute
+is **single-valued** — `DocumentTemplateSelector.tsx` writes one id and
+`BpmnCanvas.tsx` reads a scalar — so exactly one template can hang off a task,
+and the value is the bare template id with no `.document` suffix:
+
+| Task id | `ronl:documentRef` |
+|---|---|
+| `Task_VerzamelenKlanteisen` | `rip-kes` |
+| `Task_OpstellenConceptVO` | `rip-ontwerptoelichting` |
+| `Task_BesprekenConceptVO` | `rip-bevindingenformulier` |
+| `Task_OpstellenDefinitiefVO` | `rip-hoeveelheidsbepaling` |
+
+`rip-objectenboom` is deliberately left unattached. It is the "Format
+objectenboom (Relatics)" artifact — maintained in Relatics rather than authored
+in this process — so no task in R2.2 produces it and it binds to nothing.
+
 **Control flow — five parallel gateways**, mirroring the diagram's bars:
 
 ```

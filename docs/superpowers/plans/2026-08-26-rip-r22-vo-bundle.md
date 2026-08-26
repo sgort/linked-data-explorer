@@ -297,7 +297,7 @@ Header values specific to this file:
 
 Each lane lists its members as `<bpmn:flowNodeRef>` children, exactly as R2.1 does.
 
-**User tasks** — nine. Every one is a `<bpmn:userTask>` with `camunda:formRef`, `camunda:formRefBinding="latest"`, and `camunda:candidateGroups`:
+**User tasks** — nine. Every one is a `<bpmn:userTask>` with `camunda:formRef`, `camunda:formRefBinding="latest"`, and `camunda:candidateGroups`; four of them additionally carry `ronl:documentRef` (see below the table):
 
 | Task id | `name` | Lane | `camunda:formRef` | `camunda:candidateGroups` |
 |---|---|---|---|---|
@@ -312,6 +312,17 @@ Each lane lists its members as `<bpmn:flowNodeRef>` children, exactly as R2.1 do
 | `Task_TerugkoppelenKlanteisen` | `Terugkoppelen klanteisen` | `Lane_Omgevingsmanager` | `rip-terugkoppelen-klanteisen` | `rip-omgevingsmanager` |
 
 `&#10;` is a literal line break in the rendered label — R2.1 uses it the same way for two-line task names.
+
+**`ronl:documentRef`** — four of the nine tasks bind to the document template they produce, exactly as R2.1 does on `Task_AanvullenProjectplan2` (`ronl:documentRef="rip-intake-report"`), `Task_AanvullenProjectplan4` (`rip-pdp`) and `Task_UitvoerenPSU` (`rip-psu-report`). This is what renders the document badge on the task in the Modeler; without it Task 5's templates import but attach to nothing. The attribute is **single-valued** — `DocumentTemplateSelector.tsx` writes one id and `BpmnCanvas.tsx` reads a scalar — so only one template per task, and the value is the bare template id with **no `.document` suffix**:
+
+| Task id | `ronl:documentRef` |
+|---|---|
+| `Task_VerzamelenKlanteisen` | `rip-kes` |
+| `Task_OpstellenConceptVO` | `rip-ontwerptoelichting` |
+| `Task_BesprekenConceptVO` | `rip-bevindingenformulier` |
+| `Task_OpstellenDefinitiefVO` | `rip-hoeveelheidsbepaling` |
+
+The fifth template, `rip-objectenboom`, is deliberately left unattached: it is the "Format objectenboom (Relatics)" artifact, maintained in Relatics rather than authored in this process. Do not attach it to any task.
 
 **Events and gateways:**
 
