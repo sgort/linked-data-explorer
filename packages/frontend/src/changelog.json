@@ -2,6 +2,79 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.08.4",
+      "status": "Upcoming",
+      "date": "26 aug 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "e0efa12",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Five R2.2 document templates added — KES, Ontwerptoelichting, Objectenboom, Bevindingenformulier, Hoeveelheidsbepaling",
+          "details": [
+            "One template per green “Format …” box in R2_2 - VO.pdf: KES, Ontwerptoelichting, Objectenboom, Bevindingenformulier and Hoeveelheidsbepaling. A Format in the diagram and a `.document` in LDE are the same thing — a template with bindings — so the mapping is direct; the blue outputs beside them in the spec are instances of these templates rather than artifacts of their own.",
+            "Zone keys are `signOff` and `contactInformation`, camelCase, from the start — unlike R2.1's templates, which shipped with `signoff` and `contactInfo`, keys `DocumentZones` never declares, leaving their signature blocks unrendered until 49832d2 repaired them.",
+            "Completes the RipR22Process bundle: the manifest now declares nothing that does not exist, and the fixture suite is green."
+          ]
+        },
+        {
+          "sha": "557744a",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Nine R2.2 user task forms added, one per lane task, bound by camunda:formRef",
+          "details": [
+            "One form per user task in RipR22Process. Field types stay inside the eight the R2.1 bundle already uses — text, textarea, textfield, checkbox, datetime, select, radio, button — since nothing else is exercised against this Camunda 7.21 stack.",
+            "The spec's conditional “LCC-raming (indien variantenafweging)” is modelled as a checkbox plus a reference field on `rip-concept-vo.form` rather than an artifact of its own, since it only exists when a variant trade-off happened.",
+            "`klicMeldingReferentie` is collected only on `rip-inventariseren-kabels-leidingen.form`. The concept VO task reads the same information but does not also write it, since two forms writing one process variable would mean whichever task completes last silently wins."
+          ]
+        },
+        {
+          "sha": "8bd789d",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "R2.2 document templates were unattached — RipR22Process shipped without ronl:documentRef",
+          "details": [
+            "R2.1 wires each document template to the task that produces it with `ronl:documentRef` — the attribute `DocumentTemplateSelector` writes and `BpmnCanvas` reads to render the document badge on a task in the Modeler. The R2.2 spec never mentioned it, so RipR22Process shipped without it and the five templates added alongside it would have imported but attached to nothing.",
+            "The attribute is single-valued, so a task can carry at most one template. Four of the five bind: Task_VerzamelenKlanteisen → rip-kes, Task_OpstellenConceptVO → rip-ontwerptoelichting, Task_BesprekenConceptVO → rip-bevindingenformulier, Task_OpstellenDefinitiefVO → rip-hoeveelheidsbepaling. `rip-objectenboom` stays unattached on purpose — it is the “Format objectenboom (Relatics)” artifact, maintained in Relatics rather than authored in this process, so no R2.2 task produces it.",
+            "Values are bare template ids with no `.document` suffix, matching R2.1. Both the `examples/` and `e2e-fixtures/` copies are updated so the parity test stays green."
+          ]
+        },
+        {
+          "sha": "442ae79",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "RipR22Process added — four lanes, nine user tasks, from R2_2 - VO.pdf",
+          "details": [
+            "Four lanes and nine user tasks from R2_2 - VO.pdf (rev. 21-11-2024), picking up where RipR21Process's “Fase 1 voltooid → R2.2” end event left off.",
+            "All five branches of the opening parallel split rejoin the join gateway. The PDF does not draw it that way — it shows Inventariseren kabels en leidingen and Aanvragen raamvergunning leaving the pool into CO1 and JU3.5 and never coming back, which as control flow deadlocks at the join. Those hand-offs are `textAnnotation`s instead: CO1 and JU3.5 do not exist as fixtures, so a `callActivity` would dangle at deploy time and fail the manifest's `calledElement` test. They are referenced by several phases and belong in a shared bundle of their own.",
+            "The manifest entry declares the nine forms and five documents that the following commits add, so the fixture suite's file-existence test stays red until the bundle is complete."
+          ]
+        },
+        {
+          "sha": "e750f21",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "New parity test locks each RIP bundle's examples/ and e2e-fixtures/ copies together",
+          "details": [
+            "Each RIP bundle exists twice on disk: authored under `examples/`, imported and deployed from `e2e-fixtures/`. Nothing stopped the two drifting, and they have — 39a49bb repaired the document zone keys in the `e2e-fixtures` copies only, and the `examples` copies kept the dead `signoff`/`contactInfo` keys until 44d1cb4 re-pasted them by hand.",
+            "A new test asserts every file in a mirrored bundle is byte-identical to its twin. New bundles opt in by adding an entry to `MIRRORED_BUNDLES`."
+          ]
+        },
+        {
+          "sha": "1cd6843",
+          "author": "Steven Gort",
+          "type": "refactor",
+          "subject": "rip-phase1-swimlanes renamed to rip-phase-21",
+          "details": [
+            "The `-swimlanes` suffix distinguished this bundle from a competing `rip-phase1/` draft that b1b88a8 deleted, so it now distinguishes nothing, and the directory name no longer matched the process it holds (RipR21Process). Renaming it makes the incoming R2.2 bundle an obvious sibling: `rip-phase-21/` holds RipR21Process, `rip-phase-22/` holds RipR22Process.",
+            "Contents are untouched. Exactly one reference to the old path existed — the `source` field of the RipR21Process entry in `e2e-fixtures/manifest.json` — and it is repointed here. Nothing resolves this directory at runtime; the app serves examples from `packages/frontend/public/examples/`, which has never held the RIP bundles."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.08.3",
       "status": "Released",
       "date": "20 aug 2026",
