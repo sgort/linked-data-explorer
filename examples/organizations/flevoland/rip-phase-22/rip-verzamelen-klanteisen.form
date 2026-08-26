@@ -1,0 +1,59 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-verzamelen-klanteisen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Collect client requirements (klanteisen)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the client requirements raised by each stakeholder so they can be weighed against the design."
+    },
+    {
+      "id": "Field_Stakeholder",
+      "type": "textfield",
+      "label": "Stakeholder",
+      "key": "klanteisStakeholder",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_Klanteisen",
+      "type": "textarea",
+      "label": "Requirements",
+      "key": "klanteisen",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_KesReferentie",
+      "type": "textfield",
+      "label": "KES reference",
+      "key": "kesReferentie",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_Prioriteit",
+      "type": "select",
+      "label": "Priority",
+      "key": "klanteisPrioriteit",
+      "values": [
+        { "label": "Must have", "value": "must" },
+        { "label": "Should have", "value": "should" },
+        { "label": "Could have", "value": "could" },
+        { "label": "Won't have this phase", "value": "wont" }
+      ]
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

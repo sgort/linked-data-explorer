@@ -1,0 +1,53 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-bespreken-concept-vo",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Review meeting — draft VO"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the review meeting held on the draft VO and its findings."
+    },
+    {
+      "id": "Field_BesprekingDatum",
+      "type": "datetime",
+      "label": "Meeting date and time",
+      "key": "conceptVoBesprekingDatum",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_Deelnemers",
+      "type": "textarea",
+      "label": "Attendees",
+      "key": "conceptVoBesprekingDeelnemers",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_Bevindingen",
+      "type": "textarea",
+      "label": "Findings",
+      "key": "conceptVoBevindingen",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_BevindingenformulierReferentie",
+      "type": "textfield",
+      "label": "Findings form reference",
+      "key": "bevindingenformulierReferentie"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

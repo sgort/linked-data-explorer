@@ -1,0 +1,59 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-bespreken-klanteisen-kl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Review meeting — client requirements, cables and pipes"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the review meeting on client requirements versus known cables and pipes, and the agreed bottleneck category."
+    },
+    {
+      "id": "Field_BesprekingDatum",
+      "type": "datetime",
+      "label": "Meeting date and time",
+      "key": "klanteisenBesprekingDatum",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_Deelnemers",
+      "type": "textarea",
+      "label": "Attendees",
+      "key": "klanteisenBesprekingDeelnemers",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_KnelpuntCategorie",
+      "type": "select",
+      "label": "Bottleneck category agreed",
+      "key": "knelpuntCategorie",
+      "validate": { "required": true },
+      "values": [
+        { "label": "Category 1 — no relocation needed", "value": "cat1" },
+        { "label": "Category 2 — relocation within project scope", "value": "cat2" },
+        { "label": "Category 3 — relocation requires a separate agreement", "value": "cat3" }
+      ]
+    },
+    {
+      "id": "Field_Knelpuntenanalyse",
+      "type": "textarea",
+      "label": "Bottleneck analysis",
+      "key": "knelpuntenanalyse",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
