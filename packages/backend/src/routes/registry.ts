@@ -25,12 +25,7 @@ import shaclRoutes from './shacl.routes';
 /** Logical grouping for the root page. New categories can be added; see
  *  CATEGORY_ORDER in utils/rootView.ts for render order. */
 export type RouteCategory =
-  | 'Health & monitoring'
-  | 'Discovery'
-  | 'Validation'
-  | 'Execution'
-  | 'Assets'
-  | 'Integrations';
+  'Health & monitoring' | 'Discovery' | 'Validation' | 'Execution' | 'Assets' | 'Integrations';
 
 export interface RouteDefinition {
   /** Mount path under which the router is attached. Drives both registration

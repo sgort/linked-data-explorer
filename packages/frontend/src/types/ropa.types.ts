@@ -1,13 +1,7 @@
 export type ProcessLevel = 'shell' | 'subprocess';
 export type RopaStatus = 'draft' | 'active' | 'archived';
 export type DataCategory =
-  | 'identity'
-  | 'financial'
-  | 'residence'
-  | 'health'
-  | 'civil status'
-  | 'criminal'
-  | 'other';
+  'identity' | 'financial' | 'residence' | 'health' | 'civil status' | 'criminal' | 'other';
 
 export interface RopaPersonalDataField {
   id: string;
