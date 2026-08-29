@@ -111,7 +111,7 @@
       <bpmn:incoming>Flow_Aanvullen4_OverlegVO</bpmn:incoming>
       <bpmn:outgoing>Flow_OverlegVO_Accorderen4</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_AccorderenProjectplan4" name="Accorderen Projectplan&#10;4. Uitgangspunten VO-fase" camunda:formRef="rip-approval" camunda:formRefBinding="latest" camunda:candidateGroups="rip-projectleider,rip-aandrager,rip-ao">
+    <bpmn:userTask id="Task_AccorderenProjectplan4" name="Accorderen Projectplan&#10;4. Uitgangspunten VO-fase" camunda:formRef="rip-approval" camunda:formRefBinding="latest" camunda:candidateGroups="rip-projectleider,rip-aandrager,rip-ao" ronl:signatureRef="rip-pdp">
       <bpmn:incoming>Flow_OverlegVO_Accorderen4</bpmn:incoming>
       <bpmn:outgoing>Flow_Accorderen4_Gateway</bpmn:outgoing>
     </bpmn:userTask>

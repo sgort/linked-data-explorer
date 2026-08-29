@@ -2,6 +2,385 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.08.9",
+      "status": "Released",
+      "date": "29 aug 2026",
+      "scope": "frontend",
+      "commits": [
+        {
+          "sha": "5bacf3d",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Changelog gains the ci and repo scope tags",
+          "details": [
+            "The scope field offered frontend, backend and both. Three entries in this release change no deployable's code at all, so none of the three was true for them.",
+            "'ci' covers pipeline and supply-chain work and mirrors the tag ronl-business-api already uses, so both repositories label the same kind of work the same way. 'repo' covers everything else that ships no application code: documentation, and the Operaton deploy bundles under examples/ and e2e-fixtures/. Those bundles are worth distinguishing from a frontend change, because the frontend serves its own copies from packages/frontend/public/examples/ - the root directories are read only by the backend's tests and deployed to Operaton separately.",
+            "Labelling any of it 'both' would have told a reader that a release touching only .github/ had changed application code."
+          ]
+        },
+        {
+          "sha": "749bb63",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "bump-release lands through a pull request and reconciles Renovate first",
+          "details": [
+            "Two steps of the command were not merely out of date but impossible. Step 7 fast-forwarded acc locally and asked separately about pushing; both halves are now rejected, because acc requires a pull request and a passing audit check. It is rewritten to push the branch, open a pull request, and let a human merge it - merging is the push.",
+            "The merge method is called out because both alternatives silently break the entry: it names every commit by SHA, and squash collapses them into one new commit while rebase replays them as new commits, preserving the count while replacing every hash.",
+            "Step 0 is new. Renovate raises dependency pull requests continuously and they rewrite package-lock.json, the same file the version bump edits. Three lessons from this release are recorded: verify each one locally because no pull-request check runs backend tests, include check-format because it runs in no workflow at all, and trial-merge a stale branch before trusting a clean-looking result."
+          ]
+        },
+        {
+          "sha": "e96ff02",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Changelog renders the ci type, and an unknown scope no longer crashes the panel",
+          "details": [
+            "The commit-type union had no 'ci'. Unknown types fall back to 'other', so a ci entry would have rendered rather than crashed - but as a generic document icon, filing an entire supply-chain effort under \"other\". It now has its own icon and colour, distinct from chore.",
+            "ScopeBadge had no such fallback. changelog.json is imported as untyped JSON and cast at the module boundary, so TypeScript never checks the scope strings the data actually carries; an unrecognised one reached SCOPE_BADGE[scope], yielded undefined, and would take the whole panel down on config.cls. The type system cannot help here by construction, so the guard is the only thing that can - and it is what makes the scope tags added next safe to introduce."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
+      "version": "2026.08.8",
+      "status": "Released",
+      "date": "29 aug 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "1a64fef",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Reformatted for prettier 3.9",
+          "details": [
+            "Prettier 3.9 formats short union types on a single line rather than the leading-pipe multiline style 3.7 produced, leaving five existing files failing prettier --check the moment the upgrade landed.",
+            "No workflow runs check-format - the deploy workflows run lint and tests only - so nothing in CI reported it. The gate that catches this is the pre-push hook, which means the symptom would have been the next person's push failing on files they never touched."
+          ]
+        },
+        {
+          "sha": "2ca0815",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Backend dependencies brought up to date",
+          "details": [
+            "Twenty-three packages, of which exactly one carried an advisory: express 4.18.2 to 4.22.2. The rest - helmet, pg, winston, dotenv, cors, sparql-http-client and the TypeScript, ESLint and Jest toolchain - are routine currency rather than security work, and are recorded as such rather than presented as advisory fixes.",
+            "Two had consequences beyond their own version. prettier 3.9.6 reformatted five untouched files, and typescript 5.9.3 warranted a full build to verify. Both were checked before the merge, because the backend workflow runs no tests on a pull request."
+          ]
+        },
+        {
+          "sha": "6af8927",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "fast-xml-parser advisory closed",
+          "details": [
+            "Range raised from ^5.3.5 to ^5.7.0, the minimum patched release, with the lockfile resolving to 5.11.1. That split is rangeStrategy bump working as intended: raise the floor to the safe version, let the lockfile pin the current one.",
+            "Raised through the vulnerabilityAlerts fast-lane, which clears the 14-day cooldown for known advisories - the one class of update that must not wait."
+          ]
+        },
+        {
+          "sha": "05258ce",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "axios advisory closed",
+          "details": [
+            "Range raised from ^1.6.5 to ^1.18.0 with the lockfile resolving to 1.20.0, spanning fourteen minor releases - the widest jump in this release.",
+            "Verified against the full backend suite locally before merging, since the backend deploy workflow triggers on push only and the sole pull-request check says nothing about whether a dependency broke anything."
+          ]
+        },
+        {
+          "sha": "29f838b",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "concurrently updated",
+          "details": [
+            "Root devDependency, no advisory. Its branch was never rebased because it did not conflict, so the merge was trialled locally first and the resulting lockfile checked with npm ci - a clean textual merge of two lockfile diffs can still produce a file npm will not accept."
+          ]
+        },
+        {
+          "sha": "5ad4aba",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "vite advisory closed",
+          "details": [
+            "Frontend build tooling raised from ^6.2.0 to ^6.4.3.",
+            "The only one of the three security updates whose pull request ran the full lint, test and preview-deploy chain, because the frontend workflow triggers on pull requests and the backend workflow does not - the asymmetry that made local verification necessary for the other two."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
+      "version": "2026.08.7",
+      "status": "Released",
+      "date": "29 aug 2026",
+      "scope": "ci",
+      "commits": [
+        {
+          "sha": "0576c2d",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Config validator runs on the Node version Renovate requires",
+          "details": [
+            "renovate 44.50.3 declares engines.node ^24.11.0 and the runner defaults to Node 22. npm accepts the mismatch with an EBADENGINE warning rather than refusing, so the validator ran unsupported and still reported green - the kind of mismatch that keeps working right up until a release stops tolerating it.",
+            "setup-node is placed before the zizmor step rather than beside the validator it serves. A step following a failed one is skipped, so putting it after would mean the validator's if: always() ran on whatever Node the runner defaulted to, precisely when zizmor had already failed and the logs were being read."
+          ]
+        },
+        {
+          "sha": "0bc5bd9",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "renovate.json validated by the audit gate",
+          "details": [
+            "The gate caught every floating action reference and had nothing to say about a malformed renovate.json - which is how five invalid \"//\" keys reached acc and stopped Renovate opening any pull request at all. Pins without updates decay into an unpatched tree, so a silently inert Renovate is a supply-chain failure the audit exists to prevent.",
+            "renovate-config-validator runs as a second step in the same audit job, so it is covered by the existing required status check and needs no ruleset change. It runs with no filename argument, because passing one switches the validator into global config mode and applies different rules, and under if: always() so a zizmor failure cannot hide a broken configuration behind it.",
+            "--strict earned its place immediately. It fails on configuration Renovate would auto-migrate rather than reject, which surfaced baseBranches - renamed upstream to baseBranchPatterns, silently migrated on every run, and therefore invisible."
+          ]
+        },
+        {
+          "sha": "d126ed2",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Renovate configuration comments moved to description fields",
+          "details": [
+            "Renovate validates strictly and rejects unknown options, so the \"//\"-prefixed keys used as JSON comments were read as five invalid settings rather than ignored. Renovate stopped opening pull requests as a precaution - correct behaviour from it, but it meant the half of the supply-chain policy that keeps pins current was inert from the moment it landed.",
+            "Every comment moves to a description field, valid at the top level and inside any nested object. No policy changes: the cooldown, the security fast-lane, the workspace groups and the static-web-apps-deploy exclusion are identical in effect; only the annotation style differs."
+          ]
+        },
+        {
+          "sha": "1f0bec2",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Supply-chain pinning enforced on the acceptance pipeline",
+          "details": [
+            "Nothing downloaded or executed by this pipeline may float. All twenty action references across the six deployment workflows are now commit hashes with their version in a trailing comment, and a zizmor gate refuses any pull request that reintroduces a floating tag. Findings go from 40 to 0.",
+            "Each workflow also gains the hardening zizmor was reporting: persist-credentials false on checkout, explicit workflow and job permissions, and a concurrency group keyed on the pull-request number rather than the ref - because github.ref alone puts the pull_request(closed) teardown and the push deploy that a merge fires into one group, where they cancel each other at random.",
+            "renovate.json supplies the other half of the policy: a 14-day cooldown with internalChecksFilter strict, cleared by vulnerabilityAlerts for known advisories, and dependencies grouped per workspace. SECURITY-PIPELINE.md records what is pinned and, more importantly, what is not - the static-web-apps-deploy Docker image behind four workflows, and the backend deploy step's lockfile-less npm install."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
+      "version": "2026.08.6",
+      "status": "Released",
+      "date": "29 aug 2026",
+      "scope": "repo",
+      "commits": [
+        {
+          "sha": "84493e3",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "ValidSign signature mirrored into the R2.1 examples copy",
+          "details": [
+            "RipR21Process.bpmn exists in two places the parity test locks together byte for byte: examples/organizations/flevoland/rip-phase-21/ is the authored source, e2e-fixtures/flevoland/ is the mirror. The signature attribute had been added to the mirror only, so the two had drifted apart.",
+            "The parity test had been failing since the signature commit. Because the backend deploy workflow triggers on push only, no pull request runs these tests - the failure would have surfaced on acc after merge, where npm test gates the deploy step, leaving a red acceptance branch and no deployment.",
+            "The xmlns:ronl namespace was already declared in both files and the byte delta was exactly the length of the attribute, so this adds one attribute rather than reflowing the document."
+          ]
+        },
+        {
+          "sha": "8071778",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "ValidSign signature required on the R2.1 phase-exit approval",
+          "details": [
+            "Adds ronl:signatureRef=\"rip-pdp\" to Task_AccorderenProjectplan4, the \"Accorderen Projectplan 4. Uitgangspunten VO-fase\" task that closes R2.1.",
+            "This one attribute is the switch for the whole signing feature built in ronl-business-api. The backend resolves ronl:signatureRef on a user task and, when present, replaces that task's plain approval form with a ValidSign signing ceremony: the phase document is rendered from its deployed template, a signature package is created, and the Operaton task completes only once the signature lands."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
+      "version": "2026.08.5",
+      "status": "Released",
+      "date": "29 aug 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "cb9eb7f",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Dutch grammar corrected in the join-gateway annotation",
+          "details": [
+            "\"het pool\" becomes \"de pool\" - pool is common-gender - and the subordinate clause was missing \"dat\": the source PDF shows THAT the two branches leave the pool, not the branches themselves.",
+            "Text only, and both copies were updated together so the parity test stayed green."
+          ]
+        },
+        {
+          "sha": "d6708b7",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Final review findings on the R2.2 bundle addressed",
+          "details": [
+            "Four findings from the whole-branch review. The notable one was a dangling SHA: 39a49bb survived only on a sibling branch slated for deletion, so citing it in the parity test's doc comment, a changelog entry and three places in the planning document would have left references that stop resolving.",
+            "Replaced throughout with 49832d2 - the same reachable commit with the same meaning, the one that repaired the document zone keys in the e2e-fixtures copies."
+          ]
+        },
+        {
+          "sha": "d671639",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Changelog entry for the R2.2 VO bundle",
+          "details": [
+            "Records the RipR22Process bundle, the rip-phase1-swimlanes to rip-phase-21 rename, and the parity test now holding the examples/ and e2e-fixtures/ copies of each bundle together."
+          ]
+        },
+        {
+          "sha": "e0efa12",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Five R2.2 document templates added — KES, Ontwerptoelichting, Objectenboom, Bevindingenformulier, Hoeveelheidsbepaling",
+          "details": [
+            "One template per green “Format …” box in R2_2 - VO.pdf: KES, Ontwerptoelichting, Objectenboom, Bevindingenformulier and Hoeveelheidsbepaling. A Format in the diagram and a `.document` in LDE are the same thing — a template with bindings — so the mapping is direct; the blue outputs beside them in the spec are instances of these templates rather than artifacts of their own.",
+            "Zone keys are `signOff` and `contactInformation`, camelCase, from the start — unlike R2.1's templates, which shipped with `signoff` and `contactInfo`, keys `DocumentZones` never declares, leaving their signature blocks unrendered until 49832d2 repaired them.",
+            "Completes the RipR22Process bundle: the manifest now declares nothing that does not exist, and the fixture suite is green."
+          ]
+        },
+        {
+          "sha": "557744a",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Nine R2.2 user task forms added, one per lane task, bound by camunda:formRef",
+          "details": [
+            "One form per user task in RipR22Process. Field types stay inside the eight the R2.1 bundle already uses — text, textarea, textfield, checkbox, datetime, select, radio, button — since nothing else is exercised against this Camunda 7.21 stack.",
+            "The spec's conditional “LCC-raming (indien variantenafweging)” is modelled as a checkbox plus a reference field on `rip-concept-vo.form` rather than an artifact of its own, since it only exists when a variant trade-off happened.",
+            "`klicMeldingReferentie` is collected only on `rip-inventariseren-kabels-leidingen.form`. The concept VO task reads the same information but does not also write it, since two forms writing one process variable would mean whichever task completes last silently wins."
+          ]
+        },
+        {
+          "sha": "8bd789d",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "R2.2 document templates were unattached — RipR22Process shipped without ronl:documentRef",
+          "details": [
+            "R2.1 wires each document template to the task that produces it with `ronl:documentRef` — the attribute `DocumentTemplateSelector` writes and `BpmnCanvas` reads to render the document badge on a task in the Modeler. The R2.2 spec never mentioned it, so RipR22Process shipped without it and the five templates added alongside it would have imported but attached to nothing.",
+            "The attribute is single-valued, so a task can carry at most one template. Four of the five bind: Task_VerzamelenKlanteisen → rip-kes, Task_OpstellenConceptVO → rip-ontwerptoelichting, Task_BesprekenConceptVO → rip-bevindingenformulier, Task_OpstellenDefinitiefVO → rip-hoeveelheidsbepaling. `rip-objectenboom` stays unattached on purpose — Task_OpstellenConceptVO produces both the Ontwerptoelichting and the Objectenboom, and its one slot went to the Ontwerptoelichting; the Objectenboom still ships and imports normally, it simply carries no task badge. Its reference is additionally maintained in Relatics.",
+            "Values are bare template ids with no `.document` suffix, matching R2.1. Both the `examples/` and `e2e-fixtures/` copies are updated so the parity test stays green."
+          ]
+        },
+        {
+          "sha": "442ae79",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "RipR22Process added — four lanes, nine user tasks, from R2_2 - VO.pdf",
+          "details": [
+            "Four lanes and nine user tasks from R2_2 - VO.pdf (rev. 21-11-2024), picking up where RipR21Process's “Fase 1 voltooid → R2.2” end event left off.",
+            "All five branches of the opening parallel split rejoin the join gateway. The PDF does not draw it that way — it shows Inventariseren kabels en leidingen and Aanvragen raamvergunning leaving the pool into CO1 and JU3.5 and never coming back, which as control flow deadlocks at the join. Those hand-offs are `textAnnotation`s instead: CO1 and JU3.5 do not exist as fixtures, so a `callActivity` would dangle at deploy time and fail the manifest's `calledElement` test. They are referenced by several phases and belong in a shared bundle of their own.",
+            "The manifest entry declares the nine forms and five documents that the following commits add, so the fixture suite's file-existence test stays red until the bundle is complete."
+          ]
+        },
+        {
+          "sha": "e750f21",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "New parity test locks each RIP bundle's examples/ and e2e-fixtures/ copies together",
+          "details": [
+            "Each RIP bundle exists twice on disk: authored under `examples/`, imported and deployed from `e2e-fixtures/`. Nothing stopped the two drifting, and they have — 49832d2 repaired the document zone keys in the `e2e-fixtures` copies only, and the `examples` copies kept the dead `signoff`/`contactInfo` keys until 44d1cb4 re-pasted them by hand.",
+            "A new test asserts every file in a mirrored bundle is byte-identical to its twin. New bundles opt in by adding an entry to `MIRRORED_BUNDLES`."
+          ]
+        },
+        {
+          "sha": "1cd6843",
+          "author": "Steven Gort",
+          "type": "refactor",
+          "subject": "rip-phase1-swimlanes renamed to rip-phase-21",
+          "details": [
+            "The `-swimlanes` suffix distinguished this bundle from a competing `rip-phase1/` draft that b1b88a8 deleted, so it now distinguishes nothing, and the directory name no longer matched the process it holds (RipR21Process). Renaming it makes the incoming R2.2 bundle an obvious sibling: `rip-phase-21/` holds RipR21Process, `rip-phase-22/` holds RipR22Process.",
+            "Contents are untouched. Exactly one reference to the old path existed — the `source` field of the RipR21Process entry in `e2e-fixtures/manifest.json` — and it is repointed here. Nothing resolves this directory at runtime; the app serves examples from `packages/frontend/public/examples/`, which has never held the RIP bundles."
+          ]
+        },
+        {
+          "sha": "04a1f5c",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Implementation plan for the R2.2 VO deploy bundle",
+          "details": [
+            "Six tasks: rename rip-phase1-swimlanes to rip-phase-21, add a parity test, then the BPMN, the nine forms and the five documents, closing with the changelog and a full verification pass.",
+            "Task 3 declares all fifteen files in the manifest up front, so the fixture suite's file-existence test stays red through Tasks 3 and 4 and turns green only at the end of Task 5. The plan flags that as the expected state, so nobody \"fixes\" it by trimming the manifest back."
+          ]
+        },
+        {
+          "sha": "09b283e",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Design for the RipR22Process (R2.2 - VO) deploy bundle",
+          "details": [
+            "Turns the R2_2 - VO source PDF (rev. 21-11-2024) into a specification for a bundle LDE can import and deploy: a four-lane BPMN process with nine user tasks, nine Camunda form-js forms, and five document templates - one per green \"Format\" in the diagram, since a Format there and a .document here are the same thing.",
+            "Flags the design decisions worth knowing later, including that the cross-phase hand-offs to CO1 and JU3.5 are text annotations rather than modelled flows."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
+      "version": "2026.08.4",
+      "status": "Released",
+      "date": "29 aug 2026",
+      "scope": "repo",
+      "commits": [
+        {
+          "sha": "44d1cb4",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Fixture repairs rebased onto the current examples",
+          "details": [
+            "Housekeeping commit carrying the repaired RIP document templates into their final position alongside the R2.1 examples."
+          ]
+        },
+        {
+          "sha": "49832d2",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Signature blocks and process key repaired in the RIP document templates",
+          "details": [
+            "Two defects had shipped with every deployment of the three RIP document templates in e2e-fixtures/flevoland.",
+            "The templates used \"signoff\" and \"contactInfo\" where DocumentZones declares \"signOff\" and \"contactInformation\". DocumentCanvas iterates ZONE_ORDER and calls getZoneBlocks('signOff'), so the lowercase key meant the Signatures block was dropped silently - the three signature lines in these templates had never rendered.",
+            "They also declared processKey \"RipPhase1Process\" while the BPMN they deploy with declares RipR21Process, which is also the key the fixture manifest lists them under."
+          ]
+        },
+        {
+          "sha": "b1b88a8",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "R2.1 examples rebased against the e2e fixtures",
+          "details": [
+            "Brings the authored examples/ copies back in line with the e2e-fixtures/ mirror, ahead of the parity test that would later enforce it mechanically."
+          ]
+        },
+        {
+          "sha": "f421020",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Child-activity fan-out in the Activity Detail panel documented",
+          "details": [
+            "The RTR returns onderliggendeActiviteiten as bare HAL hrefs with no omschrijving, so ActivityDetailPanel fires one extra activity-detail request per child, in parallel, purely to resolve names. Opening a single activity therefore costs 1 + N upstream RTR calls - 24 for an activity with 23 children.",
+            "Records the call shape, the Promise.allSettled error isolation, the name-or-URN fallback, and the absence of any cache or concurrency cap. Flagged as the viewer's heaviest interaction and the first candidate for memoisation."
+          ]
+        },
+        {
+          "sha": "88fc011",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Every DSO API behind the DSO Viewer documented",
+          "details": [
+            "Maps each DSO Viewer feature to the upstream API behind it: Stelselcatalogus v3 for concepts, RTR Gegevens v2 for activities, Zoekinterface v2 for werkzaamheden search, Opvragen Werkzaamheden v1 for werkzaamheid detail, and Toepasbare Regels Uitvoeren Gegevens v1 for rule metadata.",
+            "Includes the UI to LDE to DSO call path per feature, a complete endpoint map, pre and prod base URLs and env vars, and transport conventions. Notes that the geo point search is implemented and tested but not yet wired into the UI, and that /toepasbare-regels/:id/dmn is a contract shared with the CPSV Editor."
+          ]
+        },
+        {
+          "sha": "c122dae",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Lockfile synchronised with the current package versions",
+          "details": [
+            "Routine reconciliation after a pull and install, so the lockfile stops carrying a stale resolution set into the next change."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.08.3",
       "status": "Released",
       "date": "20 aug 2026",

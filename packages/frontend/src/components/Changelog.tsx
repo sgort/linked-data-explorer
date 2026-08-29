@@ -15,7 +15,7 @@ import changelogData from '../changelog.json';
 interface ChangelogCommit {
   sha: string;
   author: string;
-  type: 'feat' | 'fix' | 'test' | 'docs' | 'chore' | 'refactor' | 'other';
+  type: 'feat' | 'fix' | 'test' | 'docs' | 'chore' | 'refactor' | 'ci' | 'other';
   subject: string;
   details?: string[];
 }
@@ -25,7 +25,7 @@ interface ChangelogVersionV2 {
   version: string;
   status: string;
   date: string;
-  scope: 'frontend' | 'backend' | 'both';
+  scope: 'frontend' | 'backend' | 'both' | 'ci' | 'repo';
   commits: ChangelogCommit[];
 }
 
@@ -64,6 +64,10 @@ const COMMIT_TYPE_META: Record<ChangelogCommit['type'], { icon: string; color: s
   docs: { icon: '📘', color: 'text-blue-700' },
   chore: { icon: '🧹', color: 'text-gray-700' },
   refactor: { icon: '♻️', color: 'text-orange-700' },
+  // Pipeline and supply-chain work. Distinct from chore: a reader
+  // scanning for why a release touched CI should not have to open
+  // every 'other' entry to find it.
+  ci: { icon: '🔒', color: 'text-amber-700' },
   other: { icon: '📄', color: 'text-gray-700' },
 };
 
@@ -81,10 +85,21 @@ const SCOPE_BADGE: Record<ChangelogVersionV2['scope'], { label: string; cls: str
   frontend: { label: 'Frontend', cls: 'bg-blue-100 text-blue-700' },
   backend: { label: 'Backend', cls: 'bg-purple-100 text-purple-700' },
   both: { label: 'Full-stack', cls: 'bg-gray-200 text-gray-700' },
+  // Neither deployable changed. 'ci' is pipeline and supply-chain work
+  // -- .github/, renovate.json -- and mirrors the tag ronl-business-api
+  // uses. 'repo' is everything else that ships no application code:
+  // documentation, and the Operaton deploy bundles under examples/ and
+  // e2e-fixtures/, which the backend reads only from its tests.
+  ci: { label: 'CI', cls: 'bg-amber-100 text-amber-700' },
+  repo: { label: 'Repository', cls: 'bg-slate-100 text-slate-700' },
 };
 
 function ScopeBadge({ scope }: { scope: ChangelogVersionV2['scope'] }) {
-  const config = SCOPE_BADGE[scope];
+  // Fall back rather than crash: changelog.json is imported as untyped
+  // JSON and cast at the boundary, so an unrecognised scope reaches here
+  // at runtime with nothing to stop it, and an undefined config would
+  // take the whole panel down over a badge.
+  const config = SCOPE_BADGE[scope] ?? SCOPE_BADGE.both;
   return (
     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${config.cls}`}>
       {config.label}

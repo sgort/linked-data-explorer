@@ -1,0 +1,155 @@
+{
+  "id": "rip-bevindingenformulier",
+  "name": "RIP — Review Findings Form (Bevindingenformulier)",
+  "description": "Format Bevindingenformulier. Records what was raised on the draft VO, by whom, how each finding was resolved, and the bottleneck analysis agreed for cables and pipes.",
+  "processKey": "RipR22Process",
+  "serviceId": "RipR22",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-08-26T00:00:00.000Z",
+  "updatedAt": "2026-08-26T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    { "id": "b1", "placeholder": "{{projectNumber}}", "variableKey": "projectNumber", "source": "process", "label": "Project number" },
+    { "id": "b2", "placeholder": "{{projectName}}", "variableKey": "projectName", "source": "process", "label": "Project name" },
+    { "id": "b3", "placeholder": "{{conceptVoBevindingen}}", "variableKey": "conceptVoBevindingen", "source": "process", "label": "Concept VO findings" },
+    { "id": "b4", "placeholder": "{{verwerkteBevindingen}}", "variableKey": "verwerkteBevindingen", "source": "process", "label": "Processed findings" },
+    { "id": "b5", "placeholder": "{{knelpuntenanalyse}}", "variableKey": "knelpuntenanalyse", "source": "process", "label": "Bottleneck analysis" }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": { "level": 1 },
+                "content": [{ "type": "text", "text": "Province of Flevoland" }]
+              },
+              {
+                "type": "paragraph",
+                "content": [{ "type": "text", "text": "Infrastructure — Regular Infrastructure Projects" }]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "bold" }], "text": "Project number: " },
+                  { "type": "text", "text": "{{projectNumber}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "bold" }], "text": "Project: " },
+                  { "type": "text", "text": "{{projectName}}" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "bold" }], "text": "Document: " },
+                  { "type": "text", "text": "Review Findings Form (Bevindingenformulier)" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bf1",
+          "type": "text",
+          "label": "Review findings",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": { "level": 2 },
+                "content": [{ "type": "text", "text": "Review findings" }]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "The following findings were raised on the draft VO for project {{projectNumber}} — {{projectName}}: {{conceptVoBevindingen}}." }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Each finding above was addressed as follows: {{verwerkteBevindingen}}." }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "text": "Bottleneck analysis agreed for cables and pipes during this phase: {{knelpuntenanalyse}}." }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": { "blocks": [] },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "bold" }], "text": "Project manager: " },
+                  { "type": "text", "text": "___________________________" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "bold" }], "text": "Contributor: " },
+                  { "type": "text", "text": "___________________________" }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "bold" }], "text": "Official client: " },
+                  { "type": "text", "text": "___________________________" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": { "blocks": [] },
+    "annex": { "blocks": [] }
+  }
+}

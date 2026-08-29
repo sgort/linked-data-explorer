@@ -83,15 +83,54 @@ only new entries going forward use CalVer.
     {
       "sha": "abc1234",
       "author": "Steven Gort",
-      "type": "feat", // feat | fix | test | docs | chore | refactor | other
+      "type": "feat", // feat | fix | test | docs | chore | refactor | ci | other
       "subject": "Clean, readable release-note header",
-      "details": ["One or more body paragraphs, same technical depth as the commit message."]
-    }
-  ]
+      "details": [
+        "One or more body paragraphs, same technical depth as the commit message.",
+      ],
+    },
+  ],
 }
 ```
 
 ## Steps
+
+### 0. Reconcile outstanding pull requests
+
+Run this **before touching any version**. A pull request merged outside a
+release entry ships silently and appears in no changelog, so the release
+history stops being a record of what is actually deployed. This repository now
+has Renovate raising dependency pull requests continuously, so the queue is
+rarely empty.
+
+```bash
+gh pr list --state open --json number,title,author,files
+```
+
+Present the open pull requests and ask which are in scope: all, a subset, or
+none. Out-of-scope ones stay open and are gathered by the next release. Then:
+
+1. **Merge the in-scope ones before any version editing.** Dependency pull
+   requests rewrite `package-lock.json` -- the same file step 4 edits. Bump the
+   version first and the merge either conflicts or silently reverts it.
+2. **Verify each dependency pull request locally before merging it.** The
+   backend workflow is `push`-only, so a backend dependency change arrives on
+   `acc` with **no** test run behind it; the only pull-request check is `audit`,
+   which says nothing about whether the dependency broke anything. Run
+   `npm ci && npm run lint && npm test && npm run build && npm run check-format`
+   on the branch. `check-format` is not optional here: it runs in no workflow at
+   all, only in the pre-push hook, so a formatting-tool upgrade that reformats
+   existing files lands green and then fails the _next_ person's push. That is
+   exactly what prettier 3.9.6 did on 2026-08-29.
+3. **Re-check mergeability between merges** when several touch the same file.
+   The `acc` ruleset does not require branches to be up to date, so merging one
+   leaves the next based on a stale tree. Renovate rebases on conflict but not
+   otherwise -- a stale branch that merges cleanly can still produce a lockfile
+   npm will not accept. Trial-merge locally and run `npm ci` before trusting it.
+4. **Say that each merge to `acc` triggers an acceptance deploy** when proposing
+   to merge several.
+5. **Bring the working branch up to date with `acc` afterwards** -- rebase if the
+   branch is unpushed, merge if it is not. Only then compute the range in step 1.
 
 ### 1. Determine the released version and scope
 
@@ -111,8 +150,18 @@ only new entries going forward use CalVer.
 
 1. Find the commit range: `PREV=$(git log --grep='^chore: bump release' -n 1 --format=%H)`
    (may be empty the first time this runs — if so, use the branch's
-   divergence from `acc`/`origin/acc` instead), then `git log $PREV..HEAD
---oneline`. Drop any commits already covered by an existing entry.
+   divergence from `acc`/`origin/acc` instead), then `git log $PREV..HEAD --no-merges --oneline`. Drop any commits already
+   covered by an existing entry.
+
+   **`--no-merges` is required.** Releases land through pull requests now, so
+   every range contains merge commits, and a merge commit carries no content
+   for a changelog.
+
+   **Compute the range only after step 0 has brought the branch up to date.**
+   Merging `acc` in can surface conflicts that need their own fix commits, and
+   rebasing rewrites SHAs outright -- so a range captured earlier records hashes
+   that no longer exist, and nothing downstream will catch it.
+
 2. For each remaining commit, pull its real SHA (short form), author, and
    full subject + body: `git log -1 --format='%h|%an|%s%n%b' <sha>`. Derive
    `type` from the commit's conventional-commit prefix, falling back to
@@ -210,18 +259,79 @@ commit message format: `chore: bump release to v<released-version>`, no
 Co-Authored-By line, committed via bash heredoc or plain `-m` quoting
 (never `@'...'@`).
 
-### 7. Fast-forward onto `acc` and clean up the working branch
+### 7. Land the release through a pull request
 
-Once the bump commit exists and the user has confirmed:
+`acc` is protected by the `acc supply-chain gate` ruleset, which requires a
+pull request and a passing `audit` check. A locally created bump commit has
+never been through CI, so **the old flow -- `git checkout acc` followed by
+`git merge --ff-only` and a push -- is rejected outright.** Do not work around
+it: the gate applies to releases like everything else, and bypassing a
+verification gate is never a step in this task.
 
 ```bash
-git checkout acc
-git merge --ff-only <working-branch>
+git push -u origin <working-branch>
+gh pr create --base acc --title "chore: bump release to v<version>" --body "..."
 ```
 
-- If not a clean fast-forward, **stop and ask** — never force-merge,
-  rebase, or `--no-ff` silently.
-- On success: `git branch -d <working-branch>` (not `-D` — only succeeds
-  if fully merged). If it refuses, stop and investigate.
-- Local-only: does not push `acc`. Report the new local `acc` HEAD and ask
-  separately whether to push.
+- **Merge with a merge commit. Squash and rebase are disabled repo-wide.**
+  The changelog entry names each commit by its SHA, and _both_ alternatives
+  rewrite those hashes: squashing collapses the commits into one, and rebasing
+  replays them as new commits -- deceptively, since it preserves the commit
+  count while replacing every hash. Either leaves the entry pointing at commits
+  that do not exist on `acc`.
+
+  ```bash
+  gh pr merge <n> --merge --delete-branch
+  ```
+
+  Rather than rely on anyone remembering that, this repository allows merge
+  commits only (Settings -> General -> Pull Requests), and the ruleset pins
+  `allowed_merge_methods` to `["merge"]` as well. GitHub's default button is
+  otherwise "Squash and merge", so a single absent-minded click would orphan
+  every SHA the entry cites.
+
+  A side effect: Renovate's dependency pull requests land as merge commits too.
+  That costs nothing -- `--no-merges` in step 1 excludes the merge commit, and
+  the underlying update commit is what the entry should name anyway.
+
+- Report the pull request URL and let the human merge it. The release is
+  audited before it lands, which is the point of the change.
+- **Merging the pull request pushes `acc`, which triggers the acceptance
+  deploys.** There is no separate "ask whether to push" step any more --
+  merging is the push.
+- Afterwards, clean up and sync local:
+
+  ```bash
+  git checkout acc && git pull --ff-only
+  git branch -d <working-branch>
+  ```
+
+  Use `-d`, not `-D` -- it only succeeds when the branch is fully merged. If it
+  refuses, stop and investigate rather than forcing it.
+
+- **Confirm the branch is gone from the remote too.** `gh pr merge
+--delete-branch` removes both copies, and this repository has
+  `delete_branch_on_merge` enabled so a merge through the GitHub UI does the
+  same. But a release merged some other way leaves the remote branch behind:
+
+  ```bash
+  git fetch origin --prune
+  git ls-remote --heads origin '<working-branch>'   # expect no output
+  git push origin --delete <working-branch>          # only if it survived
+  ```
+
+  A stale merged branch is harmless alone. They accumulate, and each one makes
+  it harder to see which branches are genuinely in flight -- which is the
+  question step 0 has to answer at the next release.
+
+### Why steps 0 and 7 changed
+
+Through v2026.08.3 step 7 fast-forwarded `acc` locally and asked separately
+about pushing. That stopped working on 2026-08-29 when `acc` gained a ruleset
+requiring a pull request and a passing `audit` check -- enforcement introduced
+by the supply-chain pinning work, documented in `docs/the-gate-has-teeth.md`.
+
+Step 0 was added at the same time, for a different reason: enabling Renovate
+meant dependency pull requests now arrive continuously, and the v2026.08.4
+release had to reconcile five of them before it could compute a commit range
+that stayed valid.
