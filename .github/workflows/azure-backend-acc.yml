@@ -9,8 +9,23 @@ on:
       - '.github/workflows/azure-backend-acc.yml'
   workflow_dispatch:
 
+# Serialise deployments to one environment. Keyed on the pull-request
+# NUMBER rather than the ref: keyed on github.ref alone, the
+# pull_request(closed) teardown and the push deploy that a merge fires
+# simultaneously land in one group and cancel each other at random.
+# Learned in ronl-business-api on 2026-08-29.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Default to read-only; jobs opt into more only where required.
+permissions:
+  contents: read
+
 jobs:
   deploy:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     environment:
       name: acceptance
@@ -18,10 +33,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
 
@@ -82,7 +99,7 @@ jobs:
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT = false" >> .deployment
 
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
         with:
           app-name: 'ronl-linkeddata-backend-acc'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_ACC }}

@@ -6,26 +6,45 @@ on:
       - acc
     paths:
       - 'packages/ropa-site/**'
+      - '.github/workflows/azure-ropa-site-acc.yml'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - acc
     paths:
       - 'packages/ropa-site/**'
+      - '.github/workflows/azure-ropa-site-acc.yml'
+
+# Serialise deployments to one environment. Keyed on the pull-request
+# NUMBER rather than the ref: keyed on github.ref alone, the
+# pull_request(closed) teardown and the push deploy that a merge fires
+# simultaneously land in one group and cancel each other at random.
+# Learned in ronl-business-api on 2026-08-29.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Default to read-only; jobs opt into more only where required.
+permissions:
+  contents: read
 
 jobs:
   build_and_deploy_job:
+    permissions:
+      contents: read
+      pull-requests: write
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
         with:
           submodules: true
+          persist-credentials: false
           lfs: false
       - name: Build And Deploy
         id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_CLIFF_04B2D4E03 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
@@ -35,13 +54,14 @@ jobs:
           output_location: "packages/ropa-site" # Built app content directory - optional
 
   close_pull_request_job:
+    permissions: {}
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     name: Close Pull Request Job
     steps:
       - name: Close Pull Request
         id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_CLIFF_04B2D4E03 }}
           action: "close"

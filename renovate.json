@@ -1,0 +1,84 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "Supply-chain policy for linked-data-explorer. Companion to .github/zizmor.yml",
+    "and the Supply-chain audit workflow: zizmor enforces that every action",
+    "reference is a commit hash, Renovate keeps those hashes current. Pinning",
+    "without automated updates decays into an unpatched tree, which is worse",
+    "than floating. See SECURITY-PIPELINE.md.",
+    "baseBranchPatterns targets acc, this repository's integration and",
+    "default branch. main is promoted from acc and must never receive",
+    "dependency pull requests directly."
+  ],
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "minimumReleaseAge": "14 days",
+  "internalChecksFilter": "strict",
+  "vulnerabilityAlerts": {
+    "description": [
+      "Security advisories bypass the cooldown. Without this override the",
+      "14-day wait would delay exactly the updates that must not wait, which",
+      "is why such policies get disabled mid-incident. Requires GitHub",
+      "Dependabot ALERTS to be enabled on the repository; Dependabot security",
+      "UPDATES must stay off, or it opens competing PRs that ignore the cooldown."
+    ],
+    "minimumReleaseAge": null,
+    "labels": ["security"]
+  },
+  "packageRules": [
+    {
+      "description": [
+        "Actions land across all seven workflows at once, so they are grouped",
+        "separately from the workspace dependencies below."
+      ],
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "matchUpdateTypes": ["minor", "patch", "digest"]
+    },
+    {
+      "description": [
+        "Azure/static-web-apps-deploy publishes v1 as BOTH a 2021 tag and a",
+        "2024 branch head (4d27395796ac319302594769cfe812bd207490b1). The four",
+        "Static Web Apps workflows pin the branch head; Renovate's github-tags",
+        "datasource resolves the tag, so it would open a routine-looking digest",
+        "update that reverts those deploy steps to 3.5-year-old code.",
+        "minimumReleaseAge gives no protection here - the target commit is",
+        "years old already. Re-resolve by hand if this action ever needs to",
+        "move. See SECURITY-PIPELINE.md."
+      ],
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["Azure/static-web-apps-deploy"],
+      "enabled": false
+    },
+    {
+      "description": [
+        "Three deployables, three groups. An update that breaks one workspace",
+        "should not be entangled with the other two in a single pull request -",
+        "each has its own deploy workflow and its own acceptance site."
+      ],
+      "matchFileNames": ["packages/backend/**"],
+      "groupName": "backend dependencies"
+    },
+    {
+      "matchFileNames": ["packages/frontend/**"],
+      "groupName": "frontend dependencies"
+    },
+    {
+      "matchFileNames": ["packages/ropa-site/**"],
+      "groupName": "ropa-site dependencies"
+    }
+  ],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "baseBranchPatterns": ["acc"],
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "postUpdateOptions": ["npmDedupe"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on monday"]
+  }
+}
