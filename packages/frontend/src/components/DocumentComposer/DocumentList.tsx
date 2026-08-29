@@ -107,8 +107,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
           const baseName = file.name.replace(/\.document$/i, '');
           const langMatch = baseName.match(/\.(en|nl|de)$/i);
           const inferredLanguage = langMatch?.[1].toLowerCase() as
-            | DocumentTemplate['language']
-            | undefined;
+            DocumentTemplate['language'] | undefined;
 
           // e2e-fixtures .document files declare status: "e2e" directly (see
           // manifest.json) — trust only that exact sentinel; any other
