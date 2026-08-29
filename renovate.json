@@ -1,0 +1,64 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    "helpers:pinGitHubActionDigests"
+  ],
+
+  "//": "IOU supply-chain policy. Nothing a pipeline downloads or executes may float: actions are pinned to a commit hash, and Renovate is the mechanism that keeps those hashes current without anyone hand-resolving a digest again.",
+
+  "minimumReleaseAge": "14 days",
+  "internalChecksFilter": "strict",
+
+  "//minimumReleaseAge": "A cooldown, not a security control. A compromised release is usually yanked within days; waiting two weeks means this repository never installs it. 'strict' makes Renovate actually hold the pull request back rather than raise it and annotate it as pending.",
+
+  "vulnerabilityAlerts": {
+    "minimumReleaseAge": null,
+    "labels": ["security"]
+  },
+
+  "//vulnerabilityAlerts": "The fast lane. A fix for a known advisory is the one update that must not wait out the cooldown, so the delay is explicitly cleared here.",
+
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "matchUpdateTypes": ["minor", "patch", "digest"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["Azure/static-web-apps-deploy"],
+      "enabled": false,
+      "description": "Pinned to 4d27395 — the newest commit on the v1 branch, not the v1 tag, which has not moved since 2021. Renovate resolves @v1 to the tag, so leaving this enabled would raise a pull request 'updating' the pin backwards by four years. Re-resolve by hand if this action ever needs to move."
+    },
+    {
+      "matchFileNames": ["packages/backend/**"],
+      "groupName": "backend dependencies"
+    },
+    {
+      "matchFileNames": ["packages/frontend/**"],
+      "groupName": "frontend dependencies"
+    },
+    {
+      "matchFileNames": ["packages/ropa-site/**"],
+      "groupName": "ropa-site dependencies"
+    }
+  ],
+
+  "//packageRules": "Three workspaces, three groups: an update that breaks one deployable should not be entangled with the other two in a single pull request. Actions are grouped separately again because they land across all six workflows at once.",
+
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "baseBranches": ["acc"],
+
+  "//baseBranches": "acc is the integration branch. main is promoted from acc and must never receive dependency pull requests directly.",
+
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "postUpdateOptions": ["npmDedupe"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on monday"]
+  }
+}
