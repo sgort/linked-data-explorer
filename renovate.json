@@ -6,9 +6,9 @@
     "reference is a commit hash, Renovate keeps those hashes current. Pinning",
     "without automated updates decays into an unpatched tree, which is worse",
     "than floating. See SECURITY-PIPELINE.md.",
-    "baseBranches targets acc, this repository's integration and default",
-    "branch. main is promoted from acc and must never receive dependency",
-    "pull requests directly."
+    "baseBranchPatterns targets acc, this repository's integration and",
+    "default branch. main is promoted from acc and must never receive",
+    "dependency pull requests directly."
   ],
   "extends": [
     "config:recommended",
@@ -73,7 +73,7 @@
   ],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
-  "baseBranches": ["acc"],
+  "baseBranchPatterns": ["acc"],
   "labels": ["dependencies"],
   "rangeStrategy": "bump",
   "postUpdateOptions": ["npmDedupe"],
