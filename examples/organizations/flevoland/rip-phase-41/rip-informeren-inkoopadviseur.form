@@ -1,0 +1,43 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-informeren-inkoopadviseur",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Inform the procurement adviser"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Inform the procurement adviser that the decision note is adopted, so the procurement procedure can be closed."
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Informed on",
+      "key": "inkoopadviseurGeinformeerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Message",
+      "key": "inkoopadviseurBericht"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

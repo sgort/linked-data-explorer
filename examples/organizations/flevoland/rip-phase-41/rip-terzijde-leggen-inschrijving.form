@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-terzijde-leggen-inschrijving",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Set the tender aside as unlawful"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Set the tender aside because of an unlawful submission, so it can be rejected."
+    },
+    {
+      "id": "F_Inschrijver",
+      "type": "textfield",
+      "label": "Tenderer",
+      "key": "inschrijverNaam",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Grond",
+      "type": "textarea",
+      "label": "Grounds for setting aside",
+      "key": "terzijdeLeggenGrond",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Set aside on",
+      "key": "terzijdeGelegdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
