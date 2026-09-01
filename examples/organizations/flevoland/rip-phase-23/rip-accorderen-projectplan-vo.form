@@ -1,0 +1,71 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-accorderen-projectplan-vo",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Approve the project plan — 5. Closing the VO phase"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Approve the project plan so the VO phase can be closed and R2.4 (commissioning the external engineering firm) can start."
+    },
+    {
+      "id": "Field_ProjectplanReferentie",
+      "type": "textfield",
+      "label": "Project plan reference",
+      "key": "projectplanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_AkkoordProjectplan",
+      "type": "select",
+      "label": "Project plan approved",
+      "key": "akkoordProjectplan",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ProjectplanVastgesteldOp",
+      "type": "datetime",
+      "label": "Adopted on",
+      "key": "projectplanVastgesteldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_AccordeerOpmerkingen",
+      "type": "textarea",
+      "label": "Comments",
+      "key": "accordeerOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

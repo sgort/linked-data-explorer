@@ -1,0 +1,52 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-analyseren-verbeterpunten",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Analyse and process the improvement points"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Analyse the evaluation outcome and record which improvement points were carried through."
+    },
+    {
+      "id": "Field_Verbeterpunten",
+      "type": "textarea",
+      "label": "Improvement points identified",
+      "key": "verbeterpunten",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_DoorgevoerdeAanpassingen",
+      "type": "textarea",
+      "label": "Changes carried through",
+      "key": "doorgevoerdeAanpassingen"
+    },
+    {
+      "id": "Field_VerbeterpuntenVerwerktOp",
+      "type": "datetime",
+      "label": "Processed on",
+      "key": "verbeterpuntenVerwerktOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

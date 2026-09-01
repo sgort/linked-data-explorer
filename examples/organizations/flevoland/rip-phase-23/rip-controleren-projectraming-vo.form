@@ -1,0 +1,80 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-controleren-projectraming-vo",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Check the VO project estimate"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Review the project estimate and record whether it falls within or outside the available project credit. That answer routes the remainder of the phase."
+    },
+    {
+      "id": "Field_GecontroleerdDoor",
+      "type": "textfield",
+      "label": "Checked by",
+      "key": "gecontroleerdDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_GecontroleerdOp",
+      "type": "datetime",
+      "label": "Checked on",
+      "key": "gecontroleerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_BeschikbaarProjectkrediet",
+      "type": "number",
+      "label": "Available project credit (EUR)",
+      "key": "beschikbaarProjectkrediet",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ProjectkredietDekking",
+      "type": "select",
+      "label": "Estimate falls within or outside the project credit",
+      "key": "projectkredietDekking",
+      "values": [
+        {
+          "label": "Within the project credit",
+          "value": "binnen"
+        },
+        {
+          "label": "Outside the project credit",
+          "value": "buiten"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ControleOpmerkingen",
+      "type": "textarea",
+      "label": "Review comments",
+      "key": "controleOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
