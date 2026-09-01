@@ -1,0 +1,70 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opdracht-extern-ib",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Commission the external engineering firm"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Open the DO phase by commissioning the external engineering firm against the project plan adopted at the close of the VO phase."
+    },
+    {
+      "id": "F_Projectplan",
+      "type": "textfield",
+      "label": "Adopted project plan reference (from R2.3)",
+      "key": "projectplanVoReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_IB",
+      "type": "textfield",
+      "label": "External engineering firm",
+      "key": "externIngenieursbureau",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opdracht",
+      "type": "textfield",
+      "label": "Commission reference",
+      "key": "opdrachtReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_OpdrachtDatum",
+      "type": "datetime",
+      "label": "Commissioned on",
+      "key": "opdrachtDatum",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Scope",
+      "type": "textarea",
+      "label": "Scope of the commission",
+      "key": "opdrachtScope"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

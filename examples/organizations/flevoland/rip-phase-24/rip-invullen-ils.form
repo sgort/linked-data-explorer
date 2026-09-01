@@ -1,0 +1,52 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-invullen-ils",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Complete the ILS"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Complete the Province of Flevoland ILS (Integrale Levensduur Systematiek) form for the detailed design, so asset management can assess it."
+    },
+    {
+      "id": "F_ILS",
+      "type": "textfield",
+      "label": "ILS reference",
+      "key": "ilsReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Ingevuld",
+      "type": "datetime",
+      "label": "Completed on",
+      "key": "ilsIngevuldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Toel",
+      "type": "textarea",
+      "label": "Notes for the assessor",
+      "key": "ilsToelichting"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

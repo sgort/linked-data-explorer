@@ -1,0 +1,71 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-concept-do",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the draft DO and draft DO estimate drawn up"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the external engineering firm produce the draft detailed design and its estimate, working from the VO, the project estimate, the conditioning surveys and the risk file."
+    },
+    {
+      "id": "F_DO",
+      "type": "textfield",
+      "label": "Draft DO reference",
+      "key": "conceptDoReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Raming",
+      "type": "textfield",
+      "label": "Draft DO estimate reference",
+      "key": "conceptDoRamingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_VG",
+      "type": "textfield",
+      "label": "V&G plan reference",
+      "key": "vgPlanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Ontwerp",
+      "type": "textfield",
+      "label": "Design rationale reference",
+      "key": "ontwerptoelichtingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Draft DO estimate (EUR)",
+      "key": "conceptDoRamingBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

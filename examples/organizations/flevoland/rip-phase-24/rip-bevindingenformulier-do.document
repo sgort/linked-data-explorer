@@ -1,0 +1,218 @@
+{
+  "id": "rip-bevindingenformulier-do",
+  "name": "RIP — Findings Form, DO phase (Bevindingenformulier)",
+  "description": "Format Bevindingenformulier. Records the review findings on the draft DO and the draft DO estimate.",
+  "processKey": "RipR24Process",
+  "serviceId": "RipR24",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{bevindingenformulierReferentie}}",
+      "variableKey": "bevindingenformulierReferentie",
+      "source": "process",
+      "label": "Findings form reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{conceptDoReferentie}}",
+      "variableKey": "conceptDoReferentie",
+      "source": "process",
+      "label": "Draft DO reference"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{bevindingen}}",
+      "variableKey": "bevindingen",
+      "source": "process",
+      "label": "Findings"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{conceptDoAkkoord}}",
+      "variableKey": "conceptDoAkkoord",
+      "source": "process",
+      "label": "Outcome"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{conceptDoBesprokenOp}}",
+      "variableKey": "conceptDoBesprokenOp",
+      "source": "process",
+      "label": "Discussed on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Findings {{bevindingenformulierReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Findings on the draft DO",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Findings on the draft DO"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The draft detailed design {{conceptDoReferentie}} and its estimate were discussed on {{conceptDoBesprokenOp}} for project {{projectNumber}} — {{projectName}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Findings: {{bevindingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Outcome: {{conceptDoAkkoord}}. Where not approved, the external engineering firm amends the design and PKT reviews the amendments before the final DO is drawn up."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Recorded by the RIP team"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

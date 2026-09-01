@@ -1,0 +1,70 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-definitieve-do-raming",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the final DO estimate drawn up"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the external engineering firm produce the final DO estimate and the matching SSK estimate, from the risk file, the project estimate and the final DO."
+    },
+    {
+      "id": "F_Raming",
+      "type": "textfield",
+      "label": "DO estimate reference",
+      "key": "doRamingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_SSK",
+      "type": "textfield",
+      "label": "SSK estimate reference",
+      "key": "sskRamingDoReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "DO estimate (EUR)",
+      "key": "doRamingBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Risico",
+      "type": "textfield",
+      "label": "Risk file reference",
+      "key": "risicodossierReferentie"
+    },
+    {
+      "id": "F_Gereed",
+      "type": "datetime",
+      "label": "Estimate delivered on",
+      "key": "doRamingGereedOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
