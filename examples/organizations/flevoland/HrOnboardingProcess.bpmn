@@ -4,7 +4,7 @@
     <bpmn:startEvent id="StartEvent_Onboarding" name="Start onboarding">
       <bpmn:outgoing>Flow_Start_CollectData</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:userTask id="Task_CollectEmployeeData" name="Collect employee data" camunda:formRef="hr-onboarding-start" camunda:formRefBinding="latest" camunda:candidateGroups="hr-medewerker">
+    <bpmn:userTask id="Task_CollectEmployeeData" name="Collect employee data" camunda:formRef="hr-onboarding-start" camunda:formRefBinding="deployment" camunda:candidateGroups="hr-medewerker">
       <bpmn:incoming>Flow_Start_CollectData</bpmn:incoming>
       <bpmn:incoming>Flow_Revision_BackToCollect</bpmn:incoming>
       <bpmn:outgoing>Flow_CollectData_DetermineRoles</bpmn:outgoing>
@@ -22,7 +22,7 @@
         execution.setVariable("accessLevel",     roleResult.get("accessLevel"));
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:userTask id="Task_ReviewRoleAssignment" name="Review role assignment" camunda:formRef="hr-role-review" camunda:formRefBinding="latest" camunda:candidateGroups="hr-medewerker">
+    <bpmn:userTask id="Task_ReviewRoleAssignment" name="Review role assignment" camunda:formRef="hr-role-review" camunda:formRefBinding="deployment" camunda:candidateGroups="hr-medewerker">
       <bpmn:incoming>Flow_MapOutputs_ReviewRoles</bpmn:incoming>
       <bpmn:outgoing>Flow_Review_Gateway</bpmn:outgoing>
     </bpmn:userTask>
@@ -31,7 +31,7 @@
       <bpmn:outgoing>Flow_Gateway_Notify</bpmn:outgoing>
       <bpmn:outgoing>Flow_Gateway_Revision</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Task_NotifyEmployee" name="Notify employee" camunda:formRef="hr-notify-employee" camunda:formRefBinding="latest" camunda:candidateGroups="hr-medewerker">
+    <bpmn:userTask id="Task_NotifyEmployee" name="Notify employee" camunda:formRef="hr-notify-employee" camunda:formRefBinding="deployment" camunda:candidateGroups="hr-medewerker">
       <bpmn:incoming>Flow_Gateway_Notify</bpmn:incoming>
       <bpmn:outgoing>Flow_Notify_End</bpmn:outgoing>
     </bpmn:userTask>

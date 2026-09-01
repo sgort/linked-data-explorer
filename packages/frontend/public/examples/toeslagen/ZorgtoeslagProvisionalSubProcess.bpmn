@@ -53,7 +53,7 @@
         execution.setVariable("amountYear", amountYear != null ? Number(amountYear) : 0);
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:userTask id="Sub_CaseReview" name="Case review: provisional entitlement decision" camunda:formRef="zorgtoeslag-provisional-review" camunda:formRefBinding="latest" camunda:candidateGroups="caseworker">
+    <bpmn:userTask id="Sub_CaseReview" name="Case review: provisional entitlement decision" camunda:formRef="zorgtoeslag-provisional-review" camunda:formRefBinding="deployment" camunda:candidateGroups="caseworker">
       <bpmn:incoming>Flow_Sub_Extract_Review</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Review_Resolve</bpmn:outgoing>
     </bpmn:userTask>

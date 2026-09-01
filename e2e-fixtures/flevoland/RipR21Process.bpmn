@@ -46,36 +46,36 @@
     <bpmn:startEvent id="StartEvent_RipPhase1" name="Start RIP fase 1">
       <bpmn:outgoing>Flow_Start_Aanlevren</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:userTask id="Task_AanlevrenProjectplan" name="Aanleveren Projectplan&#10;1. Intake-formulier" camunda:formRef="rip-intake" camunda:formRefBinding="latest" camunda:candidateGroups="rip-aandrager">
+    <bpmn:userTask id="Task_AanlevrenProjectplan" name="Aanleveren Projectplan&#10;1. Intake-formulier" camunda:formRef="rip-intake" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-aandrager">
       <bpmn:incoming>Flow_Start_Aanlevren</bpmn:incoming>
       <bpmn:outgoing>Flow_Aanlevren_Organiseren</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_VerberenKwaliteit" name="Verbeteren kwaliteit&#10;1. Intake-formulier" camunda:formRef="rip-kwaliteit-verbetering" camunda:formRefBinding="latest" camunda:candidateGroups="rip-aandrager">
+    <bpmn:userTask id="Task_VerberenKwaliteit" name="Verbeteren kwaliteit&#10;1. Intake-formulier" camunda:formRef="rip-kwaliteit-verbetering" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-aandrager">
       <bpmn:incoming>Flow_IntakeNee_Verbeteren</bpmn:incoming>
       <bpmn:outgoing>Flow_Verbeteren_Accorderen2</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_OrganiserenIntakeoverleg" name="Organiseren intake-overleg" camunda:formRef="rip-intake-meeting" camunda:formRefBinding="latest" camunda:candidateGroups="rip-manager-pb">
+    <bpmn:userTask id="Task_OrganiserenIntakeoverleg" name="Organiseren intake-overleg" camunda:formRef="rip-intake-meeting" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-manager-pb">
       <bpmn:incoming>Flow_Aanlevren_Organiseren</bpmn:incoming>
       <bpmn:outgoing>Flow_Organiseren_Uitvoeren</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_OpstellenRisicodossier" name="Opstellen risicossier&#10;en versturen aan PL" camunda:formRef="rip-risk-file" camunda:formRefBinding="latest" camunda:candidateGroups="rip-manager-pb">
+    <bpmn:userTask id="Task_OpstellenRisicodossier" name="Opstellen risicossier&#10;en versturen aan PL" camunda:formRef="rip-risk-file" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-manager-pb">
       <bpmn:incoming>Flow_Relatics_Risicodossier</bpmn:incoming>
       <bpmn:outgoing>Flow_Risicodossier_UitvoerenPSU</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_OpstellenPlanning" name="Opstellen planning en&#10;informeren PL en ondersteuner" camunda:formRef="rip-planning" camunda:formRefBinding="latest" camunda:candidateGroups="rip-manager-pb">
+    <bpmn:userTask id="Task_OpstellenPlanning" name="Opstellen planning en&#10;informeren PL en ondersteuner" camunda:formRef="rip-planning" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-manager-pb">
       <bpmn:incoming>Flow_UitvoerenPSU_Planning</bpmn:incoming>
       <bpmn:outgoing>Flow_Planning_Aanvullen4</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_AanvullenProjectplan2" name="Aanvullen Projectplan&#10;2. Intake-verslag" camunda:formRef="rip-intake-report" camunda:formRefBinding="latest" camunda:candidateGroups="rip-projectleider" ronl:documentRef="rip-intake-report">
+    <bpmn:userTask id="Task_AanvullenProjectplan2" name="Aanvullen Projectplan&#10;2. Intake-verslag" camunda:formRef="rip-intake-report" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-projectleider" ronl:documentRef="rip-intake-report">
       <bpmn:incoming>Flow_IntakeJa_Aanvullen2</bpmn:incoming>
       <bpmn:incoming>Flow_Akkoord2Rejected_Aanvullen2</bpmn:incoming>
       <bpmn:outgoing>Flow_Aanvullen2_Accorderen2</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_InitierenPSU" name="Initieren / organiseren PSU" camunda:formRef="rip-psu-organize" camunda:formRefBinding="latest" camunda:candidateGroups="rip-projectleider">
+    <bpmn:userTask id="Task_InitierenPSU" name="Initieren / organiseren PSU" camunda:formRef="rip-psu-organize" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-projectleider">
       <bpmn:incoming>Flow_Akkoord2Approved_InitierenPSU</bpmn:incoming>
       <bpmn:outgoing>Flow_InitierenPSU_Relatics</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_AanvullenProjectplan4" name="Aanvullen Projectplan&#10;4. Uitgangspunten VO-fase" camunda:formRef="rip-pdp-aanvullen" camunda:formRefBinding="latest" camunda:candidateGroups="rip-projectleider" ronl:documentRef="rip-pdp">
+    <bpmn:userTask id="Task_AanvullenProjectplan4" name="Aanvullen Projectplan&#10;4. Uitgangspunten VO-fase" camunda:formRef="rip-pdp-aanvullen" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-projectleider" ronl:documentRef="rip-pdp">
       <bpmn:incoming>Flow_Planning_Aanvullen4</bpmn:incoming>
       <bpmn:incoming>Flow_Akkoord4Rejected_Aanvullen4</bpmn:incoming>
       <bpmn:outgoing>Flow_Aanvullen4_OverlegVO</bpmn:outgoing>
@@ -84,7 +84,7 @@
       <bpmn:incoming>Flow_InitierenPSU_Relatics</bpmn:incoming>
       <bpmn:outgoing>Flow_Relatics_Risicodossier</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:userTask id="Task_UitvoerenIntakeoverleg" name="Uitvoeren intake-overleg" camunda:formRef="rip-uitvoer-intake" camunda:formRefBinding="latest" camunda:candidateGroups="rip-ao,rip-aandrager,rip-projectleider">
+    <bpmn:userTask id="Task_UitvoerenIntakeoverleg" name="Uitvoeren intake-overleg" camunda:formRef="rip-uitvoer-intake" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-ao,rip-aandrager,rip-projectleider">
       <bpmn:incoming>Flow_Organiseren_Uitvoeren</bpmn:incoming>
       <bpmn:outgoing>Flow_Uitvoeren_Gateway</bpmn:outgoing>
     </bpmn:userTask>
@@ -93,7 +93,7 @@
       <bpmn:outgoing>Flow_IntakeJa_Aanvullen2</bpmn:outgoing>
       <bpmn:outgoing>Flow_IntakeNee_Verbeteren</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Task_AccorderenProjectplan2" name="Accorderen Projectplan&#10;2. Intake-verslag" camunda:formRef="rip-approval" camunda:formRefBinding="latest" camunda:candidateGroups="rip-aandrager,rip-projectleider">
+    <bpmn:userTask id="Task_AccorderenProjectplan2" name="Accorderen Projectplan&#10;2. Intake-verslag" camunda:formRef="rip-approval" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-aandrager,rip-projectleider">
       <bpmn:incoming>Flow_Aanvullen2_Accorderen2</bpmn:incoming>
       <bpmn:incoming>Flow_Verbeteren_Accorderen2</bpmn:incoming>
       <bpmn:outgoing>Flow_Accorderen2_Gateway</bpmn:outgoing>
@@ -103,15 +103,15 @@
       <bpmn:outgoing>Flow_Akkoord2Approved_InitierenPSU</bpmn:outgoing>
       <bpmn:outgoing>Flow_Akkoord2Rejected_Aanvullen2</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Task_UitvoerenPSU" name="Uitvoeren PSU en aanvullen&#10;Projectplan 3. PSU-verslag" camunda:formRef="rip-psu-execution" camunda:formRefBinding="latest" camunda:candidateGroups="rip-deelnemers-psu" ronl:documentRef="rip-psu-report">
+    <bpmn:userTask id="Task_UitvoerenPSU" name="Uitvoeren PSU en aanvullen&#10;Projectplan 3. PSU-verslag" camunda:formRef="rip-psu-execution" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-deelnemers-psu" ronl:documentRef="rip-psu-report">
       <bpmn:incoming>Flow_Risicodossier_UitvoerenPSU</bpmn:incoming>
       <bpmn:outgoing>Flow_UitvoerenPSU_Planning</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_HoudenOverlegVO" name="Houden overleg&#10;uitgangspunten VO-fase" camunda:formRef="rip-overleg-vo" camunda:formRefBinding="latest" camunda:candidateGroups="rip-team">
+    <bpmn:userTask id="Task_HoudenOverlegVO" name="Houden overleg&#10;uitgangspunten VO-fase" camunda:formRef="rip-overleg-vo" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-team">
       <bpmn:incoming>Flow_Aanvullen4_OverlegVO</bpmn:incoming>
       <bpmn:outgoing>Flow_OverlegVO_Accorderen4</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_AccorderenProjectplan4" name="Accorderen Projectplan&#10;4. Uitgangspunten VO-fase" camunda:formRef="rip-approval" camunda:formRefBinding="latest" camunda:candidateGroups="rip-projectleider,rip-aandrager,rip-ao" ronl:signatureRef="rip-pdp">
+    <bpmn:userTask id="Task_AccorderenProjectplan4" name="Accorderen Projectplan&#10;4. Uitgangspunten VO-fase" camunda:formRef="rip-approval" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-projectleider,rip-aandrager,rip-ao" ronl:signatureRef="rip-pdp">
       <bpmn:incoming>Flow_OverlegVO_Accorderen4</bpmn:incoming>
       <bpmn:outgoing>Flow_Accorderen4_Gateway</bpmn:outgoing>
     </bpmn:userTask>

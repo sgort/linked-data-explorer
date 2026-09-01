@@ -42,23 +42,23 @@
       <bpmn:outgoing>Flow_Gateway_UitgangspuntenSplit_Task_InventariserenKabelsLeidingen</bpmn:outgoing>
       <bpmn:outgoing>Flow_Gateway_UitgangspuntenSplit_Task_AanvragenRaamvergunning</bpmn:outgoing>
     </bpmn:parallelGateway>
-    <bpmn:userTask id="Task_UitvoerenConditionerendeOnderzoeken" name="Uitvoeren conditionerende onderzoeken" camunda:formRef="rip-conditionerende-onderzoeken" camunda:formRefBinding="latest" camunda:candidateGroups="rip-projectleider">
+    <bpmn:userTask id="Task_UitvoerenConditionerendeOnderzoeken" name="Uitvoeren conditionerende onderzoeken" camunda:formRef="rip-conditionerende-onderzoeken" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-projectleider">
       <bpmn:incoming>Flow_Gateway_UitgangspuntenSplit_Task_UitvoerenConditionerendeOnderzoeken</bpmn:incoming>
       <bpmn:outgoing>Flow_Task_UitvoerenConditionerendeOnderzoeken_Gateway_UitgangspuntenJoin</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_OpstellenConceptVO" name="Opstellen concept VO" camunda:formRef="rip-concept-vo" camunda:formRefBinding="latest" camunda:candidateGroups="rip-ontwerper" ronl:documentRef="rip-ontwerptoelichting">
+    <bpmn:userTask id="Task_OpstellenConceptVO" name="Opstellen concept VO" camunda:formRef="rip-concept-vo" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-ontwerper" ronl:documentRef="rip-ontwerptoelichting">
       <bpmn:incoming>Flow_Gateway_UitgangspuntenSplit_Task_OpstellenConceptVO</bpmn:incoming>
       <bpmn:outgoing>Flow_Task_OpstellenConceptVO_Gateway_UitgangspuntenJoin</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_VerzamelenKlanteisen" name="Verzamelen klanteisen" camunda:formRef="rip-verzamelen-klanteisen" camunda:formRefBinding="latest" camunda:candidateGroups="rip-omgevingsmanager" ronl:documentRef="rip-kes">
+    <bpmn:userTask id="Task_VerzamelenKlanteisen" name="Verzamelen klanteisen" camunda:formRef="rip-verzamelen-klanteisen" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-omgevingsmanager" ronl:documentRef="rip-kes">
       <bpmn:incoming>Flow_Gateway_UitgangspuntenSplit_Task_VerzamelenKlanteisen</bpmn:incoming>
       <bpmn:outgoing>Flow_Task_VerzamelenKlanteisen_Gateway_UitgangspuntenJoin</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_InventariserenKabelsLeidingen" name="Inventariseren&#10;kabels en leidingen" camunda:formRef="rip-inventariseren-kabels-leidingen" camunda:formRefBinding="latest" camunda:candidateGroups="rip-omgevingsmanager">
+    <bpmn:userTask id="Task_InventariserenKabelsLeidingen" name="Inventariseren&#10;kabels en leidingen" camunda:formRef="rip-inventariseren-kabels-leidingen" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-omgevingsmanager">
       <bpmn:incoming>Flow_Gateway_UitgangspuntenSplit_Task_InventariserenKabelsLeidingen</bpmn:incoming>
       <bpmn:outgoing>Flow_Task_InventariserenKabelsLeidingen_Gateway_UitgangspuntenJoin</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_AanvragenRaamvergunning" name="Aanvragen raamvergunning" camunda:formRef="rip-aanvragen-raamvergunning" camunda:formRefBinding="latest" camunda:candidateGroups="rip-omgevingsmanager">
+    <bpmn:userTask id="Task_AanvragenRaamvergunning" name="Aanvragen raamvergunning" camunda:formRef="rip-aanvragen-raamvergunning" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-omgevingsmanager">
       <bpmn:incoming>Flow_Gateway_UitgangspuntenSplit_Task_AanvragenRaamvergunning</bpmn:incoming>
       <bpmn:outgoing>Flow_Task_AanvragenRaamvergunning_Gateway_UitgangspuntenJoin</bpmn:outgoing>
     </bpmn:userTask>
@@ -75,11 +75,11 @@
       <bpmn:outgoing>Flow_Gateway_BesprekenSplit_Task_BesprekenConceptVO</bpmn:outgoing>
       <bpmn:outgoing>Flow_Gateway_BesprekenSplit_Task_BesprekenKlanteisenKL</bpmn:outgoing>
     </bpmn:parallelGateway>
-    <bpmn:userTask id="Task_BesprekenConceptVO" name="Bespreken concept VO" camunda:formRef="rip-bespreken-concept-vo" camunda:formRefBinding="latest" camunda:candidateGroups="rip-team,rip-aandrager,rip-adviseur" ronl:documentRef="rip-bevindingenformulier">
+    <bpmn:userTask id="Task_BesprekenConceptVO" name="Bespreken concept VO" camunda:formRef="rip-bespreken-concept-vo" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-team,rip-aandrager,rip-adviseur" ronl:documentRef="rip-bevindingenformulier">
       <bpmn:incoming>Flow_Gateway_BesprekenSplit_Task_BesprekenConceptVO</bpmn:incoming>
       <bpmn:outgoing>Flow_Task_BesprekenConceptVO_Gateway_BesprekenJoin</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_BesprekenKlanteisenKL" name="Bespreken klanteisen en&#10;kabels en leidingen" camunda:formRef="rip-bespreken-klanteisen-kl" camunda:formRefBinding="latest" camunda:candidateGroups="rip-team,rip-aandrager,rip-adviseur">
+    <bpmn:userTask id="Task_BesprekenKlanteisenKL" name="Bespreken klanteisen en&#10;kabels en leidingen" camunda:formRef="rip-bespreken-klanteisen-kl" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-team,rip-aandrager,rip-adviseur">
       <bpmn:incoming>Flow_Gateway_BesprekenSplit_Task_BesprekenKlanteisenKL</bpmn:incoming>
       <bpmn:outgoing>Flow_Task_BesprekenKlanteisenKL_Gateway_BesprekenJoin</bpmn:outgoing>
     </bpmn:userTask>
@@ -93,11 +93,11 @@
       <bpmn:outgoing>Flow_Gateway_AfrondingSplit_Task_TerugkoppelenKlanteisen</bpmn:outgoing>
       <bpmn:outgoing>Flow_Gateway_AfrondingSplit_Task_OpstellenDefinitiefVO</bpmn:outgoing>
     </bpmn:parallelGateway>
-    <bpmn:userTask id="Task_TerugkoppelenKlanteisen" name="Terugkoppelen klanteisen" camunda:formRef="rip-terugkoppelen-klanteisen" camunda:formRefBinding="latest" camunda:candidateGroups="rip-omgevingsmanager">
+    <bpmn:userTask id="Task_TerugkoppelenKlanteisen" name="Terugkoppelen klanteisen" camunda:formRef="rip-terugkoppelen-klanteisen" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-omgevingsmanager">
       <bpmn:incoming>Flow_Gateway_AfrondingSplit_Task_TerugkoppelenKlanteisen</bpmn:incoming>
       <bpmn:outgoing>Flow_Task_TerugkoppelenKlanteisen_EndEvent_KlanteisenTeruggekoppeld</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_OpstellenDefinitiefVO" name="Opstellen definitief VO" camunda:formRef="rip-definitief-vo" camunda:formRefBinding="latest" camunda:candidateGroups="rip-ontwerper" ronl:documentRef="rip-hoeveelheidsbepaling">
+    <bpmn:userTask id="Task_OpstellenDefinitiefVO" name="Opstellen definitief VO" camunda:formRef="rip-definitief-vo" camunda:formRefBinding="deployment" camunda:candidateGroups="rip-ontwerper" ronl:documentRef="rip-hoeveelheidsbepaling">
       <bpmn:incoming>Flow_Gateway_AfrondingSplit_Task_OpstellenDefinitiefVO</bpmn:incoming>
       <bpmn:outgoing>Flow_Task_OpstellenDefinitiefVO_EndEvent_VOGereed</bpmn:outgoing>
     </bpmn:userTask>
