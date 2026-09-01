@@ -2,6 +2,37 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.09.0",
+      "status": "Released",
+      "date": "1 sep 2026",
+      "scope": "frontend",
+      "commits": [
+        {
+          "sha": "9abc2f2",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Deploy refuses a bundle whose forms or documents are missing from local storage",
+          "details": [
+            "The deploy modal filtered referenced forms and document templates against the browser’s own storage and dropped every miss without a word, so a bundle could deploy with none of its .document resources and still show a green \"Resources to deploy\" panel.",
+            "The failure surfaced far from its cause. RipR21Process deployed with its BPMN and twelve forms but none of its three documents; at runtime ronl-business-api read ronl:signatureRef from the engine, looked for rip-pdp.document in the deployment, threw SIGNATURE_TEMPLATE_NOT_FOUND and returned 500 from the task spec endpoint. ProjectDetail fetches that spec inside a Promise.allSettled and degrades a failure to \"no signature required\", so the phase-exit approval task rendered an ordinary form instead of the signing panel and the E2E journey failed on a missing panel.",
+            "Missing resources are now listed by name and the deploy button is disabled while any remain, matching the existing board-owner and organization guards. unmatchedForms was already computed but rendered nowhere, and is surfaced alongside it. extractDocumentRefs now also follows ronl:signatureRef: a task binding a template through that attribute alone never contributed it, and rip-pdp survived only because it carries both. No bundle in the repository changes as a result. The resources footer, which printed its count twice with the first total omitting documents, is collapsed to one."
+          ]
+        },
+        {
+          "sha": "45d3d2f",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Forms bind to their own deployment instead of the latest version",
+          "details": [
+            "Tenanting a process definition made the process unambiguous and its forms ambiguous. camunda:formRefBinding=\"latest\" resolves a form key across the whole repository rather than within the bundle, so deploying AwbShellProcess under tenant flevoland produced ENGINE-03109: the key ‘kapvergunning-start’ existed for multiple tenants. \"deployment\" resolves the form from the process definition’s own deployment, unique by construction, so tenanted and untenanted copies coexist and no deployment history has to be destroyed.",
+            "91 of 109 references converted across the three trees that hold BPMN: packages/frontend/public/examples/ (seed and deploy source for the Awb/Zorgtoeslag/DvTP/HR bundles), examples/organizations/ (authoring source for RIP and HR-capacity), and e2e-fixtures/ (what ronl-business-api’s E2E suite deploys). thuisbatterij and ind stay on \"latest\" because their form keys resolve nowhere in the repository.",
+            "Also bumps the seven seeded BPMN entries in EXAMPLE_VERSIONS. public/examples is seeded into localStorage and re-fetched only when its version rises, so without the bump the edit would be invisible to every existing user. Already-deployed definitions do not heal: ACC users get the fix only after a frontend deploy and a page load that re-seeds, and the e2e-fixtures bundles must be re-imported through the BPMN Modeler before an E2E run exercises them."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.08.9",
       "status": "Released",
       "date": "29 aug 2026",
