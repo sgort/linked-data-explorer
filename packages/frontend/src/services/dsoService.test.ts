@@ -137,6 +137,83 @@ describe('activiteiten-shaped endpoints', () => {
     expect(result.items).toHaveLength(1);
   });
 
+  test('getActiviteitenByOin throws when the envelope reports success: false', async () => {
+    server.use(
+      http.post('*/v1/dso/activiteiten/oin', () => HttpResponse.json({ success: false, data: {} }))
+    );
+    await expect(getActiviteitenByOin('oin-123')).rejects.toThrow('DSO OIN request failed');
+  });
+
+  test('zoekActiviteiten throws on a non-ok response', async () => {
+    server.use(
+      http.post('*/v1/dso/activiteiten/zoek', () => new HttpResponse(null, { status: 500 }))
+    );
+    await expect(zoekActiviteiten({})).rejects.toThrow('HTTP 500');
+  });
+
+  test('zoekActiviteiten throws when the envelope reports success: false', async () => {
+    server.use(
+      http.post('*/v1/dso/activiteiten/zoek', () => HttpResponse.json({ success: false, data: {} }))
+    );
+    await expect(zoekActiviteiten({})).rejects.toThrow('DSO search failed');
+  });
+
+  test('zoekActiviteiten falls back to the requested page and an empty list', async () => {
+    server.use(
+      http.post('*/v1/dso/activiteiten/zoek', () => HttpResponse.json({ success: true, data: {} }))
+    );
+
+    const result = await zoekActiviteiten({ page: 3, pageSize: 50 });
+
+    expect(result).toEqual({ items: [], page: { number: 3, size: 50 }, hasNext: false });
+  });
+
+  test('zoekActiviteiten defaults the page when the caller supplies none', async () => {
+    server.use(
+      http.post('*/v1/dso/activiteiten/zoek', () => HttpResponse.json({ success: true, data: {} }))
+    );
+
+    expect((await zoekActiviteiten({})).page).toEqual({ number: 1, size: 20 });
+  });
+
+  test('zoekActiviteiten reports hasNext when the envelope carries a next link', async () => {
+    server.use(
+      http.post('*/v1/dso/activiteiten/zoek', () =>
+        HttpResponse.json({
+          success: true,
+          data: { _links: { next: { href: 'https://example.com/next' } } },
+        })
+      )
+    );
+
+    expect((await zoekActiviteiten({})).hasNext).toBe(true);
+  });
+
+  test('getActiviteiten falls back to an empty list and a default page', async () => {
+    server.use(
+      http.get('*/v1/dso/activiteiten', () => HttpResponse.json({ success: true, data: {} }))
+    );
+
+    expect(await getActiviteiten()).toEqual({
+      items: [],
+      page: { number: 1, size: 20 },
+      hasNext: false,
+    });
+  });
+
+  test('getActiviteiten reports hasNext when the envelope carries a next link', async () => {
+    server.use(
+      http.get('*/v1/dso/activiteiten', () =>
+        HttpResponse.json({
+          success: true,
+          data: { _links: { next: { href: 'https://example.com/next' } } },
+        })
+      )
+    );
+
+    expect((await getActiviteiten()).hasNext).toBe(true);
+  });
+
   test('getActiviteiten fetches with page/pageSize params', async () => {
     let url = '';
     server.use(
@@ -211,6 +288,87 @@ describe('werkzaamheden endpoints', () => {
   });
 });
 
+describe('werkzaamheden edge cases', () => {
+  test('zoekWerkzaamheden sends no zoekterm when the search box is blank', async () => {
+    let body: unknown;
+    server.use(
+      http.post('*/v1/dso/werkzaamheden/zoek', async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ success: true, data: {} });
+      })
+    );
+
+    await zoekWerkzaamheden('   ');
+
+    expect(body).toEqual({ page: 1, pageSize: 20 });
+  });
+
+  test('zoekWerkzaamheden throws on a non-ok response', async () => {
+    server.use(
+      http.post('*/v1/dso/werkzaamheden/zoek', () => new HttpResponse(null, { status: 503 }))
+    );
+    await expect(zoekWerkzaamheden('kappen')).rejects.toThrow('HTTP 503');
+  });
+
+  test('zoekWerkzaamheden throws when the envelope reports success: false', async () => {
+    server.use(
+      http.post('*/v1/dso/werkzaamheden/zoek', () =>
+        HttpResponse.json({ success: false, data: {} })
+      )
+    );
+    await expect(zoekWerkzaamheden('kappen')).rejects.toThrow('DSO search failed');
+  });
+
+  test('zoekWerkzaamheden falls back to the requested page and reports hasNext', async () => {
+    server.use(
+      http.post('*/v1/dso/werkzaamheden/zoek', () =>
+        HttpResponse.json({
+          success: true,
+          data: { _links: { next: { href: 'https://example.com/next' } } },
+        })
+      )
+    );
+
+    expect(await zoekWerkzaamheden('kappen', 4)).toEqual({
+      items: [],
+      page: { number: 4, size: 20 },
+      hasNext: true,
+    });
+  });
+
+  test('suggereerWerkzaamheden returns [] when the envelope reports success: false', async () => {
+    server.use(
+      http.post('*/v1/dso/werkzaamheden/suggereer', () =>
+        HttpResponse.json({ success: false, data: null })
+      )
+    );
+    expect(await suggereerWerkzaamheden('kap')).toEqual([]);
+  });
+
+  test('suggereerWerkzaamheden returns [] when the payload is not an array', async () => {
+    server.use(
+      http.post('*/v1/dso/werkzaamheden/suggereer', () =>
+        HttpResponse.json({ success: true, data: { unexpected: true } })
+      )
+    );
+    expect(await suggereerWerkzaamheden('kap')).toEqual([]);
+  });
+
+  test('getWerkzaamheidDetail throws on a non-ok response', async () => {
+    server.use(
+      http.get('*/v1/dso/werkzaamheden/:urn', () => new HttpResponse(null, { status: 404 }))
+    );
+    await expect(getWerkzaamheidDetail('urn:1')).rejects.toThrow('HTTP 404');
+  });
+
+  test('getWerkzaamheidDetail throws when the envelope reports success: false', async () => {
+    server.use(
+      http.get('*/v1/dso/werkzaamheden/:urn', () => HttpResponse.json({ success: false, data: {} }))
+    );
+    await expect(getWerkzaamheidDetail('urn:1')).rejects.toThrow('DSO request failed');
+  });
+});
+
 describe('getActiviteitDetail', () => {
   test('fetches the activiteit detail with an optional datum param', async () => {
     let url = '';
@@ -237,6 +395,30 @@ describe('fetchToepasbareRegels', () => {
       )
     );
     expect(await fetchToepasbareRegels('fs-ref')).toEqual({ items: [{ identifier: 1 }] });
+  });
+
+  test('accepts the alternative _embedded.toepasbareRegels key', async () => {
+    server.use(
+      http.get('*/v1/dso/toepasbare-regels', () =>
+        HttpResponse.json({
+          success: true,
+          data: { _embedded: { toepasbareRegels: [{ identifier: 7 }] } },
+        })
+      )
+    );
+    expect(await fetchToepasbareRegels('fs-ref')).toEqual({ items: [{ identifier: 7 }] });
+  });
+
+  test('falls back to [] when the embedded value is not a list', async () => {
+    server.use(
+      http.get('*/v1/dso/toepasbare-regels', () =>
+        HttpResponse.json({
+          success: true,
+          data: { _embedded: { toepasbareRegelsList: { not: 'a list' } } },
+        })
+      )
+    );
+    expect(await fetchToepasbareRegels('fs-ref')).toEqual({ items: [] });
   });
 
   test('falls back to [] when neither known key is present', async () => {

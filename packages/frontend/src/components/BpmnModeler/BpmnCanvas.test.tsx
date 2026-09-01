@@ -84,6 +84,8 @@ const { modelerInstances, MockBpmnModeler } = vi.hoisted(() => {
     }
 
     importXML(xml: string) {
+      // Sentinel for the failure path: bpmn-js rejects on unparseable XML.
+      if (xml.includes('__IMPORT_FAIL__')) return Promise.reject(new Error('parse error'));
       this.xml = xml;
       return Promise.resolve({ warnings: [] });
     }
@@ -552,5 +554,351 @@ describe('BpmnCanvas — deploy modal, unmatched resources', () => {
     // the first omitting documents entirely: "2 resource(s) · 3 resource(s)".
     expect(document.body.textContent).toContain('3 resource(s) · process key:');
     expect(document.body.textContent).not.toMatch(/resource\(s\)\s*·\s*\d+\s*resource\(s\)/);
+  });
+});
+
+describe('BpmnCanvas — overlay badges', () => {
+  /** A minimal element-registry entry, shaped like a bpmn-js element. */
+  function element(type: string, attrs: Record<string, string> = {}, id = 'e1') {
+    return {
+      id,
+      type,
+      width: 100,
+      businessObject: { get: (key: string) => attrs[key] },
+    };
+  }
+
+  async function overlaysAfterChange(elements: unknown[]) {
+    const { modeler } = await renderCanvas();
+    const added: { id: string; type: string; opts: { html: string } }[] = [];
+    modeler.overlays.add = ((id: string, type: string, opts: { html: string }) => {
+      added.push({ id, type, opts });
+    }) as never;
+    modeler.elementRegistry.elements = elements;
+
+    act(() => modeler.eventBus.emit('commandStack.changed'));
+
+    return added;
+  }
+
+  test('badges a BusinessRuleTask that references a DMN', async () => {
+    const added = await overlaysAfterChange([
+      element('bpmn:BusinessRuleTask', { 'camunda:decisionRef': 'AgeCheck' }),
+    ]);
+
+    expect(added).toHaveLength(1);
+    expect(added[0].type).toBe('dmn-linked');
+    expect(added[0].opts.html).toContain('AgeCheck');
+  });
+
+  test('leaves an unlinked BusinessRuleTask unbadged', async () => {
+    expect(await overlaysAfterChange([element('bpmn:BusinessRuleTask')])).toHaveLength(0);
+  });
+
+  test('badges a UserTask with both its form and its document', async () => {
+    const added = await overlaysAfterChange([
+      element('bpmn:UserTask', {
+        'camunda:formRef': 'aanvraag-form',
+        'ronl:documentRef': 'beschikking',
+      }),
+    ]);
+
+    expect(added.map((a) => a.type)).toEqual(['form-linked', 'document-linked']);
+    expect(added[0].opts.html).toContain('aanvraag-form');
+    expect(added[1].opts.html).toContain('beschikking');
+  });
+
+  test('badges a UserTask that has a form but no document', async () => {
+    const added = await overlaysAfterChange([
+      element('bpmn:UserTask', { 'camunda:formRef': 'aanvraag-form' }),
+    ]);
+    expect(added.map((a) => a.type)).toEqual(['form-linked']);
+  });
+
+  test('leaves an unlinked UserTask unbadged', async () => {
+    expect(await overlaysAfterChange([element('bpmn:UserTask')])).toHaveLength(0);
+  });
+
+  test('badges a StartEvent that carries a form, below the shape', async () => {
+    const added = await overlaysAfterChange([
+      element('bpmn:StartEvent', { 'camunda:formRef': 'start-form' }),
+    ]);
+
+    expect(added).toHaveLength(1);
+    expect(added[0].opts.html).toContain('form-linked-badge--start');
+  });
+
+  test('leaves an unlinked StartEvent unbadged', async () => {
+    expect(await overlaysAfterChange([element('bpmn:StartEvent')])).toHaveLength(0);
+  });
+
+  test('ignores element types that carry no badge', async () => {
+    expect(await overlaysAfterChange([element('bpmn:SequenceFlow')])).toHaveLength(0);
+  });
+});
+
+describe('BpmnCanvas — canvas interaction', () => {
+  test('the wheel zooms in when scrolling up and out when scrolling down', async () => {
+    const { modeler } = await renderCanvas();
+    const container = document.querySelector('.flex-1.relative') ?? document.body;
+    const surface = container.querySelector('div') ?? (container as HTMLElement);
+
+    const before = modeler.canvas.zoom();
+    surface.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, bubbles: true }));
+    const zoomedIn = modeler.canvas.zoom();
+
+    surface.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true }));
+    const zoomedOut = modeler.canvas.zoom();
+
+    expect(zoomedIn).toBeGreaterThanOrEqual(before);
+    expect(zoomedOut).toBeLessThanOrEqual(zoomedIn);
+  });
+
+  test('logs and keeps rendering when the XML cannot be imported', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    getProcesses.mockReturnValue([]);
+    getForms.mockReturnValue([]);
+    getTemplates.mockReturnValue([]);
+    render(
+      <BpmnCanvas
+        xml="<definitions __IMPORT_FAIL__ />"
+        endpoint="e"
+        onSave={vi.fn()}
+        onClose={vi.fn()}
+        onElementSelect={vi.fn()}
+      />
+    );
+
+    await vi.waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith('Failed to import BPMN:', expect.any(Error))
+    );
+  });
+
+  test('a selection of an element type with no custom panel injects nothing', async () => {
+    const { modeler } = await renderCanvas();
+
+    act(() =>
+      modeler.eventBus.emit('selection.changed', {
+        newSelection: [
+          { id: 'g1', type: 'bpmn:Gateway', businessObject: { get: () => undefined } },
+        ],
+      })
+    );
+
+    expect(screen.queryByText(/selector:/)).toBeNull();
+  });
+
+  test('injects nothing when the properties panel scroll container is absent', async () => {
+    const { modeler } = await renderCanvas();
+    document.querySelector('.bio-properties-panel-scroll-container')?.remove();
+
+    act(() =>
+      modeler.eventBus.emit('selection.changed', {
+        newSelection: [
+          {
+            id: 't1',
+            type: 'bpmn:UserTask',
+            businessObject: { get: () => undefined },
+          },
+        ],
+      })
+    );
+
+    expect(screen.queryByText(/Form selector/)).toBeNull();
+  });
+});
+
+describe('BpmnCanvas — deploy bundle assembly', () => {
+  const NS =
+    'xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" ' +
+    'xmlns:camunda="http://camunda.org/schema/1.0/bpmn" ' +
+    'xmlns:ronl="https://regels.overheid.nl/schema"';
+
+  function shell(extraProcessAttrs: string, body: string) {
+    return (
+      `<bpmn:definitions ${NS}><bpmn:process id="MyProcess" ronl:organization="flevoland" ` +
+      `${extraProcessAttrs}><bpmn:userTask id="t1" camunda:candidateGroups="rip-projectleider"/>` +
+      `${body}</bpmn:process></bpmn:definitions>`
+    );
+  }
+
+  function subprocess(id: string, attrs = '') {
+    return `<bpmn:definitions ${NS}><bpmn:process id="${id}" ${attrs}/></bpmn:definitions>`;
+  }
+
+  async function openModal(options: Parameters<typeof renderCanvas>[0]) {
+    const rendered = await renderCanvas(options);
+    await userEvent.click(screen.getByText('Deploy'));
+    await screen.findByText('Deploy to Operaton');
+    return rendered;
+  }
+
+  test('pulls a called subprocess into the bundle', async () => {
+    await openModal({
+      xml: shell('', '<bpmn:callActivity id="c1" calledElement="SubProc"/>'),
+      processes: [{ id: 'p2', xml: subprocess('SubProc') }],
+    });
+
+    expect(document.body.textContent).toContain('SubProc.bpmn');
+    expect(document.body.textContent).toContain('2 resource(s)');
+  });
+
+  test('omits a called subprocess that is not in local storage', async () => {
+    await openModal({
+      xml: shell('', '<bpmn:callActivity id="c1" calledElement="Missing"/>'),
+      processes: [{ id: 'p2', xml: subprocess('Other') }],
+    });
+
+    expect(document.body.textContent).not.toContain('Missing.bpmn');
+    expect(document.body.textContent).toContain('1 resource(s)');
+  });
+
+  test('accepts a single-language bundle without warning', async () => {
+    await openModal({
+      xml: shell('ronl:language="nl"', '<bpmn:callActivity id="c1" calledElement="SubProc"/>'),
+      processes: [{ id: 'p2', xml: subprocess('SubProc', 'ronl:language="nl"') }],
+    });
+
+    expect(document.body.textContent).not.toContain('Bundle mixes languages');
+  });
+
+  test('warns when the shell and its subprocess disagree on language', async () => {
+    await openModal({
+      xml: shell('ronl:language="nl"', '<bpmn:callActivity id="c1" calledElement="SubProc"/>'),
+      processes: [{ id: 'p2', xml: subprocess('SubProc', 'ronl:language="en"') }],
+    });
+
+    expect(document.body.textContent).toContain('Bundle mixes languages');
+    expect(document.body.textContent).toContain('en, nl');
+  });
+
+  test('warns when a bundled form is tagged in another language than the process', async () => {
+    await openModal({
+      xml:
+        `<bpmn:definitions ${NS}><bpmn:process id="MyProcess" ronl:organization="flevoland" ` +
+        `ronl:language="nl"><bpmn:userTask id="t1" camunda:formRef="form-1"/>` +
+        `</bpmn:process></bpmn:definitions>`,
+      forms: [{ id: 'f1', schema: { id: 'form-1' }, language: 'de' }],
+    });
+
+    expect(document.body.textContent).toContain('Bundle mixes languages');
+    expect(document.body.textContent).toContain('de, nl');
+  });
+
+  test('warns when a bundled document is tagged in another language than the process', async () => {
+    await openModal({
+      xml:
+        `<bpmn:definitions ${NS}><bpmn:process id="MyProcess" ronl:organization="flevoland" ` +
+        `ronl:language="nl"><bpmn:userTask id="t1" ronl:documentRef="doc-1"/>` +
+        `</bpmn:process></bpmn:definitions>`,
+      templates: [{ id: 'doc-1', name: 'Beschikking', language: 'en' }],
+    });
+
+    expect(document.body.textContent).toContain('Bundle mixes languages');
+    expect(document.body.textContent).toContain('en, nl');
+  });
+
+  test('a process XML with no <process> element falls back to a generic key', async () => {
+    await openModal({
+      xml: `<bpmn:definitions ${NS}><bpmn:collaboration id="c"/></bpmn:definitions>`,
+    });
+
+    expect(document.body.textContent).toContain('process key:');
+    expect(document.body.textContent).toContain('process.bpmn');
+  });
+});
+
+describe('BpmnCanvas — deploy request', () => {
+  const NS =
+    'xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" ' +
+    'xmlns:camunda="http://camunda.org/schema/1.0/bpmn" ' +
+    'xmlns:ronl="https://regels.overheid.nl/schema"';
+
+  const DEPLOYABLE =
+    `<bpmn:definitions ${NS}><bpmn:process id="MyProcess" ronl:organization="flevoland" ` +
+    `ronl:ropaRef="ropa-1"><bpmn:userTask id="t1" camunda:candidateGroups="rip-projectleider" ` +
+    `camunda:formRef="form-1" ronl:documentRef="doc-1"/>` +
+    `<bpmn:callActivity id="c1" calledElement="SubProc"/></bpmn:process></bpmn:definitions>`;
+
+  async function deploy(fetchImpl: (url: string, init?: RequestInit) => Promise<unknown>) {
+    global.fetch = vi.fn().mockImplementation(fetchImpl) as never;
+    await renderCanvas({
+      xml: DEPLOYABLE,
+      forms: [{ id: 'f1', schema: { id: 'form-1' } }],
+      templates: [{ id: 'doc-1', name: 'Beschikking' }],
+      processes: [
+        { id: 'lde-1', bpmnProcessId: 'MyProcess', xml: DEPLOYABLE },
+        {
+          id: 'p2',
+          bpmnProcessId: 'SubProc',
+          xml: `<bpmn:definitions ${NS}><bpmn:process id="SubProc"/></bpmn:definitions>`,
+        },
+      ],
+    });
+    await userEvent.click(screen.getByText('Deploy'));
+    await screen.findByText('Deploy to Operaton');
+    await userEvent.click(screen.getAllByRole('button', { name: /^Deploy$/ })[1]);
+  }
+
+  test('posts the whole bundle and records the deployment on success', async () => {
+    const calls: { url: string; body: Record<string, unknown> }[] = [];
+    await deploy(async (url, init) => {
+      calls.push({ url, body: JSON.parse(String(init?.body)) });
+      return {
+        json: async () => ({ success: true, data: { deploymentId: 'dep-42' } }),
+      };
+    });
+
+    expect((await screen.findAllByText(/Deployment ID: dep-42/)).length).toBeGreaterThan(0);
+
+    const deployCall = calls.find((c) => c.url.includes('/api/dmns/process/deploy'))!;
+    expect(deployCall.body.deploymentName).toBe('MyProcess');
+    expect(deployCall.body.boardOwner).toBe('infra-board');
+    expect(deployCall.body.organization).toBe('flevoland');
+    expect(deployCall.body.forms).toEqual([{ id: 'form-1', schema: { id: 'form-1' } }]);
+    expect((deployCall.body.documents as { id: string }[])[0].id).toBe('doc-1');
+    expect((deployCall.body.subProcesses as { filename: string }[])[0].filename).toBe(
+      'SubProc.bpmn'
+    );
+    expect(deployCall.body.operatonUrl).toBeUndefined();
+
+    await vi.waitFor(() =>
+      expect(calls.some((c) => c.url.includes('/v1/assets/bpmn/lde-1/deploy'))).toBe(true)
+    );
+    const patch = calls.find((c) => c.url.includes('/v1/assets/bpmn/lde-1/deploy'))!;
+    expect(patch.body.deploymentId).toBe('dep-42');
+    expect(patch.body.formIds).toEqual(['form-1']);
+    expect(patch.body.documentIds).toEqual(['doc-1']);
+  });
+
+  test('reports the server message when the deploy is refused', async () => {
+    await deploy(async () => ({
+      json: async () => ({ success: false, error: { message: 'engine unreachable' } }),
+    }));
+
+    expect((await screen.findAllByText(/engine unreachable/)).length).toBeGreaterThan(0);
+  });
+
+  test('falls back to a generic message when the server sends no error text', async () => {
+    await deploy(async () => ({ json: async () => ({ success: false }) }));
+
+    expect((await screen.findAllByText(/Deployment failed/)).length).toBeGreaterThan(0);
+  });
+
+  test('reports a network failure as the deploy result', async () => {
+    await deploy(async () => {
+      throw new Error('offline');
+    });
+
+    expect((await screen.findAllByText(/offline/)).length).toBeGreaterThan(0);
+  });
+
+  test('reports a non-Error rejection generically', async () => {
+    await deploy(async () => {
+      throw 'kaboom';
+    });
+
+    expect((await screen.findAllByText(/Deployment failed/)).length).toBeGreaterThan(0);
   });
 });

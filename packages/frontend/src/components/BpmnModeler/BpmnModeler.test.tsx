@@ -115,6 +115,10 @@ vi.mock('./ProcessList', () => ({
       <button onClick={() => onDsoActiviteitUrnChange('urn:x')}>set-dso</button>
       <button onClick={() => onLanguageChange?.('nl')}>set-language</button>
       <button onClick={() => onOrganizationChange?.('flevoland')}>set-org</button>
+      <button onClick={() => onRopaRefChange(undefined)}>clear-ropa</button>
+      <button onClick={() => onDsoActiviteitUrnChange(undefined)}>clear-dso</button>
+      <button onClick={() => onLanguageChange?.(undefined)}>clear-language</button>
+      <button onClick={() => onOrganizationChange?.(undefined)}>clear-org</button>
     </div>
   ),
 }));
@@ -524,5 +528,252 @@ describe('BpmnModeler — close / discard-changes gate', () => {
 
     expect(window.confirm).toHaveBeenCalled();
     expect(screen.getByText('No process selected')).toBeTruthy();
+  });
+});
+
+describe('BpmnModeler — example seeding', () => {
+  test('seeds every bundled example when all stored versions are stale', async () => {
+    getProcesses.mockReturnValue([]);
+    hydrateFromServer.mockResolvedValue([]);
+    getStoredVersion.mockReturnValue(0);
+    global.fetch = vi.fn().mockResolvedValue({ text: async () => '<bpmn:definitions/>' });
+
+    render(<BpmnModeler endpoint="e" />);
+
+    await vi.waitFor(() => expect(setStoredVersion.mock.calls.length).toBeGreaterThan(4));
+
+    const seeded = saveProcess.mock.calls.map((c) => (c[0] as { id: string }).id);
+    expect(new Set(seeded).size).toBe(seeded.length);
+    expect(seeded).toContain('example_awb_process');
+    expect(seeded).toContain('example_tree_felling');
+    expect(seeded).toContain('example_awb_zorgtoeslag');
+    expect(screen.getByText(/^active:/).textContent).toBe('active:example_awb_process');
+  });
+});
+
+describe('BpmnModeler — guards and no-ops', () => {
+  function setup(processes = [process()], lookup: BpmnProcess | undefined = process()) {
+    getProcesses.mockReturnValue(processes);
+    getProcess.mockReturnValue(lookup);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue(processes);
+  }
+
+  test('creating a process while dirty is cancelled when the discard prompt is declined', async () => {
+    setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('mark-dirty'));
+    saveProcess.mockClear();
+
+    await userEvent.click(screen.getByText('create-process'));
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(saveProcess).not.toHaveBeenCalled();
+    expect(screen.getByText('active:p1')).toBeTruthy();
+  });
+
+  test('re-loading the already-active process is a no-op, even while dirty', async () => {
+    setup();
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('mark-dirty'));
+    await userEvent.click(screen.getByText('load-p1'));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByText('active:p1')).toBeTruthy();
+  });
+
+  test('loading a process that has disappeared leaves the selection untouched', async () => {
+    getProcesses.mockReturnValue([process(), process({ id: 'p2', name: 'Other' })]);
+    getProcess.mockImplementation((id: string) => (id === 'p2' ? undefined : process()));
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue(getProcesses());
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('load-p2'));
+
+    expect(screen.getByText('active:p1')).toBeTruthy();
+  });
+
+  test('saving after the process disappeared from storage writes nothing', async () => {
+    setup();
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    saveProcess.mockClear();
+    getProcess.mockReturnValue(undefined);
+
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveProcess).not.toHaveBeenCalled();
+  });
+
+  test('renaming a process that no longer exists writes nothing', async () => {
+    setup();
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    saveProcess.mockClear();
+    getProcess.mockReturnValue(undefined);
+
+    await userEvent.click(screen.getByText('rename-active'));
+
+    expect(saveProcess).not.toHaveBeenCalled();
+  });
+
+  test('footer edits are ignored while no process is active', async () => {
+    setup();
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('set-ropa'));
+    await userEvent.click(screen.getByText('set-dso'));
+    await userEvent.click(screen.getByText('set-language'));
+    await userEvent.click(screen.getByText('set-org'));
+
+    expect(screen.getByText('effRopa:none')).toBeTruthy();
+    expect(screen.getByText('effDso:none')).toBeTruthy();
+    expect(screen.getByText('effLang:none')).toBeTruthy();
+    expect(screen.getByText('effOrg:none')).toBeTruthy();
+  });
+
+  test('declining the delete confirmation keeps the process', async () => {
+    setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('delete-p1'));
+
+    expect(deleteProcess).not.toHaveBeenCalled();
+    expect(screen.getByText('active:p1')).toBeTruthy();
+  });
+
+  test('deleting a process other than the active one keeps the selection', async () => {
+    getProcesses.mockReturnValue([process(), process({ id: 'p2', name: 'Other' })]);
+    getProcess.mockImplementation((id: string) =>
+      id === 'p2' ? process({ id: 'p2', name: 'Other' }) : process()
+    );
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue(getProcesses());
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('delete-p2'));
+
+    expect(deleteProcess).toHaveBeenCalledWith('p2');
+    expect(screen.getByText('active:p1')).toBeTruthy();
+  });
+
+  test('closing while dirty is cancelled when the discard prompt is declined', async () => {
+    setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('mark-dirty'));
+    await userEvent.click(screen.getByText('close-canvas'));
+
+    expect(screen.getByText('active:p1')).toBeTruthy();
+  });
+});
+
+describe('BpmnModeler — ronl:* attribute rewriting on save', () => {
+  function setup(xml: string) {
+    const p = process({ xml });
+    getProcesses.mockReturnValue([p]);
+    getProcess.mockReturnValue(p);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([p]);
+  }
+
+  function savedXml(): string {
+    const call = saveProcess.mock.calls.at(-1)![0] as { xml: string };
+    return call.xml;
+  }
+
+  test('adds the ronl namespace and the attribute when neither is present', async () => {
+    setup('<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>');
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('set-ropa'));
+    await userEvent.click(screen.getByText('set-dso'));
+    saveProcess.mockClear();
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(savedXml()).toContain('xmlns:ronl="http://ronl.nl/schema/1.0"');
+    expect(savedXml()).toContain('ronl:ropaRef="ropa-1"');
+    expect(savedXml()).toContain('ronl:dsoActiviteitUrn="urn:x"');
+  });
+
+  test('replaces an existing attribute in place, without re-declaring the namespace', async () => {
+    setup(
+      '<bpmn:definitions xmlns:ronl="http://ronl.nl/schema/1.0">' +
+        '<bpmn:process id="P" ronl:ropaRef="old"/></bpmn:definitions>'
+    );
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('set-ropa'));
+    saveProcess.mockClear();
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(savedXml()).toContain('ronl:ropaRef="ropa-1"');
+    expect(savedXml()).not.toContain('ronl:ropaRef="old"');
+    expect(savedXml().match(/xmlns:ronl=/g)).toHaveLength(1);
+  });
+
+  test('clearing a footer field strips the attribute from the XML', async () => {
+    setup(
+      '<bpmn:definitions xmlns:ronl="http://ronl.nl/schema/1.0">' +
+        '<bpmn:process id="P" ronl:ropaRef="old" ronl:organization="flevoland"/></bpmn:definitions>'
+    );
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('clear-ropa'));
+    await userEvent.click(screen.getByText('clear-org'));
+    saveProcess.mockClear();
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(savedXml()).not.toContain('ronl:ropaRef');
+    expect(savedXml()).not.toContain('ronl:organization');
+  });
+
+  test('clearing the language and DSO refs strips those attributes too', async () => {
+    setup(
+      '<bpmn:definitions xmlns:ronl="http://ronl.nl/schema/1.0">' +
+        '<bpmn:process id="P" ronl:language="nl" ronl:dsoActiviteitUrn="urn:x"/></bpmn:definitions>'
+    );
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('clear-language'));
+    await userEvent.click(screen.getByText('clear-dso'));
+    saveProcess.mockClear();
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(savedXml()).not.toContain('ronl:language');
+    expect(savedXml()).not.toContain('ronl:dsoActiviteitUrn');
+  });
+
+  test('a new process whose XML declares no process id records "unknown"', async () => {
+    getProcesses.mockReturnValue([]);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([]);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('create-process'));
+
+    expect(saveProcess).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'DefaultProcess', processRole: 'standalone' })
+    );
   });
 });

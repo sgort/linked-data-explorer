@@ -171,4 +171,164 @@ describe('InputForm', () => {
     expect(getCombinedTestData).toHaveBeenCalledWith(['age-check']);
     expect(onInputChange).toHaveBeenCalledWith('age', 30);
   });
+
+  test('renders a decimal input for Double and parses it as a float', async () => {
+    const onInputChange = vi.fn();
+    render(
+      <InputForm
+        chain={[]}
+        inputs={{ income: 1234.5 }}
+        onInputChange={onInputChange}
+        validation={validation([
+          { identifier: 'income', title: 'Income', type: 'Double', requiredBy: 'dmn-1' },
+        ])}
+      />
+    );
+
+    const field = screen.getByDisplayValue('1234.5');
+    expect(field.getAttribute('step')).toBe('0.01');
+
+    await userEvent.clear(field);
+    expect(onInputChange).toHaveBeenLastCalledWith('income', 0);
+  });
+
+  test('an empty Double field renders blank rather than NaN', () => {
+    render(
+      <InputForm
+        chain={[]}
+        inputs={{}}
+        onInputChange={vi.fn()}
+        validation={validation([
+          { identifier: 'income', title: 'Income', type: 'Double', requiredBy: 'dmn-1' },
+        ])}
+      />
+    );
+    expect(screen.getByPlaceholderText('Enter income')).toHaveValue(null);
+  });
+
+  test('clearing an Integer field reports 0 rather than NaN', async () => {
+    const onInputChange = vi.fn();
+    render(
+      <InputForm
+        chain={[]}
+        inputs={{ age: 42 }}
+        onInputChange={onInputChange}
+        validation={validation([
+          { identifier: 'age', title: 'Age', type: 'Integer', requiredBy: 'dmn-1' },
+        ])}
+      />
+    );
+
+    await userEvent.clear(screen.getByDisplayValue('42'));
+    expect(onInputChange).toHaveBeenLastCalledWith('age', 0);
+  });
+
+  test('an unset Date field renders empty and reports the picked date', async () => {
+    const onInputChange = vi.fn();
+    const { container } = render(
+      <InputForm
+        chain={[]}
+        inputs={{}}
+        onInputChange={onInputChange}
+        validation={validation([
+          { identifier: 'birthdate', title: 'Birthdate', type: 'Date', requiredBy: 'dmn-1' },
+        ])}
+      />
+    );
+
+    const field = container.querySelector('input[type="date"]') as HTMLInputElement;
+    expect(field.value).toBe('');
+
+    await userEvent.type(field, '2020-01-01');
+    expect(onInputChange).toHaveBeenLastCalledWith('birthdate', '2020-01-01');
+  });
+
+  test('falls back to a text input for an unrecognised type', async () => {
+    const onInputChange = vi.fn();
+    render(
+      <InputForm
+        chain={[]}
+        inputs={{}}
+        onInputChange={onInputChange}
+        validation={validation([
+          {
+            identifier: 'bsn',
+            title: 'BSN',
+            type: 'Duration' as RequiredInput['type'],
+            requiredBy: 'dmn-1',
+          },
+        ])}
+      />
+    );
+
+    await userEvent.type(screen.getByPlaceholderText('Enter bsn'), '1');
+    expect(onInputChange).toHaveBeenLastCalledWith('bsn', '1');
+  });
+
+  test('renders an input description when the RDF supplies one', () => {
+    render(
+      <InputForm
+        chain={[]}
+        inputs={{}}
+        onInputChange={vi.fn()}
+        validation={validation([
+          {
+            identifier: 'name',
+            title: 'Name',
+            type: 'String',
+            requiredBy: 'dmn-1',
+            description: 'Full legal name as registered',
+          },
+        ])}
+      />
+    );
+    expect(screen.getByText('Full legal name as registered')).toBeTruthy();
+  });
+
+  test('"Fill with test data" clears Date inputs that carry no RDF test value', async () => {
+    const onInputChange = vi.fn();
+    render(
+      <InputForm
+        chain={[dmn()]}
+        inputs={{}}
+        onInputChange={onInputChange}
+        validation={validation([
+          { identifier: 'age', title: 'Age', type: 'Integer', requiredBy: 'dmn-1', testValue: 21 },
+          { identifier: 'since', title: 'Since', type: 'Date', requiredBy: 'dmn-1' },
+        ])}
+      />
+    );
+
+    await userEvent.click(screen.getByText(/Fill with test data/));
+
+    expect(onInputChange).toHaveBeenCalledWith('age', 21);
+    expect(onInputChange).toHaveBeenCalledWith('since', null);
+    expect(getCombinedTestData).not.toHaveBeenCalled();
+  });
+
+  test('pluralises the DMN count on the test-data button', () => {
+    const { rerender } = render(
+      <InputForm
+        chain={[dmn()]}
+        inputs={{}}
+        onInputChange={vi.fn()}
+        validation={validation([
+          { identifier: 'name', title: 'Name', type: 'String', requiredBy: 'dmn-1' },
+        ])}
+      />
+    );
+    expect(screen.getByText('Fill with test data (1 DMN)')).toBeTruthy();
+
+    rerender(
+      <InputForm
+        chain={[dmn(), dmn({ identifier: 'income-check' })]}
+        inputs={{}}
+        onInputChange={vi.fn()}
+        validation={validation([
+          { identifier: 'name', title: 'Name', type: 'String', requiredBy: 'dmn-1' },
+        ])}
+      />
+    );
+    expect(screen.getByText('Fill with test data (2 DMNs)')).toBeTruthy();
+  });
 });

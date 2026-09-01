@@ -385,3 +385,202 @@ describe('DocumentComposer — bindings and left-panel tabs', () => {
     expect(screen.getByText('AssetLibrary stub:https://example.com/sparql')).toBeTruthy();
   });
 });
+
+describe('DocumentComposer — guards and no-ops', () => {
+  /** Load the first seeded template and mark the canvas dirty. */
+  async function renderDirty() {
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('load-default-2'));
+    await userEvent.click(screen.getByText('edit-canvas'));
+    expect(screen.getByText('hasChanges:true')).toBeTruthy();
+  }
+
+  test('creating a template while dirty is cancelled when the discard prompt is declined', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    await renderDirty();
+    saveTemplate.mockClear();
+
+    await userEvent.click(screen.getByText('create-template'));
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(saveTemplate).not.toHaveBeenCalled();
+    expect(screen.getByText('active:default-2')).toBeTruthy();
+  });
+
+  test('importing a template while dirty is cancelled when the discard prompt is declined', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    await renderDirty();
+    saveTemplate.mockClear();
+
+    await userEvent.click(screen.getByText('import-template'));
+
+    expect(saveTemplate).not.toHaveBeenCalled();
+    expect(screen.getByText('active:default-2')).toBeTruthy();
+  });
+
+  test('closing while dirty is cancelled when the discard prompt is declined', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    await renderDirty();
+
+    await userEvent.click(screen.getByText('close-canvas'));
+
+    expect(screen.getByText('active:default-2')).toBeTruthy();
+  });
+
+  test('re-loading the already-active template is a no-op, even while dirty', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    await renderDirty();
+
+    await userEvent.click(screen.getByText('load-default-2'));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByText('hasChanges:true')).toBeTruthy();
+  });
+
+  test('declining the delete confirmation keeps the template', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<DocumentComposer endpoint="e" />);
+
+    await userEvent.click(screen.getByText('delete-default-2'));
+
+    expect(deleteTemplate).not.toHaveBeenCalled();
+    expect(screen.getByText('templates:default-1,default-2')).toBeTruthy();
+  });
+
+  test('deleting a template other than the active one keeps the selection', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('load-default-2'));
+
+    await userEvent.click(screen.getByText('delete-default-1'));
+
+    expect(deleteTemplate).toHaveBeenCalledWith('default-1');
+    expect(screen.getByText('active:default-2')).toBeTruthy();
+  });
+
+  test('renaming a template that no longer exists writes nothing', async () => {
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('load-default-2'));
+    saveTemplate.mockClear();
+    getTemplate.mockReturnValue(null);
+
+    await userEvent.click(screen.getByText('rename-active'));
+
+    expect(saveTemplate).not.toHaveBeenCalled();
+  });
+
+  test('footer edits are ignored while no template is active', async () => {
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('close-canvas'));
+    expect(screen.getByText('active:none')).toBeTruthy();
+
+    await userEvent.click(screen.getByText('set-language'));
+    await userEvent.click(screen.getByText('set-org'));
+
+    expect(screen.getByText('effLang:none')).toBeTruthy();
+    expect(screen.getByText('effOrg:none')).toBeTruthy();
+  });
+
+  test('the footer shows the committed values until the user edits them', async () => {
+    store = [
+      {
+        id: 'doc-1',
+        name: 'Doc',
+        bindings: [],
+        zones: {},
+        language: 'de',
+        organization: 'heusden',
+      },
+    ];
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('load-doc-1'));
+
+    expect(screen.getByText('effLang:de')).toBeTruthy();
+    expect(screen.getByText('effOrg:heusden')).toBeTruthy();
+
+    await userEvent.click(screen.getByText('set-language'));
+    expect(screen.getByText('effLang:nl')).toBeTruthy();
+  });
+
+  test('Save keeps the committed language and organization when the footer was not touched', async () => {
+    store = [
+      {
+        id: 'doc-1',
+        name: 'Doc',
+        bindings: [],
+        zones: {},
+        language: 'de',
+        organization: 'heusden',
+      },
+    ];
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('load-doc-1'));
+    saveTemplate.mockClear();
+
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({ language: 'de', organization: 'heusden' })
+    );
+  });
+
+  test('Save is refused for a readonly template', async () => {
+    store = [{ id: 'doc-1', name: 'Doc', bindings: [], zones: {}, readonly: true }];
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('load-doc-1'));
+    saveTemplate.mockClear();
+
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveTemplate).not.toHaveBeenCalled();
+  });
+
+  test('Save As carries a pending footer draft into the copy', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValue('Copy of Doc');
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('load-default-2'));
+    await userEvent.click(screen.getByText('set-org'));
+    saveTemplate.mockClear();
+
+    await userEvent.click(screen.getByText('saveas-canvas'));
+
+    expect(saveTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Copy of Doc',
+        organization: 'flevoland',
+        readonly: false,
+        status: 'wip',
+      })
+    );
+  });
+
+  test('Save As is abandoned when the prompt returns only whitespace', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValue('   ');
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('load-default-2'));
+    saveTemplate.mockClear();
+
+    await userEvent.click(screen.getByText('saveas-canvas'));
+
+    expect(saveTemplate).not.toHaveBeenCalled();
+  });
+
+  test('clearing the process key stores undefined rather than an empty string', async () => {
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('load-default-2'));
+    await userEvent.click(screen.getByText('set-processkey'));
+    expect(screen.getByText('processKey:NewProcess')).toBeTruthy();
+  });
+
+  test('deleting a binding removes it from the active template', async () => {
+    render(<DocumentComposer endpoint="e" />);
+    await userEvent.click(screen.getByText('load-default-2'));
+    await userEvent.click(screen.getByText('add-binding'));
+
+    expect(screen.getByText('bindings-count:1')).toBeTruthy();
+
+    await userEvent.click(screen.getByText(/^delete-binding-/));
+
+    expect(screen.getByText('bindings-count:0')).toBeTruthy();
+  });
+});

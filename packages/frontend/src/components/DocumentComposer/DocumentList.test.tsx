@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
 
@@ -231,5 +231,153 @@ describe('DocumentList', () => {
     );
     expect(screen.getByText('Language')).toBeTruthy();
     expect(screen.getByText('Organization')).toBeTruthy();
+  });
+
+  test('collapsing an organization group hides its cards until expanded again', async () => {
+    render(
+      <DocumentList
+        {...baseProps}
+        templates={[template({ organization: 'flevoland', name: 'Kapvergunning' })]}
+      />
+    );
+
+    expect(screen.getByText('Kapvergunning')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: /flevoland/i }));
+    expect(screen.queryByText('Kapvergunning')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /flevoland/i }));
+    expect(screen.getByText('Kapvergunning')).toBeTruthy();
+  });
+
+  test('labels the group of documents with no organization "Ungrouped"', () => {
+    render(<DocumentList {...baseProps} templates={[template()]} />);
+    expect(screen.getByText('Ungrouped')).toBeTruthy();
+  });
+
+  test('reports when the filters exclude every template', async () => {
+    render(<DocumentList {...baseProps} templates={[template()]} />);
+
+    await userEvent.type(screen.getByPlaceholderText(/Search/i), 'nothing-matches-this');
+
+    expect(screen.getByText('No documents match the current filters')).toBeTruthy();
+    expect(screen.queryByText('No documents yet')).toBeNull();
+  });
+
+  test('shows the bound process key on a card that declares one', () => {
+    render(
+      <DocumentList {...baseProps} templates={[template({ processKey: 'AwbShellProcess' })]} />
+    );
+    expect(screen.getByText('AwbShellProcess')).toBeTruthy();
+  });
+
+  test('Escape abandons a rename without committing it', async () => {
+    const onUpdateTemplateName = vi.fn();
+    render(
+      <DocumentList
+        {...baseProps}
+        onUpdateTemplateName={onUpdateTemplateName}
+        templates={[template()]}
+      />
+    );
+
+    await userEvent.dblClick(screen.getByText('Beschikking'));
+    const field = screen.getByDisplayValue('Beschikking');
+    await userEvent.clear(field);
+    await userEvent.type(field, 'Nieuwe naam{Escape}');
+
+    expect(onUpdateTemplateName).not.toHaveBeenCalled();
+    expect(screen.getByText('Beschikking')).toBeTruthy();
+  });
+
+  test('a rename to blank is discarded rather than committed', async () => {
+    const onUpdateTemplateName = vi.fn();
+    render(
+      <DocumentList
+        {...baseProps}
+        onUpdateTemplateName={onUpdateTemplateName}
+        templates={[template()]}
+      />
+    );
+
+    await userEvent.dblClick(screen.getByText('Beschikking'));
+    const field = screen.getByDisplayValue('Beschikking');
+    await userEvent.clear(field);
+    await userEvent.type(field, '   {Enter}');
+
+    expect(onUpdateTemplateName).not.toHaveBeenCalled();
+  });
+
+  test('clicking a card does not start a rename', async () => {
+    const onLoadTemplate = vi.fn();
+    render(
+      <DocumentList {...baseProps} onLoadTemplate={onLoadTemplate} templates={[template()]} />
+    );
+
+    await userEvent.click(screen.getByText('Beschikking'));
+
+    expect(onLoadTemplate).toHaveBeenCalledWith('t1');
+    expect(screen.queryByDisplayValue('Beschikking')).toBeNull();
+  });
+
+  /** The footer selectors sit under the Language / Organization labels. */
+  function footerControls() {
+    const footer = screen.getByText('Language').closest('div')!.parentElement!.parentElement!;
+    return Array.from(footer.querySelectorAll('select, input')) as HTMLElement[];
+  }
+
+  test('the footer selectors are disabled for a readonly template', () => {
+    render(
+      <DocumentList
+        {...baseProps}
+        templates={[template({ readonly: true })]}
+        activeTemplate={template({ readonly: true })}
+        activeTemplateId="t1"
+        onLanguageChange={vi.fn()}
+        onOrganizationChange={vi.fn()}
+      />
+    );
+
+    for (const control of footerControls()) expect(control).toBeDisabled();
+  });
+
+  test('the footer selectors are disabled when the parent supplies no change handlers', () => {
+    render(
+      <DocumentList
+        {...baseProps}
+        templates={[template()]}
+        activeTemplate={template()}
+        activeTemplateId="t1"
+      />
+    );
+
+    for (const control of footerControls()) expect(control).toBeDisabled();
+  });
+
+  test('the footer selectors are enabled for an editable template with handlers', () => {
+    render(
+      <DocumentList
+        {...baseProps}
+        templates={[template()]}
+        activeTemplate={template()}
+        activeTemplateId="t1"
+        onLanguageChange={vi.fn()}
+        onOrganizationChange={vi.fn()}
+      />
+    );
+
+    for (const control of footerControls()) expect(control).not.toBeDisabled();
+  });
+
+  test('choosing no files leaves the import handler idle', () => {
+    const onImportTemplate = vi.fn();
+    const { container } = render(
+      <DocumentList {...baseProps} onImportTemplate={onImportTemplate} templates={[]} />
+    );
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [] } });
+
+    expect(onImportTemplate).not.toHaveBeenCalled();
   });
 });
