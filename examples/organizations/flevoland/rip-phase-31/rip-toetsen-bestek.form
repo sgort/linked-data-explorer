@@ -1,0 +1,74 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-toetsen-bestek",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Review the specification"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Vaste lezers and risicogestuurd lezen review the bestek against the drawings and the SSK estimate, and record the findings."
+    },
+    {
+      "id": "F_Bev",
+      "type": "textfield",
+      "label": "Findings form reference",
+      "key": "bevindingenBestekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Findings",
+      "key": "bevindingenBestek",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Bestek approved",
+      "key": "bestekAkkoord",
+      "values": [
+        {
+          "label": "Yes — approved",
+          "value": "ja"
+        },
+        {
+          "label": "No — amendment required",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Getoetst",
+      "type": "datetime",
+      "label": "Reviewed on",
+      "key": "bestekGetoetstOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

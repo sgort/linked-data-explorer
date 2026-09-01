@@ -1,0 +1,225 @@
+{
+  "id": "rip-bestek",
+  "name": "RIP — Specification (Bestek incl. bijlagen)",
+  "description": "The bestek with annexes, the inschrijvingsleidraad and the SSK estimate, drawn up against the final drawings.",
+  "processKey": "RipR31Process",
+  "serviceId": "RipR31",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{bestekReferentie}}",
+      "variableKey": "bestekReferentie",
+      "source": "process",
+      "label": "Bestek reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{inschrijvingsleidraadReferentie}}",
+      "variableKey": "inschrijvingsleidraadReferentie",
+      "source": "process",
+      "label": "Inschrijvingsleidraad reference"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{sskRamingBestekReferentie}}",
+      "variableKey": "sskRamingBestekReferentie",
+      "source": "process",
+      "label": "SSK estimate reference"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{maatregelenplanReferentie}}",
+      "variableKey": "maatregelenplanReferentie",
+      "source": "process",
+      "label": "Maatregelenplan reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{risicodossierReferentie}}",
+      "variableKey": "risicodossierReferentie",
+      "source": "process",
+      "label": "Risk file reference"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{bestekGereedOp}}",
+      "variableKey": "bestekGereedOp",
+      "source": "process",
+      "label": "Delivered on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Bestek {{bestekReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Specification",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Specification"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Bestek {{bestekReferentie}} for project {{projectNumber}} — {{projectName}} was delivered on {{bestekGereedOp}}, with inschrijvingsleidraad {{inschrijvingsleidraadReferentie}} and SSK estimate {{sskRamingBestekReferentie}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up against final drawings, risk file {{risicodossierReferentie}} and maatregelenplan {{maatregelenplanReferentie}}, using the UAV, the moederbestek format and the inschrijvingsleidraad format."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Bestek and inschrijvingsleidraad are reviewed in parallel; each is amended and re-reviewed on its own track until approved."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the external party"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}
