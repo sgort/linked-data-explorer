@@ -1,0 +1,218 @@
+{
+  "id": "rip-proces-verbaal-aanbesteding",
+  "name": "RIP — Tender Record (Proces verbaal)",
+  "description": "Sjabloon Proces verbaal. Records the unit-price check on the tender schedule and the contractor offer.",
+  "processKey": "RipR41Process",
+  "serviceId": "RipR41",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{procesVerbaalReferentie}}",
+      "variableKey": "procesVerbaalReferentie",
+      "source": "process",
+      "label": "Proces verbaal reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{eenheidsprijzenGecontroleerdOp}}",
+      "variableKey": "eenheidsprijzenGecontroleerdOp",
+      "source": "process",
+      "label": "Checked on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{aanbiedingAannemerReferentie}}",
+      "variableKey": "aanbiedingAannemerReferentie",
+      "source": "process",
+      "label": "Contractor offer reference"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{eenheidsprijzenBevindingen}}",
+      "variableKey": "eenheidsprijzenBevindingen",
+      "source": "process",
+      "label": "Findings"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{onregelmatigheidEenheidsprijzen}}",
+      "variableKey": "onregelmatigheidEenheidsprijzen",
+      "source": "process",
+      "label": "Irregularity found"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Proces verbaal {{procesVerbaalReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Tender record",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Tender record"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Proces verbaal {{procesVerbaalReferentie}} for project {{projectNumber}} — {{projectName}} records the unit-price check carried out on {{eenheidsprijzenGecontroleerdOp}} against contractor offer {{aanbiedingAannemerReferentie}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Findings: {{eenheidsprijzenBevindingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Irregularity found: {{onregelmatigheidEenheidsprijzen}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Recorded by the cost and contract specialist"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-nota-besluitvorming-concerndirecteur",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the decision note (Concerndirecteur template)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The award over- or undershoots the funding source, so the decision note goes to the concern director for adoption."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Decision note reference",
+      "key": "notaConcerndirecteurReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Afwijking",
+      "type": "number",
+      "label": "Deviation against the funding source (EUR)",
+      "key": "afwijkingDekkingsbron",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Toel",
+      "type": "textarea",
+      "label": "Substantiation",
+      "key": "notaConcerndirecteurToelichting",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "notaConcerndirecteurOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
