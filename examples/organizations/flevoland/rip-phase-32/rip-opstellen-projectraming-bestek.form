@@ -1,0 +1,61 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-projectraming-bestek",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the specification project estimate"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Draw up the projectraming bestek against the Format Projectraming, using the bestek and the SSK estimate from R3.1."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Project estimate reference",
+      "key": "projectramingBestekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Project estimate (EUR)",
+      "key": "projectramingBestekBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_SSK",
+      "type": "textfield",
+      "label": "SSK estimate reference (from R3.1)",
+      "key": "sskRamingBestekReferentie"
+    },
+    {
+      "id": "F_Gereed",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "projectramingBestekGereedOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

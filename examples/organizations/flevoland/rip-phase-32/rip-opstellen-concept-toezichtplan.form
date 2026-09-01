@@ -1,0 +1,52 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-concept-toezichtplan",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up and send the draft supervision plan"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Draw up the concept toezichtplan against the Format Toezichtplan and send it for assessment."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Draft supervision plan reference",
+      "key": "conceptToezichtplanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Format",
+      "type": "textfield",
+      "label": "Format Toezichtplan version",
+      "key": "formatToezichtplanVersie"
+    },
+    {
+      "id": "F_Verstuurd",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "conceptToezichtplanVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

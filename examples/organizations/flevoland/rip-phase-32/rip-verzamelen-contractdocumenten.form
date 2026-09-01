@@ -1,0 +1,73 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-verzamelen-contractdocumenten",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Collect the reviewed contract and tender documents"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Bring together the bestek, the inschrijvingsleidraad, the SSK estimate and the final drawings approved in R3.1 into one set."
+    },
+    {
+      "id": "F_Set",
+      "type": "textfield",
+      "label": "Document set reference",
+      "key": "contractdocumentenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bestek",
+      "type": "textfield",
+      "label": "Bestek reference (from R3.1)",
+      "key": "bestekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Leidraad",
+      "type": "textfield",
+      "label": "Inschrijvingsleidraad reference (from R3.1)",
+      "key": "inschrijvingsleidraadReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Tek",
+      "type": "textfield",
+      "label": "Final drawings reference (from R3.1)",
+      "key": "definitieveBestekstekeningenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Verzameld",
+      "type": "datetime",
+      "label": "Collected on",
+      "key": "contractdocumentenVerzameldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

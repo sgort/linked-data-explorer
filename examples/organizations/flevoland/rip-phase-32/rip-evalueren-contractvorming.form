@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-evalueren-contractvorming",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Evaluate the contract formation phase"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Participants evaluate the DO and bestek phase in Qualtrics."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Qualtrics evaluation reference",
+      "key": "evaluatieContractvormingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Evaluated on",
+      "key": "evaluatieContractvormingOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bev",
+      "type": "textarea",
+      "label": "Main findings",
+      "key": "evaluatieContractvormingBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

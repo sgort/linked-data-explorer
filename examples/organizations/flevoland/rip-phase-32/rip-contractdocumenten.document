@@ -1,0 +1,232 @@
+{
+  "id": "rip-contractdocumenten",
+  "name": "RIP — Contract and Tender Documents (Getoetste contract- en aanbestedingsdocumenten)",
+  "description": "The reviewed contract and tender document set assembled at the start of R3.2 and sent on at its close.",
+  "processKey": "RipR32Process",
+  "serviceId": "RipR32",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{contractdocumentenReferentie}}",
+      "variableKey": "contractdocumentenReferentie",
+      "source": "process",
+      "label": "Document set reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{contractdocumentenVerzameldOp}}",
+      "variableKey": "contractdocumentenVerzameldOp",
+      "source": "process",
+      "label": "Collected on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{bestekReferentie}}",
+      "variableKey": "bestekReferentie",
+      "source": "process",
+      "label": "Bestek reference"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{inschrijvingsleidraadReferentie}}",
+      "variableKey": "inschrijvingsleidraadReferentie",
+      "source": "process",
+      "label": "Inschrijvingsleidraad reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{definitieveBestekstekeningenReferentie}}",
+      "variableKey": "definitieveBestekstekeningenReferentie",
+      "source": "process",
+      "label": "Final drawings reference"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{contractdocumentenVerstuurdOp}}",
+      "variableKey": "contractdocumentenVerstuurdOp",
+      "source": "process",
+      "label": "Sent on"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{contractdocumentenVerstuurdAan}}",
+      "variableKey": "contractdocumentenVerstuurdAan",
+      "source": "process",
+      "label": "Sent to"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Document set {{contractdocumentenReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Contract and tender documents",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Contract and tender documents"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Document set {{contractdocumentenReferentie}} for project {{projectNumber}} — {{projectName}} was collected on {{contractdocumentenVerzameldOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "It comprises bestek {{bestekReferentie}}, inschrijvingsleidraad {{inschrijvingsleidraadReferentie}} and final drawings {{definitieveBestekstekeningenReferentie}}, all reviewed in R3.1."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Sent on {{contractdocumentenVerstuurdOp}} to {{contractdocumentenVerstuurdAan}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Assembled by the project leader"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

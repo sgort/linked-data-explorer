@@ -1,0 +1,59 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-memo-projectkrediet-bestek",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the project credit memo (soft claim)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The specification project estimate was not approved against the available credit. Draw up the memo so the Infra consultation can decide."
+    },
+    {
+      "id": "F_Memo",
+      "type": "textfield",
+      "label": "Memo reference",
+      "key": "memoBestekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Gevraagd",
+      "type": "number",
+      "label": "Requested project credit (EUR)",
+      "key": "gevraagdKredietBestek",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Tekort",
+      "type": "number",
+      "label": "Shortfall (EUR)",
+      "key": "dekkingstekortBestek"
+    },
+    {
+      "id": "F_Onderbouwing",
+      "type": "textarea",
+      "label": "Substantiation",
+      "key": "memoBestekOnderbouwing",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
