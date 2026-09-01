@@ -17,12 +17,12 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 4, // v4: organization=flevoland tagging
-  example_tree_felling: 7, // v7: shellId added (fixes stale copies rendering under the wrong shell)
-  example_awb_zorgtoeslag: 3, // v3: organization=toeslagen tagging
-  example_zorgtoeslag_provisional: 5, // v5: shellId added (fixes stale copies rendering under the wrong shell)
-  example_zorgtoeslag_final: 5, // v5: shellId added (fixes stale copies rendering under the wrong shell)
-  example_hr_capacity_nl: 1, // v1: HR-capacity Dutch BPMN sibling (multilingualism release)
+  example_awb_process: 5, // v5: formRefBinding=deployment (tenant-safe form resolution)
+  example_tree_felling: 8, // v8: formRefBinding=deployment (tenant-safe form resolution)
+  example_awb_zorgtoeslag: 4, // v4: formRefBinding=deployment (tenant-safe form resolution)
+  example_zorgtoeslag_provisional: 6, // v6: formRefBinding=deployment (tenant-safe form resolution)
+  example_zorgtoeslag_final: 6, // v6: formRefBinding=deployment (tenant-safe form resolution)
+  example_hr_capacity_nl: 2, // v2: formRefBinding=deployment (tenant-safe form resolution)
 
   // Camunda Forms
   example_kapvergunning_start: 4, // v4: force re-seed for ACC users with stale localStorage from v1.6.0 testing
@@ -48,7 +48,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_hr_capacity_handover_doc_nl: 1,
 
   // DvTP consent bundle
-  example_dvtp_toestemming: 2, // v2: organization=bzk tagging
+  example_dvtp_toestemming: 3, // v3: formRefBinding=deployment (tenant-safe form resolution)
   example_dvtp_consent_start: 2, // v2: organization=bzk tagging
   example_dvtp_consent_info: 2, // v2: organization=bzk tagging
   example_dvtp_consent_decision: 2, // v2: organization=bzk tagging

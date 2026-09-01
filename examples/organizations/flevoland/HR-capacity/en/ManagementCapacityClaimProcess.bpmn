@@ -4,7 +4,7 @@
     <bpmn:startEvent id="StartEvent_CapacityClaim" name="Start capacity claim">
       <bpmn:outgoing>Flow_Start_Intake</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:userTask id="Task_ConsultAndClassify" name="Consult and classify" camunda:formRef="capacity-claim-intake" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
+    <bpmn:userTask id="Task_ConsultAndClassify" name="Consult and classify" camunda:formRef="capacity-claim-intake" camunda:formRefBinding="deployment" camunda:candidateGroups="manager">
       <bpmn:incoming>Flow_Start_Intake</bpmn:incoming>
       <bpmn:outgoing>Flow_Intake_RequestTypeGateway</bpmn:outgoing>
     </bpmn:userTask>
@@ -14,11 +14,11 @@
       <bpmn:outgoing>Flow_Gateway_Staffing</bpmn:outgoing>
       <bpmn:outgoing>Flow_Gateway_Hiring</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Task_PrepareStaffingClaim" name="Prepare staffing claim" camunda:formRef="capacity-claim-staffing" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
+    <bpmn:userTask id="Task_PrepareStaffingClaim" name="Prepare staffing claim" camunda:formRef="capacity-claim-staffing" camunda:formRefBinding="deployment" camunda:candidateGroups="manager">
       <bpmn:incoming>Flow_Gateway_Staffing</bpmn:incoming>
       <bpmn:outgoing>Flow_Staffing_MergePrepare</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_PrepareHiringClaim" name="Prepare hiring claim" camunda:formRef="capacity-claim-hiring" camunda:formRefBinding="latest" camunda:candidateGroups="manager">
+    <bpmn:userTask id="Task_PrepareHiringClaim" name="Prepare hiring claim" camunda:formRef="capacity-claim-hiring" camunda:formRefBinding="deployment" camunda:candidateGroups="manager">
       <bpmn:incoming>Flow_Gateway_Hiring</bpmn:incoming>
       <bpmn:outgoing>Flow_Hiring_MergePrepare</bpmn:outgoing>
     </bpmn:userTask>
@@ -40,11 +40,11 @@
         execution.setVariable("advisoryGroup",   routingResult.get("advisoryGroup"));
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:userTask id="Task_SubmitToBoardAgenda" name="Submit to Board agenda" camunda:formRef="capacity-claim-submit" camunda:formRefBinding="latest" camunda:candidateGroups="board-secretary">
+    <bpmn:userTask id="Task_SubmitToBoardAgenda" name="Submit to Board agenda" camunda:formRef="capacity-claim-submit" camunda:formRefBinding="deployment" camunda:candidateGroups="board-secretary">
       <bpmn:incoming>Flow_MapOutputs_Submit</bpmn:incoming>
       <bpmn:outgoing>Flow_Submit_BoardDecision</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_BoardDecision" name="Board decision" camunda:formRef="capacity-claim-board-decision" camunda:formRefBinding="latest" camunda:candidateGroups="board-director" ronl:documentRef="board-decision-notification">
+    <bpmn:userTask id="Task_BoardDecision" name="Board decision" camunda:formRef="capacity-claim-board-decision" camunda:formRefBinding="deployment" camunda:candidateGroups="board-director" ronl:documentRef="board-decision-notification">
       <bpmn:incoming>Flow_Submit_BoardDecision</bpmn:incoming>
       <bpmn:outgoing>Flow_BoardDecision_Gateway</bpmn:outgoing>
     </bpmn:userTask>
@@ -53,7 +53,7 @@
       <bpmn:outgoing>Flow_Gateway_Approved</bpmn:outgoing>
       <bpmn:outgoing>Flow_Gateway_Rejected</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Task_ReconsiderationMeeting" name="Reconsideration meeting" camunda:formRef="capacity-claim-reconsideration" camunda:formRefBinding="latest" camunda:candidateGroups="manager,hr-business-partner,personnel-controller">
+    <bpmn:userTask id="Task_ReconsiderationMeeting" name="Reconsideration meeting" camunda:formRef="capacity-claim-reconsideration" camunda:formRefBinding="deployment" camunda:candidateGroups="manager,hr-business-partner,personnel-controller">
       <bpmn:incoming>Flow_Gateway_Rejected</bpmn:incoming>
       <bpmn:outgoing>Flow_Reconsider_OutcomeGateway</bpmn:outgoing>
     </bpmn:userTask>
@@ -70,11 +70,11 @@
       <bpmn:outgoing>Flow_Route_Recruitment</bpmn:outgoing>
       <bpmn:outgoing>Flow_Route_Procurement</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Task_HandoverToRecruitment" name="Handover to Recruitment (HRM)" camunda:formRef="capacity-claim-handover" camunda:formRefBinding="latest" camunda:candidateGroups="hrm-unit" ronl:documentRef="capacity-claim-handover">
+    <bpmn:userTask id="Task_HandoverToRecruitment" name="Handover to Recruitment (HRM)" camunda:formRef="capacity-claim-handover" camunda:formRefBinding="deployment" camunda:candidateGroups="hrm-unit" ronl:documentRef="capacity-claim-handover">
       <bpmn:incoming>Flow_Route_Recruitment</bpmn:incoming>
       <bpmn:outgoing>Flow_Recruitment_MergeHandover</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Task_HandoverToProcurement" name="Handover to Procurement" camunda:formRef="capacity-claim-handover" camunda:formRefBinding="latest" camunda:candidateGroups="procurement-unit,planning-control-officer" ronl:documentRef="capacity-claim-handover">
+    <bpmn:userTask id="Task_HandoverToProcurement" name="Handover to Procurement" camunda:formRef="capacity-claim-handover" camunda:formRefBinding="deployment" camunda:candidateGroups="procurement-unit,planning-control-officer" ronl:documentRef="capacity-claim-handover">
       <bpmn:incoming>Flow_Route_Procurement</bpmn:incoming>
       <bpmn:outgoing>Flow_Procurement_MergeHandover</bpmn:outgoing>
     </bpmn:userTask>
@@ -83,7 +83,7 @@
       <bpmn:incoming>Flow_Procurement_MergeHandover</bpmn:incoming>
       <bpmn:outgoing>Flow_MergeHandover_Reservation</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="Task_RegisterReservation" name="Register financial reservation" camunda:formRef="capacity-claim-register-reservation" camunda:formRefBinding="latest" camunda:candidateGroups="financial-controller">
+    <bpmn:userTask id="Task_RegisterReservation" name="Register financial reservation" camunda:formRef="capacity-claim-register-reservation" camunda:formRefBinding="deployment" camunda:candidateGroups="financial-controller">
       <bpmn:incoming>Flow_MergeHandover_Reservation</bpmn:incoming>
       <bpmn:outgoing>Flow_Reservation_End</bpmn:outgoing>
     </bpmn:userTask>
