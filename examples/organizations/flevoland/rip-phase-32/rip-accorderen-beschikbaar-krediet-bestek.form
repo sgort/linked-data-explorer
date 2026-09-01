@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-accorderen-beschikbaar-krediet-bestek",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Approve the available credit and send it on"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Finance approves the available credit against the specification project estimate and sends it to the project leader and the cost and contract specialist."
+    },
+    {
+      "id": "F_Krediet",
+      "type": "number",
+      "label": "Available project credit (EUR)",
+      "key": "beschikbaarProjectkrediet",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Approved by",
+      "key": "kredietBestekGeaccordeerdDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Approved and sent on",
+      "key": "kredietBestekGeaccordeerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

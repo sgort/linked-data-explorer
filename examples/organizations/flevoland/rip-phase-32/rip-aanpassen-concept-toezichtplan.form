@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-aanpassen-concept-toezichtplan",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Amend the draft supervision plan"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Amend the toezichtplan in line with the assessment findings and resubmit it."
+    },
+    {
+      "id": "F_Versie",
+      "type": "textfield",
+      "label": "Amended version",
+      "key": "toezichtplanVersie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Verwerkt",
+      "type": "textarea",
+      "label": "How the findings were incorporated",
+      "key": "toezichtplanVerwerkteBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aangepast",
+      "type": "datetime",
+      "label": "Amended on",
+      "key": "toezichtplanAangepastOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

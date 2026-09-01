@@ -1,0 +1,260 @@
+{
+  "id": "rip-projectraming-bestek",
+  "name": "RIP — Specification Project Estimate (Projectraming bestek)",
+  "description": "Format Projectraming. The project estimate drawn up against the bestek, decided on by the AO.",
+  "processKey": "RipR32Process",
+  "serviceId": "RipR32",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{projectramingBestekReferentie}}",
+      "variableKey": "projectramingBestekReferentie",
+      "source": "process",
+      "label": "Project estimate reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{projectramingBestekBedrag}}",
+      "variableKey": "projectramingBestekBedrag",
+      "source": "process",
+      "label": "Project estimate"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{projectramingBestekGereedOp}}",
+      "variableKey": "projectramingBestekGereedOp",
+      "source": "process",
+      "label": "Drawn up on"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{sskRamingBestekReferentie}}",
+      "variableKey": "sskRamingBestekReferentie",
+      "source": "process",
+      "label": "SSK estimate reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{beschikbaarProjectkrediet}}",
+      "variableKey": "beschikbaarProjectkrediet",
+      "source": "process",
+      "label": "Available project credit"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{kredietBestekGeaccordeerdDoor}}",
+      "variableKey": "kredietBestekGeaccordeerdDoor",
+      "source": "process",
+      "label": "Credit approved by"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{kredietBestekGeaccordeerdOp}}",
+      "variableKey": "kredietBestekGeaccordeerdOp",
+      "source": "process",
+      "label": "Credit approved on"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{projectramingBestekAkkoord}}",
+      "variableKey": "projectramingBestekAkkoord",
+      "source": "process",
+      "label": "AO decision"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{projectramingBesluitDoor}}",
+      "variableKey": "projectramingBesluitDoor",
+      "source": "process",
+      "label": "Decided by"
+    },
+    {
+      "id": "b12",
+      "placeholder": "{{projectramingBesluitOp}}",
+      "variableKey": "projectramingBesluitOp",
+      "source": "process",
+      "label": "Decided on"
+    },
+    {
+      "id": "b13",
+      "placeholder": "{{projectramingBesluitOpmerkingen}}",
+      "variableKey": "projectramingBesluitOpmerkingen",
+      "source": "process",
+      "label": "Comments"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project estimate {{projectramingBestekReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Specification project estimate",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Specification project estimate"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project estimate {{projectramingBestekReferentie}} for project {{projectNumber}} — {{projectName}} amounts to EUR {{projectramingBestekBedrag}}, drawn up on {{projectramingBestekGereedOp}} against SSK estimate {{sskRamingBestekReferentie}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Available project credit: EUR {{beschikbaarProjectkrediet}}, approved by {{kredietBestekGeaccordeerdDoor}} on {{kredietBestekGeaccordeerdOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "AO decision: {{projectramingBestekAkkoord}}, by {{projectramingBesluitDoor}} on {{projectramingBesluitOp}}. {{projectramingBesluitOpmerkingen}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the cost and contract specialist"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

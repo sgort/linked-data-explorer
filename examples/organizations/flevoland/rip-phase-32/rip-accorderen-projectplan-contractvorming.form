@@ -1,0 +1,71 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-accorderen-projectplan-contractvorming",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Approve the project plan — 7. Closing the contract formation phase"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Approve the project plan so the contract formation phase can be closed and R4.1 (requesting the tender) can start."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Project plan reference",
+      "key": "projectplanContractvormingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Project plan approved",
+      "key": "akkoordProjectplanContractvorming",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Adopted on",
+      "key": "projectplanContractvormingVastgesteldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Comments",
+      "key": "accordeerOpmerkingenContractvorming"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

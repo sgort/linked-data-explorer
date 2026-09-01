@@ -1,0 +1,52 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-verwerken-projectraming-bestek",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Process the project estimate and Infra framework credit"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the specification project estimate and the credit decision in the Infra framework credit administration."
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Amount processed (EUR)",
+      "key": "verwerktBedragBestek",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Admin",
+      "type": "textfield",
+      "label": "Administration reference",
+      "key": "administratieReferentieBestek"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Processed on",
+      "key": "verwerktOpBestek",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,246 @@
+{
+  "id": "rip-concept-toezichtplan",
+  "name": "RIP — Draft Supervision Plan (Concept toezichtplan)",
+  "description": "Format Toezichtplan. The draft supervision plan drawn up in R3.2 and approved by the directievoerder and vestigingsmanager.",
+  "processKey": "RipR32Process",
+  "serviceId": "RipR32",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{conceptToezichtplanReferentie}}",
+      "variableKey": "conceptToezichtplanReferentie",
+      "source": "process",
+      "label": "Supervision plan reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{conceptToezichtplanVerstuurdOp}}",
+      "variableKey": "conceptToezichtplanVerstuurdOp",
+      "source": "process",
+      "label": "Sent on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{toezichtplanAkkoord}}",
+      "variableKey": "toezichtplanAkkoord",
+      "source": "process",
+      "label": "Assessment outcome"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{toezichtplanBeoordeeldDoor}}",
+      "variableKey": "toezichtplanBeoordeeldDoor",
+      "source": "process",
+      "label": "Assessed by"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{toezichtplanBeoordeeldOp}}",
+      "variableKey": "toezichtplanBeoordeeldOp",
+      "source": "process",
+      "label": "Assessed on"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{toezichtplanBevindingen}}",
+      "variableKey": "toezichtplanBevindingen",
+      "source": "process",
+      "label": "Findings"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{toezichtplanGeaccordeerdDoor}}",
+      "variableKey": "toezichtplanGeaccordeerdDoor",
+      "source": "process",
+      "label": "Approved by"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{toezichtplanGeaccordeerdOp}}",
+      "variableKey": "toezichtplanGeaccordeerdOp",
+      "source": "process",
+      "label": "Approved on"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{toezichtplanOntvangenOp}}",
+      "variableKey": "toezichtplanOntvangenOp",
+      "source": "process",
+      "label": "Received on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Supervision plan {{conceptToezichtplanReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Draft supervision plan",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Draft supervision plan"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Draft toezichtplan {{conceptToezichtplanReferentie}} for project {{projectNumber}} — {{projectName}} was sent for assessment on {{conceptToezichtplanVerstuurdOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Assessment: {{toezichtplanAkkoord}}, by {{toezichtplanBeoordeeldDoor}} on {{toezichtplanBeoordeeldOp}}. Findings: {{toezichtplanBevindingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Approved by {{toezichtplanGeaccordeerdDoor}} on {{toezichtplanGeaccordeerdOp}} and received back on {{toezichtplanOntvangenOp}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the project leader"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}
