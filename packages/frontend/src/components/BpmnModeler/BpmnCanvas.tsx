@@ -120,7 +120,16 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     bpmnFiles: string[];
     formFiles: string[];
     documentFiles: string[];
-  }>({ processKey: '', bpmnFiles: [], formFiles: [], documentFiles: [] });
+    unmatchedForms: string[];
+    unmatchedDocuments: string[];
+  }>({
+    processKey: '',
+    bpmnFiles: [],
+    formFiles: [],
+    documentFiles: [],
+    unmatchedForms: [],
+    unmatchedDocuments: [],
+  });
 
   // To make the endpoint user-configurable we need to thread it through the
   // full chain: modal state → request body → backend route → service method
@@ -438,7 +447,14 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     ];
 
     const extractDocumentRefs = (bpmnXml: string) => [
-      ...new Set([...bpmnXml.matchAll(/ronl:documentRef="([^"]+)"/g)].map((m) => m[1])),
+      ...new Set(
+        [
+          ...bpmnXml.matchAll(/ronl:documentRef="([^"]+)"/g),
+          // A signature task binds its template through signatureRef alone;
+          // reading only documentRef left such a template out of the bundle.
+          ...bpmnXml.matchAll(/ronl:signatureRef="([^"]+)"/g),
+        ].map((m) => m[1])
+      ),
     ];
 
     const extractCalledElements = (bpmnXml: string) => [
@@ -480,6 +496,13 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     const matchedDocuments = [...allDocumentRefs].filter((ref) =>
       allDocumentTemplates.some((d) => d.id === ref)
     );
+    // A referenced template that is not in local storage was previously dropped
+    // from the payload without a word, so the deployment shipped without its
+    // .document resource and the signing panel silently degraded to a plain
+    // form at runtime. Surfaced and blocked here instead.
+    const unmatchedDocuments = [...allDocumentRefs].filter(
+      (ref) => !allDocumentTemplates.some((d) => d.id === ref)
+    );
 
     // ─── Language consistency check ─────────────────────────────────────
     // Collect all distinct non-null language codes across the bundle.
@@ -511,12 +534,12 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       bpmnFiles: [`${processKey}.bpmn`, ...subProcessXmls.map((sp) => sp.filename)],
       formFiles: matchedForms.map((ref) => `${ref}.form`),
       documentFiles: matchedDocuments.map((ref) => `${ref}.document`),
-      ...(unmatchedForms.length ? { unmatchedForms } : {}),
+      unmatchedForms,
+      unmatchedDocuments,
       ropaRefMissing,
       languageMismatch,
       languageList,
     } as typeof deployResources & {
-      unmatchedForms?: string[];
       ropaRefMissing?: boolean;
       languageMismatch?: boolean;
       languageList?: string[];
@@ -561,7 +584,14 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       ];
 
       const extractDocumentRefs = (bpmnXml: string) => [
-        ...new Set([...bpmnXml.matchAll(/ronl:documentRef="([^"]+)"/g)].map((m) => m[1])),
+        ...new Set(
+          [
+            ...bpmnXml.matchAll(/ronl:documentRef="([^"]+)"/g),
+            // A signature task binds its template through signatureRef alone;
+            // reading only documentRef left such a template out of the bundle.
+            ...bpmnXml.matchAll(/ronl:signatureRef="([^"]+)"/g),
+          ].map((m) => m[1])
+        ),
       ];
 
       const extractCalledElements = (bpmnXml: string) => [
@@ -882,6 +912,28 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                   </li>
                 ))}
               </ul>
+              {(deployResources.unmatchedForms.length > 0 ||
+                deployResources.unmatchedDocuments.length > 0) && (
+                <div className="mb-3 mt-3 p-3 rounded-lg bg-red-50 border border-red-300 text-xs text-red-800">
+                  <div className="font-semibold mb-1">
+                    ⛔ Referenced resources are missing from local storage
+                  </div>
+                  <ul className="mb-2 space-y-0.5">
+                    {deployResources.unmatchedForms.map((ref) => (
+                      <li key={`uf-${ref}`} className="font-mono">
+                        {ref}.form
+                      </li>
+                    ))}
+                    {deployResources.unmatchedDocuments.map((ref) => (
+                      <li key={`ud-${ref}`} className="font-mono">
+                        {ref}.document
+                      </li>
+                    ))}
+                  </ul>
+                  Deploying without them produces a bundle the engine cannot resolve at runtime.
+                  Import them in the Form editor or Document composer first.
+                </div>
+              )}
               {(deployResources as any).ropaRefMissing && (
                 <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
                   ⚠️ No <code className="font-mono">ronl:ropaRef</code> found on the process
@@ -900,7 +952,6 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                 </div>
               )}
               <div className="mt-2 text-xs text-slate-500">
-                {deployResources.bpmnFiles.length + deployResources.formFiles.length} resource(s) ·
                 {deployResources.bpmnFiles.length +
                   deployResources.formFiles.length +
                   deployResources.documentFiles.length}{' '}
@@ -978,7 +1029,9 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                   isDeploying ||
                   deployResult?.success === true ||
                   !resolvedBoard ||
-                  !deployOrganization
+                  !deployOrganization ||
+                  deployResources.unmatchedForms.length > 0 ||
+                  deployResources.unmatchedDocuments.length > 0
                 }
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >

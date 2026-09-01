@@ -482,3 +482,75 @@ describe('BpmnCanvas — deploy modal', () => {
     expect(screen.queryByText('Deploy to Operaton')).toBeNull();
   });
 });
+
+describe('BpmnCanvas — deploy modal, unmatched resources', () => {
+  // A bundle whose board and organization are both already satisfied, so the
+  // ONLY thing left that can disable Deploy is the unmatched-resource guard.
+  // Without that isolation these tests would pass on the pre-existing
+  // organization guard and prove nothing.
+  const NS =
+    'xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" ' +
+    'xmlns:camunda="http://camunda.org/schema/1.0/bpmn" ' +
+    'xmlns:ronl="https://regels.overheid.nl/schema"';
+
+  const bundle = (taskAttrs: string) =>
+    `<bpmn:definitions ${NS}><bpmn:process id="MyProcess" ronl:organization="flevoland">` +
+    `<bpmn:userTask id="t1" camunda:candidateGroups="rip-projectleider" ${taskAttrs} />` +
+    `</bpmn:process></bpmn:definitions>`;
+
+  async function openModalWithBoard(
+    xml: string,
+    opts: { forms?: unknown[]; templates?: unknown[] }
+  ) {
+    await renderCanvas({ xml, forms: opts.forms ?? [], templates: opts.templates ?? [] });
+    await userEvent.click(screen.getByText('Deploy'));
+    await screen.findByText('Deploy to Operaton');
+    await userEvent.click(screen.getByRole('button', { name: 'Infra-board' }));
+  }
+
+  test('blocks deploy when a referenced document template is missing from storage', async () => {
+    await openModalWithBoard(bundle('ronl:documentRef="doc-missing"'), { templates: [] });
+
+    expect(document.body.textContent).toContain('doc-missing.document');
+    expect(screen.getAllByRole('button', { name: /Deploy/ })[1]).toBeDisabled();
+  });
+
+  test('blocks deploy when a referenced form is missing from storage', async () => {
+    await openModalWithBoard(bundle('camunda:formRef="form-missing"'), { forms: [] });
+
+    expect(document.body.textContent).toContain('form-missing.form');
+    expect(screen.getAllByRole('button', { name: /Deploy/ })[1]).toBeDisabled();
+  });
+
+  test('allows deploy once every referenced resource is present in storage', async () => {
+    await openModalWithBoard(bundle('camunda:formRef="form-1" ronl:documentRef="doc-1"'), {
+      forms: [{ id: 'f1', schema: { id: 'form-1' } }],
+      templates: [{ id: 'doc-1', name: 'Beschikking' }],
+    });
+
+    expect(screen.getAllByRole('button', { name: /Deploy/ })[1]).not.toBeDisabled();
+  });
+
+  test('bundles the template a task references through ronl:signatureRef', async () => {
+    // rip-pdp survived this gap in production only because it happened to carry
+    // ronl:documentRef as well; a signature-only task shipped without its
+    // template and failed at runtime with SIGNATURE_TEMPLATE_NOT_FOUND.
+    await openModalWithBoard(bundle('ronl:signatureRef="doc-1"'), {
+      templates: [{ id: 'doc-1', name: 'Projectplan' }],
+    });
+
+    expect(document.body.textContent).toContain('doc-1.document');
+  });
+
+  test('reports the resource count once, including documents', async () => {
+    await openModalWithBoard(bundle('camunda:formRef="form-1" ronl:documentRef="doc-1"'), {
+      forms: [{ id: 'f1', schema: { id: 'form-1' } }],
+      templates: [{ id: 'doc-1', name: 'Beschikking' }],
+    });
+
+    // 1 bpmn + 1 form + 1 document. The footer used to print the count twice,
+    // the first omitting documents entirely: "2 resource(s) · 3 resource(s)".
+    expect(document.body.textContent).toContain('3 resource(s) · process key:');
+    expect(document.body.textContent).not.toMatch(/resource\(s\)\s*·\s*\d+\s*resource\(s\)/);
+  });
+});
