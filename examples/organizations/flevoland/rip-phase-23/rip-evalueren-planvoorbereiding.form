@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-evalueren-planvoorbereiding",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Evaluate the plan preparation (internal)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Run the internal evaluation of the plan preparation and record the Qualtrics reference."
+    },
+    {
+      "id": "Field_QualtricsReferentie",
+      "type": "textfield",
+      "label": "Qualtrics evaluation reference",
+      "key": "qualtricsReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_EvaluatieUitgevoerdOp",
+      "type": "datetime",
+      "label": "Evaluation carried out on",
+      "key": "evaluatieUitgevoerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_BelangrijksteBevindingen",
+      "type": "textarea",
+      "label": "Main findings",
+      "key": "belangrijksteBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-memo-projectkrediet",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the project credit memo (soft claim)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The estimate falls outside the current project credit. Draw up the project credit memo so the Infra consultation can decide on the additional credit."
+    },
+    {
+      "id": "Field_MemoReferentie",
+      "type": "textfield",
+      "label": "Memo reference",
+      "key": "memoReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_GevraagdKrediet",
+      "type": "number",
+      "label": "Requested project credit (EUR)",
+      "key": "gevraagdKrediet",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Dekkingstekort",
+      "type": "number",
+      "label": "Shortfall against the current credit (EUR)",
+      "key": "dekkingstekort"
+    },
+    {
+      "id": "Field_MemoOnderbouwing",
+      "type": "textarea",
+      "label": "Substantiation of the soft claim",
+      "key": "memoOnderbouwing",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

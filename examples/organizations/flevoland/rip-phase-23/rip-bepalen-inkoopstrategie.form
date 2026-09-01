@@ -1,0 +1,77 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-bepalen-inkoopstrategie",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Determine the procurement strategy"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Set the procurement strategy for the project against the procurement plan format, the adopted project plan and the Infra procurement strategy. The result feeds IN1.1."
+    },
+    {
+      "id": "Field_InkoopplanReferentie",
+      "type": "textfield",
+      "label": "Procurement plan reference",
+      "key": "inkoopplanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Inkoopstrategie",
+      "type": "select",
+      "label": "Procurement strategy",
+      "key": "inkoopstrategie",
+      "values": [
+        {
+          "label": "Open tender",
+          "value": "openbaar"
+        },
+        {
+          "label": "Restricted tender",
+          "value": "nietOpenbaar"
+        },
+        {
+          "label": "Private tender",
+          "value": "onderhands"
+        },
+        {
+          "label": "Framework agreement",
+          "value": "raamovereenkomst"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_VastgesteldProjectplanReferentie",
+      "type": "textfield",
+      "label": "Adopted project plan reference (VO assumptions)",
+      "key": "vastgesteldProjectplanReferentie"
+    },
+    {
+      "id": "Field_InkoopMotivering",
+      "type": "textarea",
+      "label": "Rationale for the chosen strategy",
+      "key": "inkoopMotivering",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

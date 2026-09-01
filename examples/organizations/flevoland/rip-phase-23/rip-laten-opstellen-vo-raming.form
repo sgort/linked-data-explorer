@@ -1,0 +1,83 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-laten-opstellen-vo-raming",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Commission the VO cost estimate"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the VO cost estimate drawn up against the project estimate format and the Province of Flevoland SSK calculation model, using the quantity determination from R2.2."
+    },
+    {
+      "id": "Field_FormatProjectramingVersie",
+      "type": "textfield",
+      "label": "Project estimate format version",
+      "key": "formatProjectramingVersie"
+    },
+    {
+      "id": "Field_SskRekenmodelVersie",
+      "type": "textfield",
+      "label": "SSK calculation model version (Province of Flevoland)",
+      "key": "sskRekenmodelVersie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_ProjectramingReferentie",
+      "type": "textfield",
+      "label": "Project estimate reference",
+      "key": "projectramingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_SskRamingReferentie",
+      "type": "textfield",
+      "label": "SSK estimate reference",
+      "key": "sskRamingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_RamingBedrag",
+      "type": "number",
+      "label": "Estimated project cost (EUR)",
+      "key": "ramingBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_OpgesteldDoor",
+      "type": "textfield",
+      "label": "Drawn up by (cost advisor)",
+      "key": "opgesteldDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_RamingToelichting",
+      "type": "textarea",
+      "label": "Notes and assumptions",
+      "key": "ramingToelichting"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
