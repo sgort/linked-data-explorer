@@ -1,0 +1,78 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-projectraming-do",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the DO project estimate"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Consolidate the DO estimate into the project estimate and record whether it falls within the project credit. That answer routes the remainder of the phase."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "DO project estimate reference",
+      "key": "projectramingDoReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "DO project estimate (EUR)",
+      "key": "projectramingDoBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Krediet",
+      "type": "number",
+      "label": "Available project credit (EUR)",
+      "key": "beschikbaarProjectkrediet",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Binnen",
+      "type": "select",
+      "label": "Estimate falls within the project credit",
+      "key": "ramingBinnenKrediet",
+      "values": [
+        {
+          "label": "Yes — within the project credit",
+          "value": "ja"
+        },
+        {
+          "label": "No — additional credit needed",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Comments",
+      "key": "projectramingDoOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

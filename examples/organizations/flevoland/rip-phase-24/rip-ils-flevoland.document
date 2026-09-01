@@ -1,0 +1,232 @@
+{
+  "id": "rip-ils-flevoland",
+  "name": "RIP — ILS Province of Flevoland",
+  "description": "The Province of Flevoland ILS form completed for the detailed design and assessed by advisers and asset management.",
+  "processKey": "RipR24Process",
+  "serviceId": "RipR24",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{ilsReferentie}}",
+      "variableKey": "ilsReferentie",
+      "source": "process",
+      "label": "ILS reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{ilsIngevuldOp}}",
+      "variableKey": "ilsIngevuldOp",
+      "source": "process",
+      "label": "Completed on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{ilsToelichting}}",
+      "variableKey": "ilsToelichting",
+      "source": "process",
+      "label": "Notes for the assessor"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{ilsOordeel}}",
+      "variableKey": "ilsOordeel",
+      "source": "process",
+      "label": "Assessment"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{ilsBeoordeeldDoor}}",
+      "variableKey": "ilsBeoordeeldDoor",
+      "source": "process",
+      "label": "Assessed by"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{ilsBeoordeeldOp}}",
+      "variableKey": "ilsBeoordeeldOp",
+      "source": "process",
+      "label": "Assessed on"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{ilsBeoordelingOpmerkingen}}",
+      "variableKey": "ilsBeoordelingOpmerkingen",
+      "source": "process",
+      "label": "Assessment comments"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "ILS {{ilsReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "ILS assessment",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "ILS assessment"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "ILS {{ilsReferentie}} for project {{projectNumber}} — {{projectName}} was completed on {{ilsIngevuldOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Notes for the assessor: {{ilsToelichting}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Assessment: {{ilsOordeel}}, by {{ilsBeoordeeldDoor}} on {{ilsBeoordeeldOp}}. Comments: {{ilsBeoordelingOpmerkingen}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Assessed by advisers and asset management"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

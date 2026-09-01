@@ -1,0 +1,74 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-bespreken-concept-do",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Discuss the draft DO and draft DO estimate"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Review the draft detailed design and its estimate, record the findings, and decide whether the design can go to final."
+    },
+    {
+      "id": "F_Bev",
+      "type": "textfield",
+      "label": "Findings form reference",
+      "key": "bevindingenformulierReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Findings",
+      "key": "bevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Draft DO approved",
+      "key": "conceptDoAkkoord",
+      "values": [
+        {
+          "label": "Yes — proceed to the final DO",
+          "value": "ja"
+        },
+        {
+          "label": "No — the external firm must amend the DO",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Besproken",
+      "type": "datetime",
+      "label": "Discussed on",
+      "key": "conceptDoBesprokenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
