@@ -1,0 +1,195 @@
+{
+  "id": "rip-definitieve-bestekstekeningen",
+  "name": "RIP — Final Specification Drawings (Definitieve bestekstekeningen)",
+  "description": "The approved drawings made final, against which the bestek is drawn up.",
+  "processKey": "RipR31Process",
+  "serviceId": "RipR31",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{definitieveBestekstekeningenReferentie}}",
+      "variableKey": "definitieveBestekstekeningenReferentie",
+      "source": "process",
+      "label": "Final drawings reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{definitieveBestekstekeningenGereedOp}}",
+      "variableKey": "definitieveBestekstekeningenGereedOp",
+      "source": "process",
+      "label": "Finalised on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{definitieveBestekstekeningenOpmerkingen}}",
+      "variableKey": "definitieveBestekstekeningenOpmerkingen",
+      "source": "process",
+      "label": "Notes"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Final drawings {{definitieveBestekstekeningenReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Final specification drawings",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Final specification drawings"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Final bestekstekeningen {{definitieveBestekstekeningenReferentie}} for project {{projectNumber}} — {{projectName}} were finalised on {{definitieveBestekstekeningenGereedOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Notes: {{definitieveBestekstekeningenOpmerkingen}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the designer"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

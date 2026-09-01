@@ -1,0 +1,67 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-concept-bestekstekeningen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the draft specification drawings drawn up"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the draft bestekstekeningen produced from the final DO and the design rationale carried over from R2.4."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Draft drawings reference",
+      "key": "conceptBestekstekeningenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_DO",
+      "type": "textfield",
+      "label": "Final DO reference (from R2.4)",
+      "key": "doReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Ontwerp",
+      "type": "textfield",
+      "label": "Design rationale reference",
+      "key": "ontwerptoelichtingReferentie"
+    },
+    {
+      "id": "F_Uitvraag",
+      "type": "textfield",
+      "label": "Uitvraag werkzaamheden reference",
+      "key": "uitvraagReferentie"
+    },
+    {
+      "id": "F_Gereed",
+      "type": "datetime",
+      "label": "Delivered on",
+      "key": "conceptBestekstekeningenGereedOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
