@@ -330,7 +330,8 @@ describe('ChainComposer', () => {
       Array.from({ length: 5 }, (_, i) => ({
         identifier: `${prefix}${i}`,
         title: `${prefix}${i}`,
-        type: 'String',
+        // as const: DmnVariable.type is a union, and a bare literal widens to string.
+        type: 'String' as const,
       }));
 
     renderChain([dmn({ inputs: many('in'), outputs: many('out') })]);
@@ -343,7 +344,10 @@ describe('ChainComposer', () => {
 
   test('uses the singular noun for exactly one missing input', () => {
     renderChain([dmn()], {
-      validation: validation({ isValid: false, missingInputs: ['age'] }),
+      validation: validation({
+        isValid: false,
+        missingInputs: [{ identifier: 'age', title: 'Age', type: 'Integer', requiredBy: 'dmn-1' }],
+      }),
     });
     expect(screen.getByText(/^1 input required$/)).toBeTruthy();
   });
@@ -357,6 +361,7 @@ describe('ChainComposer', () => {
             outputVar: 'x',
             inputDmn: 'b',
             inputVar: 'y',
+            matchType: 'semantic' as const,
             semanticConcept: 'https://example.org/concept/Age',
           },
         ],
