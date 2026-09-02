@@ -1,0 +1,73 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-overleg-vg-coordinator",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Hold the meeting with the contractor health and safety coordinator"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectleider meets the contractor health and safety coordinator for the execution phase, covering the written agreement under the Arbobesluit vergewisplicht, the client design plan and the contractor execution plan. Once this is done the work can start on site and R5.2 begins."
+    },
+    {
+      "id": "F_Naam",
+      "type": "textfield",
+      "label": "Health and safety coordinator (contractor)",
+      "key": "vgCoordinatorNaam",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Ovk",
+      "type": "textfield",
+      "label": "Written agreement, Arbobesluit vergewisplicht",
+      "key": "schriftelijkeOvkVergewisplicht",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Ontwerpplan",
+      "type": "textfield",
+      "label": "Health and safety design plan (client) reference",
+      "key": "vgOntwerpplanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Uitvoerplan",
+      "type": "textfield",
+      "label": "Health and safety execution plan (contractor) reference",
+      "key": "vgUitvoerplanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Held on",
+      "key": "vgOverlegGehoudenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-updaten-toezichtsplan",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Update the supervision plan"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Work the draft supervision plan up into the definitieve toezichtsplan, using the contractor offer, the risk dossier and the work specification."
+    },
+    {
+      "id": "F_Concept",
+      "type": "textfield",
+      "label": "Draft supervision plan reference",
+      "key": "conceptToezichtsplanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Definitief",
+      "type": "textfield",
+      "label": "Final supervision plan reference",
+      "key": "definitiefToezichtsplanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Wijzigingen",
+      "type": "textarea",
+      "label": "What was changed",
+      "key": "toezichtsplanWijzigingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Updated on",
+      "key": "toezichtsplanBijgewerktOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

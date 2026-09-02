@@ -1,0 +1,218 @@
+{
+  "id": "rip-vg-plan-beoordeling",
+  "name": "RIP — Health and Safety Plan Assessment (Beoordeling V&G-plan)",
+  "description": "The B&O Infra health and safety adviser assessment of the contractor health and safety plan, and the verdict on the contractor documents as a whole.",
+  "processKey": "RipR51Process",
+  "serviceId": "RipR51",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{vgBeoordelingReferentie}}",
+      "variableKey": "vgBeoordelingReferentie",
+      "source": "process",
+      "label": "Assessment reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{vgBeoordeeldOp}}",
+      "variableKey": "vgBeoordeeldOp",
+      "source": "process",
+      "label": "Assessed on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{vgPlanReferentie}}",
+      "variableKey": "vgPlanReferentie",
+      "source": "process",
+      "label": "Health and safety plan reference"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{vgBeoordelingBevindingen}}",
+      "variableKey": "vgBeoordelingBevindingen",
+      "source": "process",
+      "label": "Findings"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{documentenAkkoord}}",
+      "variableKey": "documentenAkkoord",
+      "source": "process",
+      "label": "All documents approved"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Beoordeling {{vgBeoordelingReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Health and safety plan assessment",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Health and safety plan assessment"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Health and safety plan {{vgPlanReferentie}} for project {{projectNumber}} — {{projectName}} was assessed on {{vgBeoordeeldOp}}, recorded in {{vgBeoordelingReferentie}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Findings: {{vgBeoordelingBevindingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "All contractor documents approved: {{documentenAkkoord}}. Where they are not, the documents go back to the contractor for amendment and are checked again."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Assessed by the B&O Infra health and safety adviser"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-beoordelen-document-vg",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Assess the contractor health and safety plan"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The B&O Infra health and safety adviser assesses the contractor health and safety plan and gives the verdict on the contractor documents as a whole."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Assessment reference",
+      "key": "vgBeoordelingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Assessment findings",
+      "key": "vgBeoordelingBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "All contractor documents approved",
+      "key": "documentenAkkoord",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Assessed on",
+      "key": "vgBeoordeeldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

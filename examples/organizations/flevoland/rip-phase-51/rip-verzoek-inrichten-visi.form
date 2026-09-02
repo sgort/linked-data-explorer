@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-verzoek-inrichten-visi",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the request to set up VISI"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Submit the VISI registration form so the VISI environment can be set up for the project."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "VISI registration form reference",
+      "key": "visiAanmeldformulierReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Code",
+      "type": "textfield",
+      "label": "VISI project code",
+      "key": "visiProjectcode",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Request sent on",
+      "key": "visiVerzoekVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

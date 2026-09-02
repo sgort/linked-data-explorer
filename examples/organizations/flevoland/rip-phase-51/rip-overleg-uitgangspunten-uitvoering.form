@@ -1,0 +1,83 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-overleg-uitgangspunten-uitvoering",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Hold the execution ground-rules meeting"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The RIP team, environment manager, supervisor and communications adviser agree the uitgangspunten for the execution phase. Whether the project contains technical installations is settled here, because it decides later whether the installation part is handed to Beheer & Onderhoud under BO13.1."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Execution ground rules reference",
+      "key": "uitgangspuntenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Deelnemers",
+      "type": "textfield",
+      "label": "Attendees",
+      "key": "uitgangspuntenDeelnemers",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Afspraken",
+      "type": "textarea",
+      "label": "Ground rules agreed",
+      "key": "uitgangspuntenAfspraken",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Installaties",
+      "type": "select",
+      "label": "Project contains technical installation(s)",
+      "key": "technischeInstallaties",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Agreed on",
+      "key": "uitgangspuntenVastgesteldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

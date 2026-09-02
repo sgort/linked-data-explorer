@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-versturen-toezichtsplan",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the supervision plan to VM and TZH"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Send the final supervision plan to the vestigingsmanager and the toezichthouder ahead of the meeting at which it is adopted."
+    },
+    {
+      "id": "F_Ontvangers",
+      "type": "textfield",
+      "label": "Sent to",
+      "key": "toezichtsplanOntvangers",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "toezichtsplanVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
