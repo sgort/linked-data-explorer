@@ -794,10 +794,21 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       </div>
 
       {showDeployModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          {/*
+            The resource list grows with the bundle — a RIP phase deploys 19-28
+            files — so the dialog is capped at the viewport and split into three:
+            a pinned header, a scrolling body, and a pinned footer. Without the
+            cap the dialog grew past the screen and pushed Deploy/Cancel out of
+            reach. min-h-0 is what actually lets the middle shrink; a flex child
+            defaults to min-height:auto and would refuse to scroll without it.
+          */}
+          <div
+            data-testid="deploy-modal"
+            className="bg-white rounded-lg max-w-md w-full shadow-xl flex flex-col max-h-full"
+          >
+            {/* Header — pinned */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
               <h3 className="text-lg font-semibold">Deploy to Operaton</h3>
               <button
                 onClick={() => {
@@ -810,252 +821,261 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
               </button>
             </div>
 
-            {/* Board ownership — deploy-time boardOwner tag */}
-            <div className="mb-4 p-3 rounded-lg border-2 bg-slate-50 border-slate-200">
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-semibold text-sm text-slate-800">🏷️ Board ownership</div>
-                {boardAuto ? (
-                  <span className="text-xs text-slate-500">
-                    auto-detected: <span className="font-mono text-slate-700">{boardAuto}</span>
-                  </span>
-                ) : (
-                  <span className="text-xs text-slate-400">no board auto-detected</span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(
-                  [
-                    { id: 'auto', label: boardAuto ? `Auto (${boardAuto})` : 'Auto (none)' },
-                    { id: 'infra-board', label: 'Infra-board' },
-                    { id: 'caseworker', label: 'Caseworker' },
-                  ] as { id: BoardChoice; label: string }[]
-                ).map((opt) => {
-                  const active = boardChoice === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setBoardChoice(opt.id)}
-                      disabled={isDeploying || deployResult?.success === true}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors disabled:opacity-50 ${
-                        active
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-2 text-xs text-slate-500">
-                {boardChoice === 'auto' ? (
-                  boardAuto ? (
-                    <>
-                      Auto-detected <span className="font-mono">{boardAuto}</span> from the
-                      candidate groups.
-                    </>
+            {/* Body — the only part that scrolls */}
+            <div data-testid="deploy-modal-body" className="flex-1 min-h-0 overflow-y-auto px-6">
+              {/* Board ownership — deploy-time boardOwner tag */}
+              <div className="mb-4 p-3 rounded-lg border-2 bg-slate-50 border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-semibold text-sm text-slate-800">🏷️ Board ownership</div>
+                  {boardAuto ? (
+                    <span className="text-xs text-slate-500">
+                      auto-detected: <span className="font-mono text-slate-700">{boardAuto}</span>
+                    </span>
                   ) : (
-                    'No board could be auto-detected — pick one to continue.'
-                  )
-                ) : (
-                  <>
-                    Tagging as <span className="font-mono">{boardChoice}</span> — overrides
-                    auto-detection.
-                  </>
-                )}
-              </div>
-              {!resolvedBoard && (
-                <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                  ⚠️ A board owner is required. Select{' '}
-                  <span className="font-mono">Infra-board</span> or{' '}
-                  <span className="font-mono">Caseworker</span> before deploying.
+                    <span className="text-xs text-slate-400">no board auto-detected</span>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Organization — deploy-time tenant-id tag */}
-            <div className="mb-4 p-3 rounded-lg border-2 bg-slate-50 border-slate-200">
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-semibold text-sm text-slate-800">🏢 Organization</div>
-                {deployOrganization ? (
-                  <span className="text-xs font-mono text-slate-700">{deployOrganization}</span>
-                ) : (
-                  <span className="text-xs text-slate-400">not set</span>
-                )}
-              </div>
-              {!deployOrganization && (
-                <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                  ⚠️ An organization is required. Set one in the sidebar&apos;s Organization field
-                  before deploying.
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { id: 'auto', label: boardAuto ? `Auto (${boardAuto})` : 'Auto (none)' },
+                      { id: 'infra-board', label: 'Infra-board' },
+                      { id: 'caseworker', label: 'Caseworker' },
+                    ] as { id: BoardChoice; label: string }[]
+                  ).map((opt) => {
+                    const active = boardChoice === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setBoardChoice(opt.id)}
+                        disabled={isDeploying || deployResult?.success === true}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors disabled:opacity-50 ${
+                          active
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-
-            {/* Resources preview */}
-            <div className="mb-4 p-3 rounded-lg border-2 bg-blue-50 border-blue-200">
-              <div className="font-semibold text-sm text-blue-800 mb-2">🚀 Resources to deploy</div>
-              <ul className="space-y-1">
-                {deployResources.bpmnFiles.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
-                    <span className="text-blue-500">📄</span> {f}
-                  </li>
-                ))}
-                {deployResources.formFiles.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
-                    <span className="text-green-500">📝</span> {f}
-                  </li>
-                ))}
-                {deployResources.documentFiles.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
-                    <span className="text-purple-500">📄</span> {f}
-                  </li>
-                ))}
-              </ul>
-              {(deployResources.unmatchedForms.length > 0 ||
-                deployResources.unmatchedDocuments.length > 0) && (
-                <div className="mb-3 mt-3 p-3 rounded-lg bg-red-50 border border-red-300 text-xs text-red-800">
-                  <div className="font-semibold mb-1">
-                    ⛔ Referenced resources are missing from local storage
+                <div className="mt-2 text-xs text-slate-500">
+                  {boardChoice === 'auto' ? (
+                    boardAuto ? (
+                      <>
+                        Auto-detected <span className="font-mono">{boardAuto}</span> from the
+                        candidate groups.
+                      </>
+                    ) : (
+                      'No board could be auto-detected — pick one to continue.'
+                    )
+                  ) : (
+                    <>
+                      Tagging as <span className="font-mono">{boardChoice}</span> — overrides
+                      auto-detection.
+                    </>
+                  )}
+                </div>
+                {!resolvedBoard && (
+                  <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                    ⚠️ A board owner is required. Select{' '}
+                    <span className="font-mono">Infra-board</span> or{' '}
+                    <span className="font-mono">Caseworker</span> before deploying.
                   </div>
-                  <ul className="mb-2 space-y-0.5">
-                    {deployResources.unmatchedForms.map((ref) => (
-                      <li key={`uf-${ref}`} className="font-mono">
-                        {ref}.form
-                      </li>
-                    ))}
-                    {deployResources.unmatchedDocuments.map((ref) => (
-                      <li key={`ud-${ref}`} className="font-mono">
-                        {ref}.document
-                      </li>
-                    ))}
-                  </ul>
-                  Deploying without them produces a bundle the engine cannot resolve at runtime.
-                  Import them in the Form editor or Document composer first.
-                </div>
-              )}
-              {(deployResources as any).ropaRefMissing && (
-                <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                  ⚠️ No <code className="font-mono">ronl:ropaRef</code> found on the process
-                  element. Link a RoPA record in the BPMN properties panel before deploying to
-                  production.
-                </div>
-              )}
-              {(deployResources as any).languageMismatch && (
-                <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                  ⚠️ Bundle mixes languages:{' '}
-                  <span className="font-mono">
-                    {((deployResources as any).languageList as string[]).join(', ')}
-                  </span>
-                  . A deployed bundle should be a single language. Untag or retag the mismatched
-                  artefact(s) before deploying.
-                </div>
-              )}
-              <div className="mt-2 text-xs text-slate-500">
-                {deployResources.bpmnFiles.length +
-                  deployResources.formFiles.length +
-                  deployResources.documentFiles.length}{' '}
-                resource(s) · process key:{' '}
-                <span className="font-mono">{deployResources.processKey}</span>
+                )}
               </div>
-            </div>
 
-            {/* Operaton REST endpoint */}
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                Operaton REST endpoint
-              </label>
-              <input
-                type="text"
-                value={operatonUrl}
-                onChange={(e) => setOperatonUrl(e.target.value)}
-                disabled={isDeploying || deployResult?.success === true}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
-                placeholder="https://operaton.open-regels.nl/engine-rest"
-              />
-            </div>
+              {/* Organization — deploy-time tenant-id tag */}
+              <div className="mb-4 p-3 rounded-lg border-2 bg-slate-50 border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-semibold text-sm text-slate-800">🏢 Organization</div>
+                  {deployOrganization ? (
+                    <span className="text-xs font-mono text-slate-700">{deployOrganization}</span>
+                  ) : (
+                    <span className="text-xs text-slate-400">not set</span>
+                  )}
+                </div>
+                {!deployOrganization && (
+                  <div className="mt-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                    ⚠️ An organization is required. Set one in the sidebar&apos;s Organization field
+                    before deploying.
+                  </div>
+                )}
+              </div>
 
-            {/* Operaton REST endpoint - Username & Password */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div>
+              {/* Resources preview */}
+              <div className="mb-4 p-3 rounded-lg border-2 bg-blue-50 border-blue-200">
+                <div className="font-semibold text-sm text-blue-800 mb-2">
+                  🚀 Resources to deploy
+                </div>
+                <ul className="space-y-1">
+                  {deployResources.bpmnFiles.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
+                      <span className="text-blue-500">📄</span> {f}
+                    </li>
+                  ))}
+                  {deployResources.formFiles.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
+                      <span className="text-green-500">📝</span> {f}
+                    </li>
+                  ))}
+                  {deployResources.documentFiles.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
+                      <span className="text-purple-500">📄</span> {f}
+                    </li>
+                  ))}
+                </ul>
+                {(deployResources.unmatchedForms.length > 0 ||
+                  deployResources.unmatchedDocuments.length > 0) && (
+                  <div className="mb-3 mt-3 p-3 rounded-lg bg-red-50 border border-red-300 text-xs text-red-800">
+                    <div className="font-semibold mb-1">
+                      ⛔ Referenced resources are missing from local storage
+                    </div>
+                    <ul className="mb-2 space-y-0.5">
+                      {deployResources.unmatchedForms.map((ref) => (
+                        <li key={`uf-${ref}`} className="font-mono">
+                          {ref}.form
+                        </li>
+                      ))}
+                      {deployResources.unmatchedDocuments.map((ref) => (
+                        <li key={`ud-${ref}`} className="font-mono">
+                          {ref}.document
+                        </li>
+                      ))}
+                    </ul>
+                    Deploying without them produces a bundle the engine cannot resolve at runtime.
+                    Import them in the Form editor or Document composer first.
+                  </div>
+                )}
+                {(deployResources as any).ropaRefMissing && (
+                  <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                    ⚠️ No <code className="font-mono">ronl:ropaRef</code> found on the process
+                    element. Link a RoPA record in the BPMN properties panel before deploying to
+                    production.
+                  </div>
+                )}
+                {(deployResources as any).languageMismatch && (
+                  <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                    ⚠️ Bundle mixes languages:{' '}
+                    <span className="font-mono">
+                      {((deployResources as any).languageList as string[]).join(', ')}
+                    </span>
+                    . A deployed bundle should be a single language. Untag or retag the mismatched
+                    artefact(s) before deploying.
+                  </div>
+                )}
+                <div className="mt-2 text-xs text-slate-500">
+                  {deployResources.bpmnFiles.length +
+                    deployResources.formFiles.length +
+                    deployResources.documentFiles.length}{' '}
+                  resource(s) · process key:{' '}
+                  <span className="font-mono">{deployResources.processKey}</span>
+                </div>
+              </div>
+
+              {/* Operaton REST endpoint */}
+              <div className="mb-4">
                 <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Username <span className="text-slate-400 font-normal">(optional)</span>
+                  Operaton REST endpoint
                 </label>
                 <input
                   type="text"
-                  value={operatonUsername}
-                  onChange={(e) => setOperatonUsername(e.target.value)}
+                  value={operatonUrl}
+                  onChange={(e) => setOperatonUrl(e.target.value)}
                   disabled={isDeploying || deployResult?.success === true}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
-                  placeholder="demo"
-                  autoComplete="username"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
+                  placeholder="https://operaton.open-regels.nl/engine-rest"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Password <span className="text-slate-400 font-normal">(optional)</span>
-                </label>
-                <input
-                  type="password"
-                  value={operatonPassword}
-                  onChange={(e) => setOperatonPassword(e.target.value)}
-                  disabled={isDeploying || deployResult?.success === true}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                />
+
+              {/* Operaton REST endpoint - Username & Password */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    Username <span className="text-slate-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={operatonUsername}
+                    onChange={(e) => setOperatonUsername(e.target.value)}
+                    disabled={isDeploying || deployResult?.success === true}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
+                    placeholder="demo"
+                    autoComplete="username"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    Password <span className="text-slate-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={operatonPassword}
+                    onChange={(e) => setOperatonPassword(e.target.value)}
+                    disabled={isDeploying || deployResult?.success === true}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Result banner */}
-            {deployResult && (
-              <div
-                className={`mb-4 p-3 rounded-lg text-sm ${
-                  deployResult.success
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
-                }`}
-              >
-                {deployResult.success ? '✓ ' : '✗ '}
-                {deployResult.message}
-              </div>
-            )}
+            {/* Footer — pinned. The result banner rides with the buttons so the
+                deployment id stays readable next to Close. */}
+            <div className="flex-shrink-0 px-6 pb-6 pt-4 border-t border-slate-200">
+              {/* Result banner */}
+              {deployResult && (
+                <div
+                  className={`mb-4 p-3 rounded-lg text-sm ${
+                    deployResult.success
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}
+                >
+                  {deployResult.success ? '✓ ' : '✗ '}
+                  {deployResult.message}
+                </div>
+              )}
 
-            {/* Actions */}
-            <div className="flex gap-2">
-              <button
-                onClick={handleDeploy}
-                disabled={
-                  isDeploying ||
-                  deployResult?.success === true ||
-                  !resolvedBoard ||
-                  !deployOrganization ||
-                  deployResources.unmatchedForms.length > 0 ||
-                  deployResources.unmatchedDocuments.length > 0
-                }
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                {isDeploying ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Deploying…
-                  </>
-                ) : (
-                  <>
-                    <Rocket size={16} />
-                    {deployResult?.success ? 'Deployed' : 'Deploy'}
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setShowDeployModal(false);
-                  setDeployResult(null);
-                }}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-              >
-                {deployResult?.success ? 'Close' : 'Cancel'}
-              </button>
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDeploy}
+                  disabled={
+                    isDeploying ||
+                    deployResult?.success === true ||
+                    !resolvedBoard ||
+                    !deployOrganization ||
+                    deployResources.unmatchedForms.length > 0 ||
+                    deployResources.unmatchedDocuments.length > 0
+                  }
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {isDeploying ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Deploying…
+                    </>
+                  ) : (
+                    <>
+                      <Rocket size={16} />
+                      {deployResult?.success ? 'Deployed' : 'Deploy'}
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeployModal(false);
+                    setDeployResult(null);
+                  }}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  {deployResult?.success ? 'Close' : 'Cancel'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

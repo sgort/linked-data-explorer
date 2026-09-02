@@ -902,3 +902,109 @@ describe('BpmnCanvas — deploy request', () => {
     expect((await screen.findAllByText(/Deployment failed/)).length).toBeGreaterThan(0);
   });
 });
+
+describe('BpmnCanvas — deploy modal layout', () => {
+  // A RIP phase bundles 19-28 resources. Before the dialog was height-capped it
+  // grew with that list until Deploy/Cancel sat below the fold, unreachable
+  // without zooming the browser out.
+  const NS =
+    'xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" ' +
+    'xmlns:camunda="http://camunda.org/schema/1.0/bpmn" ' +
+    'xmlns:ronl="https://regels.overheid.nl/schema"';
+
+  /** A bundle referencing `count` distinct forms, to grow the resource list. */
+  function bulkXml(count: number) {
+    const tasks = Array.from(
+      { length: count },
+      (_, i) =>
+        `<bpmn:userTask id="t${i}" camunda:candidateGroups="rip-projectleider" ` +
+        `camunda:formRef="form-${i}" />`
+    ).join('');
+    return (
+      `<bpmn:definitions ${NS}><bpmn:process id="BulkProcess" ` +
+      `ronl:organization="flevoland">${tasks}</bpmn:process></bpmn:definitions>`
+    );
+  }
+
+  async function openModal(count: number) {
+    const forms = Array.from({ length: count }, (_, i) => ({
+      id: `f${i}`,
+      schema: { id: `form-${i}` },
+    }));
+    await renderCanvas({ xml: bulkXml(count), forms });
+    await userEvent.click(screen.getByText('Deploy'));
+    await screen.findByText('Deploy to Operaton');
+  }
+
+  test('the dialog is capped to the viewport so it cannot outgrow the screen', async () => {
+    await openModal(26);
+
+    const dialog = screen.getByTestId('deploy-modal');
+    expect(dialog.className).toContain('max-h-full');
+    expect(dialog.className).toContain('flex-col');
+    // The overlay keeps the dialog off the viewport edges.
+    const overlay = screen.getByTestId('deploy-modal').parentElement as HTMLElement;
+    expect(overlay.className).toContain('fixed');
+    expect(overlay.className).toContain('p-4');
+  });
+
+  test('only the middle section scrolls, and it can actually shrink', async () => {
+    await openModal(26);
+
+    const body = screen.getByTestId('deploy-modal-body');
+    expect(body.className).toContain('overflow-y-auto');
+    expect(body.className).toContain('flex-1');
+    // Without min-h-0 a flex child defaults to min-height:auto and refuses to
+    // shrink, so the overflow rule would never take effect.
+    expect(body.className).toContain('min-h-0');
+  });
+
+  test('Deploy and Cancel sit outside the scrolling body, however long the list', async () => {
+    await openModal(26);
+
+    const body = screen.getByTestId('deploy-modal-body');
+    const deploy = screen.getAllByRole('button', { name: /^Deploy$/ })[1];
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+
+    expect(body.contains(deploy)).toBe(false);
+    expect(body.contains(cancel)).toBe(false);
+  });
+
+  test('the resource list itself stays inside the scrolling body', async () => {
+    await openModal(26);
+
+    const body = screen.getByTestId('deploy-modal-body');
+    expect(body.textContent).toContain('Resources to deploy');
+    expect(body.textContent).toContain('form-25.form');
+    // 26 forms plus the process itself.
+    expect(body.textContent).toContain('27 resource(s)');
+  });
+
+  test('the result banner rides with the buttons, not with the scrolling list', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        json: async () => ({ success: true, data: { deploymentId: 'dep-77' } }),
+      }))
+    );
+    await openModal(3);
+
+    await userEvent.click(screen.getAllByRole('button', { name: /^Deploy$/ })[1]);
+    // The id also appears in the toolbar badge behind the dialog; take the one
+    // inside the dialog.
+    const banner = (await screen.findAllByText(/Deployment ID: dep-77/)).find((el) =>
+      screen.getByTestId('deploy-modal').contains(el)
+    ) as HTMLElement;
+
+    expect(banner).toBeTruthy();
+    expect(screen.getByTestId('deploy-modal-body').contains(banner)).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  test('a short bundle still renders the whole dialog', async () => {
+    await openModal(2);
+
+    expect(screen.getByTestId('deploy-modal-body').textContent).toContain('3 resource(s)');
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
+  });
+});
