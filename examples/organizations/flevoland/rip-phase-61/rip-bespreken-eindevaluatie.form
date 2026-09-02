@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-bespreken-eindevaluatie",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Discuss the final evaluation"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The RIP team discusses the final evaluation of the project process."
+    },
+    {
+      "id": "F_Aanwezig",
+      "type": "textarea",
+      "label": "Attendees",
+      "key": "eindevaluatieAanwezigen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bespreking",
+      "type": "textarea",
+      "label": "What was discussed",
+      "key": "eindevaluatieBespreking",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Discussed on",
+      "key": "eindevaluatieBesprokenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

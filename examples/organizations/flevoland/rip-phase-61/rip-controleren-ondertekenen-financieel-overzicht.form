@@ -1,0 +1,52 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-controleren-ondertekenen-financieel-overzicht",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Check and sign the financial overview for discharge"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectleider checks the financial overview against the project and signs it."
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Signed by",
+      "key": "financieelOverzichtGetekendDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Check findings",
+      "key": "financieelOverzichtBevindingen"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Signed on",
+      "key": "financieelOverzichtGetekendOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

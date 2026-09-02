@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-laten-aanpassen-rechten-relatics",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the Relatics workspace rights adjusted"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectondersteuner has the rights on the Relatics workspace adjusted now the project is discharged."
+    },
+    {
+      "id": "F_Workspace",
+      "type": "textfield",
+      "label": "Relatics workspace",
+      "key": "relaticsWorkspace",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Rechten",
+      "type": "textarea",
+      "label": "Rights to be adjusted",
+      "key": "relaticsRechten",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Requested on",
+      "key": "relaticsRechtenVerzochtOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

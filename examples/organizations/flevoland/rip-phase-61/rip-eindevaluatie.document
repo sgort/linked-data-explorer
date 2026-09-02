@@ -1,0 +1,264 @@
+{
+  "id": "rip-eindevaluatie",
+  "name": "RIP — Final Evaluation (Eindevaluatie RIP projectenproces)",
+  "description": "The final evaluation of the RIP project process, discussed with the RIP team and updated afterwards.",
+  "processKey": "RipR61Process",
+  "serviceId": "RipR61",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{eindevaluatieReferentie}}",
+      "variableKey": "eindevaluatieReferentie",
+      "source": "process",
+      "label": "Final evaluation reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{eindevaluatieOp}}",
+      "variableKey": "eindevaluatieOp",
+      "source": "process",
+      "label": "Drawn up on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{eindevaluatieGeleerd}}",
+      "variableKey": "eindevaluatieGeleerd",
+      "source": "process",
+      "label": "What was learned"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{eindevaluatieAanbevelingen}}",
+      "variableKey": "eindevaluatieAanbevelingen",
+      "source": "process",
+      "label": "Recommendations"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{eindevaluatieBesprokenOp}}",
+      "variableKey": "eindevaluatieBesprokenOp",
+      "source": "process",
+      "label": "Discussed on"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{eindevaluatieAanwezigen}}",
+      "variableKey": "eindevaluatieAanwezigen",
+      "source": "process",
+      "label": "Attendees"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{eindevaluatieBespreking}}",
+      "variableKey": "eindevaluatieBespreking",
+      "source": "process",
+      "label": "Discussion"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{eindevaluatieBijgewerktOp}}",
+      "variableKey": "eindevaluatieBijgewerktOp",
+      "source": "process",
+      "label": "Updated on"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{eindevaluatieWijzigingen}}",
+      "variableKey": "eindevaluatieWijzigingen",
+      "source": "process",
+      "label": "What was changed"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Eindevaluatie {{eindevaluatieReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Final evaluation of the RIP project process",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Final evaluation of the RIP project process"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Final evaluation {{eindevaluatieReferentie}} for project {{projectNumber}} — {{projectName}} was drawn up on {{eindevaluatieOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "What was learned: {{eindevaluatieGeleerd}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Recommendations: {{eindevaluatieAanbevelingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "It was discussed with the RIP team on {{eindevaluatieBesprokenOp}} ({{eindevaluatieAanwezigen}}): {{eindevaluatieBespreking}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Updated on {{eindevaluatieBijgewerktOp}}: {{eindevaluatieWijzigingen}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the projectleider, discussed with the RIP team"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}
