@@ -2,6 +2,185 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.09.1",
+      "status": "Released",
+      "date": "2 sep 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "c20677b",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Frontend dependencies updated",
+          "details": [
+            "bpmn-js to 18.24, form-js to 1.25, bpmn-js-properties-panel to 5.64, React to 19.2.8, TypeScript to 5.9.3, prettier to 3.9.6, and the surrounding eslint and testing-library packages.",
+            "Verified locally before merge: check-format passes untouched under prettier 3.9.6, and TypeScript 5.9 produces exactly the same fifteen pre-existing type errors as 5.8 — no new ones — so the tsc gate landing in this same release still covers precisely the right set."
+          ]
+        },
+        {
+          "sha": "c0c0c5b",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "npm engine floor raised to >=10.9.9",
+          "details": [
+            "Collides with the Node floor raised in the same release: each bumps one engine and leaves the other, so merging the second needs the four-line resolution that keeps both raised."
+          ]
+        },
+        {
+          "sha": "a3e0027",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "R6.1 Projectdecharge completes the RIP phase ladder",
+          "details": [
+            "The last phase of the Flevoland RIP ladder: 28 nodes, 32 flows, 6 lanes, 21 forms and 4 documents. Opstarten decharge fans out into three labelled streams — A financieel overzicht, B overdrachtsverklaring, C eindevaluatie — which converge on the dechargedossier the AO approves, before a second fan-out closes the project: the financial end position into the raamkrediet Infra, the project folder closed in the DMS, and the Relatics workspace rights adjusted.",
+            "The sheet draws two Einde proces markers, one per closing action. They are modelled as one end event behind a parallel join: they mean the same completion, and a single exit keeps the phase end detectable the way every other phase is."
+          ]
+        },
+        {
+          "sha": "aa8598d",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "R5.4 Oplevering en onderhoudsperiode",
+          "details": [
+            "39 nodes, 46 flows, 6 lanes, 26 forms and 8 documents. The financial branch is three-way rather than the usual binnen/buiten split, because the final account is measured against the credit and the contract sum at once: within the contract sum the existing ATB covers it, within the credit a EUR 50.000 threshold decides between an AO decision note and the ATB webform alone, and outside the credit it goes to the concerndirecteur.",
+            "The sheet draws an Aannemer band carrying no activity — the contractor is written about but never acts in this phase. An empty lane would deploy as a lane no task can land in, so it is left out and recorded in a text annotation."
+          ]
+        },
+        {
+          "sha": "6d0b2fd",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "R5.2 Directievoering en toezicht UAV",
+          "details": [
+            "The densest phase in the ladder at 56 nodes, 67 flows, 36 forms and 11 documents, and the only one whose subject is a period rather than a deliverable. Modelled as a parallel split into the weekly cycle, invoicing and the delivery request, joined before R5.3, with the repetition confined to the weekly branch where the sheet own Werk gereed decision sits.",
+            "The flat alternative was rejected: one loop containing every stream would force an invoice and a delivery request through every week and deadlock a real instance on the parallel join. Three rework loops in total — weekstaat rejected, AWR overview rejected, and work not finished."
+          ]
+        },
+        {
+          "sha": "38e6b76",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "R5.1 Voorbereiding op uitvoering",
+          "details": [
+            "25 nodes, 30 flows, 8 lanes, 19 forms and 10 documents. Five preparation streams — VISI, Better Performance, the toezichtsplan, the besteksadministratie and the startoverleg — fan out of the risk-dossier update and collect again before the technical-installation question. They share no data and the sheet draws no order between them, so a parallel split and join is more faithful than an arbitrary sequence.",
+            "The BO13.1 branch is a round trip rather than an exit: on ja the installation part is handed to Beheer en Onderhoud, which communicates the handover back, so the leg rejoins the document check and the phase keeps its single R5.2 exit. First phase in which the contractor occupies a lane."
+          ]
+        },
+        {
+          "sha": "df01ff8",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Type errors cleared in the ChainComposer tests",
+          "details": [
+            "Four fixtures satisfied the runtime shape but not the declared type: a widened String literal, a missingInputs array of strings where RequiredInput was declared, and a semanticMatches entry without matchType. Each is fixed by correcting the fixture rather than loosening an assertion.",
+            "The missingInputs case is the instructive one — only its length reaches the DOM, so the test passed on a fixture the type system would have rejected. Exactly what the absent tsc was hiding."
+          ]
+        },
+        {
+          "sha": "b0e1580",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Pre-existing type errors cleared and a tsc gate added",
+          "details": [
+            "Fifteen type errors had accumulated invisibly across three test files, because nothing in the repository ran tsc: build is vite build, which strips types via esbuild without checking, lint is eslint, and test is vitest. None of them typecheck.",
+            "A typecheck script is added to the root and both workspaces, and a Typecheck step to all four Azure deployment workflows, so the gap cannot reopen."
+          ]
+        },
+        {
+          "sha": "f346ac9",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Deploy modal keeps its actions reachable for large bundles",
+          "details": [
+            "With bundles now reaching 48 resources the modal grew past the viewport and pushed Deploy and Close off-screen. It is restructured into a pinned header, a scrolling body and a pinned footer, with the result banner riding with the buttons.",
+            "The body needs min-h-0 to shrink below its content: a flex child defaults to min-height auto and will not."
+          ]
+        },
+        {
+          "sha": "f1adb63",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "R4.1 Aanbestedingsproces",
+          "details": [
+            "Two irregularity checks run in sequence, each with its own remedy: an unlawful tender is set aside and rejected on a terminating path, while an unclear tender prompts a request for clarification that loops back into the unit-price check."
+          ]
+        },
+        {
+          "sha": "fcd64ac",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "R3.2 Afronding bestek en tekeningen",
+          "details": [
+            "27 nodes across 7 lanes, with 18 forms and 7 documents covering the completion of the contract specification and drawings."
+          ]
+        },
+        {
+          "sha": "7b1abfd",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "R3.1 Opstellen bestek en tekeningen",
+          "details": [
+            "25 nodes across 4 lanes, carrying the concept drawings the phase produces as its first activity."
+          ]
+        },
+        {
+          "sha": "b450afe",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "R2.4 DO en -raming",
+          "details": [
+            "29 nodes across 6 lanes with 18 forms, and the first rework loop in the ladder."
+          ]
+        },
+        {
+          "sha": "b518b1b",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "R2.3 VO-raming",
+          "details": [
+            "21 nodes across 9 lanes, the first phase generated from the reusable BPMN toolchain rather than laid out by hand.",
+            "The start form was moved into the first task: on a programmatic start the gating variable would be unset, leaving the instance with no selectable outgoing flow."
+          ]
+        },
+        {
+          "sha": "c886fe0",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Per-file branch coverage raised above 80% across both packages",
+          "details": [
+            "Frontend branch coverage rises from 65.89% to 90.62% and backend from 91.49% to 92.22%, with every file clearing the 80% per-file bar.",
+            "Two jsdom limitations had to be worked around for the d3 drag and zoom paths: jsdom rejects view in the MouseEvent constructor, and SVGSVGElement carries no width or height baseVal for the default extent d3-zoom computes."
+          ]
+        },
+        {
+          "sha": "8f7c35c",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Node engine floor raised to >=20.20.2",
+          "details": [
+            "Paired with the workflow pins in the same release: the two frontend workflows are pinned to exactly 20.20.2, landing on the floor this sets."
+          ]
+        },
+        {
+          "sha": "92f8fa6",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Workflow Node versions pinned to exact patches",
+          "details": [
+            "The floating majors in the deployment workflows are pinned: 20.20.2 for the frontend, 22.23.2 for the backend, 24.19.0 for the supply-chain audit."
+          ]
+        },
+        {
+          "sha": "3fab709",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "lint-staged updated to ^16.4.0",
+          "details": []
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.09.0",
       "status": "Released",
       "date": "1 sep 2026",
