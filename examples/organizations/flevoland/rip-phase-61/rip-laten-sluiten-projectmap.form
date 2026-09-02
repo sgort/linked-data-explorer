@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-laten-sluiten-projectmap",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the project folder closed in the DMS"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectondersteuner raises a TopDesk request to have the project folder closed in the DMS."
+    },
+    {
+      "id": "F_Melding",
+      "type": "textfield",
+      "label": "TopDesk request reference",
+      "key": "topdeskMeldingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Requested on",
+      "key": "projectmapSluitenVerzochtOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

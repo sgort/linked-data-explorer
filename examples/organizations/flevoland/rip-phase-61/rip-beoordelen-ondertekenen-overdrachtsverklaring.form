@@ -1,0 +1,71 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-beoordelen-ondertekenen-overdrachtsverklaring",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Assess and sign the transfer declaration"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The beheerder and the vestigingsmanager assess the transfer declaration and sign it. Where they do not, it goes back to the projectleider to be redrafted."
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Assessment findings",
+      "key": "overdrachtsverklaringBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Transfer declaration signed",
+      "key": "overdrachtsverklaringAkkoord",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Signed by",
+      "key": "overdrachtsverklaringGetekendDoor"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Assessed on",
+      "key": "overdrachtsverklaringBeoordeeldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

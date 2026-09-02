@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-plannen-afspraak-eindevaluatie",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Plan the RIP team meeting on the final evaluation"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectondersteuner plans the meeting at which the RIP team discusses the final evaluation."
+    },
+    {
+      "id": "F_Datum",
+      "type": "datetime",
+      "label": "Meeting date",
+      "key": "eindevaluatieOverlegDatum",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Genodigden",
+      "type": "textarea",
+      "label": "Invited",
+      "key": "eindevaluatieGenodigden",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

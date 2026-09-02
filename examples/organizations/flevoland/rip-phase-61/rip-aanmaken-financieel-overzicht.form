@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-aanmaken-financieel-overzicht",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Create the financial overview for discharge"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectondersteuner creates the financieel overzicht voor decharge, files it in the case folder in the DMS and sends it to Financiën, with the projectleider in copy."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Financial overview reference",
+      "key": "financieelOverzichtReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Dms",
+      "type": "textfield",
+      "label": "DMS case folder reference",
+      "key": "zaakmapDmsReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Created on",
+      "key": "financieelOverzichtAangemaaktOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
