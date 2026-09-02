@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-sturen-factuur-og",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the invoice to the client"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The contractor invoices the client for the approved terms."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Invoice reference",
+      "key": "factuurReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Invoice amount (EUR)",
+      "key": "factuurBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Invoiced on",
+      "key": "factuurVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

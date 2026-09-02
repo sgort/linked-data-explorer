@@ -1,0 +1,65 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-beoordelen-weekstaat",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Assess the weekly statement"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder assesses the weekstaat and gives the decisive verdict, having the toezichthouder assessment alongside."
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Assessment findings",
+      "key": "weekstaatBevindingenDv",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Weekly statement approved",
+      "key": "weekstaatAkkoord",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Assessed on",
+      "key": "weekstaatBeoordeeldOpDv",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

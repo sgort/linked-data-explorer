@@ -1,0 +1,65 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-versturen-overzicht-awr-dv",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Issue the AWR overview"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder issues the AWR overview for the week and records whether the work is finished. While it is not, the next week begins."
+    },
+    {
+      "id": "F_Aan",
+      "type": "textfield",
+      "label": "Issued to",
+      "key": "awrUitgegevenAan",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Issued on",
+      "key": "awrUitgegevenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Gereed",
+      "type": "select",
+      "label": "Work finished",
+      "key": "werkGereed",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-invullen-webformulier-atb",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Fill in the ATB webform"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The ondersteuner fills in the ATB webform. Handling of the ATB itself sits outside R5.2."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "ATB webform reference",
+      "key": "atbFormulierReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Inhoud",
+      "type": "textarea",
+      "label": "What was recorded",
+      "key": "atbInhoud",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Filled in on",
+      "key": "atbIngevuldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

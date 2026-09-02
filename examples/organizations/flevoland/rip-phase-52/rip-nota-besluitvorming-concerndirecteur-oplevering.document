@@ -1,0 +1,218 @@
+{
+  "id": "rip-nota-besluitvorming-concerndirecteur-oplevering",
+  "name": "RIP — Decision Note on Delivery, Concerndirecteur (Nota besluitvorming)",
+  "description": "Sjabloon nota besluitvorming for the concern director, used when the financial effect of the delivery request falls outside the credit.",
+  "processKey": "RipR52Process",
+  "serviceId": "RipR52",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{notaConcerndirecteurOpleveringReferentie}}",
+      "variableKey": "notaConcerndirecteurOpleveringReferentie",
+      "source": "process",
+      "label": "Decision note reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{opleveringVerzoekReferentie}}",
+      "variableKey": "opleveringVerzoekReferentie",
+      "source": "process",
+      "label": "Request reference"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{opleveringBedrag}}",
+      "variableKey": "opleveringBedrag",
+      "source": "process",
+      "label": "Financial effect"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{notaConcerndirecteurOpleveringToelichting}}",
+      "variableKey": "notaConcerndirecteurOpleveringToelichting",
+      "source": "process",
+      "label": "Substantiation"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{notaConcerndirecteurOpleveringOp}}",
+      "variableKey": "notaConcerndirecteurOpleveringOp",
+      "source": "process",
+      "label": "Drawn up on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Nota {{notaConcerndirecteurOpleveringReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Decision note — concern director",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Decision note — concern director"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The financial effect of request {{opleveringVerzoekReferentie}} for project {{projectNumber}} — {{projectName}} is EUR {{opleveringBedrag}} and falls outside the credit, so the decision goes to the concern director."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Substantiation: {{notaConcerndirecteurOpleveringToelichting}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up on {{notaConcerndirecteurOpleveringOp}}; the ATB webform is filled in alongside."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the projectleider for the concern director"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

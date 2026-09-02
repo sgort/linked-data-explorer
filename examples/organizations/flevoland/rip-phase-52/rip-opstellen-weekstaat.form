@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-weekstaat",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the weekly statement"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The contractor draws up the weekstaat for the week: the quantities carried out against the work specification."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Weekly statement reference",
+      "key": "weekstaatReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Hoeveelheden",
+      "type": "textarea",
+      "label": "Quantities carried out",
+      "key": "weekstaatHoeveelheden",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "weekstaatOpgesteldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

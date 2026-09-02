@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-plaatsen-brief-visi",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Place the letter in VISI"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder places the letter on (postponement of) delivery in VISI, so it reaches the contractor through the contract channel."
+    },
+    {
+      "id": "F_Visi",
+      "type": "textfield",
+      "label": "VISI message reference",
+      "key": "briefVisiReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Placed on",
+      "key": "briefInVisiOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

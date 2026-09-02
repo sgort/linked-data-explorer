@@ -1,0 +1,74 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-verzoeken-uitstel-opleveren",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Request delivery, or postponement of delivery"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The contractor asks to deliver the work, or asks for delivery to be postponed."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Request reference",
+      "key": "opleveringVerzoekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Soort",
+      "type": "select",
+      "label": "Request concerns",
+      "key": "opleveringVerzoekSoort",
+      "values": [
+        {
+          "label": "Delivery",
+          "value": "oplevering"
+        },
+        {
+          "label": "Postponement of delivery",
+          "value": "uitstel"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Motivering",
+      "type": "textarea",
+      "label": "Substantiation",
+      "key": "opleveringVerzoekMotivering",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Requested on",
+      "key": "opleveringVerzochtOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

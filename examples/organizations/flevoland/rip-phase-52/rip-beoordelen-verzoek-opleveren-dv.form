@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-beoordelen-verzoek-opleveren-dv",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Assess the request to deliver or postpone (DV)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder assesses the contractor request against the state of the work."
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Assessment findings",
+      "key": "opleveringBevindingenDv",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Assessed on",
+      "key": "opleveringBeoordeeldOpDv",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

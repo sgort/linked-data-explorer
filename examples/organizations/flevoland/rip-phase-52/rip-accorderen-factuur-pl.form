@@ -1,0 +1,62 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-accorderen-factuur-pl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Approve the invoice and forward it to the AO"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectleider approves the invoice against the approved terms and forwards it to the AO."
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Invoice approved by PL",
+      "key": "factuurAkkoordPl",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Toel",
+      "type": "textarea",
+      "label": "Notes",
+      "key": "factuurToelichtingPl"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Approved on",
+      "key": "factuurGeaccordeerdOpPl",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

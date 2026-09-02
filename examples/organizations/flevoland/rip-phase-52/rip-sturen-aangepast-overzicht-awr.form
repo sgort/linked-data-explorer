@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-sturen-aangepast-overzicht-awr",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the amended AWR overview"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Send the AWR overview again, amended for the negotiated prices."
+    },
+    {
+      "id": "F_Aanpassing",
+      "type": "textarea",
+      "label": "What was amended",
+      "key": "awrAanpassing",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "awrAangepastVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

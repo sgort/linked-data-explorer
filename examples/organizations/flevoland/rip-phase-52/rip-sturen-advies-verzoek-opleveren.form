@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-sturen-advies-verzoek-opleveren",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the advice on the request to deliver or postpone"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder sends the advice on to the projectleider, who takes it into both the letter chain and the funding decision."
+    },
+    {
+      "id": "F_Advies",
+      "type": "textarea",
+      "label": "Advice",
+      "key": "opleveringAdvies",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "opleveringAdviesVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

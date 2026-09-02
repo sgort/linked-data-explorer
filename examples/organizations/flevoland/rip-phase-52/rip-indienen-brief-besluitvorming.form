@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-indienen-brief-besluitvorming",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Submit the letter for decision-making, cc PL and DV"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The AO submits the letter into the decision-making process, with the projectleider and the directievoerder in copy."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Decision-making reference",
+      "key": "besluitvormingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Submitted on",
+      "key": "briefIngediendOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-beoordelen-sturen-weekstaat",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Assess the weekly statement and send the assessment"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The toezichthouder assesses the weekstaat against what was observed on site and sends the assessment on."
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Assessment findings",
+      "key": "weekstaatBevindingenTzh",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Assessed on",
+      "key": "weekstaatBeoordeeldOpTzh",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

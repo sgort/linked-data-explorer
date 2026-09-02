@@ -1,0 +1,65 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-beoordelen-verzoek-oplevering-ao",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Assess the request to deliver or postpone (AO)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The AO assesses the request and decides whether it is granted."
+    },
+    {
+      "id": "F_Toegekend",
+      "type": "select",
+      "label": "Request granted",
+      "key": "opleveringVerzoekToegekend",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Motivering",
+      "type": "textarea",
+      "label": "Substantiation",
+      "key": "opleveringBesluitMotivering",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Decided on",
+      "key": "opleveringBesluitOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
