@@ -1,11 +1,41 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 vi.mock('../../services/defaultTestCases', () => ({
   initializeDefaultTestCases: vi.fn(),
 }));
+
+// dnd-kit gestures cannot be synthesised in jsdom; capture the handlers
+// ChainBuilder hands to DndContext and drive them directly instead.
+const dnd = vi.hoisted(() => ({
+  onDragStart: null as ((e: unknown) => void) | null,
+  onDragEnd: null as ((e: unknown) => void) | null,
+}));
+
+vi.mock('@dnd-kit/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@dnd-kit/core')>();
+  return {
+    ...actual,
+    DndContext: ({
+      children,
+      onDragStart,
+      onDragEnd,
+    }: {
+      children: React.ReactNode;
+      onDragStart: (e: unknown) => void;
+      onDragEnd: (e: unknown) => void;
+    }) => {
+      dnd.onDragStart = onDragStart;
+      dnd.onDragEnd = onDragEnd;
+      return <div>{children}</div>;
+    },
+    DragOverlay: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="drag-overlay">{children}</div>
+    ),
+  };
+});
 
 vi.mock('./SemanticView', () => ({ default: () => <div>SemanticView stub</div> }));
 
@@ -50,7 +80,14 @@ vi.mock('./ChainConfig', () => ({
     executionResult,
   }: {
     chain: { identifier: string }[];
-    validation: { isValid: boolean; missingInputs: unknown[] } | null;
+    validation: {
+      isValid: boolean;
+      isDrdCompatible: boolean;
+      missingInputs: unknown[];
+      requiredInputs: { identifier: string; type: string }[];
+      semanticMatches: unknown[];
+      warnings: { type: string; message: string }[];
+    } | null;
     inputs: Record<string, unknown>;
     onInputChange: (id: string, value: unknown) => void;
     onExecute: () => void;
@@ -68,6 +105,15 @@ vi.mock('./ChainConfig', () => ({
             })
           : 'none'}
       </div>
+      <div>drd:{validation ? String(validation.isDrdCompatible) : 'none'}</div>
+      <div>semantic:{validation ? validation.semanticMatches.length : 'none'}</div>
+      <div>
+        required:
+        {validation
+          ? validation.requiredInputs.map((r) => `${r.identifier}:${r.type}`).join(',')
+          : 'none'}
+      </div>
+      <div>warnings:{validation ? validation.warnings.map((w) => w.type).join(',') : 'none'}</div>
       <div>inputs:{JSON.stringify(inputs)}</div>
       <div>result:{executionResult ? 'has-result' : 'no-result'}</div>
       <button
@@ -114,6 +160,51 @@ vi.mock('./ChainConfig', () => ({
         }
       >
         load-drd
+      </button>
+      <button
+        onClick={() =>
+          onLoadPreset({
+            id: 't4',
+            name: 'Two-DMN preset',
+            description: 'd',
+            dmnIds: ['age-check', 'benefit-calc'],
+            type: 'sequential',
+            defaultInputs: { age: 30 },
+          })
+        }
+      >
+        load-two-dmn
+      </button>
+      <button
+        onClick={() =>
+          onLoadPreset({
+            id: 't5',
+            name: 'DRD preset, typed inputs',
+            description: 'd',
+            dmnIds: [],
+            type: 'drd',
+            drdEntryPointId: 'drd-typed',
+            drdOriginalChain: ['age-check'],
+            defaultInputs: { flag: true, count: 3, label: 'x' },
+          })
+        }
+      >
+        load-drd-typed
+      </button>
+      <button
+        onClick={() =>
+          onLoadPreset({
+            id: 't6',
+            name: 'DRD preset, no inputs',
+            description: 'd',
+            dmnIds: [],
+            type: 'drd',
+            drdEntryPointId: 'drd-bare',
+            drdOriginalChain: ['age-check'],
+          })
+        }
+      >
+        load-drd-bare
       </button>
       <button onClick={() => onInputChange('extra', 'x')}>change-input</button>
       <button onClick={onExecute}>execute</button>
@@ -320,5 +411,330 @@ describe('ChainBuilder — execution', () => {
     await vi.waitFor(() =>
       expect(alertSpy).toHaveBeenCalledWith('Execution failed: DMN engine unavailable')
     );
+  });
+});
+
+describe('ChainBuilder — degraded backend responses', () => {
+  test('a semantic-links payload reporting success: false leaves the links empty', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/api/dmns/enhanced-chain-links')) {
+        return Promise.resolve({
+          json: async () => ({ success: false, error: 'links unavailable' }),
+        });
+      }
+      return fetchMock()(url);
+    });
+
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:1 loading:false');
+
+    expect(consoleError).toHaveBeenCalledWith(
+      '[SemanticLinks] Failed to load:',
+      'links unavailable'
+    );
+  });
+
+  test('a semantic-links fetch that rejects leaves the links empty', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/api/dmns/enhanced-chain-links')) {
+        return Promise.reject(new Error('links down'));
+      }
+      return fetchMock()(url);
+    });
+
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:1 loading:false');
+
+    expect(consoleError).toHaveBeenCalledWith('[SemanticLinks] Error:', expect.any(Error));
+  });
+
+  test('a DMN payload reporting success: false degrades to an empty list', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/api/dmns?')) {
+        return Promise.resolve({ json: async () => ({ success: false, error: 'no dmns' }) });
+      }
+      return Promise.resolve({ json: async () => ({ success: true, data: [] }) });
+    });
+
+    render(<ChainBuilder endpoint="e" />);
+
+    expect(await screen.findByText('dmns:0 loading:false')).toBeTruthy();
+  });
+});
+
+describe('ChainBuilder — chain validation', () => {
+  /** Two DMNs where the second consumes what the first produces. */
+  function twoDmnFetch(
+    secondInputs: { identifier: string; title: string; type: string }[],
+    links: unknown[] = []
+  ) {
+    return vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/api/dmns?')) {
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: {
+              dmns: [
+                {
+                  id: 'd1',
+                  identifier: 'age-check',
+                  title: 'Age check',
+                  inputs: [{ identifier: 'age', title: 'Age', type: 'Integer' }],
+                  outputs: [{ identifier: 'eligible', title: 'Eligible', type: 'Boolean' }],
+                },
+                {
+                  id: 'd2',
+                  identifier: 'benefit-calc',
+                  title: 'Benefit calculation',
+                  inputs: secondInputs,
+                  outputs: [{ identifier: 'amount', title: 'Amount', type: 'Double' }],
+                },
+              ],
+            },
+          }),
+        });
+      }
+      if (url.includes('/api/dmns/enhanced-chain-links')) {
+        return Promise.resolve({ json: async () => ({ success: true, data: links }) });
+      }
+      return Promise.reject(new Error(`unexpected fetch url: ${url}`));
+    });
+  }
+
+  test('an exact output-to-input match does not ask the user for the value', async () => {
+    global.fetch = twoDmnFetch([{ identifier: 'eligible', title: 'Eligible', type: 'Boolean' }]);
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:2 loading:false');
+
+    await userEvent.click(screen.getByText('load-two-dmn'));
+
+    expect(screen.getByText('required:age:Integer')).toBeTruthy();
+    expect(screen.getByText('drd:true')).toBeTruthy();
+  });
+
+  test('a semantic match satisfies the input but marks the chain DRD-incompatible', async () => {
+    global.fetch = twoDmnFetch(
+      [{ identifier: 'isEligible', title: 'Is eligible', type: 'Boolean' }],
+      [
+        {
+          dmn1: { identifier: 'age-check' },
+          dmn2: { identifier: 'benefit-calc' },
+          inputVariable: 'isEligible',
+          outputVariable: 'eligible',
+          matchType: 'semantic',
+          sharedConcept: 'https://example.org/concept/Eligibility',
+        },
+      ]
+    );
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:2 loading:false');
+
+    await userEvent.click(screen.getByText('load-two-dmn'));
+
+    expect(screen.getByText('semantic:1')).toBeTruthy();
+    expect(screen.getByText('drd:false')).toBeTruthy();
+    expect(screen.getByText('required:age:Integer')).toBeTruthy();
+  });
+
+  test('an unmatched input on the second DMN is asked of the user', async () => {
+    global.fetch = twoDmnFetch([{ identifier: 'region', title: 'Region', type: 'String' }]);
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:2 loading:false');
+
+    await userEvent.click(screen.getByText('load-two-dmn'));
+
+    expect(screen.getByText('required:age:Integer,region:String')).toBeTruthy();
+    expect(screen.getByText('validation:{"isValid":false,"missing":1}')).toBeTruthy();
+  });
+
+  test('Boolean and Date inputs are required but not counted as missing', async () => {
+    global.fetch = twoDmnFetch([
+      { identifier: 'consent', title: 'Consent', type: 'Boolean' },
+      { identifier: 'since', title: 'Since', type: 'Date' },
+    ]);
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:2 loading:false');
+
+    await userEvent.click(screen.getByText('load-two-dmn'));
+
+    expect(screen.getByText('required:age:Integer,consent:Boolean,since:Date')).toBeTruthy();
+    expect(screen.getByText('validation:{"isValid":true,"missing":0}')).toBeTruthy();
+  });
+
+  test('two DMNs producing the same output raise a duplicate warning', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/api/dmns?')) {
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: {
+              dmns: [
+                {
+                  id: 'd1',
+                  identifier: 'age-check',
+                  title: 'Age check',
+                  inputs: [{ identifier: 'age', title: 'Age', type: 'Integer' }],
+                  outputs: [{ identifier: 'eligible', title: 'Eligible', type: 'Boolean' }],
+                },
+                {
+                  id: 'd2',
+                  identifier: 'benefit-calc',
+                  title: 'Benefit calculation',
+                  inputs: [{ identifier: 'eligible', title: 'Eligible', type: 'Boolean' }],
+                  outputs: [{ identifier: 'eligible', title: 'Eligible', type: 'Boolean' }],
+                },
+              ],
+            },
+          }),
+        });
+      }
+      return Promise.resolve({ json: async () => ({ success: true, data: [] }) });
+    });
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:2 loading:false');
+
+    await userEvent.click(screen.getByText('load-two-dmn'));
+
+    expect(screen.getByText('warnings:duplicate_dmn,duplicate_dmn')).toBeTruthy();
+  });
+
+  test('a single-DMN chain warns that orchestration adds little', async () => {
+    global.fetch = fetchMock();
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:1 loading:false');
+
+    await userEvent.click(screen.getByText('load-sequential'));
+
+    expect(screen.getByText('warnings:performance')).toBeTruthy();
+  });
+});
+
+describe('ChainBuilder — DRD presets', () => {
+  test('a DRD preset derives synthetic input types from its default values', async () => {
+    global.fetch = fetchMock();
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:1 loading:false');
+
+    await userEvent.click(screen.getByText('load-drd-typed'));
+
+    expect(screen.getByText('required:flag:Boolean,count:Integer,label:String')).toBeTruthy();
+  });
+
+  test('a DRD preset without default inputs loads with an empty input set', async () => {
+    global.fetch = fetchMock();
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:1 loading:false');
+
+    await userEvent.click(screen.getByText('load-drd-bare'));
+
+    expect(screen.getByText('chain:drd-bare')).toBeTruthy();
+    expect(screen.getByText('inputs:{}')).toBeTruthy();
+    expect(screen.getByText('required:')).toBeTruthy();
+  });
+});
+
+describe('ChainBuilder — drag and drop', () => {
+  async function renderLoaded() {
+    global.fetch = fetchMock();
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:1 loading:false');
+  }
+
+  test('a drop outside any droppable leaves the chain untouched', async () => {
+    await renderLoaded();
+
+    act(() => dnd.onDragEnd!({ active: { id: 'age-check' }, over: null }));
+
+    expect(screen.getByText('composer-chain:')).toBeTruthy();
+  });
+
+  test('dropping a DMN on the chain droppable appends it', async () => {
+    await renderLoaded();
+
+    act(() => dnd.onDragEnd!({ active: { id: 'age-check' }, over: { id: 'chain-droppable' } }));
+
+    expect(screen.getByText('composer-chain:age-check')).toBeTruthy();
+  });
+
+  test('dropping a DMN already in the chain does not duplicate it', async () => {
+    await renderLoaded();
+
+    act(() => dnd.onDragEnd!({ active: { id: 'age-check' }, over: { id: 'chain-droppable' } }));
+    act(() => dnd.onDragEnd!({ active: { id: 'age-check' }, over: { id: 'chain-droppable' } }));
+
+    expect(screen.getByText('composer-chain:age-check')).toBeTruthy();
+  });
+
+  test('dropping one chained DMN onto another reorders the chain', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/api/dmns?')) {
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: {
+              dmns: [
+                {
+                  id: 'd1',
+                  identifier: 'age-check',
+                  title: 'Age check',
+                  inputs: [],
+                  outputs: [],
+                },
+                {
+                  id: 'd2',
+                  identifier: 'benefit-calc',
+                  title: 'Benefit calculation',
+                  inputs: [],
+                  outputs: [],
+                },
+              ],
+            },
+          }),
+        });
+      }
+      return Promise.resolve({ json: async () => ({ success: true, data: [] }) });
+    });
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:2 loading:false');
+
+    act(() => dnd.onDragEnd!({ active: { id: 'age-check' }, over: { id: 'chain-droppable' } }));
+    act(() => dnd.onDragEnd!({ active: { id: 'benefit-calc' }, over: { id: 'chain-droppable' } }));
+    expect(screen.getByText('composer-chain:age-check,benefit-calc')).toBeTruthy();
+
+    act(() => dnd.onDragEnd!({ active: { id: 'benefit-calc' }, over: { id: 'age-check' } }));
+
+    expect(screen.getByText('composer-chain:benefit-calc,age-check')).toBeTruthy();
+  });
+
+  test('dropping a chained DMN back onto itself leaves the order unchanged', async () => {
+    await renderLoaded();
+    act(() => dnd.onDragEnd!({ active: { id: 'age-check' }, over: { id: 'chain-droppable' } }));
+
+    act(() => dnd.onDragEnd!({ active: { id: 'age-check' }, over: { id: 'age-check' } }));
+
+    expect(screen.getByText('composer-chain:age-check')).toBeTruthy();
+  });
+
+  test('the drag overlay previews the DMN being dragged, and clears on drop', async () => {
+    await renderLoaded();
+
+    act(() => dnd.onDragStart!({ active: { id: 'age-check' } }));
+    const overlay = screen.getByTestId('drag-overlay');
+    expect(overlay.textContent).toContain('age-check');
+    expect(overlay.textContent).toContain('1 inputs → 1 outputs');
+
+    act(() => dnd.onDragEnd!({ active: { id: 'age-check' }, over: null }));
+    expect(screen.getByTestId('drag-overlay').textContent).toBe('');
+  });
+
+  test('the drag overlay stays empty for an id that matches no DMN', async () => {
+    await renderLoaded();
+
+    act(() => dnd.onDragStart!({ active: { id: 'ghost' } }));
+
+    expect(screen.getByTestId('drag-overlay').textContent).toBe('');
   });
 });

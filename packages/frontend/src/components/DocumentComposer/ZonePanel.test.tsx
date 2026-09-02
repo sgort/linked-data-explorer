@@ -1,7 +1,17 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, test, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+
+// dnd-kit's hover state is driven by a live DndContext; drive it directly instead.
+const droppableState = vi.hoisted(() => ({ isOver: false }));
+vi.mock('@dnd-kit/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@dnd-kit/core')>();
+  return {
+    ...actual,
+    useDroppable: () => ({ setNodeRef: () => {}, isOver: droppableState.isOver }),
+  };
+});
 
 vi.mock('./BlockItem', () => ({
   default: ({
@@ -26,6 +36,10 @@ import ZonePanel from './ZonePanel';
 function block(overrides: Partial<DocumentBlock> = {}): DocumentBlock {
   return { id: 'b1', type: 'text', ...overrides };
 }
+
+beforeEach(() => {
+  droppableState.isOver = false;
+});
 
 describe('ZonePanel', () => {
   test('renders the zone label, description, and block count', () => {
@@ -113,5 +127,57 @@ describe('ZonePanel', () => {
     expect(screen.getByText('Intro')).toBeTruthy();
     await userEvent.click(screen.getByText('Body'));
     expect(screen.queryByText('Intro')).toBeNull();
+  });
+
+  test('highlights the panel and its placeholder while a block hovers over the zone', () => {
+    droppableState.isOver = true;
+    const { container } = render(
+      <ZonePanel
+        zoneId="body"
+        blocks={[]}
+        readonly={false}
+        onUpdateBlock={vi.fn()}
+        onDeleteBlock={vi.fn()}
+      />
+    );
+
+    expect(container.firstElementChild?.className).toContain('bg-blue-50');
+    expect(screen.getByText('Drag a block here').parentElement?.className).toContain(
+      'border-blue-400'
+    );
+  });
+
+  test('renders in its resting colours when nothing hovers over the zone', () => {
+    const { container } = render(
+      <ZonePanel
+        zoneId="body"
+        blocks={[]}
+        readonly={false}
+        onUpdateBlock={vi.fn()}
+        onDeleteBlock={vi.fn()}
+      />
+    );
+
+    expect(container.firstElementChild?.className).toContain('bg-white');
+    expect(screen.getByText('Drag a block here').parentElement?.className).toContain(
+      'border-slate-200'
+    );
+  });
+
+  test.each([
+    ['letterhead', 'border-l-blue-500'],
+    ['reference', 'border-l-amber-500'],
+    ['annex', 'border-l-slate-400'],
+  ] as const)('gives the %s zone its own accent colour', (zoneId, colour) => {
+    const { container } = render(
+      <ZonePanel
+        zoneId={zoneId}
+        blocks={[]}
+        readonly={false}
+        onUpdateBlock={vi.fn()}
+        onDeleteBlock={vi.fn()}
+      />
+    );
+    expect(container.firstElementChild?.className).toContain(colour);
   });
 });

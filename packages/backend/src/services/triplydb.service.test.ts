@@ -149,6 +149,12 @@ describe('listGraphs', () => {
     await expect(listGraphs(CONFIG)).resolves.toEqual(['graph:a']);
   });
 
+  test('falls back to the stringified entry when a graph names itself neither way', async () => {
+    mockFetch.mockResolvedValue(response({ json: [{ id: 'g-1' }] }));
+
+    await expect(listGraphs(CONFIG)).resolves.toEqual(['[object Object]']);
+  });
+
   test('prefers graphName over name when both are present', async () => {
     mockFetch.mockResolvedValue(
       response({ json: [{ graphName: 'graph:preferred', name: 'graph:other' }] })
@@ -320,6 +326,42 @@ describe('testConnection', () => {
 
   test('returns false rather than throwing when the host is unreachable', async () => {
     mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
+
+    await expect(testConnection(CONFIG)).resolves.toBe(false);
+  });
+});
+
+// Every catch block distinguishes an Error from anything else a rejected fetch
+// can carry (a string, a DOMException-like object). Cover the non-Error side so
+// the logging fallbacks are exercised rather than assumed.
+describe('non-Error transport failures', () => {
+  test('executeQuery reports a rejection that is not an Error', async () => {
+    mockFetch.mockRejectedValue('socket hang up');
+
+    await expect(executeQuery('e', 'q')).rejects.toThrow('Failed to execute query:');
+  });
+
+  test('constructGraph reports a rejection that is not an Error', async () => {
+    mockFetch.mockRejectedValue('socket hang up');
+
+    await expect(constructGraph('e', 'q')).rejects.toThrow('Failed to execute CONSTRUCT:');
+  });
+
+  test('listGraphs reports a rejection that is not an Error', async () => {
+    mockFetch.mockRejectedValue('socket hang up');
+
+    await expect(listGraphs(CONFIG)).rejects.toThrow('Failed to list graphs:');
+  });
+
+  test('updateService reports a rejection that is not an Error', async () => {
+    // Supply the graph list so the sync POST is the only fetch, and reject it.
+    mockFetch.mockRejectedValue('socket hang up');
+
+    await expect(updateService(CONFIG, 'svc', ['g1'])).rejects.toThrow('Failed to update service:');
+  });
+
+  test('testConnection returns false for a rejection that is not an Error', async () => {
+    mockFetch.mockRejectedValue('socket hang up');
 
     await expect(testConnection(CONFIG)).resolves.toBe(false);
   });

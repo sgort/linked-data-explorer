@@ -84,6 +84,33 @@ describe('templateService.getTemplatesByCategory', () => {
     expect(result[0].category).toBe('financial');
   });
 
+  test('passes the endpoint alongside the category when provided', async () => {
+    let url = '';
+    server.use(
+      http.get('*/api/chains/templates', ({ request }) => {
+        url = request.url;
+        return HttpResponse.json({
+          success: true,
+          data: { templates: [], total: 0, categories: [] },
+        });
+      })
+    );
+
+    await templateService.getTemplatesByCategory('financial', 'https://example.com/sparql');
+
+    expect(url).toContain('category=financial');
+    expect(url).toContain(`endpoint=${encodeURIComponent('https://example.com/sparql')}`);
+  });
+
+  test('returns [] when the backend reports success: false', async () => {
+    server.use(
+      http.get('*/api/chains/templates', () =>
+        HttpResponse.json({ success: false, error: 'unknown category' })
+      )
+    );
+    expect(await templateService.getTemplatesByCategory('nope')).toEqual([]);
+  });
+
   test('returns [] (not a throw) when the request fails outright', async () => {
     server.use(http.get('*/api/chains/templates', () => HttpResponse.error()));
     expect(await templateService.getTemplatesByCategory('financial')).toEqual([]);
@@ -107,6 +134,20 @@ describe('templateService.getTemplateById', () => {
       )
     );
     expect(await templateService.getTemplateById('missing')).toBeNull();
+  });
+
+  test('passes the endpoint as a query param when provided', async () => {
+    let url = '';
+    server.use(
+      http.get('*/api/chains/templates/:id', ({ request }) => {
+        url = request.url;
+        return HttpResponse.json({ success: true, data: chainTemplate() });
+      })
+    );
+
+    await templateService.getTemplateById('t1', 'https://example.com/sparql');
+
+    expect(url).toContain(`endpoint=${encodeURIComponent('https://example.com/sparql')}`);
   });
 
   test('returns null (not a throw) when the request fails outright', async () => {

@@ -116,4 +116,35 @@ describe('RopaEditor', () => {
     expect(deleteRopa).toHaveBeenCalledWith('r1');
     expect(await screen.findByText('Select a record or create a new one')).toBeTruthy();
   });
+
+  test('deleting a record other than the active one keeps the selection', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    deleteRopa.mockResolvedValue(undefined);
+    const other = record({ id: 'r2', title: 'Kinderbijslag' });
+    listRopa.mockResolvedValueOnce([record(), other]).mockResolvedValue([record()]);
+    render(<RopaEditor />);
+
+    await userEvent.click(await screen.findByText('Zorgtoeslag'));
+
+    const card = screen.getByText('Kinderbijslag').closest('div')!.parentElement!;
+    await userEvent.click(within(card).getByRole('button'));
+
+    expect(deleteRopa).toHaveBeenCalledWith('r2');
+    expect(await screen.findByRole('heading', { name: 'Zorgtoeslag' })).toBeTruthy();
+  });
+
+  test('survives a failed load and still renders the empty list', async () => {
+    listRopa.mockRejectedValue(new Error('backend unreachable'));
+    render(<RopaEditor />);
+
+    expect(await screen.findByText('Select a record or create a new one')).toBeTruthy();
+    expect(screen.queryByText('Zorgtoeslag')).toBeNull();
+  });
+
+  test('survives a load rejection that is not an Error', async () => {
+    listRopa.mockRejectedValue('boom');
+    render(<RopaEditor />);
+
+    expect(await screen.findByText('Select a record or create a new one')).toBeTruthy();
+  });
 });

@@ -369,3 +369,158 @@ describe('FormEditor — close / discard-changes gate', () => {
     expect(screen.getByText('No form selected')).toBeTruthy();
   });
 });
+
+describe('FormEditor — guards and no-ops', () => {
+  function setup(forms = [form()], lookup = form()) {
+    getForms.mockReturnValue(forms);
+    getForm.mockReturnValue(lookup);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue(forms);
+  }
+
+  test('creating a new form while dirty is cancelled when the discard prompt is declined', async () => {
+    setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('load-f1'));
+    await userEvent.click(screen.getByText('mark-dirty'));
+    saveForm.mockClear();
+
+    await userEvent.click(screen.getByText('create-form'));
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(saveForm).not.toHaveBeenCalled();
+    expect(screen.getByText('active:f1')).toBeTruthy();
+  });
+
+  test('re-loading the already-active form is a no-op, even while dirty', async () => {
+    setup();
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('load-f1'));
+    await userEvent.click(screen.getByText('mark-dirty'));
+    await userEvent.click(screen.getByText('load-f1'));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByText('active:f1')).toBeTruthy();
+  });
+
+  test('loading a form that has disappeared leaves the selection untouched', async () => {
+    getForms.mockReturnValue([form(), form({ id: 'f2', name: 'Other' })]);
+    getForm.mockImplementation((id: string) => (id === 'f2' ? undefined : form()));
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue(getForms());
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('load-f1'));
+    await userEvent.click(screen.getByText('load-f2'));
+
+    expect(screen.getByText('active:f1')).toBeTruthy();
+  });
+
+  test('saving keeps the committed language and organization when the footer was not touched', async () => {
+    setup(
+      [form({ language: 'de', organization: 'heusden' })],
+      form({
+        language: 'de',
+        organization: 'heusden',
+      })
+    );
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('load-f1'));
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveForm).toHaveBeenCalledWith(
+      expect.objectContaining({ language: 'de', organization: 'heusden' })
+    );
+  });
+
+  test('a footer organization edit is merged into the saved form', async () => {
+    setup();
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('load-f1'));
+    await userEvent.click(screen.getByText('set-org'));
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveForm).toHaveBeenCalledWith(expect.objectContaining({ organization: 'flevoland' }));
+  });
+
+  test('saving after the form disappeared from storage writes nothing', async () => {
+    getForms.mockReturnValue([form()]);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([form()]);
+    getForm.mockReturnValue(form());
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('load-f1'));
+    saveForm.mockClear();
+    getForm.mockReturnValue(undefined);
+
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveForm).not.toHaveBeenCalled();
+  });
+
+  test('renaming a form that no longer exists writes nothing', async () => {
+    getForms.mockReturnValue([form()]);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([form()]);
+    getForm.mockReturnValue(form());
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('load-f1'));
+    saveForm.mockClear();
+    getForm.mockReturnValue(undefined);
+
+    await userEvent.click(screen.getByText('rename-active'));
+
+    expect(saveForm).not.toHaveBeenCalled();
+  });
+
+  test('footer edits are ignored while no form is active', async () => {
+    setup([form()]);
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('set-language'));
+    await userEvent.click(screen.getByText('set-org'));
+    await userEvent.click(screen.getByText('load-f1'));
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveForm).toHaveBeenCalledWith(
+      expect.objectContaining({ language: undefined, organization: undefined })
+    );
+  });
+
+  test('declining the delete confirmation keeps the form', async () => {
+    setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('load-f1'));
+    await userEvent.click(screen.getByText('delete-f1'));
+
+    expect(deleteForm).not.toHaveBeenCalled();
+    expect(screen.getByText('active:f1')).toBeTruthy();
+  });
+
+  test('deleting a form other than the active one keeps the selection', async () => {
+    getForms.mockReturnValue([form(), form({ id: 'f2', name: 'Other' })]);
+    getForm.mockImplementation((id: string) =>
+      id === 'f2' ? form({ id: 'f2', name: 'Other' }) : form()
+    );
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue(getForms());
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<FormEditor />);
+
+    await userEvent.click(screen.getByText('load-f1'));
+    await userEvent.click(screen.getByText('delete-f2'));
+
+    expect(deleteForm).toHaveBeenCalledWith('f2');
+    expect(screen.getByText('active:f1')).toBeTruthy();
+  });
+});
