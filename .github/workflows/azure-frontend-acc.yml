@@ -54,6 +54,8 @@ jobs:
         run: npm ci
       - name: Run linter
         run: npm run lint --workspace=packages/frontend
+      - name: Typecheck
+        run: npm run typecheck --workspace=packages/frontend
       - name: Unit tests
         run: npm test --workspace=packages/frontend
       - name: Build And Deploy

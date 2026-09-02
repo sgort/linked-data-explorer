@@ -15,12 +15,16 @@ const deleteTemplate = vi.fn((id: string) => {
   store = store.filter((t) => t.id !== id);
 });
 
+// Forwarded with each mock's own signature rather than (...args: unknown[]).
+// The mocks are typed by their implementations, so spreading an unknown[] into
+// them is not assignable — the indirection is only here because vi.mock is
+// hoisted above the const declarations and must reference them lazily.
 vi.mock('../../services/documentService', () => ({
   DocumentService: {
-    getTemplates: (...args: unknown[]) => getTemplates(...args),
-    saveTemplate: (...args: unknown[]) => saveTemplate(...args),
-    getTemplate: (...args: unknown[]) => getTemplate(...args),
-    deleteTemplate: (...args: unknown[]) => deleteTemplate(...args),
+    getTemplates: () => getTemplates(),
+    saveTemplate: (t: { id: string }) => saveTemplate(t),
+    getTemplate: (id: string) => getTemplate(id),
+    deleteTemplate: (id: string) => deleteTemplate(id),
   },
 }));
 
