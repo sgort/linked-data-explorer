@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-communiceren-overdracht-installatiedeel",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Communicate the handover of the installation part"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The project contains technical installations, so the installation part is handed to Beheer & Onderhoud under BO13.1. Communicate that handover to the OvD and the directievoerder; preparation of the execution then continues."
+    },
+    {
+      "id": "F_Ontvangers",
+      "type": "textfield",
+      "label": "Communicated to",
+      "key": "overdrachtOntvangers",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Toel",
+      "type": "textarea",
+      "label": "Scope of the installation part",
+      "key": "overdrachtInstallatiedeelToelichting",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Communicated on",
+      "key": "overdrachtGecommuniceerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-bespreken-toezichtsplan",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Discuss and adopt the supervision plan"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder, toezichthouder and vestigingsmanager discuss the final supervision plan and adopt it."
+    },
+    {
+      "id": "F_Vastgesteld",
+      "type": "select",
+      "label": "Supervision plan adopted",
+      "key": "toezichtsplanVastgesteld",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Adopted by",
+      "key": "toezichtsplanVastgesteldDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Adopted on",
+      "key": "toezichtsplanVastgesteldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Comments",
+      "key": "toezichtsplanOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

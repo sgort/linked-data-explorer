@@ -1,0 +1,232 @@
+{
+  "id": "rip-vastgesteld-toezichtsplan",
+  "name": "RIP — Adopted Supervision Plan (Vastgesteld toezichtsplan)",
+  "description": "The supervision plan as adopted by the directievoerder, toezichthouder and vestigingsmanager.",
+  "processKey": "RipR51Process",
+  "serviceId": "RipR51",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{definitiefToezichtsplanReferentie}}",
+      "variableKey": "definitiefToezichtsplanReferentie",
+      "source": "process",
+      "label": "Supervision plan reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{toezichtsplanOntvangers}}",
+      "variableKey": "toezichtsplanOntvangers",
+      "source": "process",
+      "label": "Sent to"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{toezichtsplanVerstuurdOp}}",
+      "variableKey": "toezichtsplanVerstuurdOp",
+      "source": "process",
+      "label": "Sent on"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{toezichtsplanVastgesteld}}",
+      "variableKey": "toezichtsplanVastgesteld",
+      "source": "process",
+      "label": "Adopted"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{toezichtsplanVastgesteldDoor}}",
+      "variableKey": "toezichtsplanVastgesteldDoor",
+      "source": "process",
+      "label": "Adopted by"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{toezichtsplanVastgesteldOp}}",
+      "variableKey": "toezichtsplanVastgesteldOp",
+      "source": "process",
+      "label": "Adopted on"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{toezichtsplanOpmerkingen}}",
+      "variableKey": "toezichtsplanOpmerkingen",
+      "source": "process",
+      "label": "Comments"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Toezichtsplan {{definitiefToezichtsplanReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Adopted supervision plan",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Adopted supervision plan"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Supervision plan {{definitiefToezichtsplanReferentie}} for project {{projectNumber}} — {{projectName}} was sent to {{toezichtsplanOntvangers}} on {{toezichtsplanVerstuurdOp}} and discussed thereafter."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Adopted: {{toezichtsplanVastgesteld}}, by {{toezichtsplanVastgesteldDoor}} on {{toezichtsplanVastgesteldOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "{{toezichtsplanOpmerkingen}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Adopted by the directievoerder, toezichthouder and vestigingsmanager"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}
