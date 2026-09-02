@@ -1,0 +1,241 @@
+{
+  "id": "rip-verslag-schouw",
+  "name": "RIP — Inspection Report (Verslag schouw)",
+  "description": "The report of the inspection held no later than two weeks before the maintenance period ends.",
+  "processKey": "RipR54Process",
+  "serviceId": "RipR54",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{verslagSchouwReferentie}}",
+      "variableKey": "verslagSchouwReferentie",
+      "source": "process",
+      "label": "Inspection report reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{schouwGehoudenOp}}",
+      "variableKey": "schouwGehoudenOp",
+      "source": "process",
+      "label": "Held on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{onderhoudsperiodeEinde}}",
+      "variableKey": "onderhoudsperiodeEinde",
+      "source": "process",
+      "label": "End of maintenance period"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{schouwAanwezigen}}",
+      "variableKey": "schouwAanwezigen",
+      "source": "process",
+      "label": "Attendees"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{schouwRestpunten}}",
+      "variableKey": "schouwRestpunten",
+      "source": "process",
+      "label": "Outstanding restpunten"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{verslagSchouwVerstuurdOp}}",
+      "variableKey": "verslagSchouwVerstuurdOp",
+      "source": "process",
+      "label": "Sent on"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{verslagSchouwOpmerkingen}}",
+      "variableKey": "verslagSchouwOpmerkingen",
+      "source": "process",
+      "label": "Notes"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Verslag schouw {{verslagSchouwReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Inspection report",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Inspection report"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The inspection for project {{projectNumber}} — {{projectName}} was held on {{schouwGehoudenOp}}, ahead of the end of the maintenance period on {{onderhoudsperiodeEinde}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Attendees: {{schouwAanwezigen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Outstanding restpunten: {{schouwRestpunten}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The report was sent to the projectleider on {{verslagSchouwVerstuurdOp}}. {{verslagSchouwOpmerkingen}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Recorded by the directievoerder"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

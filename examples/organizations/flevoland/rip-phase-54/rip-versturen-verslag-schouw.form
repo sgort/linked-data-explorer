@@ -1,0 +1,43 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-versturen-verslag-schouw",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the inspection report to the projectleider"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Send the verslag schouw to the projectleider."
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "verslagSchouwVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Notes",
+      "key": "verslagSchouwOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

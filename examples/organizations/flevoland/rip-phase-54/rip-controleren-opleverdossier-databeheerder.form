@@ -1,0 +1,65 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-controleren-opleverdossier-databeheerder",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Check the delivery dossier (databeheerder)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The databeheerder checks the opleverdossier from the data side. The verdict here is the joint verdict of the beheerder and the databeheerder."
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Check findings",
+      "key": "opleverdossierBevindingenDatabeheerder",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Approved by beheerder and databeheerder",
+      "key": "opleverdossierAkkoordBeheer",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Checked on",
+      "key": "opleverdossierGecontroleerdOpDatabeheerder",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

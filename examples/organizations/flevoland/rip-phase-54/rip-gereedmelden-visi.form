@@ -1,0 +1,43 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-gereedmelden-visi",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Report the work complete in VISI"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Report the work complete in VISI. The maintenance period is closed and R6.1 Opstellen Overdrachtsverklaring follows."
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Reported complete on",
+      "key": "gereedgemeldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Closing notes",
+      "key": "gereedmeldingOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

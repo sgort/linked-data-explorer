@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-versturen-brief-eindafrekening",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the final-account letter to DV and PL"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The ondersteuner sends the final-account letter to the directievoerder and the projectleider, so the work can be closed out."
+    },
+    {
+      "id": "F_Aan",
+      "type": "textfield",
+      "label": "Sent to",
+      "key": "briefEindafrekeningVerstuurdAan",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "briefEindafrekeningVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

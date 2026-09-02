@@ -1,0 +1,227 @@
+{
+  "id": "rip-kennisgeving-schorsing",
+  "name": "RIP — Notice of Temporary Suspension (Kennisgeving tijdelijke schorsing)",
+  "description": "Notice suspending the contractor from taking part in the groslijst, where restpunten were left incomplete.",
+  "processKey": "RipR54Process",
+  "serviceId": "RipR54",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{kennisgevingReferentie}}",
+      "variableKey": "kennisgevingReferentie",
+      "source": "process",
+      "label": "Notice reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{kennisgevingVerstuurdOp}}",
+      "variableKey": "kennisgevingVerstuurdOp",
+      "source": "process",
+      "label": "Sent on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{schorsingGrond}}",
+      "variableKey": "schorsingGrond",
+      "source": "process",
+      "label": "Grounds"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{restpuntenOpen}}",
+      "variableKey": "restpuntenOpen",
+      "source": "process",
+      "label": "Restpunten open"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{schorsingDuur}}",
+      "variableKey": "schorsingDuur",
+      "source": "process",
+      "label": "Duration"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Kennisgeving {{kennisgevingReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Notice of temporary suspension from the groslijst",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Notice of temporary suspension from the groslijst"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Notice {{kennisgevingReferentie}} for project {{projectNumber}} — {{projectName}} was sent on {{kennisgevingVerstuurdOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Grounds: {{schorsingGrond}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Restpunten left open: {{restpuntenOpen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Duration of the suspension: {{schorsingDuur}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Sent by the directievoerder"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

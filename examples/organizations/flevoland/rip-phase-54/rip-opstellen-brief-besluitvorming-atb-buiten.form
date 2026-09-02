@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-brief-besluitvorming-atb-buiten",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the letter, submit it for decision-making and fill in the ATB webform"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The final account falls outside the credit, so the letter goes out with the concerndirecteur decision note and the ATB webform."
+    },
+    {
+      "id": "F_Atb",
+      "type": "textfield",
+      "label": "ATB webform reference",
+      "key": "atbEindafrekeningBuitenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Inhoud",
+      "type": "textarea",
+      "label": "What was recorded in the ATB",
+      "key": "atbEindafrekeningBuitenInhoud",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Submitted on",
+      "key": "briefAtbBuitenIngediendOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

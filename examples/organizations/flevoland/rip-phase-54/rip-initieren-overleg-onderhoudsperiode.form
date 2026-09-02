@@ -1,0 +1,57 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-initieren-overleg-onderhoudsperiode",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Initiate the meeting before the maintenance period ends"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder initiates the meeting to be held no later than two weeks before the end of the maintenance period."
+    },
+    {
+      "id": "F_Datum",
+      "type": "datetime",
+      "label": "Meeting date",
+      "key": "schouwOverlegDatum",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Einde",
+      "type": "datetime",
+      "label": "End of the maintenance period",
+      "key": "onderhoudsperiodeEinde",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Genodigden",
+      "type": "textarea",
+      "label": "Invited",
+      "key": "schouwGenodigden",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

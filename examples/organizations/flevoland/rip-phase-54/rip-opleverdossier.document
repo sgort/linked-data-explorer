@@ -1,0 +1,292 @@
+{
+  "id": "rip-opleverdossier",
+  "name": "RIP — Delivery Dossier (Opleverdossier)",
+  "description": "The contractor delivery dossier and its ILS data, as tested by the directievoerder and checked by the beheerder and the databeheerder.",
+  "processKey": "RipR54Process",
+  "serviceId": "RipR54",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{opleverdossierReferentie}}",
+      "variableKey": "opleverdossierReferentie",
+      "source": "process",
+      "label": "Delivery dossier reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{opleverdossierVersie}}",
+      "variableKey": "opleverdossierVersie",
+      "source": "process",
+      "label": "Version"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{opleverdossierOntvangenOp}}",
+      "variableKey": "opleverdossierOntvangenOp",
+      "source": "process",
+      "label": "Received on"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{ilsReferentie}}",
+      "variableKey": "ilsReferentie",
+      "source": "process",
+      "label": "ILS reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{opleverdossierGetoetstOp}}",
+      "variableKey": "opleverdossierGetoetstOp",
+      "source": "process",
+      "label": "Tested on"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{opleverdossierBevindingenDv}}",
+      "variableKey": "opleverdossierBevindingenDv",
+      "source": "process",
+      "label": "Directievoerder findings"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{opleverdossierAkkoordDv}}",
+      "variableKey": "opleverdossierAkkoordDv",
+      "source": "process",
+      "label": "Approved by DV"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{opleverdossierBevindingenBeheerder}}",
+      "variableKey": "opleverdossierBevindingenBeheerder",
+      "source": "process",
+      "label": "Beheerder findings"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{opleverdossierBevindingenDatabeheerder}}",
+      "variableKey": "opleverdossierBevindingenDatabeheerder",
+      "source": "process",
+      "label": "Databeheerder findings"
+    },
+    {
+      "id": "b12",
+      "placeholder": "{{opleverdossierAkkoordBeheer}}",
+      "variableKey": "opleverdossierAkkoordBeheer",
+      "source": "process",
+      "label": "Approved by beheer"
+    },
+    {
+      "id": "b13",
+      "placeholder": "{{beheersysteemReferentie}}",
+      "variableKey": "beheersysteemReferentie",
+      "source": "process",
+      "label": "Asset management system"
+    },
+    {
+      "id": "b14",
+      "placeholder": "{{opleverdossierVerwerktOp}}",
+      "variableKey": "opleverdossierVerwerktOp",
+      "source": "process",
+      "label": "Processed on"
+    },
+    {
+      "id": "b15",
+      "placeholder": "{{technischeInstallatiesAanwezig}}",
+      "variableKey": "technischeInstallatiesAanwezig",
+      "source": "process",
+      "label": "Technical installations"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Opleverdossier {{opleverdossierReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Delivery dossier",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Delivery dossier"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Opleverdossier {{opleverdossierReferentie}} (version {{opleverdossierVersie}}) for project {{projectNumber}} — {{projectName}} was received on {{opleverdossierOntvangenOp}}, with ILS {{ilsReferentie}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Directievoerder test on {{opleverdossierGetoetstOp}}: {{opleverdossierBevindingenDv}} Approved: {{opleverdossierAkkoordDv}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Beheerder check: {{opleverdossierBevindingenBeheerder}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Databeheerder check: {{opleverdossierBevindingenDatabeheerder}} Approved by beheerder and databeheerder: {{opleverdossierAkkoordBeheer}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Processed in asset management system {{beheersysteemReferentie}} on {{opleverdossierVerwerktOp}}. Technical installations present: {{technischeInstallatiesAanwezig}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Delivered by the contractor, accepted by the beheerder and the databeheerder"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}
