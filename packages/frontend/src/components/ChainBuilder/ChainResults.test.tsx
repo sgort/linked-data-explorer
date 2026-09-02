@@ -56,7 +56,16 @@ describe('ChainResults', () => {
     render(
       <ChainResults
         result={result({
-          steps: [{ dmnId: 'age-check', duration: 10, outputs: { eligible: true } }],
+          steps: [
+            {
+              dmnId: 'age-check',
+              dmnTitle: 'Age check',
+              startTime: 1_700_000_000_000,
+              inputs: { age: 42 },
+              duration: 10,
+              outputs: { eligible: true },
+            },
+          ],
         })}
       />
     );
@@ -71,7 +80,16 @@ describe('ChainResults', () => {
     render(
       <ChainResults
         result={result({
-          steps: [{ dmnId: 'age-check', duration: 10, error: 'Missing variable' }],
+          steps: [
+            {
+              dmnId: 'age-check',
+              dmnTitle: 'Age check',
+              startTime: 1_700_000_000_000,
+              inputs: { age: 42 },
+              duration: 10,
+              error: 'Missing variable',
+            },
+          ],
         })}
       />
     );

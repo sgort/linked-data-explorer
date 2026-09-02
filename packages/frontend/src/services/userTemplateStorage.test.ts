@@ -15,12 +15,21 @@ import {
 
 const ENDPOINT = 'https://api.open-regels.triply.cc/datasets/x/facts/sparql';
 
+/** Endpoint deliberately unlike ENDPOINT — see the note on `endpoint` below. */
+const IGNORED_ENDPOINT = 'https://ignored.example.com/sparql';
+
 function baseTemplate() {
   return {
     name: 'My chain',
+    description: 'A chain saved from the builder',
+    dmnIds: ['age-check', 'income-check'],
+    // saveUserTemplate spreads the payload and then overwrites endpoint from
+    // its own argument, so whatever is passed here is discarded. Passing a
+    // different value keeps `expect(saved.endpoint).toBe(ENDPOINT)` honest.
+    endpoint: IGNORED_ENDPOINT,
     type: 'sequential' as const,
     category: 'custom' as const,
-    tags: [],
+    tags: [] as string[],
     complexity: 'simple' as const,
     estimatedTime: 5,
     isPublic: false,
