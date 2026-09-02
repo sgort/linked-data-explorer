@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-reageren-naar-aannemer",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Respond to the contractor"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The opleverdossier was not approved by the beheerder and the databeheerder. Respond to the contractor so the dossier can be put right, then check it again."
+    },
+    {
+      "id": "F_Reactie",
+      "type": "textarea",
+      "label": "What the contractor is asked to put right",
+      "key": "reactieAannemer",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Responded on",
+      "key": "gereageerdNaarAannemerOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

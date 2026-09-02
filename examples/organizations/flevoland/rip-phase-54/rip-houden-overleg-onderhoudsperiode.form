@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-houden-overleg-onderhoudsperiode",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Hold the meeting before the maintenance period ends"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder, vestigingsmanager, toezichthouder and beheerder walk the work and record the outstanding restpunten in the verslag schouw."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Inspection report reference",
+      "key": "verslagSchouwReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aanwezig",
+      "type": "textarea",
+      "label": "Attendees",
+      "key": "schouwAanwezigen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Restpunten",
+      "type": "textarea",
+      "label": "Outstanding restpunten",
+      "key": "schouwRestpunten",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Held on",
+      "key": "schouwGehoudenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

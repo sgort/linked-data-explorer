@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-ontvangen-opleverdossier",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Receive the delivery dossier"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder receives the opleverdossier and the ILS data from the contractor. Where an earlier version was rejected, this is the corrected dossier."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Delivery dossier reference",
+      "key": "opleverdossierReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Ils",
+      "type": "textfield",
+      "label": "ILS reference",
+      "key": "ilsReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Versie",
+      "type": "number",
+      "label": "Dossier version",
+      "key": "opleverdossierVersie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Received on",
+      "key": "opleverdossierOntvangenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,234 @@
+{
+  "id": "rip-intern-schouwrapport",
+  "name": "RIP — Internal Inspection Report (Intern schouwrapport)",
+  "description": "The directievoerder assessment of which restpunten were completed, closing the maintenance period.",
+  "processKey": "RipR54Process",
+  "serviceId": "RipR54",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{internSchouwrapportReferentie}}",
+      "variableKey": "internSchouwrapportReferentie",
+      "source": "process",
+      "label": "Internal report reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{restpuntenBeoordeeldOp}}",
+      "variableKey": "restpuntenBeoordeeldOp",
+      "source": "process",
+      "label": "Assessed on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{onderhoudsperiodeEinde}}",
+      "variableKey": "onderhoudsperiodeEinde",
+      "source": "process",
+      "label": "End of maintenance period"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{restpuntenGereed}}",
+      "variableKey": "restpuntenGereed",
+      "source": "process",
+      "label": "Restpunten completed"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{restpuntenOpen}}",
+      "variableKey": "restpuntenOpen",
+      "source": "process",
+      "label": "Restpunten open"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{restpuntenAkkoord}}",
+      "variableKey": "restpuntenAkkoord",
+      "source": "process",
+      "label": "All completed"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Schouwrapport {{internSchouwrapportReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Internal inspection report",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Internal inspection report"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Internal inspection report {{internSchouwrapportReferentie}} for project {{projectNumber}} — {{projectName}} was drawn up on {{restpuntenBeoordeeldOp}}, closing the maintenance period that ran to {{onderhoudsperiodeEinde}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Restpunten completed: {{restpuntenGereed}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Restpunten still open: {{restpuntenOpen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "All restpunten completed: {{restpuntenAkkoord}}. Where they were not, a notice of temporary suspension follows; the maintenance period closes either way."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the directievoerder"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

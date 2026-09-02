@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-brief-binnen-krediet",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the final-account letter drawn up (within the credit)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The final account stays within the credit but exceeds the contract sum, so the letter goes out with the ATB webform — and, above EUR 50.000, with the AO decision note."
+    },
+    {
+      "id": "F_Opdracht",
+      "type": "textarea",
+      "label": "Instruction to the ondersteuner",
+      "key": "briefOpdrachtBinnenKrediet",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Requested on",
+      "key": "briefVerzochtOpBinnenKrediet",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
