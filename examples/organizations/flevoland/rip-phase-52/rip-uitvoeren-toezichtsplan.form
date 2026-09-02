@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-uitvoeren-toezichtsplan",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Carry out supervision under the supervision plan"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The toezichthouder supervises the work for the week against the toezichtsplan adopted in R5.1."
+    },
+    {
+      "id": "F_Week",
+      "type": "textfield",
+      "label": "Week number",
+      "key": "weeknummer",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Plan",
+      "type": "textfield",
+      "label": "Adopted supervision plan reference (from R5.1)",
+      "key": "toezichtsplanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Waarnemingen",
+      "type": "textarea",
+      "label": "Observations on site",
+      "key": "toezichtWaarnemingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Supervised on",
+      "key": "toezichtUitgevoerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

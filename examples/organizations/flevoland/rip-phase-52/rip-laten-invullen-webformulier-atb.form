@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-laten-invullen-webformulier-atb",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the ATB webform filled in"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The financial effect stays within the credit and below EUR 50.000, so no decision note is needed and only the ATB webform is filled in."
+    },
+    {
+      "id": "F_Toel",
+      "type": "textarea",
+      "label": "What is to be recorded",
+      "key": "atbToelichting",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Requested on",
+      "key": "atbVerzochtOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

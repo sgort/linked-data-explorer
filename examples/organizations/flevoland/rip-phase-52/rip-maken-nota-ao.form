@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-maken-nota-ao",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the decision note (AO template)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The financial effect stays within the credit but passes EUR 50.000, so the decision note goes to the AO and the ATB webform is filled in."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Decision note reference",
+      "key": "notaAoOpleveringReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Toel",
+      "type": "textarea",
+      "label": "Substantiation",
+      "key": "notaAoOpleveringToelichting",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "notaAoOpleveringOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

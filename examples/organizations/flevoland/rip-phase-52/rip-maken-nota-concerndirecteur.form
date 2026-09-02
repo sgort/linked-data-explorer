@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-maken-nota-concerndirecteur",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the decision note (Concerndirecteur template)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The financial effect falls outside the credit, so the decision note goes to the concern director and the ATB webform is filled in."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Decision note reference",
+      "key": "notaConcerndirecteurOpleveringReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Toel",
+      "type": "textarea",
+      "label": "Substantiation",
+      "key": "notaConcerndirecteurOpleveringToelichting",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "notaConcerndirecteurOpleveringOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

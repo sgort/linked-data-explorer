@@ -1,0 +1,61 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-melden-afwijking",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Report a deviation"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The contractor reports a deviation from the work specification in an afwijkingenrapport."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Deviation report reference",
+      "key": "afwijkingenrapportReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Omschrijving",
+      "type": "textarea",
+      "label": "Deviation reported",
+      "key": "afwijkingOmschrijving",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Estimated financial effect (EUR)",
+      "key": "afwijkingBedrag"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Reported on",
+      "key": "afwijkingGemeldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

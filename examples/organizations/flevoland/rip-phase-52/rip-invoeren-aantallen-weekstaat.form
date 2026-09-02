@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-invoeren-aantallen-weekstaat",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Enter the weekly quantities in the specification administration"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Enter the approved quantities from the weekstaat in the besteksadministratie. Done weekly."
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Value entered (EUR)",
+      "key": "weekstaatBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Admin",
+      "type": "textfield",
+      "label": "Specification administration reference",
+      "key": "besteksadministratieReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Entered on",
+      "key": "weekstaatIngevoerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-sturen-overzicht-awr",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the AWR overview"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The approved terms fall outside the contract, so the deviation reporting overview (AWR) goes to the cost and contract specialist for assessment."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "AWR overview reference",
+      "key": "awrOverzichtReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Inhoud",
+      "type": "textarea",
+      "label": "Deviations in the overview",
+      "key": "awrOverzichtInhoud",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Overview value (EUR)",
+      "key": "awrOverzichtBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "awrOverzichtVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

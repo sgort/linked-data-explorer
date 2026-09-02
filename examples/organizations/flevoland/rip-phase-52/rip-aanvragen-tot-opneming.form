@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-aanvragen-tot-opneming",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Request an inspection"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The contractor requests the opneming that precedes delivery."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Inspection request reference",
+      "key": "opnemingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Requested on",
+      "key": "opnemingAangevraagdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

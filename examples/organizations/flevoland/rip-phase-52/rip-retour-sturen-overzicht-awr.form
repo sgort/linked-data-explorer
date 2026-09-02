@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-retour-sturen-overzicht-awr",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Return the AWR overview"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The AWR overview was not approved. Return it so the prices can be renegotiated with the contractor."
+    },
+    {
+      "id": "F_Reden",
+      "type": "textarea",
+      "label": "Reason for returning",
+      "key": "awrRetourReden",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Returned on",
+      "key": "awrRetourOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

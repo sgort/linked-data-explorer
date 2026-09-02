@@ -1,0 +1,74 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-afstemmen-afwijking",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Align the deviation with adviser, designer and PL"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder aligns the reported deviation with the adviser, the designer and the projectleider, and records the resulting advice."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Deviation advice reference",
+      "key": "adviesAfwijkingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Advies",
+      "type": "textarea",
+      "label": "Advice on the deviation",
+      "key": "adviesAfwijkingInhoud",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Deviation report accepted",
+      "key": "afwijkingAkkoord",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Aligned on",
+      "key": "afwijkingAfgestemdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
