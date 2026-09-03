@@ -1,10 +1,15 @@
 name: Supply-chain audit
 
 on:
+  # Deliberately NO branches filter either. A stacked pull request based on a
+  # feature branch matched no trigger and so accumulated no audit at all, while
+  # still reporting mergeStateStatus=CLEAN with zero checks — which reads as
+  # ready and is not. The moment its parent merged and GitHub retargeted it to
+  # acc, the required audit was missing and it blocked permanently: a retarget
+  # emits no pull_request event, so nothing ever ran it. Closing and reopening
+  # the pull request was the only way out, and it was needed four times in one
+  # session on 2026-09-02 (#59, #62, #63, #64).
   pull_request:
-    branches:
-      - acc
-      - main
   push:
     branches:
       - acc
@@ -12,7 +17,19 @@ on:
 
 # Deliberately NO paths filter. The audit must run on every pull request
 # regardless of what changed — filtering it would let a pull request skip the
-# gate by touching nothing the filter watches.
+# gate by touching nothing the filter watches. The branches filter removed above
+# was the same hole in another dimension: paths let a pull request skip the gate
+# by touching nothing watched, branches let it skip by targeting a base that is
+# not watched.
+#
+# This reasoning does NOT extend to the azure-*-acc.yml deploy workflows, which
+# carry the same branches filter for the opposite reason. The two fail in
+# opposite directions: an absent audit filter makes a REQUIRED CHECK silently
+# missing, so a pull request looks ready and is not; an absent deploy filter
+# makes a SCARCE ENVIRONMENT silently exhausted, every pull request against any
+# base claiming a staging slot. ronl-business-api hit that second failure on
+# 2026-08-28, when five open pull requests exhausted a three-environment
+# ceiling. Same syntax, opposite consequence — audit widely, deploy narrowly.
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

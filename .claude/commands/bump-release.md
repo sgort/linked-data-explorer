@@ -108,7 +108,17 @@ gh pr list --state open --json number,title,author,files
 ```
 
 Present the open pull requests and ask which are in scope: all, a subset, or
-none. Out-of-scope ones stay open and are gathered by the next release. Then:
+none. Out-of-scope ones stay open and are gathered by the next release.
+
+**A pull request showing `CLEAN` with zero checks has not been audited -- it has
+not run the gate, not passed it.** Read the check list, not just
+`mergeStateStatus`. This used to happen to every stacked pull request, because
+the audit was branch-filtered to `acc`/`main` and a retarget fires no
+`pull_request` event; closing and reopening was the only cure. Fixed in the
+workflow on 2026-09-02, so it should not recur -- but the reading habit is worth
+keeping, and `ronl-business-api` and `ttl-editor` still carry the old shape.
+
+Then:
 
 1. **Merge the in-scope ones before any version editing.** Dependency pull
    requests rewrite `package-lock.json` -- the same file step 4 edits. Bump the
