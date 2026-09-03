@@ -1,0 +1,234 @@
+{
+  "id": "rip-ingebruiknameschouw-vastgesteld",
+  "name": "RIP — Adopted Commissioning Inspection (Vastgestelde Ingebruiknameschouw)",
+  "description": "The commissioning inspection as adopted, with its restpuntenlijst. Either outcome returns to R5.2.",
+  "processKey": "RipR53Process",
+  "serviceId": "RipR53",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-03T00:00:00.000Z",
+  "updatedAt": "2026-09-03T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{ingebruiknameschouwReferentie}}",
+      "variableKey": "ingebruiknameschouwReferentie",
+      "source": "process",
+      "label": "Commissioning inspection reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{ingebruiknameVastgesteldDoor}}",
+      "variableKey": "ingebruiknameVastgesteldDoor",
+      "source": "process",
+      "label": "Adopted by"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{ingebruiknameVastgesteldOp}}",
+      "variableKey": "ingebruiknameVastgesteldOp",
+      "source": "process",
+      "label": "Adopted on"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{ingebruiknameAkkoord}}",
+      "variableKey": "ingebruiknameAkkoord",
+      "source": "process",
+      "label": "Early commissioning agreed"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{ingebruiknameRestpuntenlijst}}",
+      "variableKey": "ingebruiknameRestpuntenlijst",
+      "source": "process",
+      "label": "Restpuntenlijst"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{ingebruiknameDeelAreaal}}",
+      "variableKey": "ingebruiknameDeelAreaal",
+      "source": "process",
+      "label": "Part of the area"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Ingebruiknameschouw {{ingebruiknameschouwReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Adopted commissioning inspection",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Adopted commissioning inspection"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Ingebruiknameschouw {{ingebruiknameschouwReferentie}} for project {{projectNumber}} — {{projectName}} was adopted by {{ingebruiknameVastgesteldDoor}} on {{ingebruiknameVastgesteldOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Early commissioning agreed: {{ingebruiknameAkkoord}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Restpuntenlijst: {{ingebruiknameRestpuntenlijst}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Either way the work returns to R5.2. Agreed, {{ingebruiknameDeelAreaal}} goes into early use while the work carries on; not agreed, the ON executes the restpunten first."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Adopted by the directievoerder, toezichthouder and contractor"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

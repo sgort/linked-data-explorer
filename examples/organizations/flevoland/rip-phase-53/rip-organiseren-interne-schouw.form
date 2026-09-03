@@ -1,0 +1,74 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-organiseren-interne-schouw",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Organise the internal inspection"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder organises the internal schouw once the work is reported ready in R5.2, and settles which route the phase takes: a full oplevering, or an early (vervroegde) ingebruikname of part of the area while work continues."
+    },
+    {
+      "id": "F_Bestek",
+      "type": "textfield",
+      "label": "Contract specification reference (incl. annexes)",
+      "key": "bestekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Type",
+      "type": "select",
+      "label": "This inspection concerns",
+      "key": "schouwType",
+      "values": [
+        {
+          "label": "Oplevering (handover of the area)",
+          "value": "oplevering"
+        },
+        {
+          "label": "(vervroegde) Ingebruikname (early use)",
+          "value": "ingebruikname"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Deelnemers",
+      "type": "textarea",
+      "label": "Who is asked to attend",
+      "key": "schouwDeelnemers",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Datum",
+      "type": "datetime",
+      "label": "Internal inspection date",
+      "key": "interneSchouwDatum",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
