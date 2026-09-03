@@ -65,3 +65,8 @@ CLAUDE.md
 # flatten script & dir
 flatten_directory.sh
 flattened
+
+# Semgrep Guardian writes a guardian.yml + lock wherever it is invoked, so these
+# appear at the repo root and under any directory a scan was run from. Local
+# tooling state, not project config.
+.semgrep/
