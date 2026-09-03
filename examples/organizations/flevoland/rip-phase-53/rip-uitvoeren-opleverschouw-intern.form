@@ -1,0 +1,61 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-uitvoeren-opleverschouw-intern",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Carry out the internal handover inspection"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder, toezichthouder, vestigingsmanager, beheerder and projectleider walk the work against the bestek and record their findings on the schouwrapport template, before the contractor is involved."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Internal inspection report reference",
+      "key": "opleverschouwInternReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Findings",
+      "key": "opleverschouwInternBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Restpunten",
+      "type": "textarea",
+      "label": "Outstanding points noted",
+      "key": "opleverschouwInternRestpunten"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Carried out on",
+      "key": "opleverschouwInternOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

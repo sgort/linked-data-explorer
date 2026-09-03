@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-uitvoeren-ingebruiknameschouw-intern",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Carry out the internal commissioning inspection"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The same group walks the part of the area proposed for early use, against the bestek, and records its findings on the schouwrapport template."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Internal inspection report reference",
+      "key": "ingebruiknameschouwInternReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Deel",
+      "type": "textarea",
+      "label": "Part of the area proposed for early use",
+      "key": "ingebruiknameDeelAreaal",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Findings",
+      "key": "ingebruiknameschouwInternBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Carried out on",
+      "key": "ingebruiknameschouwInternOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

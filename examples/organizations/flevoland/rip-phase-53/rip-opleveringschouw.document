@@ -1,0 +1,218 @@
+{
+  "id": "rip-opleveringschouw",
+  "name": "RIP — Handover Inspection (Opleveringschouw)",
+  "description": "Sjabloon oplevering. The handover inspection carried out with the contractor and the toezichthouder.",
+  "processKey": "RipR53Process",
+  "serviceId": "RipR53",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-03T00:00:00.000Z",
+  "updatedAt": "2026-09-03T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{opleveringschouwReferentie}}",
+      "variableKey": "opleveringschouwReferentie",
+      "source": "process",
+      "label": "Handover inspection reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{opleveringschouwOp}}",
+      "variableKey": "opleveringschouwOp",
+      "source": "process",
+      "label": "Carried out on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{opleveringschouwAanwezigen}}",
+      "variableKey": "opleveringschouwAanwezigen",
+      "source": "process",
+      "label": "Attendees"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{opleveringschouwBevindingen}}",
+      "variableKey": "opleveringschouwBevindingen",
+      "source": "process",
+      "label": "Findings"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{opleverschouwInternReferentie}}",
+      "variableKey": "opleverschouwInternReferentie",
+      "source": "process",
+      "label": "Internal inspection reference"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Opleveringschouw {{opleveringschouwReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Handover inspection",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Handover inspection"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Opleveringschouw {{opleveringschouwReferentie}} for project {{projectNumber}} — {{projectName}} was carried out on {{opleveringschouwOp}} with {{opleveringschouwAanwezigen}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Findings: {{opleveringschouwBevindingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "It builds on internal inspection {{opleverschouwInternReferentie}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Carried out by the directievoerder with the contractor and the toezichthouder"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opleverschouw-aannemer",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Organise and carry out the handover inspection with the contractor"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The opleverschouw is repeated with the aannemer and the toezichthouder present, using the oplevering template and the findings from the internal inspection."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Handover inspection reference",
+      "key": "opleveringschouwReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aanwezig",
+      "type": "textarea",
+      "label": "Attendees",
+      "key": "opleveringschouwAanwezigen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Findings with the contractor",
+      "key": "opleveringschouwBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Carried out on",
+      "key": "opleveringschouwOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

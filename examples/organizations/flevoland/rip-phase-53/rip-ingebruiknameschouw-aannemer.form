@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-ingebruiknameschouw-aannemer",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Organise and carry out the commissioning inspection with the contractor"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The ingebruiknameschouw is repeated with the aannemer and the toezichthouder present, using the ingebruikname template."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Commissioning inspection reference",
+      "key": "ingebruiknameschouwReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aanwezig",
+      "type": "textarea",
+      "label": "Attendees",
+      "key": "ingebruiknameschouwAanwezigen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Findings with the contractor",
+      "key": "ingebruiknameschouwBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Carried out on",
+      "key": "ingebruiknameschouwOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}
