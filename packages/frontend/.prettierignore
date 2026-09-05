@@ -14,6 +14,11 @@ yarn.lock
 .cache/
 .parcel-cache/
 
+# Semgrep Guardian writes state into the working tree, one .semgrep/ per
+# directory it scans. Already ignored by git (.gitignore); ignored here too so
+# check-format does not fail on a tool's scratch files.
+.semgrep/
+
 # Misc
 .DS_Store
 *.log
