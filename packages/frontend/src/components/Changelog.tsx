@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import React, { useState } from 'react';
 
 import changelogData from '../changelog.json';
+import { getBuildInfo } from '../utils/buildInfo';
 
 // ── Per-commit format (v2) ───────────────────────────────────────────
 // A version entry with "format": "commits" is the new shape bump-release
@@ -132,6 +133,11 @@ function CommitBlock({ commit }: { commit: ChangelogCommit }) {
 }
 
 const Changelog: React.FC = () => {
+  // Which build is being served, as opposed to which release the version
+  // entries below name. Cheap and synchronous — see utils/buildInfo.ts for why
+  // it is a call rather than a module-scope constant.
+  const buildInfo = getBuildInfo();
+
   const [expandedVersions, setExpandedVersions] = useState<Set<string>>(
     new Set([versions[0]?.version])
   );
@@ -199,6 +205,11 @@ const Changelog: React.FC = () => {
           <h1 className="text-3xl font-bold text-slate-800 mb-2">Changelog</h1>
           <p className="text-slate-600">
             Track new features, improvements, and bug fixes in Linked Data Explorer.
+          </p>
+          {/* title carries the full 40-char SHA so it can be copied for a
+              lookup; the visible label stays short. */}
+          <p className="mt-2 font-mono text-xs text-slate-400" title={buildInfo.sha || undefined}>
+            {buildInfo.label}
           </p>
         </div>
 

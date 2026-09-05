@@ -61,6 +61,24 @@ jobs:
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
+        # Stamps the bundle with which BUILD it is, not just which release —
+        # the changelog version is authored at release time, so ACC and
+        # production can serve different builds of the same version string.
+        #
+        # These sit on the deploy step rather than a build step because there
+        # is no build step: app_build_command hands the build to Oryx inside
+        # the action's own container, and the action forwards the runner's
+        # environment into it. That is also why nothing is derived from git at
+        # build time — .git is not guaranteed to exist in that container, and a
+        # build id that silently fails to resolve is worse than none.
+        #
+        # Absent (local builds, forks), src/utils/buildInfo.ts renders
+        # 'local build'. On a pull request github.sha is the merge commit
+        # GitHub synthesises, so a preview's SHA matches no commit in the
+        # branch — that is the commit that was built, not a bug to chase.
+        env:
+          VITE_BUILD_SHA: ${{ github.sha }}
+          VITE_BUILD_RUN: ${{ github.run_number }}
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BRAVE_BAY_04F351E03 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
