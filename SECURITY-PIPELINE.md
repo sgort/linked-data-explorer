@@ -175,8 +175,23 @@ each other and with GitHub. The check was right and the register was stale. The
 row above was updated on that pull request's branch, which is the habit this
 section describes, and the check went green before it merged.
 
-The step is `continue-on-error: true` until that habit is established. See
-issue [#73](https://github.com/sgort/linked-data-explorer/issues/73).
+**The step blocks.** It was introduced non-blocking in
+[#77](https://github.com/sgort/linked-data-explorer/pull/77) and promoted in
+[#81](https://github.com/sgort/linked-data-explorer/pull/81), once the habit
+above had been exercised twice —
+[#66](https://github.com/sgort/linked-data-explorer/pull/66)
+(`actions/checkout` → v7.0.1, which also collapsed a two-digest split pin) and
+[#67](https://github.com/sgort/linked-data-explorer/pull/67)
+(`actions/setup-node` → v7.0.0). Both went green on the branch and merged green.
+
+So an action bump that leaves this table behind now **fails the audit**. That is
+the intended cost: the register is part of the policy, and a register describing
+workflows that have moved on is not documentation, it is a claim that is no
+longer true.
+
+If the GitHub API ever fails the gate through an outage or a rate limit, add
+`--offline` rather than restoring `continue-on-error` — it keeps the register
+half blocking and drops only the network-dependent half.
 
 An action may legitimately hold **more than one row**. Until #66 this table
 carried two for `actions/checkout` — v4.4.0 in three workflows, v3.7.0 in four,
