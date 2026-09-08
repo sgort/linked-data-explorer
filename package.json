@@ -18,6 +18,7 @@
     "test": "npm run test --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",
     "check-format": "npm run check-format --workspaces --if-present",
+    "check-supply-chain": "node scripts/check-supply-chain.mjs",
     "postinstall": "husky install || true"
   },
   "devDependencies": {
