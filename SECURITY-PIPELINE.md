@@ -29,8 +29,7 @@ two together.
 
 | Action                         | Pinned at                                  | Version          |
 | ------------------------------ | ------------------------------------------ | ---------------- |
-| `actions/checkout`             | `11d5960a326750d5838078e36cf38b85af677262` | v4.4.0           |
-| `actions/checkout`             | `a37ce9120846195fa4ece8f58b268e6043cb2f26` | v3.7.0           |
+| `actions/checkout`             | `3d3c42e5aac5ba805825da76410c181273ba90b1` | v7.0.1           |
 | `actions/setup-node`           | `49933ea5288caeca8642d1e84afbd3f7d6820020` | v4.4.0           |
 | `Azure/static-web-apps-deploy` | `4d27395796ac319302594769cfe812bd207490b1` | v1 (branch head) |
 | `azure/webapps-deploy`         | `02a81bead70021f5284939794bcec79c271ab383` | v3.0.8           |
@@ -106,10 +105,15 @@ there is nothing for it to resolve. Worth stating precisely, because
 
 ## Version currency
 
-The four `ropa-site` action references pin `actions/checkout` at **v3.7.0**,
-four majors behind. Pinned is not the same as current: a hash freezes a version
-in place, including an old one. Renovate now raises these as upgrades under the
-14-day cooldown, which is the intended way for them to move — deliberately, in a
+All seven `actions/checkout` references now pin **v7.0.1**, converged in
+[#66](https://github.com/sgort/linked-data-explorer/pull/66). Until then four of
+them — the `ropa-site` workflows — sat at v3.7.0, four majors behind, while the
+other three were on v4.4.0.
+
+That gap is the point worth keeping: pinned is not the same as current. A hash
+freezes a version in place, including an old one, and nothing about the pin
+itself complains as it ages. Renovate raises these as upgrades under the 14-day
+cooldown, which is the intended way for them to move — deliberately, in a
 reviewable pull request, rather than silently on the next run.
 
 ## How the pins stay current
@@ -157,25 +161,35 @@ the entire life of every such pull request — and makes the step impossible to
 promote to blocking, because no Renovate bump could ever show a green result to
 merge on.
 
-Verified rather than assumed: run against
-[#66](https://github.com/sgort/linked-data-explorer/pull/66)
-(`actions/checkout` → v7.0.1) the check reports
+Verified rather than assumed, and this table is the proof. When
+[#66](https://github.com/sgort/linked-data-explorer/pull/66) was raised
+(`actions/checkout` → v7.0.1) the check reported
 
 ```
 [register] actions/checkout: workflow pins 3d3c42e5aac5… (v7.0.1) but
            SECURITY-PIPELINE.md records only 11d5960a3267… (v4.4.0), a37ce9120846… (v3.7.0)
 ```
 
-while pin truth passes. The check is right; the register is stale.
+while pin truth passed — Renovate's digest and its rewritten comment agreed with
+each other and with GitHub. The check was right and the register was stale. The
+row above was updated on that pull request's branch, which is the habit this
+section describes, and the check went green before it merged.
 
 The step is `continue-on-error: true` until that habit is established. See
 issue [#73](https://github.com/sgort/linked-data-explorer/issues/73).
 
-An action may legitimately hold **more than one row** — `actions/checkout` sits
-at v4.4.0 in three workflows and v3.7.0 in four, mid-upgrade — and the check
-matches rows by digest precisely so a split pin is expressible. When the
-workflows converge, the surplus row goes with them; the check reports a leftover
-row as a note rather than a finding, so it will say so without failing.
+An action may legitimately hold **more than one row**. Until #66 this table
+carried two for `actions/checkout` — v4.4.0 in three workflows, v3.7.0 in four,
+mid-upgrade — and the check matches rows by digest precisely so a split pin
+stays expressible. Do not collapse such rows to tidy the table: an action at two
+digests is two distinct things to verify, and keying by action alone is the bug
+that had to be fixed upstream in
+[ttl-editor#86](https://github.com/sgort/ttl-editor/pull/86) before this
+repository could adopt the check at all.
+
+When workflows converge, the surplus row goes with them, as it did here. A
+leftover row is reported as a note rather than a finding, so the check says so
+without failing.
 
 ## How the rule is enforced
 
