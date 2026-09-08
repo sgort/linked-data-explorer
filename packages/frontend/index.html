@@ -14,6 +14,32 @@
       body {
         font-family: 'Inter', sans-serif;
       }
+      /* Sidebar icon rail. Needs its own rule rather than .custom-scrollbar
+         below, whose light track (#f1f5f9) is meant for white panels and
+         reads as a bright stripe against the slate-900 rail. Narrow, and
+         only visible on hover: the rail scrolls solely on windows too short
+         to show every icon, so a permanent bar would be noise most of the
+         time while still leaving the affordance where it is needed. */
+      .rail-scroll::-webkit-scrollbar {
+        width: 4px;
+      }
+      .rail-scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .rail-scroll::-webkit-scrollbar-thumb {
+        background: transparent;
+        border-radius: 2px;
+      }
+      .rail-scroll:hover::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+      .rail-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+      }
+      .rail-scroll:hover {
+        scrollbar-color: #475569 transparent;
+      }
       /* Custom Scrollbar for code editors and panels */
       .code-scroll::-webkit-scrollbar,
       .custom-scrollbar::-webkit-scrollbar {

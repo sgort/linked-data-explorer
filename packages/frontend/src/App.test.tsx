@@ -51,7 +51,6 @@ vi.mock('./components/RopaEditor/RopaEditor', () => ({
 vi.mock('./components/ShaclValidator', () => ({
   default: ({ apiBaseUrl }: { apiBaseUrl: string }) => <div>ShaclValidator:{apiBaseUrl}</div>,
 }));
-vi.mock('./components/Tutorial/Tutorial', () => ({ default: () => <div>Tutorial stub</div> }));
 
 import App from './App';
 import { ALL_QUERIES, PRESET_ENDPOINTS, SAMPLE_QUERIES } from './utils/constants';
@@ -85,7 +84,6 @@ describe('App — sidebar navigation', () => {
     ['Document Composer', `DocumentComposer:${PRESET_ENDPOINTS[1]?.url}`],
     ['RoPA Records', 'RopaEditor stub'],
     ['DSO Explorer', 'DsoExplorer:pre'],
-    ['Getting Started', 'Tutorial stub'],
     ['Changelog', 'Changelog stub'],
   ])('clicking the %s nav icon renders the corresponding view', async (title, expectedText) => {
     render(<App />);
@@ -188,6 +186,33 @@ describe('App — running SPARQL queries', () => {
 
     await userEvent.type(screen.getByLabelText('SPARQL Query'), ' extra');
     expect(firstQueryButton.className).not.toContain('bg-blue-100');
+  });
+});
+
+describe('App — sidebar overflow on a short viewport', () => {
+  // The rail holds a dozen icons between a pinned logo and a pinned Settings
+  // button. On a short window the middle section must scroll rather than
+  // overflow, or the last icons — Changelog, and Settings below it — are
+  // pushed past the bottom edge with no way to reach them. That is what
+  // happened before this test existed.
+  //
+  // min-h-0 is the load-bearing half and the reason this is asserted at all.
+  // A flex child defaults to min-height:auto, which refuses to shrink below
+  // its content, so overflow-y-auto alone does nothing here. Someone tidying
+  // the class list would not know that, and the regression is silent: the
+  // layout only breaks below a certain viewport height, which jsdom never
+  // exercises and no snapshot would catch.
+  test('the icon rail scrolls instead of overflowing, with Settings pinned outside it', () => {
+    render(<App />);
+
+    const scroller = screen.getByTitle('SPARQL Editor').parentElement!;
+
+    expect(scroller.className).toContain('overflow-y-auto');
+    expect(scroller.className).toContain('min-h-0');
+
+    // Settings must sit OUTSIDE the scrolling section, otherwise it scrolls
+    // out of reach exactly when the rail is too short to show it.
+    expect(scroller).not.toContainElement(screen.getByTitle('Settings'));
   });
 });
 
