@@ -30,7 +30,7 @@ two together.
 | Action                         | Pinned at                                  | Version          |
 | ------------------------------ | ------------------------------------------ | ---------------- |
 | `actions/checkout`             | `3d3c42e5aac5ba805825da76410c181273ba90b1` | v7.0.1           |
-| `actions/setup-node`           | `49933ea5288caeca8642d1e84afbd3f7d6820020` | v4.4.0           |
+| `actions/setup-node`           | `820762786026740c76f36085b0efc47a31fe5020` | v7.0.0           |
 | `Azure/static-web-apps-deploy` | `4d27395796ac319302594769cfe812bd207490b1` | v1 (branch head) |
 | `azure/webapps-deploy`         | `02a81bead70021f5284939794bcec79c271ab383` | v3.0.8           |
 | `zizmorcore/zizmor-action`     | `3dc1ecc9bcb9e94e9b2c709687979e1298497054` | v0.6.2           |
