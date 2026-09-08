@@ -116,36 +116,38 @@ jobs:
         # if: always() for the same reason as the validator above — one run
         # should report on every half of the policy, not stop at the first.
         if: always()
-        # NON-BLOCKING for now, and not merely out of caution.
         #
-        # Renovate rewrites workflow pins and never touches SECURITY-PIPELINE.md,
-        # so every action-bump pull request fails the register half until the
-        # register is updated by hand. Verified against the real thing, not
-        # assumed: PR #66 (actions/checkout → v7.0.1) reports
-        #   [register] actions/checkout: workflow pins 3d3c42e5aac5… (v7.0.1)
-        #              but SECURITY-PIPELINE.md records only 11d5960a3267…
-        # while PIN TRUTH passes — Renovate's digest and comment agree with
-        # each other and with GitHub. The check is right and the register is
-        # stale, which is exactly what it exists to say.
+        # BLOCKING. It was introduced with continue-on-error: true in #77 and
+        # promoted in #81, once the thing it was waiting on had been shown to
+        # work twice.
         #
-        # Blocking on that would make a required check fail on routine
-        # dependency updates, which is how gates get resented and then
-        # bypassed.
+        # What it was waiting on: Renovate rewrites workflow pins and never
+        # touches SECURITY-PIPELINE.md, so every action-bump pull request
+        # fails the register half until the register is updated by hand.
+        # Blocking on that would fail a required check on routine dependency
+        # updates -- how gates get resented and then bypassed.
         #
-        # The agreed answer is that the register is updated ON the Renovate
-        # pull request's branch, before it is merged -- not afterwards, which
-        # would leave the check red for that pull request's whole life and
-        # make this step impossible to promote, since no bump could ever show
-        # a green result to merge on. Promote to blocking once that habit
-        # holds; see SECURITY-PIPELINE.md, "Keeping this register true", and
-        # issue #73.
+        # What resolved it: the register is updated ON the bump's branch,
+        # before merging, so the check is green on the pull request rather
+        # than only on acc afterwards. Exercised on #66 (actions/checkout to
+        # v7.0.1, which also collapsed a two-digest split pin) and #67
+        # (actions/setup-node to v7.0.0). Both went green on the branch and
+        # merged green. See SECURITY-PIPELINE.md, "Keeping this register
+        # true".
         #
-        # The second reason to wait: this step makes a network call inside a
-        # job the ruleset requires, so an API outage or rate limit could fail
-        # a gate that has nothing to do with the change under review. Pass
-        # --offline to check format and register agreement without resolving
-        # pins, if that ever proves to be the problem.
-        continue-on-error: true
+        # Why NOT staying non-blocking, which is the part that is easy to get
+        # wrong: continue-on-error does not merely keep the job green, it
+        # rewrites the STEP's reported conclusion too, and the honest result
+        # (outcome: failure) is not exposed by the REST API at all. On #66 the
+        # job, the step and the pull request's checks list all read "success"
+        # while this step's own log carried a real finding. A check nobody can
+        # see fail is not protecting anything -- it is a check that has to be
+        # remembered, which is the condition the register drifted in.
+        #
+        # If the GitHub API ever proves flaky enough to fail this gate on an
+        # outage or a rate limit, add --offline rather than reverting to
+        # continue-on-error: it keeps the register half blocking and drops
+        # only the network-dependent half.
         env:
           # contents: read suffices — this only resolves public refs.
           GITHUB_TOKEN: ${{ github.token }}
