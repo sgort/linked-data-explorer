@@ -106,6 +106,31 @@ jobs:
         # nothing useful.
         run: npx --yes --package renovate@44.50.3 renovate-config-validator --strict
 
+      - name: Install dependencies for the formatter
+        # Needed because the formatting check below must run THIS repository's
+        # prettier, not a version named here. Issue #45 exists because prettier
+        # 3.7 -> 3.9 changed how short union types are formatted: five
+        # untouched files started failing `prettier --check` the moment #38
+        # merged, with every CI check green, and the symptom would have been
+        # the next person's `git push` failing on files they had never opened.
+        # An `npx prettier@<pinned>` here would be a second version to keep in
+        # step with package.json -- reintroducing the same class of drift the
+        # check is meant to catch. npm ci costs install time and cannot drift.
+        if: always()
+        run: npm ci
+      - name: Check formatting
+        # prettier lives per workspace here, each with its own .prettierrc and
+        # .prettierignore, and .prettierignore is resolved relative to the
+        # working directory. So `prettier --check .` from the repository root
+        # would silently check dist/ and coverage/ and disagree with what the
+        # pre-push hook enforces. The root script fans out per workspace, which
+        # is the same command developers run.
+        #
+        # if: always() for the same reason as the validator above -- a zizmor
+        # failure should not hide a formatting failure behind it.
+        if: always()
+        run: npm run check-format
+
       - name: Verify pin truth and register agreement
         # zizmor validates pin FORMAT — that `uses:` names a 40-character SHA.
         # It cannot say the SHA is the RIGHT one, so a wrong or hostile digest

@@ -1,6 +1,24 @@
 name: Deploy Backend to Production
 
 on:
+  # NO pull_request trigger here, deliberately -- issue #46 asked for this to be
+  # decided rather than left to drift, and the acc workflow got the opposite
+  # answer.
+  #
+  # Two reasons, in order of weight:
+  #
+  # 1. This job declares `environment: production`, which carries
+  #    required_reviewers and a branch policy. A pull_request trigger would
+  #    make every pull request to main wait on a human approval BEFORE the
+  #    tests could run -- an approval gate in front of the check meant to
+  #    inform it, which is exactly backwards.
+  #
+  # 2. main is promoted from acc. A pull request here carries content that
+  #    already ran lint, typecheck and the full suite on its acc pull request,
+  #    so a second pre-merge run would re-test the same commits.
+  #
+  # The acc workflow is where pre-merge verification belongs; see the note on
+  # its triggers. If main ever stops being promoted from acc, revisit this.
   push:
     branches:
       - main
