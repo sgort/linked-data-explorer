@@ -133,6 +133,50 @@ than floating. `renovate.json` supplies the other half:
   resolves `@v1` to the tag, so leaving it enabled would raise a pull request
   "updating" the pin backwards by four years.
 
+## Keeping this register true
+
+The table above is the only part of this document a machine now reads.
+`scripts/check-supply-chain.mjs` compares it with the workflows on every audit
+run — digests, versions, and multiplicities — and separately resolves each
+digest against the GitHub API to confirm it is the version its comment claims.
+zizmor cannot do the second part: it validates that a `uses:` names a
+40-character SHA, not that the SHA is the right one, so a wrong or hostile
+digest carrying a plausible `# v4.4.0` comment passes zizmor, Prettier and
+review alike.
+
+**Renovate does not maintain this table.** It rewrites workflow pins and their
+version comments together, honestly and correctly, and never touches this file.
+That means an action-bump pull request leaves the register describing a policy
+the workflows no longer follow — the drift this check exists to catch, arriving
+by the most routine route there is.
+
+So: **when a Renovate pull request bumps an action, update this table on that
+pull request's branch, before merging it.** Not afterwards. The check runs on
+the pull request, so a register fixed after the merge leaves the check red for
+the entire life of every such pull request — and makes the step impossible to
+promote to blocking, because no Renovate bump could ever show a green result to
+merge on.
+
+Verified rather than assumed: run against
+[#66](https://github.com/sgort/linked-data-explorer/pull/66)
+(`actions/checkout` → v7.0.1) the check reports
+
+```
+[register] actions/checkout: workflow pins 3d3c42e5aac5… (v7.0.1) but
+           SECURITY-PIPELINE.md records only 11d5960a3267… (v4.4.0), a37ce9120846… (v3.7.0)
+```
+
+while pin truth passes. The check is right; the register is stale.
+
+The step is `continue-on-error: true` until that habit is established. See
+issue [#73](https://github.com/sgort/linked-data-explorer/issues/73).
+
+An action may legitimately hold **more than one row** — `actions/checkout` sits
+at v4.4.0 in three workflows and v3.7.0 in four, mid-upgrade — and the check
+matches rows by digest precisely so a split pin is expressible. When the
+workflows converge, the surplus row goes with them; the check reports a leftover
+row as a note rather than a finding, so it will say so without failing.
+
 ## How the rule is enforced
 
 `.github/workflows/zizmor.yml` runs `zizmor` on every pull request and push to
