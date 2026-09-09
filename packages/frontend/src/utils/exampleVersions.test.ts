@@ -21,6 +21,16 @@ describe('getStoredVersion', () => {
     localStorage.setItem('linkedDataExplorer_exampleVersions', 'not json');
     expect(getStoredVersion('example_awb_process')).toBe(0);
   });
+
+  test('returns 0 for an example missing from an otherwise populated map', () => {
+    // The case a new example hits on an existing installation: the version map
+    // exists but has no entry yet. Without the `?? 0` this yields undefined,
+    // and BpmnModeler's `getStoredVersion(id) < EXAMPLE_VERSIONS[id]` is false
+    // for undefined — so the new example would never be seeded.
+    setStoredVersion('example_awb_process', 4);
+
+    expect(getStoredVersion('example_dvtp_toestemming')).toBe(0);
+  });
 });
 
 describe('setStoredVersion', () => {

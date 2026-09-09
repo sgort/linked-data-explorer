@@ -60,7 +60,13 @@ function validation(overrides: Partial<ChainValidation> = {}): ChainValidation {
 
 function template(
   overrides: Partial<
-    ChainPreset & { type: string; category: string; complexity: string; estimatedTime: number }
+    ChainPreset & {
+      type: string;
+      category: string;
+      complexity: string;
+      estimatedTime: number;
+      usageCount: number;
+    }
   > = {}
 ) {
   return {
@@ -151,6 +157,89 @@ describe('ChainConfig — empty chain (template browser)', () => {
     await userEvent.click(screen.getByTitle('Delete template'));
 
     expect(deleteUserTemplate).toHaveBeenCalledWith('https://example.com/sparql', 'u1');
+  });
+
+  test('the Custom category is served from localStorage without a backend query', async () => {
+    getAllTemplates.mockResolvedValue([template({ id: 'p1', name: 'Predefined chain' })]);
+    getUserTemplates.mockReturnValue([
+      {
+        ...template({ id: 'u1', name: 'My custom chain', category: 'custom' }),
+        endpoint: 'e',
+        isUserTemplate: true,
+      },
+    ]);
+    render(<ChainConfig {...baseProps} chain={[]} validation={null} />);
+    await screen.findByText('Predefined chain');
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'custom');
+
+    expect(await screen.findByText('My custom chain')).toBeTruthy();
+    expect(screen.queryByText('Predefined chain')).toBeNull();
+    // 'custom' is not a backend category — asking for it returns nothing and
+    // would wipe the list the user actually wants.
+    expect(getTemplatesByCategory).not.toHaveBeenCalled();
+  });
+
+  test('cancelling the delete confirmation neither deletes nor loads the template', async () => {
+    getAllTemplates.mockResolvedValue([]);
+    getUserTemplates.mockReturnValue([
+      { ...template({ id: 'u1', name: 'My custom chain' }), endpoint: 'e', isUserTemplate: true },
+    ]);
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const onLoadPreset = vi.fn();
+    render(<ChainConfig {...baseProps} chain={[]} validation={null} onLoadPreset={onLoadPreset} />);
+    await screen.findByText('My Templates');
+
+    await userEvent.click(screen.getByTitle('Delete template'));
+
+    expect(deleteUserTemplate).not.toHaveBeenCalled();
+    expect(screen.getByText('My custom chain')).toBeTruthy();
+    // The delete button sits inside the template's load button; without the
+    // stopPropagation the cancelled delete would load the chain instead.
+    expect(onLoadPreset).not.toHaveBeenCalled();
+  });
+
+  test('a delete the storage layer rejects alerts instead of silently reloading', async () => {
+    getAllTemplates.mockResolvedValue([]);
+    getUserTemplates.mockReturnValue([
+      { ...template({ id: 'u1', name: 'My custom chain' }), endpoint: 'e', isUserTemplate: true },
+    ]);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    deleteUserTemplate.mockReturnValue(false);
+    render(<ChainConfig {...baseProps} chain={[]} validation={null} />);
+    await screen.findByText('My Templates');
+
+    await userEvent.click(screen.getByTitle('Delete template'));
+
+    expect(alertSpy).toHaveBeenCalledWith('Failed to delete template');
+    expect(screen.getByText('My custom chain')).toBeTruthy();
+  });
+
+  test('DRD templates are marked as such in both lists', async () => {
+    getAllTemplates.mockResolvedValue([template({ id: 'p1', name: 'DRD chain', type: 'drd' })]);
+    getUserTemplates.mockReturnValue([
+      {
+        ...template({ id: 'u1', name: 'My DRD chain', type: 'drd' }),
+        endpoint: 'e',
+        isUserTemplate: true,
+      },
+    ]);
+    render(<ChainConfig {...baseProps} chain={[]} validation={null} />);
+
+    expect(await screen.findByText('DRD chain')).toBeTruthy();
+    expect(screen.getByText('DRD')).toBeTruthy();
+    // One marker per list — the sequential '⛓️' would be wrong for both.
+    expect(screen.getAllByText('🎯')).toHaveLength(2);
+    expect(screen.queryByText('⛓️')).toBeNull();
+  });
+
+  test('a template that records usage shows the count', async () => {
+    getAllTemplates.mockResolvedValue([template({ usageCount: 12 })]);
+    getUserTemplates.mockReturnValue([]);
+    render(<ChainConfig {...baseProps} chain={[]} validation={null} />);
+
+    expect(await screen.findByText('12 uses')).toBeTruthy();
   });
 });
 
@@ -377,5 +466,140 @@ describe('ChainConfig — populated chain', () => {
 
     expect(screen.queryByRole('heading', { name: 'Save as DRD Template' })).toBeNull();
     expect(saveUserTemplate).not.toHaveBeenCalled();
+  });
+
+  /** Saves a sequential template named `name` over the given chain. */
+  async function saveSequentialTemplate(chain: DmnModel[], name: string, v = validation()) {
+    getAllTemplates.mockResolvedValue([]);
+    getUserTemplates.mockReturnValue([]);
+    saveUserTemplate.mockReturnValue({ ...template(), name });
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(
+      <ChainConfig {...baseProps} chain={chain} validation={{ ...v, isDrdCompatible: false }} />
+    );
+
+    await userEvent.click(screen.getByTitle('Save template'));
+    await userEvent.type(screen.getByPlaceholderText(/My Eligibility Check/), name);
+    await userEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+  }
+
+  test('a template saved without a description gets one derived from the chain', async () => {
+    await saveSequentialTemplate(
+      [dmn(), dmn({ id: 'd2', identifier: 'income-check' })],
+      'Two step'
+    );
+
+    await vi.waitFor(() =>
+      expect(saveUserTemplate).toHaveBeenCalledWith(
+        'https://example.com/sparql',
+        expect.objectContaining({
+          description: 'Sequential chain with 2 DMNs',
+          complexity: 'medium',
+        })
+      )
+    );
+  });
+
+  test('a chain of more than three DMNs is saved as complex', async () => {
+    const chain = ['a', 'b', 'c', 'd'].map((id, i) => dmn({ id: `d${i}`, identifier: id }));
+
+    await saveSequentialTemplate(chain, 'Four step');
+
+    await vi.waitFor(() =>
+      expect(saveUserTemplate).toHaveBeenCalledWith(
+        'https://example.com/sparql',
+        expect.objectContaining({
+          description: 'Sequential chain with 4 DMNs',
+          complexity: 'complex',
+        })
+      )
+    );
+  });
+
+  test('a validation without a timing estimate falls back to one derived from the chain', async () => {
+    await saveSequentialTemplate([dmn()], 'No estimate', validation({ estimatedTime: 0 }));
+
+    await vi.waitFor(() =>
+      // 1 DMN → 1 * 150 + 50. Storing 0 would advertise the chain as instant.
+      expect(saveUserTemplate).toHaveBeenCalledWith(
+        'https://example.com/sparql',
+        expect.objectContaining({ estimatedTime: 200 })
+      )
+    );
+  });
+
+  /** Opens the DRD save modal and submits it against a failing deploy response. */
+  async function failingDrdDeploy(deployBody: unknown) {
+    getAllTemplates.mockResolvedValue([]);
+    getUserTemplates.mockReturnValue([]);
+    global.fetch = vi.fn().mockResolvedValue({ json: async () => deployBody });
+    render(
+      <ChainConfig
+        {...baseProps}
+        chain={[dmn()]}
+        validation={validation({ isDrdCompatible: true })}
+      />
+    );
+
+    await userEvent.click(screen.getByTitle('Save as DRD'));
+    await userEvent.type(screen.getByPlaceholderText(/My Eligibility Check/), 'My DRD');
+    await userEvent.click(screen.getByRole('button', { name: 'Save as DRD' }));
+  }
+
+  test('a deploy failure carrying an error object surfaces its message', async () => {
+    // Camunda answers with an object here, not the string the sibling test uses.
+    await failingDrdDeploy({ success: false, error: { message: 'DMN age-check not deployed' } });
+
+    expect(await screen.findByText(/DMN age-check not deployed/)).toBeTruthy();
+    expect(saveUserTemplate).not.toHaveBeenCalled();
+  });
+
+  test('a deploy failure with an unrecognised error shape falls back to the serialised payload', async () => {
+    await failingDrdDeploy({ success: false, error: { code: 42 } });
+
+    expect(await screen.findByText(/\{"code":42\}/)).toBeTruthy();
+  });
+
+  test('a deploy failure with no error field at all falls back to a generic message', async () => {
+    await failingDrdDeploy({ success: false });
+
+    expect(await screen.findByText(/DRD deployment failed/)).toBeTruthy();
+  });
+
+  test('the Inputs section collapses and expands', async () => {
+    getAllTemplates.mockResolvedValue([]);
+    getUserTemplates.mockReturnValue([]);
+    render(<ChainConfig {...baseProps} chain={[dmn()]} validation={validation()} />);
+
+    expect(screen.getByText('InputForm stub')).toBeTruthy();
+    await userEvent.click(screen.getByText('Inputs'));
+    expect(screen.queryByText('InputForm stub')).toBeNull();
+
+    await userEvent.click(screen.getByText('Inputs'));
+    expect(screen.getByText('InputForm stub')).toBeTruthy();
+  });
+
+  test('a chain linked by semantic matches warns that execution stays sequential', async () => {
+    getAllTemplates.mockResolvedValue([]);
+    getUserTemplates.mockReturnValue([]);
+    render(
+      <ChainConfig
+        {...baseProps}
+        chain={[dmn()]}
+        validation={validation({
+          semanticMatches: [
+            {
+              outputDmn: 'age-check',
+              outputVar: 'leeftijd',
+              inputDmn: 'income-check',
+              inputVar: 'age',
+              matchType: 'semantic',
+            },
+          ],
+        })}
+      />
+    );
+
+    expect(screen.getByText('Sequential execution required (semantic links)')).toBeTruthy();
   });
 });

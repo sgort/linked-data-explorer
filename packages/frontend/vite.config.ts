@@ -31,17 +31,25 @@ export default defineConfig(({ mode }) => {
         // A per-file 80% branch floor, enforced rather than assumed.
         //
         // perFile is the mechanism, not a detail: against the package average
-        // (90.59%) the threshold is inert, because one file dropping to 40%
+        // (92.88%) the threshold is inert, because one file dropping to 40%
         // barely moves it. Branches specifically, because statement and line
         // coverage largely restate "was this file imported", and an uncovered
         // branch is a decision no test has ever checked.
         //
-        // Measured clean when this landed — 64 files, none below 80. But the
-        // margin is thin: CaseworkerCasePanel.tsx sits at EXACTLY 80.00, and
-        // thirteen more files are between 80 and 85. The first uncovered
-        // branch added to any of them turns this red. That is the floor
-        // working, not a misconfiguration — but it is worth knowing before
-        // someone meets it on an unrelated change.
+        // When this landed, TestCasePanel.tsx sat at EXACTLY 80.00 and thirteen
+        // more files were between 80 and 85 — one uncovered branch away from
+        // red. (An earlier revision of this comment named the 80.00 file
+        // CaseworkerCasePanel.tsx; no such file exists.) Those files have since
+        // been given margin: the lowest is now GraphView.tsx at 82.26%.
+        //
+        // GraphView is where the floor is still tight, and deliberately so.
+        // Its eleven uncovered branches are all inside the d3 force-simulation
+        // tick and drag handlers — `d.x || 0` position fallbacks and
+        // `if (!event.active)` drag guards — which need a running simulation
+        // and synthesised drag events to reach. That is a d3 harness, not a
+        // test of this component; adding a branch to GraphView will turn this
+        // red, and the answer then is to test the new branch, not to lower the
+        // floor.
         //
         // Branches only. A functions floor would fail today; this is not a
         // companion setting to add without measuring first.

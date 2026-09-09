@@ -95,4 +95,23 @@ describe('TextBlockEditor', () => {
     );
     expect(screen.getByText('Existing text')).toBeTruthy();
   });
+
+  test('a content prop replaced from outside is pushed into the editor', () => {
+    const doc = (text: string) => ({
+      type: 'doc' as const,
+      content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+    });
+    const { rerender } = render(
+      <TextBlockEditor content={doc('First block')} onChange={vi.fn()} />
+    );
+    expect(screen.getByText('First block')).toBeTruthy();
+
+    // What happens when a different template is loaded into the same slot.
+    // TipTap owns the document after mount, so without the sync effect the
+    // editor keeps showing the previous template's text.
+    rerender(<TextBlockEditor content={doc('Second block')} onChange={vi.fn()} />);
+
+    expect(screen.getByText('Second block')).toBeTruthy();
+    expect(screen.queryByText('First block')).toBeNull();
+  });
 });

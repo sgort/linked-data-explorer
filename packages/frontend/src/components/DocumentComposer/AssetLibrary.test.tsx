@@ -51,6 +51,19 @@ describe('AssetLibrary', () => {
     expect(screen.queryByText('document.pdf')).toBeNull();
   });
 
+  test('an asset card shows its size in KB, or "Unknown size" when the API omits it', async () => {
+    // TriplyDB does not always report assetSize, and `size ? ... : ...` on a
+    // missing value must not produce "NaN KB" on the card.
+    fetchAssets.mockResolvedValue([
+      asset({ id: 'a1', name: 'sized.png', size: 2048 }),
+      asset({ id: 'a2', name: 'unsized.png', size: undefined }),
+    ]);
+    render(<AssetLibrary endpoint="e" />);
+
+    expect(await screen.findByText('2 KB')).toBeTruthy();
+    expect(screen.getByText('Unknown size')).toBeTruthy();
+  });
+
   test('shows an empty-state message when there are no images', async () => {
     fetchAssets.mockResolvedValue([]);
     render(<AssetLibrary endpoint="e" />);

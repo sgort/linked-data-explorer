@@ -108,4 +108,95 @@ describe('SemanticView', () => {
     const counts = screen.getAllByText('1');
     expect(counts.length).toBeGreaterThanOrEqual(2);
   });
+
+  test('a response flagged unsuccessful is ignored even when it carries data', async () => {
+    // The API answers 200 with success:false and a stale/partial payload.
+    // Without the success check that payload would render as if it were sound.
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (String(url).includes('semantic-equivalences')) {
+        return jsonResponse({
+          success: false,
+          error: 'endpoint unreachable',
+          data: [
+            {
+              dmn1: { title: 'Stale A' },
+              dmn2: { title: 'Stale B' },
+              sharedConcept: 'https://example.com/concept/leeftijd',
+              concept1: { label: 'Leeftijd', variable: { identifier: 'age' } },
+              concept2: { label: 'Age', variable: { identifier: 'age' } },
+            },
+          ],
+        });
+      }
+      return jsonResponse({
+        success: false,
+        error: 'endpoint unreachable',
+        data: [
+          {
+            matchType: 'semantic',
+            dmn1: { title: 'Stale C' },
+            dmn2: { title: 'Stale D' },
+            outputVariable: 'out',
+            inputVariable: 'in',
+            sharedConcept: 'https://example.com/concept/naam',
+          },
+        ],
+      });
+    });
+    render(<SemanticView endpoint="e" apiBaseUrl="a" />);
+
+    expect(
+      await screen.findByText(
+        'No semantic chain links found. Variables match by exact identifier only.'
+      )
+    ).toBeTruthy();
+    expect(screen.getByText('No semantic equivalences found via skos:exactMatch.')).toBeTruthy();
+    expect(screen.queryByText('Stale A')).toBeNull();
+    expect(screen.queryByText('Stale C')).toBeNull();
+  });
+
+  test('a data payload that is not an array is ignored rather than crashing the render', async () => {
+    // Both lists are rendered with .map(), so a non-array `data` that slips
+    // past the guard throws during render and blanks the whole tab.
+    global.fetch = vi
+      .fn()
+      .mockImplementation(() => jsonResponse({ success: true, data: { message: 'unexpected' } }));
+    render(<SemanticView endpoint="e" apiBaseUrl="a" />);
+
+    expect(
+      await screen.findByText(
+        'No semantic chain links found. Variables match by exact identifier only.'
+      )
+    ).toBeTruthy();
+    expect(screen.getByText('No semantic equivalences found via skos:exactMatch.')).toBeTruthy();
+  });
+
+  test('a concept notation is rendered in parentheses beside its label', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (String(url).includes('semantic-equivalences')) {
+        return jsonResponse({
+          success: true,
+          data: [
+            {
+              dmn1: { title: 'A' },
+              dmn2: { title: 'B' },
+              sharedConcept: 'https://example.com/concept/leeftijd',
+              concept1: {
+                label: 'Leeftijd',
+                notation: 'LFT-01',
+                variable: { identifier: 'age' },
+              },
+              concept2: { label: 'Age', notation: 'AGE-01', variable: { identifier: 'age' } },
+            },
+          ],
+        });
+      }
+      return jsonResponse({ success: true, data: [] });
+    });
+
+    render(<SemanticView endpoint="e" apiBaseUrl="a" />);
+
+    expect(await screen.findByText('Leeftijd (LFT-01)')).toBeTruthy();
+    expect(screen.getByText('Age (AGE-01)')).toBeTruthy();
+  });
 });

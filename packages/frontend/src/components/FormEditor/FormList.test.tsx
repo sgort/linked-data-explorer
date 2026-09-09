@@ -63,6 +63,20 @@ describe('FormList', () => {
     expect(screen.queryByText('Flevoland form')).toBeNull();
   });
 
+  test('clicking a collapsed organization expands it again', async () => {
+    render(
+      <FormList
+        {...baseProps}
+        forms={[form({ id: 'f1', name: 'Flevoland form', organization: 'flevoland' })]}
+      />
+    );
+
+    await userEvent.click(screen.getByText('flevoland'));
+    await userEvent.click(screen.getByText('flevoland'));
+
+    expect(screen.getByText('Flevoland form')).toBeTruthy();
+  });
+
   test('a status badge is shown for example/wip/dso/e2e forms', () => {
     render(
       <FormList
@@ -128,6 +142,34 @@ describe('FormList', () => {
 
     await userEvent.dblClick(screen.getByText('Aanvraagformulier'));
     expect(screen.queryByDisplayValue('Aanvraagformulier')).toBeNull();
+  });
+
+  test('Escape abandons a rename without committing it', async () => {
+    const onUpdateFormName = vi.fn();
+    render(<FormList {...baseProps} forms={[form()]} onUpdateFormName={onUpdateFormName} />);
+
+    await userEvent.dblClick(screen.getByText('Aanvraagformulier'));
+    const input = screen.getByDisplayValue('Aanvraagformulier');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'Half-typed name{Escape}');
+
+    expect(onUpdateFormName).not.toHaveBeenCalled();
+    expect(screen.getByText('Aanvraagformulier')).toBeTruthy();
+  });
+
+  test('committing a blank name keeps the original', async () => {
+    const onUpdateFormName = vi.fn();
+    render(<FormList {...baseProps} forms={[form()]} onUpdateFormName={onUpdateFormName} />);
+
+    await userEvent.dblClick(screen.getByText('Aanvraagformulier'));
+    const input = screen.getByDisplayValue('Aanvraagformulier');
+    await userEvent.clear(input);
+    await userEvent.type(input, '   {Enter}');
+
+    // A whitespace-only rename must not reach the store — it would leave the
+    // card with no readable title and nothing to double-click back into.
+    expect(onUpdateFormName).not.toHaveBeenCalled();
+    expect(screen.getByText('Aanvraagformulier')).toBeTruthy();
   });
 
   test('the toolbar search filters the visible forms', async () => {
@@ -202,6 +244,29 @@ describe('FormList', () => {
     expect(schema).not.toHaveProperty('e2eFixture');
   });
 
+  test('importing a schema with no id falls back to the filename', async () => {
+    const onImportForm = vi.fn();
+    render(<FormList {...baseProps} forms={[]} onImportForm={onImportForm} />);
+
+    const file = new File([JSON.stringify({ components: [] })], 'zorgtoeslag-aanvraag.nl.form', {
+      type: 'application/json',
+    });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, file);
+
+    await vi.waitFor(() =>
+      // The language suffix is stripped from the fallback name, but not from
+      // the language it infers.
+      expect(onImportForm).toHaveBeenCalledWith(
+        expect.any(Object),
+        'zorgtoeslag-aanvraag',
+        'nl',
+        undefined,
+        false
+      )
+    );
+  });
+
   test('importing an invalid .form file alerts instead of crashing', async () => {
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     render(<FormList {...baseProps} forms={[]} />);
@@ -222,5 +287,45 @@ describe('FormList', () => {
     rerender(<FormList {...baseProps} forms={[form()]} activeForm={form()} activeFormId="f1" />);
     expect(screen.getByText('Language')).toBeTruthy();
     expect(screen.getByText('Organization')).toBeTruthy();
+  });
+
+  test('the footer selectors are disabled for a readonly active form', () => {
+    const readonlyForm = form({ readonly: true });
+    render(
+      <FormList
+        {...baseProps}
+        forms={[readonlyForm]}
+        activeForm={readonlyForm}
+        activeFormId="f1"
+        onLanguageChange={vi.fn()}
+        onOrganizationChange={vi.fn()}
+      />
+    );
+
+    // Handlers are supplied, so readonly is the only thing that may disable
+    // these — an example form's language and organization are not the user's
+    // to change. (The toolbar's own language filter is a second combobox, so
+    // the footer one is reached through an option only it carries.)
+    expect(
+      screen.getByRole('option', { name: '— Language-agnostic —' }).closest('select')
+    ).toBeDisabled();
+    expect(screen.getByPlaceholderText('e.g. flevoland')).toBeDisabled();
+  });
+
+  test('a form whose schema carries no id is still searchable by name', async () => {
+    render(
+      <FormList
+        {...baseProps}
+        forms={[
+          form({ id: 'f1', name: 'Aanvraagformulier', schema: {} }),
+          form({ id: 'f2', name: 'Bezwaarformulier', schema: {} }),
+        ]}
+      />
+    );
+
+    await userEvent.type(screen.getByPlaceholderText(/Search/i), 'Bezwaar');
+
+    expect(screen.getByText('Bezwaarformulier')).toBeTruthy();
+    expect(screen.queryByText('Aanvraagformulier')).toBeNull();
   });
 });
