@@ -1,0 +1,69 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-bepalen-ramingsroute",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Determine the VO-raming route"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Confirm the artefacts carried over from R2.2 and choose who draws up the VO cost estimate. During the MBVI process the cost advisor is commissioned; ahead of it the cost and contract specialist prepares it against the MBVI estimate."
+    },
+    {
+      "id": "Field_VoReferentie",
+      "type": "textfield",
+      "label": "Adopted VO reference (from R2.2)",
+      "key": "voReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_HoeveelheidsbepalingReferentie",
+      "type": "textfield",
+      "label": "Quantity determination reference (from R2.2)",
+      "key": "hoeveelheidsbepalingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_MbviMoment",
+      "type": "select",
+      "label": "Estimate drawn up in relation to the MBVI process",
+      "key": "mbviMoment",
+      "values": [
+        {
+          "label": "During the MBVI process — cost advisor",
+          "value": "tijdens"
+        },
+        {
+          "label": "Ahead of the MBVI process — cost and contract specialist",
+          "value": "voorafgaandAan"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_RamingsrouteToelichting",
+      "type": "textarea",
+      "label": "Notes on the chosen route",
+      "key": "ramingsrouteToelichting"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

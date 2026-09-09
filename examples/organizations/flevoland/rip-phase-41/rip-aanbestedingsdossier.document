@@ -1,0 +1,225 @@
+{
+  "id": "rip-aanbestedingsdossier",
+  "name": "RIP — Tender Dossier (Aanbestedingsdossier)",
+  "description": "The tender dossier checked for completeness before upload to the procurement procedure.",
+  "processKey": "RipR41Process",
+  "serviceId": "RipR41",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{aanbestedingsdossierReferentie}}",
+      "variableKey": "aanbestedingsdossierReferentie",
+      "source": "process",
+      "label": "Tender dossier reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{dossierGecontroleerdOp}}",
+      "variableKey": "dossierGecontroleerdOp",
+      "source": "process",
+      "label": "Checked on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{dossierVolledig}}",
+      "variableKey": "dossierVolledig",
+      "source": "process",
+      "label": "Complete"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{dossierOntbrekendeStukken}}",
+      "variableKey": "dossierOntbrekendeStukken",
+      "source": "process",
+      "label": "Missing parts"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{aanbestedingsverzoekReferentie}}",
+      "variableKey": "aanbestedingsverzoekReferentie",
+      "source": "process",
+      "label": "Tender request reference"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{contractdocumentenReferentie}}",
+      "variableKey": "contractdocumentenReferentie",
+      "source": "process",
+      "label": "Contract document set reference"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Tender dossier {{aanbestedingsdossierReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Tender dossier",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Tender dossier"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Tender dossier {{aanbestedingsdossierReferentie}} for project {{projectNumber}} — {{projectName}} was checked on {{dossierGecontroleerdOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Complete: {{dossierVolledig}}. {{dossierOntbrekendeStukken}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "It follows tender request {{aanbestedingsverzoekReferentie}} and the contract document set {{contractdocumentenReferentie}} adopted in R3.2."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Checked by the procurement adviser"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

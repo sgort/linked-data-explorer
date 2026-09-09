@@ -1,0 +1,65 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-accorderen-factuur-ao",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Approve the invoice"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The AO approves the invoice for payment."
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Invoice approved by AO",
+      "key": "factuurAkkoordAo",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Approved by",
+      "key": "factuurGeaccordeerdDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Approved on",
+      "key": "factuurGeaccordeerdOpAo",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

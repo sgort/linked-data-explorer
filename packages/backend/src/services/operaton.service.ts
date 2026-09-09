@@ -4,7 +4,7 @@ import { config } from '../utils/config';
 import logger from '../utils/logger';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { OperatonEvaluationRequest, OperatonEvaluationResponse } from '../types/dmn.types';
-import { getErrorMessage, getErrorDetails, isError } from '../utils/errors';
+import { getErrorMessage, getErrorDetails, isError, isAxiosError } from '../utils/errors';
 import FormData from 'form-data';
 // Required for fs.writeFileSync that's kept for potential future debugging
 // import * as fs from 'fs';
@@ -97,6 +97,31 @@ export class OperatonService {
 
       throw new Error(`DMN evaluation failed: ${getErrorMessage(error)}`);
     }
+  }
+
+  /**
+   * Evaluate a DMN decision with variables already in Operaton's native wire
+   * format ({value, type, valueInfo}) -- unlike evaluateDecision() above,
+   * this does NOT infer types from plain JS values via
+   * transformVariablesToOperatonFormat, since the caller has already built
+   * an Operaton-shaped request body itself (the CPSV Editor's DMN tab
+   * constructs and stores these directly; re-wrapping them here would
+   * double-wrap and break the request).
+   *
+   * Deliberately does not catch/rewrap errors -- the caller (the /evaluate
+   * route) needs the raw axios error's `.response.status`/`.response.data`
+   * to forward Operaton's actual exception body (e.g. a RestException)
+   * verbatim, matching what a direct browser call to Operaton would have
+   * returned before being proxied through this backend for CORS reasons.
+   */
+  async evaluateRaw(
+    decisionKey: string,
+    operatonVariables: Record<string, unknown>
+  ): Promise<OperatonEvaluationResponse | OperatonEvaluationResponse[]> {
+    const response = await this.client.post(`/decision-definition/key/${decisionKey}/evaluate`, {
+      variables: operatonVariables,
+    });
+    return response.data;
   }
 
   /**
@@ -644,7 +669,9 @@ export class OperatonService {
     operatonUrl?: string,
     operatonUsername?: string,
     operatonPassword?: string,
-    boardOwner?: string
+    boardOwner?: string,
+    /** Operaton's native tenant-id deployment field. Omitted entirely when unset. */
+    organization?: string
   ): Promise<{ deploymentId: string; resourceCount: number }> {
     try {
       // Stamp the owning board onto the process definition (deploy-time tag).
@@ -676,6 +703,9 @@ export class OperatonService {
       const formData = new FormData();
       formData.append('deployment-name', deploymentName);
       formData.append('enable-duplicate-filtering', 'false');
+      if (organization) {
+        formData.append('tenant-id', organization);
+      }
 
       // Main BPMN
       const mainFilename = `${deploymentName}.bpmn`;
@@ -719,13 +749,22 @@ export class OperatonService {
       logger.info('BPMN process deployed successfully', { deploymentId, resourceCount });
       return { deploymentId, resourceCount };
     } catch (error) {
+      const operatonBody = isAxiosError(error) ? error.response?.data : undefined;
       logger.error('BPMN process deployment failed', {
         deploymentName,
         error: error instanceof Error ? error.message : 'Unknown error',
+        operatonStatus: isAxiosError(error) ? error.response?.status : undefined,
+        operatonResponse: operatonBody,
       });
-      throw new Error(
-        `Process deployment failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      const detail =
+        typeof operatonBody === 'string'
+          ? operatonBody
+          : operatonBody
+            ? JSON.stringify(operatonBody)
+            : error instanceof Error
+              ? error.message
+              : 'Unknown error';
+      throw new Error(`Process deployment failed: ${detail}`);
     }
   }
 
@@ -776,7 +815,18 @@ export class OperatonService {
       const processOpen = bpmnXml.match(/<([A-Za-z_][\w.-]*:)?process\b[^>]*?>/);
       if (!processOpen || processOpen[0].endsWith('/>')) return bpmnXml;
       const pfx = processOpen[1] ?? '';
-      const insertAt = (processOpen.index as number) + processOpen[0].length;
+      let insertAt = (processOpen.index as number) + processOpen[0].length;
+
+      // The BPMN schema requires documentation before extensionElements in a
+      // process element's child sequence — skip past any leading <documentation>
+      // element(s) so the injected block doesn't reorder them ahead of it.
+      const docTag =
+        /^\s*<([A-Za-z_][\w.-]*:)?documentation\b[^>]*\/>|^\s*<([A-Za-z_][\w.-]*:)?documentation\b[^>]*>[\s\S]*?<\/\2documentation>/;
+      for (;;) {
+        const docMatch = bpmnXml.slice(insertAt).match(docTag);
+        if (!docMatch) break;
+        insertAt += docMatch[0].length;
+      }
 
       const property = `<camunda:property name="boardOwner" value="${boardOwner}" />`;
       const after = bpmnXml.slice(insertAt);

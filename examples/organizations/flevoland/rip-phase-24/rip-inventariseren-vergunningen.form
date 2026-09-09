@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-inventariseren-vergunningen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the permit scan carried out"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the external engineering firm inventory the permits the project needs, using the permit scan format."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Permit scan reference",
+      "key": "vergunningenscanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Vergunningen",
+      "type": "textarea",
+      "label": "Permits identified",
+      "key": "benodigdeVergunningen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Gereed",
+      "type": "datetime",
+      "label": "Completed on",
+      "key": "vergunningenscanGereedOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

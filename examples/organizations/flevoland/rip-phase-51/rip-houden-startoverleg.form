@@ -1,0 +1,73 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-houden-startoverleg",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Hold the kick-off meeting"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Hold the startoverleg with the project team and the contractor, and record the agreements and the overview of documents the contractor is to submit."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Meeting report reference",
+      "key": "verslagStartoverlegReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aanwezig",
+      "type": "textarea",
+      "label": "Attendees",
+      "key": "startoverlegAanwezigen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Afspraken",
+      "type": "textarea",
+      "label": "Agreements made",
+      "key": "startoverlegAfspraken",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Stukken",
+      "type": "textarea",
+      "label": "Overview of documents to be submitted by the contractor",
+      "key": "inTeDienenStukkenON",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Held on",
+      "key": "startoverlegGehoudenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

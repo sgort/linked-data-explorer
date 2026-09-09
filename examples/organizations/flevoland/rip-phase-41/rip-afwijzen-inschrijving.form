@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-afwijzen-inschrijving",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Reject the tender"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the rejection of the tender that was set aside."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Rejection reference",
+      "key": "afwijzingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Motivering",
+      "type": "textarea",
+      "label": "Reasons given to the tenderer",
+      "key": "afwijzingMotivering",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Rejected on",
+      "key": "inschrijvingAfgewezenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

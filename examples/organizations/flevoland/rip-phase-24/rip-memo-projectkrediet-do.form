@@ -1,0 +1,59 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-memo-projectkrediet-do",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the project credit memo (soft claim)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The DO estimate exceeds the available project credit. Draw up the memo so the Infra consultation can decide on the additional credit."
+    },
+    {
+      "id": "F_Memo",
+      "type": "textfield",
+      "label": "Memo reference",
+      "key": "memoDoReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Gevraagd",
+      "type": "number",
+      "label": "Requested project credit (EUR)",
+      "key": "gevraagdKredietDo",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Tekort",
+      "type": "number",
+      "label": "Shortfall against the current credit (EUR)",
+      "key": "dekkingstekortDo"
+    },
+    {
+      "id": "F_Onderbouwing",
+      "type": "textarea",
+      "label": "Substantiation",
+      "key": "memoDoOnderbouwing",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

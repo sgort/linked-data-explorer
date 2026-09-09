@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-versturen-eindevaluatie",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up and send the final evaluation"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectleider draws up the eindevaluatie of the RIP project process and sends it for discussion with the RIP team."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Final evaluation reference",
+      "key": "eindevaluatieReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Geleerd",
+      "type": "textarea",
+      "label": "What was learned",
+      "key": "eindevaluatieGeleerd",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aanbevelingen",
+      "type": "textarea",
+      "label": "Recommendations",
+      "key": "eindevaluatieAanbevelingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "eindevaluatieOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

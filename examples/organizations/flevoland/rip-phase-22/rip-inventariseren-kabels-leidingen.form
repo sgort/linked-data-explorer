@@ -1,0 +1,52 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-inventariseren-kabels-leidingen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Inventory of cables and pipes"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the Klic notification and the cables and pipes found in the project area."
+    },
+    {
+      "id": "Field_KlicMelding",
+      "type": "textfield",
+      "label": "Klic notification reference",
+      "key": "klicMeldingReferentie",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_IassetGeraadpleegd",
+      "type": "checkbox",
+      "label": "iAsset consulted",
+      "key": "iassetGeraadpleegd"
+    },
+    {
+      "id": "Field_Bevindingen",
+      "type": "textarea",
+      "label": "Cables and pipes found",
+      "key": "kabelsLeidingenBevindingen",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_NetbeheerderContact",
+      "type": "textfield",
+      "label": "Network operator contact",
+      "key": "netbeheerderContact"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

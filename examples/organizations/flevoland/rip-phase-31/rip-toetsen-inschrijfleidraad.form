@@ -1,0 +1,74 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-toetsen-inschrijfleidraad",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Review the tender guide"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Kosten- en contractdeskundige and inkoopadviseur werken review the inschrijvingsleidraad and record the findings."
+    },
+    {
+      "id": "F_Bev",
+      "type": "textfield",
+      "label": "Findings form reference",
+      "key": "bevindingenInschrijfleidraadReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Findings",
+      "key": "bevindingenInschrijfleidraad",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Inschrijvingsleidraad approved",
+      "key": "inschrijfleidraadAkkoord",
+      "values": [
+        {
+          "label": "Yes — approved",
+          "value": "ja"
+        },
+        {
+          "label": "No — amendment required",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Getoetst",
+      "type": "datetime",
+      "label": "Reviewed on",
+      "key": "inschrijfleidraadGetoetstOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+{
+  "id": "rip-nota-besluitvorming-ao-oplevering",
+  "name": "RIP — Decision Note on Delivery, AO (Nota besluitvorming)",
+  "description": "Sjabloon nota besluitvorming for the AO, used when the financial effect stays within the credit but passes EUR 50.000.",
+  "processKey": "RipR52Process",
+  "serviceId": "RipR52",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{notaAoOpleveringReferentie}}",
+      "variableKey": "notaAoOpleveringReferentie",
+      "source": "process",
+      "label": "Decision note reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{opleveringVerzoekReferentie}}",
+      "variableKey": "opleveringVerzoekReferentie",
+      "source": "process",
+      "label": "Request reference"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{opleveringBedrag}}",
+      "variableKey": "opleveringBedrag",
+      "source": "process",
+      "label": "Financial effect"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{notaAoOpleveringToelichting}}",
+      "variableKey": "notaAoOpleveringToelichting",
+      "source": "process",
+      "label": "Substantiation"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{notaAoOpleveringOp}}",
+      "variableKey": "notaAoOpleveringOp",
+      "source": "process",
+      "label": "Drawn up on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Nota {{notaAoOpleveringReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Decision note — AO",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Decision note — AO"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The financial effect of request {{opleveringVerzoekReferentie}} for project {{projectNumber}} — {{projectName}} is EUR {{opleveringBedrag}}. It stays within the credit but passes EUR 50.000, so the decision goes to the AO."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Substantiation: {{notaAoOpleveringToelichting}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up on {{notaAoOpleveringOp}}; the ATB webform is filled in alongside."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the projectleider for the AO"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

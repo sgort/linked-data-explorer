@@ -1,0 +1,83 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-controleren-eenheidsprijzen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Check the unit prices in the tender schedule"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Check the unit prices in the inschrijfstaat against the contractor offer and the updated project estimate, and decide whether an irregularity was found."
+    },
+    {
+      "id": "F_Pv",
+      "type": "textfield",
+      "label": "Proces verbaal reference",
+      "key": "procesVerbaalReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aanbieding",
+      "type": "textfield",
+      "label": "Contractor offer reference",
+      "key": "aanbiedingAannemerReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Findings on the unit prices",
+      "key": "eenheidsprijzenBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Onregelmatig",
+      "type": "select",
+      "label": "Irregularity found",
+      "key": "onregelmatigheidEenheidsprijzen",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Checked on",
+      "key": "eenheidsprijzenGecontroleerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

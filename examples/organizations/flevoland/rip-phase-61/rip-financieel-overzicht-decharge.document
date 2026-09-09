@@ -1,0 +1,269 @@
+{
+  "id": "rip-financieel-overzicht-decharge",
+  "name": "RIP — Financial Overview for Discharge (Financieel overzicht voor decharge)",
+  "description": "The financial end position of the project, filled in by Financiën and signed by the projectleider.",
+  "processKey": "RipR61Process",
+  "serviceId": "RipR61",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{financieelOverzichtReferentie}}",
+      "variableKey": "financieelOverzichtReferentie",
+      "source": "process",
+      "label": "Financial overview reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{financieelOverzichtAangemaaktOp}}",
+      "variableKey": "financieelOverzichtAangemaaktOp",
+      "source": "process",
+      "label": "Created on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{zaakmapDmsReferentie}}",
+      "variableKey": "zaakmapDmsReferentie",
+      "source": "process",
+      "label": "DMS case folder"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{financieleEindstand}}",
+      "variableKey": "financieleEindstand",
+      "source": "process",
+      "label": "Financial end position"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{kredietVerleend}}",
+      "variableKey": "kredietVerleend",
+      "source": "process",
+      "label": "Credit granted"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{financieleEindstandToelichting}}",
+      "variableKey": "financieleEindstandToelichting",
+      "source": "process",
+      "label": "Explanation"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{financieelOverzichtGetekendDoor}}",
+      "variableKey": "financieelOverzichtGetekendDoor",
+      "source": "process",
+      "label": "Signed by"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{financieelOverzichtGetekendOp}}",
+      "variableKey": "financieelOverzichtGetekendOp",
+      "source": "process",
+      "label": "Signed on"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{financieelOverzichtBevindingen}}",
+      "variableKey": "financieelOverzichtBevindingen",
+      "source": "process",
+      "label": "Check findings"
+    },
+    {
+      "id": "b12",
+      "placeholder": "{{raamkredietReferentie}}",
+      "variableKey": "raamkredietReferentie",
+      "source": "process",
+      "label": "Framework credit reference"
+    },
+    {
+      "id": "b13",
+      "placeholder": "{{eindstandVerwerktOp}}",
+      "variableKey": "eindstandVerwerktOp",
+      "source": "process",
+      "label": "Processed on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Overzicht {{financieelOverzichtReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Financial overview for discharge",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Financial overview for discharge"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Financial overview {{financieelOverzichtReferentie}} for project {{projectNumber}} — {{projectName}} was created on {{financieelOverzichtAangemaaktOp}} and filed in DMS case folder {{zaakmapDmsReferentie}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The financial end position is EUR {{financieleEindstand}} against a granted credit of EUR {{kredietVerleend}}. {{financieleEindstandToelichting}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Checked and signed by {{financieelOverzichtGetekendDoor}} on {{financieelOverzichtGetekendOp}}. {{financieelOverzichtBevindingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The end position is processed in Infra framework credit {{raamkredietReferentie}} on {{eindstandVerwerktOp}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Filled in by Financiën, signed by the projectleider"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

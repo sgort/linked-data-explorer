@@ -1,0 +1,72 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-besluiten-projectkrediet-do",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Decide on the project credit"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the Infra consultation decision on the requested project credit."
+    },
+    {
+      "id": "F_Besluit",
+      "type": "select",
+      "label": "Decision",
+      "key": "besluitProjectkredietDo",
+      "values": [
+        {
+          "label": "Granted",
+          "value": "toegekend"
+        },
+        {
+          "label": "Refused",
+          "value": "afgewezen"
+        },
+        {
+          "label": "Deferred",
+          "value": "aangehouden"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Granted amount (EUR)",
+      "key": "toegekendBedragDo"
+    },
+    {
+      "id": "F_Datum",
+      "type": "datetime",
+      "label": "Decision date",
+      "key": "besluitDatumDo",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Toel",
+      "type": "textarea",
+      "label": "Explanation",
+      "key": "besluitToelichtingDo"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,276 @@
+{
+  "id": "rip-dechargedossier",
+  "name": "RIP — Discharge Dossier (Dechargedossier)",
+  "description": "The dossier on which the AO discharges the project: the signed financial overview, the signed transfer declaration and the final evaluation.",
+  "processKey": "RipR61Process",
+  "serviceId": "RipR61",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{dechargedossierReferentie}}",
+      "variableKey": "dechargedossierReferentie",
+      "source": "process",
+      "label": "Discharge dossier reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{dechargedossierVerstuurdOp}}",
+      "variableKey": "dechargedossierVerstuurdOp",
+      "source": "process",
+      "label": "Sent on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{financieelOverzichtReferentie}}",
+      "variableKey": "financieelOverzichtReferentie",
+      "source": "process",
+      "label": "Financial overview reference"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{overdrachtsverklaringReferentie}}",
+      "variableKey": "overdrachtsverklaringReferentie",
+      "source": "process",
+      "label": "Transfer declaration reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{eindevaluatieReferentie}}",
+      "variableKey": "eindevaluatieReferentie",
+      "source": "process",
+      "label": "Final evaluation reference"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{dechargedossierInhoud}}",
+      "variableKey": "dechargedossierInhoud",
+      "source": "process",
+      "label": "Dossier contents"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{dechargedossierAkkoord}}",
+      "variableKey": "dechargedossierAkkoord",
+      "source": "process",
+      "label": "Approved"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{dechargedossierAkkoordDoor}}",
+      "variableKey": "dechargedossierAkkoordDoor",
+      "source": "process",
+      "label": "Approved by"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{dechargedossierGeaccordeerdOp}}",
+      "variableKey": "dechargedossierGeaccordeerdOp",
+      "source": "process",
+      "label": "Approved on"
+    },
+    {
+      "id": "b12",
+      "placeholder": "{{dechargedossierOpmerkingen}}",
+      "variableKey": "dechargedossierOpmerkingen",
+      "source": "process",
+      "label": "Comments"
+    },
+    {
+      "id": "b13",
+      "placeholder": "{{topdeskMeldingReferentie}}",
+      "variableKey": "topdeskMeldingReferentie",
+      "source": "process",
+      "label": "TopDesk request reference"
+    },
+    {
+      "id": "b14",
+      "placeholder": "{{relaticsWorkspace}}",
+      "variableKey": "relaticsWorkspace",
+      "source": "process",
+      "label": "Relatics workspace"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Dechargedossier {{dechargedossierReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Discharge dossier",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Discharge dossier"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Dechargedossier {{dechargedossierReferentie}} for project {{projectNumber}} — {{projectName}} was sent to the AO on {{dechargedossierVerstuurdOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "It brings together financial overview {{financieelOverzichtReferentie}}, transfer declaration {{overdrachtsverklaringReferentie}} and final evaluation {{eindevaluatieReferentie}}. {{dechargedossierInhoud}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Approved: {{dechargedossierAkkoord}}, by {{dechargedossierAkkoordDoor}} on {{dechargedossierGeaccordeerdOp}}. {{dechargedossierOpmerkingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "With approval the project is discharged: the financial end position goes into the Infra framework credit, the project folder is closed in the DMS under TopDesk request {{topdeskMeldingReferentie}}, and the rights on Relatics workspace {{relaticsWorkspace}} are adjusted."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Approved by the AO"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

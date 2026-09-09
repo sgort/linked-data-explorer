@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-brief-besluitvorming",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the final-account letter and submit it for decision-making"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The final account stays within the contract sum, so the ondersteuner draws up the letter and submits it for decision-making. No ATB webform is needed."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Letter reference",
+      "key": "briefEindafrekeningReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Inhoud",
+      "type": "textarea",
+      "label": "Letter content",
+      "key": "briefEindafrekeningInhoud",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Besluit",
+      "type": "textfield",
+      "label": "Decision-making reference",
+      "key": "besluitvormingEindafrekeningReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Submitted on",
+      "key": "briefEindafrekeningIngediendOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

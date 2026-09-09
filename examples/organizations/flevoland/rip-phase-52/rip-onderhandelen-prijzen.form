@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-onderhandelen-prijzen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Negotiate prices with the contractor"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Negotiate the disputed prices with the contractor before the overview is resubmitted."
+    },
+    {
+      "id": "F_Uitkomst",
+      "type": "textarea",
+      "label": "Outcome of the negotiation",
+      "key": "onderhandelingUitkomst",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Agreed value (EUR)",
+      "key": "onderhandeldBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Negotiated on",
+      "key": "onderhandeldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

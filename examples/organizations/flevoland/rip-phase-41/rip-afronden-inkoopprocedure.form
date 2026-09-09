@@ -1,0 +1,43 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-afronden-inkoopprocedure",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Close the procurement procedure"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Close the procurement procedure so the intention to award can be published on TenderNed."
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Closed on",
+      "key": "inkoopprocedureAfgerondOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Notes",
+      "key": "inkoopprocedureOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

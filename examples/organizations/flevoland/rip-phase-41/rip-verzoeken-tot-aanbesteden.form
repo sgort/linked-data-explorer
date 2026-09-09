@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-verzoeken-tot-aanbesteden",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Request the tender"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Request the tender against the contract and tender documents adopted at the close of R3.2."
+    },
+    {
+      "id": "F_Set",
+      "type": "textfield",
+      "label": "Contract document set reference (from R3.2)",
+      "key": "contractdocumentenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Verzoek",
+      "type": "textfield",
+      "label": "Tender request reference",
+      "key": "aanbestedingsverzoekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Requested on",
+      "key": "aanbestedingVerzochtOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

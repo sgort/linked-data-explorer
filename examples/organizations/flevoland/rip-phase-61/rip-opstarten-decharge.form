@@ -1,0 +1,52 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstarten-decharge",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Start the project discharge"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectleider starts the discharge. Three streams run alongside each other from here: A the financial overview for discharge, B the transfer declaration, and C the final evaluation."
+    },
+    {
+      "id": "F_Visi",
+      "type": "textfield",
+      "label": "VISI completion reference (from R5.4)",
+      "key": "gereedmeldingVisiReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Discharge started on",
+      "key": "dechargeGestartOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Notes",
+      "key": "dechargeOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

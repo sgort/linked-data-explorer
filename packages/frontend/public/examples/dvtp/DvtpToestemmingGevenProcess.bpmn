@@ -52,7 +52,7 @@
     <!-- Start: private dienstverlener redirects citizen with context -->
     <bpmn:startEvent id="StartEvent_Dvtp" name="Toestemming aangevraagd"
                      camunda:formRef="dvtp-consent-start"
-                     camunda:formRefBinding="latest">
+                     camunda:formRefBinding="deployment">
       <bpmn:outgoing>Flow_Start_Identity</bpmn:outgoing>
     </bpmn:startEvent>
 
@@ -183,7 +183,7 @@
     <bpmn:userTask id="UT_ConsentInfo"
                    name="Toon dienstinformatie (FR-05/06/07/08)"
                    camunda:formRef="dvtp-consent-info"
-                   camunda:formRefBinding="latest">
+                   camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_Deleg_OK</bpmn:incoming>
       <bpmn:outgoing>Flow_ConsentInfo_Decision</bpmn:outgoing>
     </bpmn:userTask>
@@ -192,7 +192,7 @@
     <bpmn:userTask id="UT_ConsentDecision"
                    name="Vraag toestemming (FR-09/10)"
                    camunda:formRef="dvtp-consent-decision"
-                   camunda:formRefBinding="latest"
+                   camunda:formRefBinding="deployment"
                    ronl:documentRef="example_dvtp_consent_receipt">
       <bpmn:incoming>Flow_ConsentInfo_Decision</bpmn:incoming>
       <bpmn:outgoing>Flow_Decision_Gateway</bpmn:outgoing>

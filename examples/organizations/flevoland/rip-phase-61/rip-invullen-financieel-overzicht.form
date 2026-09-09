@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-invullen-financieel-overzicht",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Fill in the financial overview and send it for signature"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Financiën fills in the financial end position and sends the overview to the projectleider for signature."
+    },
+    {
+      "id": "F_Eindstand",
+      "type": "number",
+      "label": "Financial end position (EUR)",
+      "key": "financieleEindstand",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Krediet",
+      "type": "number",
+      "label": "Credit granted (EUR)",
+      "key": "kredietVerleend",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Toel",
+      "type": "textarea",
+      "label": "Explanation of the end position",
+      "key": "financieleEindstandToelichting",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Filled in on",
+      "key": "financieelOverzichtIngevuldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

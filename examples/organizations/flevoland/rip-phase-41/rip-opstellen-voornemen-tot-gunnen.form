@@ -1,0 +1,108 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-voornemen-tot-gunnen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the intention to award"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Draw up the gunningsvoornemen. Under BPKV an annex substantiating the award is included. Drafted by the procurement adviser."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Intention to award reference",
+      "key": "gunningsvoornemenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aannemer",
+      "type": "textfield",
+      "label": "Proposed contractor",
+      "key": "voorgenomenAannemer",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Award amount (EUR)",
+      "key": "gunningBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bpkv",
+      "type": "select",
+      "label": "BPKV applies (annex required)",
+      "key": "bpkvVanToepassing",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Motivering",
+      "type": "textarea",
+      "label": "Substantiation of the award",
+      "key": "gunningMotivering"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "gunningsvoornemenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Dekkingsbron",
+      "type": "select",
+      "label": "Award over- or undershoots the funding source",
+      "key": "dekkingsbronAfwijking",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

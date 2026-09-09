@@ -1,0 +1,54 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-definitief-vo",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Final preliminary design (definitief VO)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the final preliminary design, incorporating the review findings, so it can be adopted."
+    },
+    {
+      "id": "Field_VoReferentie",
+      "type": "textfield",
+      "label": "Final VO reference",
+      "key": "voReferentie",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_HoeveelheidsbepalingReferentie",
+      "type": "textfield",
+      "label": "Quantity determination reference",
+      "key": "hoeveelheidsbepalingReferentie",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_VerwerkteBevindingen",
+      "type": "textarea",
+      "label": "How review findings were incorporated",
+      "key": "verwerkteBevindingen",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_VoVastgesteldOp",
+      "type": "datetime",
+      "label": "VO adopted on",
+      "key": "voVastgesteldOp",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

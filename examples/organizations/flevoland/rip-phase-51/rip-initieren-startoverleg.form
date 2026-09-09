@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-initieren-startoverleg",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Initiate the kick-off meeting"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Draw up the agenda for the startoverleg and invite the participants, including the contractor."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Agenda reference",
+      "key": "agendaStartoverlegReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Datum",
+      "type": "datetime",
+      "label": "Meeting date",
+      "key": "startoverlegDatum",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Genodigden",
+      "type": "textarea",
+      "label": "Invited",
+      "key": "startoverlegGenodigden",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

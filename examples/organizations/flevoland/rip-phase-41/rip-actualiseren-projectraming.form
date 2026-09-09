@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-actualiseren-projectraming",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Update the project estimate"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Update the project estimate for the tender, producing the projectraming na aanbesteding."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Updated project estimate reference",
+      "key": "projectramingNaAanbestedingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Updated project estimate (EUR)",
+      "key": "projectramingNaAanbestedingBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Updated on",
+      "key": "projectramingGeactualiseerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

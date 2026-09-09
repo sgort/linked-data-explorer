@@ -1,0 +1,218 @@
+{
+  "id": "rip-memo-projectkrediet-bestek",
+  "name": "RIP — Project Credit Memo, contract formation (Memo projectkrediet)",
+  "description": "Format Memo projectkrediet. The soft claim raised when the specification project estimate is not approved against the available credit.",
+  "processKey": "RipR32Process",
+  "serviceId": "RipR32",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{memoBestekReferentie}}",
+      "variableKey": "memoBestekReferentie",
+      "source": "process",
+      "label": "Memo reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{gevraagdKredietBestek}}",
+      "variableKey": "gevraagdKredietBestek",
+      "source": "process",
+      "label": "Requested project credit"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{dekkingstekortBestek}}",
+      "variableKey": "dekkingstekortBestek",
+      "source": "process",
+      "label": "Shortfall"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{beschikbaarProjectkrediet}}",
+      "variableKey": "beschikbaarProjectkrediet",
+      "source": "process",
+      "label": "Available project credit"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{memoBestekOnderbouwing}}",
+      "variableKey": "memoBestekOnderbouwing",
+      "source": "process",
+      "label": "Substantiation"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Memo {{memoBestekReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Request for additional project credit",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Request for additional project credit"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The specification project estimate for project {{projectNumber}} — {{projectName}} was not approved against the available credit of EUR {{beschikbaarProjectkrediet}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "This memo ({{memoBestekReferentie}}) requests EUR {{gevraagdKredietBestek}}, a shortfall of EUR {{dekkingstekortBestek}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Substantiation: {{memoBestekOnderbouwing}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the project leader"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

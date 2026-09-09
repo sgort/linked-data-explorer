@@ -5,7 +5,7 @@ import { Router, Request, Response } from 'express';
 import { sparqlService } from '../services/sparql.service';
 import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
-import { getErrorMessage, getErrorDetails } from '../utils/errors';
+import { getErrorMessage, getErrorDetails, isAxiosError } from '../utils/errors';
 import { operatonService } from '../services/operaton.service';
 import { dmnValidationService } from '../services/dmn-validation.service';
 
@@ -237,6 +237,7 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       operatonUsername,
       operatonPassword,
       boardOwner,
+      organization,
     } = req.body as {
       bpmnXml: string;
       deploymentName: string;
@@ -248,6 +249,8 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       operatonPassword?: string;
       /** Owning board for the deployed process; auto-derived from candidate groups when omitted. */
       boardOwner?: string;
+      /** Tenant tag, mandatory — becomes Operaton's native tenant-id. */
+      organization?: string;
     };
 
     if (!bpmnXml?.trim()) {
@@ -266,6 +269,14 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       });
     }
 
+    if (!organization?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'organization is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     const result = await operatonService.deployProcess(
       bpmnXml,
       deploymentName,
@@ -275,7 +286,8 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       operatonUrl,
       operatonUsername,
       operatonPassword,
-      boardOwner
+      boardOwner,
+      organization
     );
 
     res.json({
@@ -293,6 +305,101 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       error: { code: 'PROCESS_DEPLOY_FAILED', message: getErrorMessage(error) },
       timestamp: new Date().toISOString(),
     });
+  }
+});
+
+/**
+ * POST /v1/dmns/deploy
+ * Deploy raw, ad-hoc DMN XML content directly to Operaton.
+ *
+ * Unlike `/drd/deploy`, this takes the DMN content as-is rather than
+ * assembling it from pre-registered LDE norm identifiers -- built for the
+ * CPSV Editor's own DMN tab, which has an uploaded/generated DMN file with
+ * no registry entry of its own. Routing the deploy through this backend
+ * instead of calling Operaton directly from the browser sidesteps CORS:
+ * `operatonService.deployDrd`'s multipart POST is server-to-server, which
+ * browsers' CORS preflight checks never apply to.
+ *
+ * Body: { xml: string, deploymentName: string, filename?: string }
+ */
+router.post('/deploy', async (req: Request, res: Response) => {
+  try {
+    const { xml, deploymentName, filename } = req.body as {
+      xml: string;
+      deploymentName: string;
+      filename?: string;
+    };
+
+    if (!xml?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'xml is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!deploymentName?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'deploymentName is required' },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const result = await operatonService.deployDrd(
+      xml,
+      deploymentName,
+      filename?.trim() || `${deploymentName}.dmn`
+    );
+
+    res.json({
+      success: true,
+      data: { deploymentId: result.deploymentId },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: unknown) {
+    logger.error('DMN deploy error', getErrorDetails(error));
+    res.status(500).json({
+      success: false,
+      error: { code: 'DMN_DEPLOY_FAILED', message: getErrorMessage(error) },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * POST /v1/dmns/evaluate/:decisionKey
+ * Evaluate a decision against variables already in Operaton's native wire
+ * format ({value, type, valueInfo}), passed straight through -- no
+ * plain-JS-value type inference (that's evaluateDecision(), used elsewhere
+ * for a different caller contract).
+ *
+ * Routed through this backend instead of calling Operaton directly from the
+ * browser for the same CORS reason `/deploy` above is -- see the CPSV
+ * Editor's DMNTab.jsx (handleEvaluateDMN and friends).
+ *
+ * Unlike every other route in this file, the response is Operaton's raw
+ * evaluate response forwarded byte-for-byte (success or failure), not the
+ * `{success, data, error}` envelope -- the DMN tab reads Operaton's raw JSON
+ * directly (e.g. checking a failed response's body for `"type":
+ * "RestException"`), exactly as it did calling Operaton directly before
+ * being proxied through here, so no frontend response-parsing changes were
+ * needed beyond the URL.
+ *
+ * Body: { variables: Record<string, {value, type, valueInfo?}> }
+ */
+router.post('/evaluate/:decisionKey', async (req: Request, res: Response) => {
+  const { decisionKey } = req.params;
+  try {
+    const result = await operatonService.evaluateRaw(decisionKey, req.body?.variables ?? {});
+    res.json(result);
+  } catch (error: unknown) {
+    if (isAxiosError(error) && error.response) {
+      res.status(error.response.status ?? 500).json(error.response.data);
+      return;
+    }
+    logger.error('DMN evaluate error', getErrorDetails(error));
+    res.status(500).json({ type: 'ProxyError', message: getErrorMessage(error) });
   }
 });
 

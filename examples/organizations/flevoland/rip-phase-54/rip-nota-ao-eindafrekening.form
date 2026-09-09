@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-nota-ao-eindafrekening",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the decision note (AO template)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The final account stays within the credit but exceeds the contract sum by EUR 50.000 or more, so the decision note goes to the AO."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Decision note reference",
+      "key": "notaAoEindafrekeningReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Overschrijding",
+      "type": "number",
+      "label": "Amount above the contract sum (EUR)",
+      "key": "overschrijdingAanneemsom",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Toel",
+      "type": "textarea",
+      "label": "Substantiation",
+      "key": "notaAoEindafrekeningToelichting",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "notaAoEindafrekeningOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-controleren-opleverdossier-beheerder",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Check the delivery dossier and send it to the databeheerder"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The beheerder checks the opleverdossier from the asset side and passes it to the databeheerder."
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Check findings",
+      "key": "opleverdossierBevindingenBeheerder",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Checked on",
+      "key": "opleverdossierGecontroleerdOpBeheerder",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

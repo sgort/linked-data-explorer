@@ -1,0 +1,80 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-beoordelen-restpunten",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Assess the completed restpunten and close the maintenance period"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder assesses which restpunten the contractor completed and closes the maintenance period. Where they were not all completed, a notice of temporary suspension from the groslijst follows; the maintenance period closes either way."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Internal inspection report reference",
+      "key": "internSchouwrapportReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Gereed",
+      "type": "textarea",
+      "label": "Restpunten completed",
+      "key": "restpuntenGereed",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Open",
+      "type": "textarea",
+      "label": "Restpunten still open",
+      "key": "restpuntenOpen"
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "All restpunten completed",
+      "key": "restpuntenAkkoord",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Assessed on",
+      "key": "restpuntenBeoordeeldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

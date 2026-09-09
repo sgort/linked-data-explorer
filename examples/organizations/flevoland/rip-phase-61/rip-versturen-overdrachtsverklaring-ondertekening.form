@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-versturen-overdrachtsverklaring-ondertekening",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the transfer declaration to the beheerder and VM for signature"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectondersteuner sends the transfer declaration to the beheerder and the vestigingsmanager for signature."
+    },
+    {
+      "id": "F_Aan",
+      "type": "textfield",
+      "label": "Sent to",
+      "key": "overdrachtsverklaringAan",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "overdrachtsverklaringTerTekeningOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

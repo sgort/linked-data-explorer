@@ -1,0 +1,209 @@
+{
+  "id": "rip-concept-bestekstekeningen",
+  "name": "RIP — Draft Specification Drawings (Concept bestekstekeningen)",
+  "description": "The draft bestekstekeningen produced from the final DO at the start of R3.1.",
+  "processKey": "RipR31Process",
+  "serviceId": "RipR31",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{conceptBestekstekeningenReferentie}}",
+      "variableKey": "conceptBestekstekeningenReferentie",
+      "source": "process",
+      "label": "Draft drawings reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{conceptBestekstekeningenGereedOp}}",
+      "variableKey": "conceptBestekstekeningenGereedOp",
+      "source": "process",
+      "label": "Delivered on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{doReferentie}}",
+      "variableKey": "doReferentie",
+      "source": "process",
+      "label": "Final DO reference"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{ontwerptoelichtingReferentie}}",
+      "variableKey": "ontwerptoelichtingReferentie",
+      "source": "process",
+      "label": "Design rationale reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{uitvraagReferentie}}",
+      "variableKey": "uitvraagReferentie",
+      "source": "process",
+      "label": "Uitvraag reference"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Draft drawings {{conceptBestekstekeningenReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Draft specification drawings",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Draft specification drawings"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Draft bestekstekeningen {{conceptBestekstekeningenReferentie}} for project {{projectNumber}} — {{projectName}} were delivered on {{conceptBestekstekeningenGereedOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn from final DO {{doReferentie}} and design rationale {{ontwerptoelichtingReferentie}}, against uitvraag {{uitvraagReferentie}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the designer"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

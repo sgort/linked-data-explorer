@@ -1,0 +1,52 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-accorderen-concept-toezichtplan",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Approve and send the supervision plan"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record approval of the toezichtplan and send it to the project leader."
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Approved by",
+      "key": "toezichtplanGeaccordeerdDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Approved on",
+      "key": "toezichtplanGeaccordeerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Comments",
+      "key": "toezichtplanAccordeerOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

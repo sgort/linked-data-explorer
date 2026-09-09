@@ -1,0 +1,61 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-werkbestek",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the work specification"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Draw up the werkbestek from the contract specification and drawings adopted in R3.2 and the note of information issued during the tender."
+    },
+    {
+      "id": "F_Werkbestek",
+      "type": "textfield",
+      "label": "Work specification reference",
+      "key": "werkbestekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bestek",
+      "type": "textfield",
+      "label": "Contract specification and drawings reference (from R3.2)",
+      "key": "bestekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Nota",
+      "type": "textfield",
+      "label": "Nota van inlichtingen reference",
+      "key": "notaVanInlichtingenReferentie"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "werkbestekOpgesteldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

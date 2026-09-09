@@ -78,36 +78,57 @@ ORDER BY ?rulesetId ?ruleIdPath`,
   {
     name: 'Rules with Their Services',
     sparql: `${COMMON_PREFIXES}
-SELECT ?serviceTitle ?ruleTitle ?validFrom ?confidence ?description
+SELECT DISTINCT ?serviceTitle ?ruleTitle ?validFrom ?confidence ?description
 WHERE {
   ?service a cpsv:PublicService .
   ?service dct:title ?serviceTitle .
-  
+
   ?rule a cpsv:Rule .
-  ?rule cpsv:implements ?service .
   ?rule dct:title ?ruleTitle .
-  
+
+  # A rule links to its service either directly (older exports) or via the
+  # shared legal resource. Since the CPSV-AP RuleShape fix, a cpsv:Rule's
+  # cpsv:implements points at an eli:LegalResource — the same resource the
+  # service declares with cv:hasLegalResource — instead of the service itself.
+  {
+    ?rule cpsv:implements ?service .
+  } UNION {
+    ?service cv:hasLegalResource ?legal .
+    ?rule cpsv:implements ?legal .
+  }
+
   OPTIONAL { ?rule dct:description ?description }
-  OPTIONAL { ?rule ronl:validFrom ?validFrom }
-  OPTIONAL { ?rule ronl:confidenceLevel ?confidence }
-  
+  OPTIONAL { ?rule cprmv041:validFrom ?validFrom }
+  OPTIONAL { ?rule cprmv041:confidenceLevel ?confidence }
+
   FILTER(LANG(?serviceTitle) = "nl")
   FILTER(LANG(?ruleTitle) = "nl")
+  # Hide auto-generated DMN decision rules (placeholder "Decision rule <id>" titles).
+  FILTER(!STRSTARTS(STR(?ruleTitle), "Decision rule "))
 }
 ORDER BY ?serviceTitle ?validFrom ?ruleTitle`,
   },
   {
     name: 'Count Rules per Service',
     sparql: `${COMMON_PREFIXES}
-SELECT ?serviceTitle (COUNT(?rule) as ?ruleCount)
+SELECT ?serviceTitle (COUNT(DISTINCT ?rule) as ?ruleCount)
 WHERE {
   ?service a cpsv:PublicService .
   ?service dct:title ?serviceTitle .
-  
+
   ?rule a cpsv:Rule .
-  ?rule cpsv:implements ?service .
-  
+  ?rule dct:title ?ruleTitle .
+  # Direct link (older exports) or via the shared eli:LegalResource (RuleShape).
+  {
+    ?rule cpsv:implements ?service .
+  } UNION {
+    ?service cv:hasLegalResource ?legal .
+    ?rule cpsv:implements ?legal .
+  }
+
   FILTER(LANG(?serviceTitle) = "nl")
+  # Exclude auto-generated DMN decision rules so the count matches the rule list.
+  FILTER(!STRSTARTS(STR(?ruleTitle), "Decision rule "))
 }
 GROUP BY ?serviceTitle
 ORDER BY DESC(?ruleCount)`,
@@ -115,20 +136,28 @@ ORDER BY DESC(?ruleCount)`,
   {
     name: 'Services with All Their Rules (Detailed)',
     sparql: `${COMMON_PREFIXES}
-SELECT ?service ?serviceTitle ?serviceDescription ?rule ?ruleTitle ?validFrom ?confidence
+SELECT DISTINCT ?service ?serviceTitle ?serviceDescription ?rule ?ruleTitle ?validFrom ?confidence
 WHERE {
   ?service a cpsv:PublicService .
   ?service dct:title ?serviceTitle .
-  
+
   OPTIONAL { ?service dct:description ?serviceDescription }
-  
+
   OPTIONAL {
     ?rule a cpsv:Rule .
-    ?rule cpsv:implements ?service .
     ?rule dct:title ?ruleTitle .
-    OPTIONAL { ?rule ronl:validFrom ?validFrom }
-    OPTIONAL { ?rule ronl:confidenceLevel ?confidence }
+    # Direct link (older exports) or via the shared eli:LegalResource (RuleShape).
+    {
+      ?rule cpsv:implements ?service .
+    } UNION {
+      ?service cv:hasLegalResource ?legal .
+      ?rule cpsv:implements ?legal .
+    }
+    OPTIONAL { ?rule cprmv041:validFrom ?validFrom }
+    OPTIONAL { ?rule cprmv041:confidenceLevel ?confidence }
     FILTER(LANG(?ruleTitle) = "nl")
+    # Hide auto-generated DMN decision rules (placeholder "Decision rule <id>" titles).
+    FILTER(!STRSTARTS(STR(?ruleTitle), "Decision rule "))
   }
   
   FILTER(LANG(?serviceTitle) = "nl")
@@ -189,18 +218,22 @@ WHERE {
   {
     name: 'NL-SBB Concepts and Services',
     sparql: `${COMMON_PREFIXES}
-SELECT ?subject ?prefLabel ?exactMatch ?service ?serviceTitle
+SELECT DISTINCT ?subject ?prefLabel ?exactMatch ?service ?serviceTitle
 WHERE {
   ?subject skos:exactMatch ?exactMatch ;
            dct:subject ?variable .
 
   OPTIONAL { ?subject skos:prefLabel ?prefLabel . FILTER(LANG(?prefLabel) = "nl" || LANG(?prefLabel) = "") }
 
-  {
-    ?variable cpsv:isRequiredBy ?dmn .
-  } UNION {
-    ?variable cpsv:produces ?dmn .
-  }
+  # A concept's dct:subject points at a DMN variable. Older exports give that
+  # variable an explicit edge to the DMN (cpsv:isRequiredBy / cpsv:produces).
+  # Newer exports (CPRMV 0.4.1) emit a bare variable URI of the form
+  # <dmnUri>/input/N or <dmnUri>/output/N with no edge, so derive the DMN URI
+  # from the variable URI and fall back to it when no explicit edge exists.
+  OPTIONAL { ?variable cpsv:isRequiredBy ?dmnRequired . }
+  OPTIONAL { ?variable cpsv:produces ?dmnProduced . }
+  BIND(IRI(REPLACE(STR(?variable), "/(input|output)/[0-9]+$", "")) AS ?dmnFromUri)
+  BIND(COALESCE(?dmnRequired, ?dmnProduced, ?dmnFromUri) AS ?dmn)
 
   { ?dmn cprmv:implements ?service } UNION { ?dmn cprmv041:implements ?service }
   OPTIONAL { ?service dct:title ?serviceTitle . FILTER(LANG(?serviceTitle) = "nl" || LANG(?serviceTitle) = "") }

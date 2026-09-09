@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-laten-aanpassen-documenten-on",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the contractor amend the documents"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Return the documents to the contractor for amendment, after which they are checked again."
+    },
+    {
+      "id": "F_Verzoek",
+      "type": "textarea",
+      "label": "Amendments requested",
+      "key": "aanpassingVerzoek",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Requested on",
+      "key": "aanpassingVerzochtOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

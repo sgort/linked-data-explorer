@@ -1,0 +1,76 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-bestek",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the specification drawn up"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the bestek, the inschrijvingsleidraad and the SSK estimate drawn up against the final drawings, the risk file, the V&G plan, the ILS, the maatregelenplan, the UAV and the moederbestek and inschrijvingsleidraad formats."
+    },
+    {
+      "id": "F_Bestek",
+      "type": "textfield",
+      "label": "Bestek reference (incl. annexes)",
+      "key": "bestekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Leidraad",
+      "type": "textfield",
+      "label": "Inschrijvingsleidraad reference",
+      "key": "inschrijvingsleidraadReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_SSK",
+      "type": "textfield",
+      "label": "SSK estimate reference",
+      "key": "sskRamingBestekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Maatregelen",
+      "type": "textfield",
+      "label": "Maatregelenplan reference (CO1.)",
+      "key": "maatregelenplanReferentie"
+    },
+    {
+      "id": "F_Risico",
+      "type": "textfield",
+      "label": "Risk file reference",
+      "key": "risicodossierReferentie"
+    },
+    {
+      "id": "F_Gereed",
+      "type": "datetime",
+      "label": "Delivered on",
+      "key": "bestekGereedOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-sturen-verzoek-oplevering",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the request and the assessment on for decision"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectleider sends the request and the assessment to the AO for a decision."
+    },
+    {
+      "id": "F_Aan",
+      "type": "textfield",
+      "label": "Sent to",
+      "key": "opleveringVerzoekAan",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "opleveringVerzoekVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

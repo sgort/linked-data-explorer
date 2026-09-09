@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-inrichten-better-performance",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Set up Better Performance"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Set up the Better Performance environment for the project."
+    },
+    {
+      "id": "F_Url",
+      "type": "textfield",
+      "label": "Better Performance environment",
+      "key": "betterPerformanceOmgevingUrl",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Set up on",
+      "key": "betterPerformanceIngerichtOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+{
+  "id": "rip-concept-do-dossier",
+  "name": "RIP — Draft Detailed Design (Concept DO)",
+  "description": "The draft detailed design dossier: draft DO, draft DO estimate, V&G plan and design rationale, produced by the external engineering firm.",
+  "processKey": "RipR24Process",
+  "serviceId": "RipR24",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{conceptDoReferentie}}",
+      "variableKey": "conceptDoReferentie",
+      "source": "process",
+      "label": "Draft DO reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{conceptDoRamingReferentie}}",
+      "variableKey": "conceptDoRamingReferentie",
+      "source": "process",
+      "label": "Draft DO estimate reference"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{conceptDoRamingBedrag}}",
+      "variableKey": "conceptDoRamingBedrag",
+      "source": "process",
+      "label": "Draft DO estimate"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{vgPlanReferentie}}",
+      "variableKey": "vgPlanReferentie",
+      "source": "process",
+      "label": "V&G plan reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{ontwerptoelichtingReferentie}}",
+      "variableKey": "ontwerptoelichtingReferentie",
+      "source": "process",
+      "label": "Design rationale reference"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Draft DO {{conceptDoReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Draft detailed design",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Draft detailed design"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Draft detailed design {{conceptDoReferentie}} for project {{projectNumber}} — {{projectName}}, with draft estimate {{conceptDoRamingReferentie}} at EUR {{conceptDoRamingBedrag}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Accompanied by V&G plan {{vgPlanReferentie}} and design rationale {{ontwerptoelichtingReferentie}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The dossier is put to the RIP team, the applicant, the advisers and the site manager for review before the final DO is drawn up."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the external engineering firm"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

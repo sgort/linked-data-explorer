@@ -1,0 +1,71 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-vaststellen-opleveringschouw",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Adopt the handover inspection with the contractor"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder and the aannemer adopt the opleveringschouw. Where it is agreed the area is handed over and R5.4 follows; where it is not, the restpunten are executed back in R5.2."
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Handover agreed",
+      "key": "opleveringAkkoord",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Adopted by",
+      "key": "opleveringVastgesteldDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Restpunten",
+      "type": "textarea",
+      "label": "Restpunten to be executed",
+      "key": "opleveringRestpunten"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Adopted on",
+      "key": "opleveringVastgesteldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

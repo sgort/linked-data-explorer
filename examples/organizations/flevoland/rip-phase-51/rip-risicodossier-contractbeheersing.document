@@ -1,0 +1,218 @@
+{
+  "id": "rip-risicodossier-contractbeheersing",
+  "name": "RIP — Risk Dossier for Contract Management (Risicodossier)",
+  "description": "The risk dossier updated for contract management at the start of the execution phase.",
+  "processKey": "RipR51Process",
+  "serviceId": "RipR51",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{risicodossierReferentie}}",
+      "variableKey": "risicodossierReferentie",
+      "source": "process",
+      "label": "Risk dossier reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{risicodossierBijgewerktOp}}",
+      "variableKey": "risicodossierBijgewerktOp",
+      "source": "process",
+      "label": "Updated on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{risicodossierWijzigingen}}",
+      "variableKey": "risicodossierWijzigingen",
+      "source": "process",
+      "label": "Risks added or changed"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{aanbiedingAannemerReferentie}}",
+      "variableKey": "aanbiedingAannemerReferentie",
+      "source": "process",
+      "label": "Contractor offer reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{werkbestekReferentie}}",
+      "variableKey": "werkbestekReferentie",
+      "source": "process",
+      "label": "Work specification reference"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Risicodossier {{risicodossierReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Risk dossier",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Risk dossier"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Risicodossier {{risicodossierReferentie}} for project {{projectNumber}} — {{projectName}} was updated for contract management on {{risicodossierBijgewerktOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Risks added or changed: {{risicodossierWijzigingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The update draws on the execution ground rules, contractor offer {{aanbiedingAannemerReferentie}} and work specification {{werkbestekReferentie}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Updated by the manager projectbeheersing"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

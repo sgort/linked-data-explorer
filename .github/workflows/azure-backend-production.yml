@@ -1,6 +1,24 @@
 name: Deploy Backend to Production
 
 on:
+  # NO pull_request trigger here, deliberately -- issue #46 asked for this to be
+  # decided rather than left to drift, and the acc workflow got the opposite
+  # answer.
+  #
+  # Two reasons, in order of weight:
+  #
+  # 1. This job declares `environment: production`, which carries
+  #    required_reviewers and a branch policy. A pull_request trigger would
+  #    make every pull request to main wait on a human approval BEFORE the
+  #    tests could run -- an approval gate in front of the check meant to
+  #    inform it, which is exactly backwards.
+  #
+  # 2. main is promoted from acc. A pull request here carries content that
+  #    already ran lint, typecheck and the full suite on its acc pull request,
+  #    so a second pre-merge run would re-test the same commits.
+  #
+  # The acc workflow is where pre-merge verification belongs; see the note on
+  # its triggers. If main ever stops being promoted from acc, revisit this.
   push:
     branches:
       - main
@@ -9,8 +27,21 @@ on:
       - '.github/workflows/azure-backend-production.yml'
   workflow_dispatch:
 
+# Same serialisation as the acc workflow, but production runs QUEUE
+# rather than cancel: interrupting a live production deployment to
+# start another is worse than waiting for it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+# Default to read-only; jobs opt into more only where required.
+permissions:
+  contents: read
+
 jobs:
   deploy:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -18,12 +49,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version: '22.23.2'
 
       - name: Install dependencies
         working-directory: packages/backend
@@ -32,6 +65,14 @@ jobs:
       - name: Run linter
         working-directory: packages/backend
         run: npm run lint
+
+      - name: Typecheck
+        working-directory: packages/backend
+        run: npm run typecheck
+
+      - name: Unit tests
+        working-directory: packages/backend
+        run: npm test
 
       - name: Build TypeScript
         working-directory: packages/backend
@@ -71,7 +112,7 @@ jobs:
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT = false" >> .deployment
 
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
         with:
           app-name: 'ronl-linkeddata-backend-prod'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}

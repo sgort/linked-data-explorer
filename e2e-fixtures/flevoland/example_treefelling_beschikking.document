@@ -1,0 +1,471 @@
+{
+  "id": "example_treefelling_beschikking",
+  "name": "Kapvergunning Beschikking (Example)",
+  "description": "Formele beschikking Awb voor de kapvergunning — TreeFelling Permit Process",
+  "processKey": "AwbShellProcess",
+  "serviceId": "TreeFellingPermit",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "e2e",
+  "language": "en",
+  "organization": "flevoland",
+  "createdAt": "2026-03-07T00:00:00.000Z",
+  "updatedAt": "2026-03-07T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{dossierReference}}",
+      "variableKey": "dossierReference",
+      "source": "process",
+      "label": "Dossiernummer"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{permitDecision}}",
+      "variableKey": "permitDecision",
+      "source": "dmn_output",
+      "label": "Vergunningsbesluit"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{finalMessage}}",
+      "variableKey": "finalMessage",
+      "source": "dmn_output",
+      "label": "Beslissingstekst"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{replacementInfo}}",
+      "variableKey": "replacementInfo",
+      "source": "dmn_output",
+      "label": "Herplantinformatie"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{applicationDate}}",
+      "variableKey": "applicationDate",
+      "source": "process",
+      "label": "Aanvraagdatum"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{applicantId}}",
+      "variableKey": "applicantId",
+      "source": "process",
+      "label": "BSN / Aanvrager-ID"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh_org_name",
+          "type": "text",
+          "label": "Organisatienaam",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Provincie Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Omgevingsdienst — Afdeling Vergunningen",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "lh_separator",
+          "type": "separator",
+          "label": "Scheidingslijn"
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": [
+        {
+          "id": "ci_address",
+          "type": "text",
+          "label": "Contactgegevens",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Postbus 1234"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "1234 AB Lelystad"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Tel: 0320 - 265 911"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "E-mail: vergunningen@flevoland.nl"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "www.flevoland.nl"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref_header",
+          "type": "text",
+          "label": "Kenmerk en datum",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Kenmerk: {{dossierReference}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Datum: {{applicationDate}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Betreft: Beslissing op aanvraag kapvergunning"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "ref_subject",
+          "type": "text",
+          "label": "Geachte aanvrager",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Geachte aanvrager (BSN/ID: {{applicantId}}),"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "body_intro",
+          "type": "text",
+          "label": "Inleiding",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Op uw aanvraag voor een kapvergunning hebben wij het volgende besloten."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_decision_heading",
+          "type": "text",
+          "label": "Besluit",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Besluit"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_decision",
+          "type": "variable",
+          "variableKey": "permitDecision",
+          "label": "Vergunningsbesluit (variabel)"
+        },
+        {
+          "id": "body_message",
+          "type": "variable",
+          "variableKey": "finalMessage",
+          "label": "Beslissingstekst (variabel)"
+        },
+        {
+          "id": "body_motivation_heading",
+          "type": "text",
+          "label": "Motivering",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Motivering"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_motivation",
+          "type": "text",
+          "label": "Motiveringstekst",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Dit besluit is genomen op grond van de Algemene wet bestuursrecht (Awb) en de lokale kapverordening."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Bij de beoordeling is rekening gehouden met de diameter van de boom, de ligging in een beschermd gebied en de ecologische waarden."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": [
+        {
+          "id": "cl_replacement",
+          "type": "variable",
+          "variableKey": "replacementInfo",
+          "label": "Herplantinformatie (variabel)"
+        },
+        {
+          "id": "cl_appeal_heading",
+          "type": "text",
+          "label": "Bezwaarmogelijkheid",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Bezwaar en beroep"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "cl_appeal_text",
+          "type": "text",
+          "label": "Bezwaartekst",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Tegen dit besluit kunt u binnen zes weken na de verzenddatum bezwaar maken."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "U stuurt uw bezwaarschrift naar: Provincie Flevoland, t.a.v. de Commissie Bezwaarschriften, Postbus 1234, 1234 AB Lelystad."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Vermeld in uw bezwaarschrift: uw naam en adres, de datum, het dossiernummer ({{dossierReference}}), en de redenen van uw bezwaar."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "In spoedeisende gevallen kunt u een voorlopige voorziening vragen bij de voorzieningenrechter van de rechtbank Midden-Nederland."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so_closing",
+          "type": "text",
+          "label": "Afsluiting",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Hoogachtend,"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "so_spacer",
+          "type": "spacer",
+          "label": "Ruimte handtekening"
+        },
+        {
+          "id": "so_name",
+          "type": "text",
+          "label": "Naam en functie",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Namens Burgemeester en Wethouders van Provincie Flevoland,"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": []
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Hoofd afdeling Vergunningen"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "annex": null
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "id": "rip-projectraming",
+  "name": "RIP — Project Estimate (Projectraming / SSK-raming)",
+  "description": "Format Projectraming. Records the VO cost estimate and the matching SSK estimate for the preliminary design, drawn up in R2.3.",
+  "processKey": "RipR23Process",
+  "serviceId": "RipR23",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{projectramingReferentie}}",
+      "variableKey": "projectramingReferentie",
+      "source": "process",
+      "label": "Project estimate reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{sskRamingReferentie}}",
+      "variableKey": "sskRamingReferentie",
+      "source": "process",
+      "label": "SSK estimate reference"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{ramingBedrag}}",
+      "variableKey": "ramingBedrag",
+      "source": "process",
+      "label": "Estimated project cost"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{voReferentie}}",
+      "variableKey": "voReferentie",
+      "source": "process",
+      "label": "VO reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{hoeveelheidsbepalingReferentie}}",
+      "variableKey": "hoeveelheidsbepalingReferentie",
+      "source": "process",
+      "label": "Quantity determination reference"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{opgesteldDoor}}",
+      "variableKey": "opgesteldDoor",
+      "source": "process",
+      "label": "Drawn up by"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project estimate {{projectramingReferentie}} · SSK estimate {{sskRamingReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "VO cost estimate",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "VO cost estimate"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "This project estimate ({{projectramingReferentie}}) and the accompanying SSK estimate ({{sskRamingReferentie}}) cover the adopted preliminary design {{voReferentie}} for project {{projectNumber}} — {{projectName}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The estimated project cost is EUR {{ramingBedrag}}. The quantities are taken from the quantity determination {{hoeveelheidsbepalingReferentie}} produced in R2.2."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The estimate is submitted for verification under BP4 by the cost advisor or the cost and contract specialist before the RIP team checks it."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by: {{opgesteldDoor}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

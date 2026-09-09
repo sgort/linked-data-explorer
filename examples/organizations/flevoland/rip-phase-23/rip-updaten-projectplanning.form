@@ -1,0 +1,49 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-updaten-projectplanning",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Update the project planning"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Update the project planning after the VO estimate and inform the project leader and the support officer."
+    },
+    {
+      "id": "Field_PlanningReferentie",
+      "type": "textfield",
+      "label": "Planning reference",
+      "key": "planningReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_NieuweMijlpaaldatum",
+      "type": "datetime",
+      "label": "Next milestone date",
+      "key": "nieuweMijlpaaldatum",
+      "subtype": "date",
+      "dateLabel": "Date"
+    },
+    {
+      "id": "Field_GeinformeerdePersonen",
+      "type": "textarea",
+      "label": "People informed",
+      "key": "geinformeerdePersonen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-vaststellen-ingebruiknameschouw",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Adopt the commissioning inspection, including the list of outstanding points"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder, toezichthouder and aannemer adopt the ingebruiknameschouw with its restpuntenlijst. Either outcome returns to R5.2: agreed, the area goes into early use while the work carries on; not agreed, the ON executes the restpunten first."
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Early commissioning agreed",
+      "key": "ingebruiknameAkkoord",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Adopted by",
+      "key": "ingebruiknameVastgesteldDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Restpuntenlijst",
+      "type": "textarea",
+      "label": "Restpuntenlijst",
+      "key": "ingebruiknameRestpuntenlijst",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Adopted on",
+      "key": "ingebruiknameVastgesteldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

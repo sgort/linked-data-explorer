@@ -1,0 +1,58 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-verwerken-projectraming",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Process the project estimate and Infra framework credit"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the project estimate and the credit decision in the Infra framework credit administration."
+    },
+    {
+      "id": "Field_VerwerktBedrag",
+      "type": "number",
+      "label": "Amount processed (EUR)",
+      "key": "verwerktBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_AdministratieReferentie",
+      "type": "textfield",
+      "label": "Administration reference",
+      "key": "administratieReferentie"
+    },
+    {
+      "id": "Field_VerwerktOp",
+      "type": "datetime",
+      "label": "Processed on",
+      "key": "verwerktOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_VerwerkingsOpmerkingen",
+      "type": "textarea",
+      "label": "Comments",
+      "key": "verwerkingsOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

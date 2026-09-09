@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-overdrachtsverklaring",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the transfer declaration"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectleider draws up the overdrachtsverklaring, transferring the asset to the beheerder. Where an earlier version was not signed, this is the redrafted declaration."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Transfer declaration reference",
+      "key": "overdrachtsverklaringReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Versie",
+      "type": "number",
+      "label": "Version",
+      "key": "overdrachtsverklaringVersie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Areaal",
+      "type": "textarea",
+      "label": "Asset transferred",
+      "key": "overgedragenAreaal",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "overdrachtsverklaringOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

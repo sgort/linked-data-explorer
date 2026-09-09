@@ -1,0 +1,43 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-ontvangen-projectraming-bestek-kcd",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Receive the project estimate (cost and contract specialist)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record receipt of the approved specification project estimate."
+    },
+    {
+      "id": "F_Ontvangen",
+      "type": "datetime",
+      "label": "Received on",
+      "key": "projectramingOntvangenKcdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Notes",
+      "key": "projectramingOntvangstKcdOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

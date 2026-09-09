@@ -1,0 +1,78 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-beoordelen-ils",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Assess and return the ILS"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Advisers and asset management assess the completed ILS and return it to the project leader."
+    },
+    {
+      "id": "F_Oordeel",
+      "type": "select",
+      "label": "Assessment",
+      "key": "ilsOordeel",
+      "values": [
+        {
+          "label": "Approved",
+          "value": "akkoord"
+        },
+        {
+          "label": "Approved with comments",
+          "value": "akkoordMetOpmerkingen"
+        },
+        {
+          "label": "Not approved",
+          "value": "nietAkkoord"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Assessment comments",
+      "key": "ilsBeoordelingOpmerkingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Assessed by",
+      "key": "ilsBeoordeeldDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Assessed on",
+      "key": "ilsBeoordeeldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

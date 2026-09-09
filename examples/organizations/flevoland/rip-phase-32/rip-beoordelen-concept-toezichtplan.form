@@ -1,0 +1,74 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-beoordelen-concept-toezichtplan",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Assess the draft supervision plan"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Directievoerder and vestigingsmanager assess the draft toezichtplan and decide whether it can be approved."
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Draft supervision plan approved",
+      "key": "toezichtplanAkkoord",
+      "values": [
+        {
+          "label": "Yes — approved",
+          "value": "ja"
+        },
+        {
+          "label": "No — amendment required",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bev",
+      "type": "textarea",
+      "label": "Assessment findings",
+      "key": "toezichtplanBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Assessed by",
+      "key": "toezichtplanBeoordeeldDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Assessed on",
+      "key": "toezichtplanBeoordeeldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

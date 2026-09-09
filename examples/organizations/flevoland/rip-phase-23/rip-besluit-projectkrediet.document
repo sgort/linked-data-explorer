@@ -1,0 +1,227 @@
+{
+  "id": "rip-besluit-projectkrediet",
+  "name": "RIP — Project Credit Decision (Besluit projectkrediet)",
+  "description": "Records the Infra consultation decision on the project credit requested in the memo.",
+  "processKey": "RipR23Process",
+  "serviceId": "RipR23",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{memoReferentie}}",
+      "variableKey": "memoReferentie",
+      "source": "process",
+      "label": "Memo reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{besluitProjectkrediet}}",
+      "variableKey": "besluitProjectkrediet",
+      "source": "process",
+      "label": "Decision"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{toegekendBedrag}}",
+      "variableKey": "toegekendBedrag",
+      "source": "process",
+      "label": "Granted amount"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{besluitDatum}}",
+      "variableKey": "besluitDatum",
+      "source": "process",
+      "label": "Decision date"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{besluitToelichting}}",
+      "variableKey": "besluitToelichting",
+      "source": "process",
+      "label": "Explanation"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Decision on memo {{memoReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Decision on the project credit",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Decision on the project credit"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "On {{besluitDatum}} the Infra consultation decided on the project credit requested in memo {{memoReferentie}} for project {{projectNumber}} — {{projectName}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Decision: {{besluitProjectkrediet}}. Granted amount: EUR {{toegekendBedrag}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Explanation: {{besluitToelichting}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The decision is processed into the Infra framework credit administration."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Decided by the Infra consultation"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

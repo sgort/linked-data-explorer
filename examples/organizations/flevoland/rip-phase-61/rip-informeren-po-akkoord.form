@@ -1,0 +1,43 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-informeren-po-akkoord",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Inform the projectondersteuner of the AO approval"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectleider informs the projectondersteuner that the AO approved the discharge dossier, so the project can be closed out."
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Informed on",
+      "key": "poGeinformeerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bericht",
+      "type": "textarea",
+      "label": "Message",
+      "key": "poBericht"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+{
+  "id": "rip-inkoopplan",
+  "name": "RIP — Procurement Plan (Inkoopplan)",
+  "description": "Format Inkoopplan. Sets the procurement strategy for the project and hands over to IN1.1 Behoefte tot inkoop.",
+  "processKey": "RipR23Process",
+  "serviceId": "RipR23",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{inkoopplanReferentie}}",
+      "variableKey": "inkoopplanReferentie",
+      "source": "process",
+      "label": "Procurement plan reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{inkoopstrategie}}",
+      "variableKey": "inkoopstrategie",
+      "source": "process",
+      "label": "Procurement strategy"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{inkoopMotivering}}",
+      "variableKey": "inkoopMotivering",
+      "source": "process",
+      "label": "Rationale"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{vastgesteldProjectplanReferentie}}",
+      "variableKey": "vastgesteldProjectplanReferentie",
+      "source": "process",
+      "label": "Adopted project plan reference"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Procurement plan {{inkoopplanReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Procurement strategy",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Procurement strategy"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The procurement strategy for project {{projectNumber}} — {{projectName}} is {{inkoopstrategie}}, recorded in procurement plan {{inkoopplanReferentie}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Rationale: {{inkoopMotivering}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The strategy follows the adopted project plan ({{vastgesteldProjectplanReferentie}}) and the Infra procurement strategy. It is handed over to IN1.1 Behoefte tot inkoop."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Determined by the RIP team"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

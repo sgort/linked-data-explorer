@@ -507,6 +507,8 @@ const WerkzaamhedenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 const LOCATION_PRESETS = [
   { label: 'Lelystad', oin: '00000001005024249000' },
   { label: 'Flevoland', oin: '00000001006203243000' },
+  { label: 'Ede', oin: '00000001001104524000' },
+  { label: 'Gelderland', oin: '00000001001825100000' },
 ] as const;
 
 /**

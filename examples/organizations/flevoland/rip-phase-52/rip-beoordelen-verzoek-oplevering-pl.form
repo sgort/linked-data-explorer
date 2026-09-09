@@ -1,0 +1,84 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-beoordelen-verzoek-oplevering-pl",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Assess the request against the credit (PL)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The projectleider assesses what the request means financially: whether it stays within the credit, and — where it does — whether the value passes the EUR 50.000 threshold that decides which decision-note template is used."
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Financial effect of the request (EUR)",
+      "key": "opleveringBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Krediet",
+      "type": "select",
+      "label": "Financial effect falls",
+      "key": "kredietPositie",
+      "values": [
+        {
+          "label": "Within the credit",
+          "value": "binnen"
+        },
+        {
+          "label": "Outside the credit",
+          "value": "buiten"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Waarde",
+      "type": "select",
+      "label": "Value against the EUR 50.000 threshold",
+      "key": "notaWaarde",
+      "values": [
+        {
+          "label": "Below EUR 50.000",
+          "value": "onder"
+        },
+        {
+          "label": "Above EUR 50.000",
+          "value": "boven"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Assessed on",
+      "key": "opleveringBeoordeeldOpPl",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

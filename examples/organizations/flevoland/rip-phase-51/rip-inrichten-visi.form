@@ -1,0 +1,65 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-inrichten-visi",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Set up VISI"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Set up the VISI environment for the project and assign the roles."
+    },
+    {
+      "id": "F_Url",
+      "type": "textfield",
+      "label": "VISI environment",
+      "key": "visiOmgevingUrl",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Rollen",
+      "type": "select",
+      "label": "Roles assigned",
+      "key": "visiRollenIngericht",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Set up on",
+      "key": "visiIngerichtOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

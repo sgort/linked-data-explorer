@@ -10,7 +10,7 @@
 import { DocumentTemplate } from '../../types/document.types';
 
 /** Helper: create an empty TipTap doc with one paragraph */
-function emptyDoc(text = '') {
+export function emptyDoc(text = '') {
   return {
     type: 'doc' as const,
     content: [
@@ -23,7 +23,7 @@ function emptyDoc(text = '') {
 }
 
 /** Helper: create a heading node */
-function heading(level: 1 | 2 | 3, text: string) {
+export function heading(level: 1 | 2 | 3, text: string) {
   return {
     type: 'doc' as const,
     content: [
@@ -37,7 +37,7 @@ function heading(level: 1 | 2 | 3, text: string) {
 }
 
 /** Helper: create a doc with multiple paragraphs */
-function paragraphs(lines: string[]) {
+export function paragraphs(lines: string[]) {
   return {
     type: 'doc' as const,
     content: lines.map((line) => ({
@@ -293,7 +293,7 @@ export const ZORGTOESLAG_PROVISIONAL_BESCHIKKING: DocumentTemplate = {
   name: 'Zorgtoeslag Voorlopige Beschikking (Example)',
   description:
     'Formele beschikking Awb voor de voorlopige zorgtoeslag — ZorgtoeslagProvisionalSubProcess',
-  processKey: 'AwbShellProcess',
+  processKey: 'AwbZorgtoeslagProcess',
   serviceId: 'ZorgtoeslagProvisional',
   schemaVersion: 1,
   readonly: false,

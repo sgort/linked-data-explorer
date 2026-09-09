@@ -1,0 +1,225 @@
+{
+  "id": "rip-nota-besluitvorming-ao-eindafrekening",
+  "name": "RIP — Final-Account Decision Note, AO (Nota besluitvorming)",
+  "description": "Sjabloon nota besluitvorming for the AO, used when the final account stays within the credit but exceeds the contract sum by EUR 50.000 or more.",
+  "processKey": "RipR54Process",
+  "serviceId": "RipR54",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{notaAoEindafrekeningReferentie}}",
+      "variableKey": "notaAoEindafrekeningReferentie",
+      "source": "process",
+      "label": "Decision note reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{eindafrekeningReferentie}}",
+      "variableKey": "eindafrekeningReferentie",
+      "source": "process",
+      "label": "Final account reference"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{eindafrekeningBedrag}}",
+      "variableKey": "eindafrekeningBedrag",
+      "source": "process",
+      "label": "Final account amount"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{overschrijdingAanneemsom}}",
+      "variableKey": "overschrijdingAanneemsom",
+      "source": "process",
+      "label": "Amount above contract sum"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{notaAoEindafrekeningToelichting}}",
+      "variableKey": "notaAoEindafrekeningToelichting",
+      "source": "process",
+      "label": "Substantiation"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{notaAoEindafrekeningOp}}",
+      "variableKey": "notaAoEindafrekeningOp",
+      "source": "process",
+      "label": "Drawn up on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Nota {{notaAoEindafrekeningReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Decision note — AO",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Decision note — AO"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Eindafrekening {{eindafrekeningReferentie}} for project {{projectNumber}} — {{projectName}} amounts to EUR {{eindafrekeningBedrag}}, exceeding the contract sum by EUR {{overschrijdingAanneemsom}} while staying within the credit, so the decision goes to the AO."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Substantiation: {{notaAoEindafrekeningToelichting}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up on {{notaAoEindafrekeningOp}}; the ATB webform is filled in alongside the letter."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the projectleider for the AO"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

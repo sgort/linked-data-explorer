@@ -1,0 +1,59 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-concept-vo",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draft preliminary design (concept VO)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the draft preliminary design and the reasoning behind it, so it can be circulated for review."
+    },
+    {
+      "id": "Field_ConceptVoReferentie",
+      "type": "textfield",
+      "label": "Draft VO reference",
+      "key": "conceptVoReferentie",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_Ontwerptoelichting",
+      "type": "textarea",
+      "label": "Design rationale",
+      "key": "ontwerptoelichtingSamenvatting",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_ObjectenboomReferentie",
+      "type": "textfield",
+      "label": "Object tree reference (Relatics)",
+      "key": "objectenboomReferentie"
+    },
+    {
+      "id": "Field_VariantenafwegingUitgevoerd",
+      "type": "checkbox",
+      "label": "A variant trade-off (variantenafweging) was carried out",
+      "key": "variantenafwegingUitgevoerd"
+    },
+    {
+      "id": "Field_LccRamingReferentie",
+      "type": "textfield",
+      "label": "LCC estimate reference",
+      "key": "lccRamingReferentie",
+      "description": "Required only when a variant trade-off was carried out."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

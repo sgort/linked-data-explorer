@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-aanvullende-conditionerende-onderzoeken",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have supplementary conditioning surveys carried out"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the external engineering firm carry out the supplementary conditioning surveys needed for the detailed design."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Survey dossier reference",
+      "key": "onderzoekenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Uitgevoerd",
+      "type": "textarea",
+      "label": "Surveys carried out",
+      "key": "uitgevoerdeOnderzoeken",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Gereed",
+      "type": "datetime",
+      "label": "Completed on",
+      "key": "onderzoekenGereedOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

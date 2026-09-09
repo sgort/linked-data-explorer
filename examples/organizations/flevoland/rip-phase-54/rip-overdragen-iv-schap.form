@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-overdragen-iv-schap",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Hand over the IV-schap and the NEN1010 part 6 reports"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The project contains technical installations, so the IV-schap is taken over and the NEN1010 part 6 reports are checked under BO13.5."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Handover reference",
+      "key": "ivSchapReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Nen",
+      "type": "textfield",
+      "label": "NEN1010 part 6 report reference",
+      "key": "nen1010Referentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Handed over on",
+      "key": "ivSchapOvergedragenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

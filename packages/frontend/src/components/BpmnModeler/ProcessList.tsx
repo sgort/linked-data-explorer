@@ -9,6 +9,7 @@ import ArtefactListToolbar, {
 } from '../common/ArtefactListToolbar';
 import LanguageSelector, { LanguageCode } from '../common/LanguageSelector';
 import OrganizationSelector from '../common/OrganizationSelector';
+import StatusBadge from '../common/StatusBadge';
 import DsoActiviteitSelector from './DsoActiviteitSelector';
 import RopaSelector from './RopaSelector';
 
@@ -84,9 +85,13 @@ const ProcessList: React.FC<ProcessListProps> = ({
     for (const p of filteredProcesses) {
       let key: string;
       if (p.processRole === 'subprocess' && p.calledElement) {
-        const shell = processes.find(
-          (s) => s.processRole === 'shell' && s.bpmnProcessId === p.calledElement
-        );
+        // Prefer shellId (unambiguous) over bpmnProcessId (two shells can
+        // share one when an e2e-fixtures copy keeps a seeded example's
+        // production Operaton key). Fall back for records saved before
+        // shellId existed.
+        const shell = p.shellId
+          ? processes.find((s) => s.processRole === 'shell' && s.id === p.shellId)
+          : processes.find((s) => s.processRole === 'shell' && s.bpmnProcessId === p.calledElement);
         key = shell?.organization || p.organization || UNGROUPED;
       } else {
         key = p.organization || UNGROUPED;
@@ -213,7 +218,9 @@ const ProcessList: React.FC<ProcessListProps> = ({
 
           const getSubprocesses = (shell: BpmnProcess, bucket: BpmnProcess[]) =>
             bucket.filter(
-              (p) => p.processRole === 'subprocess' && p.calledElement === shell.bpmnProcessId
+              (p) =>
+                p.processRole === 'subprocess' &&
+                (p.shellId ? p.shellId === shell.id : p.calledElement === shell.bpmnProcessId)
             );
 
           const renderCard = (process: BpmnProcess, indented = false) => (
@@ -245,16 +252,7 @@ const ProcessList: React.FC<ProcessListProps> = ({
                   <div className="flex-1" onDoubleClick={() => handleStartEdit(process)}>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-medium text-slate-800 text-sm">{process.name}</h3>
-                      {process.status === 'example' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
-                          EXAMPLE
-                        </span>
-                      )}
-                      {process.status === 'wip' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
-                          WIP
-                        </span>
-                      )}
+                      <StatusBadge status={process.status} />
                       {process.processRole === 'shell' && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-medium">
                           SHELL

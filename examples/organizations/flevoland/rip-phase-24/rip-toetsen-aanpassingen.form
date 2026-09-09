@@ -1,0 +1,71 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-toetsen-aanpassingen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Review the amendments (PKT)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "PKT reviews whether the amendments address the findings raised on the draft DO."
+    },
+    {
+      "id": "F_Toetser",
+      "type": "textfield",
+      "label": "Reviewed by",
+      "key": "aanpassingenGetoetstDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Amendments approved",
+      "key": "aanpassingenAkkoord",
+      "values": [
+        {
+          "label": "Yes — proceed to the final DO",
+          "value": "ja"
+        },
+        {
+          "label": "No — further amendment needed",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Review comments",
+      "key": "aanpassingenOpmerkingen"
+    },
+    {
+      "id": "F_Getoetst",
+      "type": "datetime",
+      "label": "Reviewed on",
+      "key": "aanpassingenGetoetstOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

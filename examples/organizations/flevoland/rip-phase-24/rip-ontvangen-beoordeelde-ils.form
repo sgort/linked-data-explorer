@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-ontvangen-beoordeelde-ils",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Receive the assessed ILS"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record receipt of the assessed ILS and how its comments are carried into the project plan."
+    },
+    {
+      "id": "F_Ontvangen",
+      "type": "datetime",
+      "label": "Received on",
+      "key": "ilsOntvangenOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Verwerkt",
+      "type": "textarea",
+      "label": "How the assessment is carried through",
+      "key": "ilsVerwerking",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-directievoering",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Directievoering for the week"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder closes the week: the weekrapport, the approved terms and the deviation reporting (AWR) are brought together, and it is decided whether the approved terms fall within or outside the contract."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Weekly report reference",
+      "key": "weekrapportReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Voortgang",
+      "type": "textarea",
+      "label": "Progress this week",
+      "key": "weekrapportVoortgang",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Termijnen",
+      "type": "textfield",
+      "label": "Approved terms reference",
+      "key": "geaccordeerdeTermijnenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Approved term value (EUR)",
+      "key": "geaccordeerdeTermijnBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Contract",
+      "type": "select",
+      "label": "Approved terms fall",
+      "key": "termijnenContract",
+      "values": [
+        {
+          "label": "Within the contract",
+          "value": "binnen"
+        },
+        {
+          "label": "Outside the contract",
+          "value": "buiten"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Closed on",
+      "key": "directievoeringOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

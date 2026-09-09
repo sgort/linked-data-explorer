@@ -1,0 +1,62 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-toetsen-aanpassingen-inschrijfleidraad",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Review the tender guide amendments"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Check whether the amendments address the findings raised on the inschrijvingsleidraad."
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Amendments approved",
+      "key": "aanpassingenInschrijfleidraadAkkoord",
+      "values": [
+        {
+          "label": "Yes — approved",
+          "value": "ja"
+        },
+        {
+          "label": "No — amendment required",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Review comments",
+      "key": "aanpassingenInschrijfleidraadOpmerkingen"
+    },
+    {
+      "id": "F_Getoetst",
+      "type": "datetime",
+      "label": "Reviewed on",
+      "key": "aanpassingenInschrijfleidraadGetoetstOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

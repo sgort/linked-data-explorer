@@ -1,0 +1,74 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-toetsen-concept-bestekstekeningen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Review the draft specification drawings"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Vaste lezers and risicogestuurd lezen review the draft bestekstekeningen and record the findings."
+    },
+    {
+      "id": "F_Bev",
+      "type": "textfield",
+      "label": "Findings form reference",
+      "key": "bevindingenBestekstekeningenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Findings",
+      "key": "bevindingenBestekstekeningen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Draft drawings approved",
+      "key": "conceptBestekstekeningenAkkoord",
+      "values": [
+        {
+          "label": "Yes — approved",
+          "value": "ja"
+        },
+        {
+          "label": "No — amendment required",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Getoetst",
+      "type": "datetime",
+      "label": "Reviewed on",
+      "key": "bestekstekeningenGetoetstOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

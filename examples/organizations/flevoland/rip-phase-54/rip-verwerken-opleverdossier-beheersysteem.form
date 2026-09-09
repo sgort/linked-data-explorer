@@ -1,0 +1,65 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-verwerken-opleverdossier-beheersysteem",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Process the delivery dossier in the asset management system"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The databeheerder processes the approved opleverdossier in the beheersysteem. The new and changed location data go to BO11.6 for checking, and the annual planning is adjusted under BO1. Whether the project contains technical installations is recorded here, because it decides whether the IV-schap is handed over under BO13.5."
+    },
+    {
+      "id": "F_Systeem",
+      "type": "textfield",
+      "label": "Asset management system reference",
+      "key": "beheersysteemReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Processed on",
+      "key": "opleverdossierVerwerktOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Installaties",
+      "type": "select",
+      "label": "Project contains technical installations",
+      "key": "technischeInstallatiesAanwezig",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

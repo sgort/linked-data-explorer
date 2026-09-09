@@ -1,0 +1,232 @@
+{
+  "id": "rip-nota-besluitvorming-atb",
+  "name": "RIP — ATB Webform Record (Nota besluitvorming ATB)",
+  "description": "What was recorded in the ATB webform for the delivery request. Handling of the ATB itself sits outside R5.2.",
+  "processKey": "RipR52Process",
+  "serviceId": "RipR52",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{atbFormulierReferentie}}",
+      "variableKey": "atbFormulierReferentie",
+      "source": "process",
+      "label": "ATB webform reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{atbIngevuldOp}}",
+      "variableKey": "atbIngevuldOp",
+      "source": "process",
+      "label": "Filled in on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{atbInhoud}}",
+      "variableKey": "atbInhoud",
+      "source": "process",
+      "label": "Recorded"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{opleveringVerzoekReferentie}}",
+      "variableKey": "opleveringVerzoekReferentie",
+      "source": "process",
+      "label": "Request reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{opleveringBedrag}}",
+      "variableKey": "opleveringBedrag",
+      "source": "process",
+      "label": "Financial effect"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{kredietPositie}}",
+      "variableKey": "kredietPositie",
+      "source": "process",
+      "label": "Credit position"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{notaWaarde}}",
+      "variableKey": "notaWaarde",
+      "source": "process",
+      "label": "Value against threshold"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "ATB {{atbFormulierReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "ATB webform record",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "ATB webform record"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "ATB webform {{atbFormulierReferentie}} for project {{projectNumber}} — {{projectName}} was filled in on {{atbIngevuldOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Recorded: {{atbInhoud}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "It follows request {{opleveringVerzoekReferentie}}, whose financial effect of EUR {{opleveringBedrag}} falls {{kredietPositie}} the credit and lies {{notaWaarde}} the EUR 50.000 threshold."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Filled in by the ondersteuner"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

@@ -1,0 +1,179 @@
+name: Supply-chain audit
+
+on:
+  # Deliberately NO branches filter either. A stacked pull request based on a
+  # feature branch matched no trigger and so accumulated no audit at all, while
+  # still reporting mergeStateStatus=CLEAN with zero checks — which reads as
+  # ready and is not. The moment its parent merged and GitHub retargeted it to
+  # acc, the required audit was missing and it blocked permanently: a retarget
+  # emits no pull_request event, so nothing ever ran it. Closing and reopening
+  # the pull request was the only way out, and it was needed four times in one
+  # session on 2026-09-02 (#59, #62, #63, #64).
+  pull_request:
+  push:
+    branches:
+      - acc
+      - main
+
+# Deliberately NO paths filter. The audit must run on every pull request
+# regardless of what changed — filtering it would let a pull request skip the
+# gate by touching nothing the filter watches. The branches filter removed above
+# was the same hole in another dimension: paths let a pull request skip the gate
+# by touching nothing watched, branches let it skip by targeting a base that is
+# not watched.
+#
+# This reasoning does NOT extend to the azure-*-acc.yml deploy workflows, which
+# carry the same branches filter for the opposite reason. The two fail in
+# opposite directions: an absent audit filter makes a REQUIRED CHECK silently
+# missing, so a pull request looks ready and is not; an absent deploy filter
+# makes a SCARCE ENVIRONMENT silently exhausted, every pull request against any
+# base claiming a staging slot. ronl-business-api hit that second failure on
+# 2026-08-28, when five open pull requests exhausted a three-environment
+# ceiling. Same syntax, opposite consequence — audit widely, deploy narrowly.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Read-only: the audit inspects the tree and needs nothing else.
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node 24 for the config validator
+        # renovate@44.50.3 declares engines.node ^24.11.0; the runner's
+        # default is Node 22. npm accepts that with an EBADENGINE warning
+        # rather than refusing, so the validator ran unsupported and green
+        # -- the kind of mismatch that keeps working until it abruptly
+        # does not. Reuses the setup-node pin this repository already
+        # carries, so Renovate maintains one digest rather than two.
+        #
+        # Placed BEFORE the zizmor step deliberately: a step after a
+        # failing one is skipped, and the validator's `if: always()`
+        # would then run on whatever Node the runner defaulted to.
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.19.0'
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+        with:
+          # The action's `version` input defaults to "latest". Pinning it is
+          # the whole point of this exercise — and it keeps CI's findings
+          # identical to the local baseline this work was measured against.
+          # Not Renovate-maintained: the github-actions manager does not
+          # parse action inputs, so this must be bumped by hand.
+          version: '1.29.0'
+          # advanced-security uploads SARIF, which needs security-events:
+          # write. This job is contents: read only, so it must be false.
+          # It also means fork PRs work, having no upload step to fail.
+          advanced-security: false
+          annotations: true
+          online-audits: false
+          # Leave `token` at its default. Setting it to '' looks like sound
+          # least-privilege hardening, but zizmor's --gh-token is env-backed
+          # and clap rejects a set-but-empty value before any audit runs,
+          # even with online-audits: false:
+          #   error: invalid value '' for '--gh-token <GH_TOKEN>'
+          # Learned the hard way in ttl-editor; do not retry it.
+
+      - name: Validate renovate.json
+        # Runs even when zizmor fails, so a single run reports on both halves
+        # of the policy rather than the first failure hiding the second.
+        if: always()
+        # Pinned like everything else here. A supply-chain check that fetched a
+        # floating version of its own tool would be self-defeating. Renovate's
+        # npm manager will NOT maintain this for us -- it is an inline npx
+        # argument, not a manifest entry -- so it is bumped by hand, alongside
+        # the zizmor version above.
+        #
+        # --strict also fails on configuration Renovate would silently
+        # auto-migrate. That is deliberate: it is how `baseBranches`, renamed
+        # upstream to `baseBranchPatterns`, was caught in linked-data-explorer
+        # rather than living on as a deprecated key that still "worked".
+        #
+        # No filename argument. Passing one switches the validator into global
+        # config mode, which applies different rules than the repository config
+        # this file actually is -- it will happily validate and tell you
+        # nothing useful.
+        run: npx --yes --package renovate@44.50.3 renovate-config-validator --strict
+
+      - name: Install dependencies for the formatter
+        # Needed because the formatting check below must run THIS repository's
+        # prettier, not a version named here. Issue #45 exists because prettier
+        # 3.7 -> 3.9 changed how short union types are formatted: five
+        # untouched files started failing `prettier --check` the moment #38
+        # merged, with every CI check green, and the symptom would have been
+        # the next person's `git push` failing on files they had never opened.
+        # An `npx prettier@<pinned>` here would be a second version to keep in
+        # step with package.json -- reintroducing the same class of drift the
+        # check is meant to catch. npm ci costs install time and cannot drift.
+        if: always()
+        run: npm ci
+      - name: Check formatting
+        # prettier lives per workspace here, each with its own .prettierrc and
+        # .prettierignore, and .prettierignore is resolved relative to the
+        # working directory. So `prettier --check .` from the repository root
+        # would silently check dist/ and coverage/ and disagree with what the
+        # pre-push hook enforces. The root script fans out per workspace, which
+        # is the same command developers run.
+        #
+        # if: always() for the same reason as the validator above -- a zizmor
+        # failure should not hide a formatting failure behind it.
+        if: always()
+        run: npm run check-format
+
+      - name: Verify pin truth and register agreement
+        # zizmor validates pin FORMAT — that `uses:` names a 40-character SHA.
+        # It cannot say the SHA is the RIGHT one, so a wrong or hostile digest
+        # carrying a plausible "# v4.4.0" comment passes zizmor, Prettier and
+        # review alike. This resolves every digest against the GitHub API and
+        # compares SECURITY-PIPELINE.md's register with the workflows.
+        #
+        # if: always() for the same reason as the validator above — one run
+        # should report on every half of the policy, not stop at the first.
+        if: always()
+        #
+        # BLOCKING. It was introduced with continue-on-error: true in #77 and
+        # promoted in #81, once the thing it was waiting on had been shown to
+        # work twice.
+        #
+        # What it was waiting on: Renovate rewrites workflow pins and never
+        # touches SECURITY-PIPELINE.md, so every action-bump pull request
+        # fails the register half until the register is updated by hand.
+        # Blocking on that would fail a required check on routine dependency
+        # updates -- how gates get resented and then bypassed.
+        #
+        # What resolved it: the register is updated ON the bump's branch,
+        # before merging, so the check is green on the pull request rather
+        # than only on acc afterwards. Exercised on #66 (actions/checkout to
+        # v7.0.1, which also collapsed a two-digest split pin) and #67
+        # (actions/setup-node to v7.0.0). Both went green on the branch and
+        # merged green. See SECURITY-PIPELINE.md, "Keeping this register
+        # true".
+        #
+        # Why NOT staying non-blocking, which is the part that is easy to get
+        # wrong: continue-on-error does not merely keep the job green, it
+        # rewrites the STEP's reported conclusion too, and the honest result
+        # (outcome: failure) is not exposed by the REST API at all. On #66 the
+        # job, the step and the pull request's checks list all read "success"
+        # while this step's own log carried a real finding. A check nobody can
+        # see fail is not protecting anything -- it is a check that has to be
+        # remembered, which is the condition the register drifted in.
+        #
+        # If the GitHub API ever proves flaky enough to fail this gate on an
+        # outage or a rate limit, add --offline rather than reverting to
+        # continue-on-error: it keeps the register half blocking and drops
+        # only the network-dependent half.
+        env:
+          # contents: read suffices — this only resolves public refs.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: npm run check-supply-chain

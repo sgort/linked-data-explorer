@@ -6,31 +6,66 @@ on:
       - main
     paths:
       - 'packages/frontend/**'
+      - '.github/workflows/azure-frontend-production.yml'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
     paths:
       - 'packages/frontend/**'
+      - '.github/workflows/azure-frontend-production.yml'
+
+# Same serialisation as the acc workflow, but production runs QUEUE
+# rather than cancel: interrupting a live production deployment to
+# start another is worse than waiting for it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+# Default to read-only; jobs opt into more only where required.
+permissions:
+  contents: read
 
 jobs:
   build_and_deploy_job:
+    permissions:
+      contents: read
+      pull-requests: write
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
+          persist-credentials: false
           lfs: false
       - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version: "20.20.2"
           cache: "npm"
+      # The Static Web Apps action builds inside its own container and runs
+      # none of our scripts, so lint and tests get explicit steps ahead of it.
+      # Installing from the workspace root, since the only lockfile is there.
+      - name: Install dependencies
+        run: npm ci
+      - name: Run linter
+        run: npm run lint --workspace=packages/frontend
+      - name: Typecheck
+        run: npm run typecheck --workspace=packages/frontend
+      - name: Unit tests
+        run: npm test --workspace=packages/frontend
       - name: Build And Deploy
         id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
+        # See azure-frontend-acc.yml for why these sit on the deploy step and
+        # are injected rather than derived from git. Production deploys from a
+        # push to main, so github.sha is a real commit here, never a
+        # synthesised merge commit.
+        env:
+          VITE_BUILD_SHA: ${{ github.sha }}
+          VITE_BUILD_RUN: ${{ github.run_number }}
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WITTY_BEACH_0A7CFA203 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
@@ -44,13 +79,14 @@ jobs:
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
+    permissions: {}
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     name: Close Pull Request Job
     steps:
       - name: Close Pull Request
         id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WITTY_BEACH_0A7CFA203 }}
           action: "close"

@@ -1,0 +1,216 @@
+{
+  "id": "rip-eindafrekening",
+  "name": "RIP — Final Account (Eindafrekening)",
+  "description": "The final account drawn from the specification administration, and how it stands against the credit and the contract sum.",
+  "processKey": "RipR54Process",
+  "serviceId": "RipR54",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{eindafrekeningReferentie}}",
+      "variableKey": "eindafrekeningReferentie",
+      "source": "process",
+      "label": "Final account reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{eindafrekeningBedrag}}",
+      "variableKey": "eindafrekeningBedrag",
+      "source": "process",
+      "label": "Final account amount"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{eindafrekeningOp}}",
+      "variableKey": "eindafrekeningOp",
+      "source": "process",
+      "label": "Drawn up on"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{besteksadministratieUitdraai}}",
+      "variableKey": "besteksadministratieUitdraai",
+      "source": "process",
+      "label": "Administration extract"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{kredietAanneemsom}}",
+      "variableKey": "kredietAanneemsom",
+      "source": "process",
+      "label": "Position"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{eindafrekeningWaarde}}",
+      "variableKey": "eindafrekeningWaarde",
+      "source": "process",
+      "label": "Value against threshold"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Eindafrekening {{eindafrekeningReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Final account",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Final account"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Eindafrekening {{eindafrekeningReferentie}} for project {{projectNumber}} — {{projectName}} amounts to EUR {{eindafrekeningBedrag}} and was drawn up on {{eindafrekeningOp}} from specification administration extract {{besteksadministratieUitdraai}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "It falls {{kredietAanneemsom}} and lies {{eindafrekeningWaarde}} the EUR 50.000 threshold, which decides the decision route the letter takes."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the directievoerder"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

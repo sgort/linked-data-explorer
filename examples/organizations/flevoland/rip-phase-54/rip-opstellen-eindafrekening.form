@@ -1,0 +1,106 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opstellen-eindafrekening",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Draw up the final account"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The directievoerder draws up the eindafrekening from the specification administration, and establishes how it stands against the credit and the contract sum — which decides which decision route the letter takes."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Final account reference",
+      "key": "eindafrekeningReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bedrag",
+      "type": "number",
+      "label": "Final account amount (EUR)",
+      "key": "eindafrekeningBedrag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Uitdraai",
+      "type": "textfield",
+      "label": "Specification administration extract reference",
+      "key": "besteksadministratieUitdraai",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Positie",
+      "type": "select",
+      "label": "The final account falls",
+      "key": "kredietAanneemsom",
+      "values": [
+        {
+          "label": "Within the contract sum (existing ATB)",
+          "value": "binnen-aanneemsom"
+        },
+        {
+          "label": "Within the credit, outside the contract sum",
+          "value": "binnen-krediet"
+        },
+        {
+          "label": "Outside the credit and the contract sum",
+          "value": "buiten-krediet"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Waarde",
+      "type": "select",
+      "label": "Value against the EUR 50.000 threshold",
+      "key": "eindafrekeningWaarde",
+      "values": [
+        {
+          "label": "Below EUR 50.000",
+          "value": "onder"
+        },
+        {
+          "label": "EUR 50.000 or above",
+          "value": "boven"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Drawn up on",
+      "key": "eindafrekeningOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

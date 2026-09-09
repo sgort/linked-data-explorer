@@ -9,7 +9,7 @@ export async function listBpmn(): Promise<Bpmn[]> {
   if (!pool) return [];
   const { rows } = await pool.query<BpmnRow>(
     `SELECT lde_id, bpmn_process_id, name, description, xml,
-            process_role, called_element, linked_dmn_templates,
+            process_role, called_element, shell_id, linked_dmn_templates,
             status, readonly, schema_version, language, organization,
             created_at, updated_at
      FROM process_definitions ORDER BY updated_at DESC`
@@ -25,6 +25,7 @@ export async function upsertBpmn(p: {
   xml: string;
   processRole?: string;
   calledElement?: string;
+  shellId?: string;
   linkedDmnTemplates: string[];
   status?: string;
   language?: string;
@@ -36,9 +37,9 @@ export async function upsertBpmn(p: {
   await pool.query(
     `INSERT INTO process_definitions
        (lde_id, bpmn_process_id, name, description, xml, process_role,
-        called_element, linked_dmn_templates, status, language, organization,
+        called_element, shell_id, linked_dmn_templates, status, language, organization,
         created_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
      ON CONFLICT (lde_id) DO UPDATE SET
        bpmn_process_id      = EXCLUDED.bpmn_process_id,
        name                 = EXCLUDED.name,
@@ -46,6 +47,7 @@ export async function upsertBpmn(p: {
        xml                  = EXCLUDED.xml,
        process_role         = EXCLUDED.process_role,
        called_element       = EXCLUDED.called_element,
+       shell_id             = EXCLUDED.shell_id,
        linked_dmn_templates = EXCLUDED.linked_dmn_templates,
        status               = EXCLUDED.status,
        language             = EXCLUDED.language,
@@ -59,6 +61,7 @@ export async function upsertBpmn(p: {
       p.xml,
       p.processRole ?? 'standalone',
       p.calledElement ?? null,
+      p.shellId ?? null,
       p.linkedDmnTemplates,
       p.status ?? 'wip',
       p.language ?? null,

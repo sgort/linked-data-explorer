@@ -1,0 +1,218 @@
+{
+  "id": "rip-uitgangspunten-uitvoering",
+  "name": "RIP — Execution Ground Rules (Uitgangspunten uitvoering)",
+  "description": "The ground rules agreed for the execution phase, including whether the project contains technical installations.",
+  "processKey": "RipR51Process",
+  "serviceId": "RipR51",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{uitgangspuntenReferentie}}",
+      "variableKey": "uitgangspuntenReferentie",
+      "source": "process",
+      "label": "Ground rules reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{uitgangspuntenVastgesteldOp}}",
+      "variableKey": "uitgangspuntenVastgesteldOp",
+      "source": "process",
+      "label": "Agreed on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{uitgangspuntenDeelnemers}}",
+      "variableKey": "uitgangspuntenDeelnemers",
+      "source": "process",
+      "label": "Attendees"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{uitgangspuntenAfspraken}}",
+      "variableKey": "uitgangspuntenAfspraken",
+      "source": "process",
+      "label": "Ground rules agreed"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{technischeInstallaties}}",
+      "variableKey": "technischeInstallaties",
+      "source": "process",
+      "label": "Technical installations present"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Uitgangspunten {{uitgangspuntenReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Execution ground rules",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Execution ground rules"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The ground rules {{uitgangspuntenReferentie}} for the execution phase of project {{projectNumber}} — {{projectName}} were agreed on {{uitgangspuntenVastgesteldOp}} with {{uitgangspuntenDeelnemers}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Agreed: {{uitgangspuntenAfspraken}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The project contains technical installation(s): {{technischeInstallaties}}. Where it does, the installation part is handed to Beheer & Onderhoud under BO13.1."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Agreed by the RIP team, environment manager, supervisor and communications adviser"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

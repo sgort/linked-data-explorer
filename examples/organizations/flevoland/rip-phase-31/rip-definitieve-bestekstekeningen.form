@@ -1,0 +1,52 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-definitieve-bestekstekeningen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the drawings finalised"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the approved draft drawings made final, so the specification can be drawn up against them."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Final drawings reference",
+      "key": "definitieveBestekstekeningenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Gereed",
+      "type": "datetime",
+      "label": "Finalised on",
+      "key": "definitieveBestekstekeningenGereedOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Notes",
+      "key": "definitieveBestekstekeningenOpmerkingen"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

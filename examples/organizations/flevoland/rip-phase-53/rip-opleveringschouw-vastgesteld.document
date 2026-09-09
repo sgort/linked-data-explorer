@@ -1,0 +1,218 @@
+{
+  "id": "rip-opleveringschouw-vastgesteld",
+  "name": "RIP — Adopted Handover Inspection (Vastgestelde Opleveringschouw)",
+  "description": "The handover inspection as adopted by the directievoerder and the contractor, and the decision it carries.",
+  "processKey": "RipR53Process",
+  "serviceId": "RipR53",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-03T00:00:00.000Z",
+  "updatedAt": "2026-09-03T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{opleveringschouwReferentie}}",
+      "variableKey": "opleveringschouwReferentie",
+      "source": "process",
+      "label": "Handover inspection reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{opleveringVastgesteldDoor}}",
+      "variableKey": "opleveringVastgesteldDoor",
+      "source": "process",
+      "label": "Adopted by"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{opleveringVastgesteldOp}}",
+      "variableKey": "opleveringVastgesteldOp",
+      "source": "process",
+      "label": "Adopted on"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{opleveringAkkoord}}",
+      "variableKey": "opleveringAkkoord",
+      "source": "process",
+      "label": "Handover agreed"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{opleveringRestpunten}}",
+      "variableKey": "opleveringRestpunten",
+      "source": "process",
+      "label": "Restpunten"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Opleveringschouw {{opleveringschouwReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Adopted handover inspection",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Adopted handover inspection"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Opleveringschouw {{opleveringschouwReferentie}} for project {{projectNumber}} — {{projectName}} was adopted by {{opleveringVastgesteldDoor}} on {{opleveringVastgesteldOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Handover agreed: {{opleveringAkkoord}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Where it was agreed the area is handed over and R5.4 Oplevering en onderhoudsperiode follows. Where it was not, these restpunten are executed back in R5.2: {{opleveringRestpunten}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Adopted by the directievoerder and the contractor"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

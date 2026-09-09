@@ -1,0 +1,218 @@
+{
+  "id": "rip-advies-afwijking",
+  "name": "RIP — Deviation Advice (Advies afwijking)",
+  "description": "The advice on a reported deviation, aligned with the adviser, the designer and the projectleider.",
+  "processKey": "RipR52Process",
+  "serviceId": "RipR52",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{adviesAfwijkingReferentie}}",
+      "variableKey": "adviesAfwijkingReferentie",
+      "source": "process",
+      "label": "Advice reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{afwijkingenrapportReferentie}}",
+      "variableKey": "afwijkingenrapportReferentie",
+      "source": "process",
+      "label": "Deviation report reference"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{afwijkingAfgestemdOp}}",
+      "variableKey": "afwijkingAfgestemdOp",
+      "source": "process",
+      "label": "Aligned on"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{adviesAfwijkingInhoud}}",
+      "variableKey": "adviesAfwijkingInhoud",
+      "source": "process",
+      "label": "Advice"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{afwijkingAkkoord}}",
+      "variableKey": "afwijkingAkkoord",
+      "source": "process",
+      "label": "Accepted"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Advies {{adviesAfwijkingReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Deviation advice",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Deviation advice"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Advice {{adviesAfwijkingReferentie}} on afwijkingenrapport {{afwijkingenrapportReferentie}} for project {{projectNumber}} — {{projectName}} was aligned on {{afwijkingAfgestemdOp}} with the adviser, the designer and the projectleider."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Advice: {{adviesAfwijkingInhoud}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Deviation report accepted: {{afwijkingAkkoord}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Aligned by the directievoerder"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "id": "rip-projectplan-vo",
+  "name": "RIP — Adopted Project Plan, VO phase (Vastgesteld Projectplan VO)",
+  "description": "The project plan as adopted at the close of the VO phase. Hands over to R2.4 Opdracht extern ingenieursbureau.",
+  "processKey": "RipR23Process",
+  "serviceId": "RipR23",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{projectplanReferentie}}",
+      "variableKey": "projectplanReferentie",
+      "source": "process",
+      "label": "Project plan reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{projectplanVastgesteldOp}}",
+      "variableKey": "projectplanVastgesteldOp",
+      "source": "process",
+      "label": "Adopted on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{projectramingReferentie}}",
+      "variableKey": "projectramingReferentie",
+      "source": "process",
+      "label": "Project estimate reference"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{inkoopplanReferentie}}",
+      "variableKey": "inkoopplanReferentie",
+      "source": "process",
+      "label": "Procurement plan reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{accordeerOpmerkingen}}",
+      "variableKey": "accordeerOpmerkingen",
+      "source": "process",
+      "label": "Comments"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project plan {{projectplanReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Adopted project plan — closing the VO phase",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Adopted project plan — closing the VO phase"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project plan {{projectplanReferentie}} for project {{projectNumber}} — {{projectName}} was adopted on {{projectplanVastgesteldOp}}, closing the VO phase."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The plan incorporates the VO cost estimate {{projectramingReferentie}} and the procurement strategy recorded in {{inkoopplanReferentie}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Comments: {{accordeerOpmerkingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "With this adoption the project moves to R2.4, commissioning the external engineering firm."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Approved by the project leader"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

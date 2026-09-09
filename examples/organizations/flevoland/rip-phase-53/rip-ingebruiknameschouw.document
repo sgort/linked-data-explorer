@@ -1,0 +1,225 @@
+{
+  "id": "rip-ingebruiknameschouw",
+  "name": "RIP — Commissioning Inspection (Ingebruiknameschouw)",
+  "description": "Sjabloon ingebruikname. The commissioning inspection carried out with the contractor and the toezichthouder.",
+  "processKey": "RipR53Process",
+  "serviceId": "RipR53",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-03T00:00:00.000Z",
+  "updatedAt": "2026-09-03T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{ingebruiknameschouwReferentie}}",
+      "variableKey": "ingebruiknameschouwReferentie",
+      "source": "process",
+      "label": "Commissioning inspection reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{ingebruiknameschouwOp}}",
+      "variableKey": "ingebruiknameschouwOp",
+      "source": "process",
+      "label": "Carried out on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{ingebruiknameschouwAanwezigen}}",
+      "variableKey": "ingebruiknameschouwAanwezigen",
+      "source": "process",
+      "label": "Attendees"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{ingebruiknameschouwBevindingen}}",
+      "variableKey": "ingebruiknameschouwBevindingen",
+      "source": "process",
+      "label": "Findings"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{ingebruiknameDeelAreaal}}",
+      "variableKey": "ingebruiknameDeelAreaal",
+      "source": "process",
+      "label": "Part of the area"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{ingebruiknameschouwInternReferentie}}",
+      "variableKey": "ingebruiknameschouwInternReferentie",
+      "source": "process",
+      "label": "Internal inspection reference"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Ingebruiknameschouw {{ingebruiknameschouwReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Commissioning inspection",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Commissioning inspection"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Ingebruiknameschouw {{ingebruiknameschouwReferentie}} for project {{projectNumber}} — {{projectName}} was carried out on {{ingebruiknameschouwOp}} with {{ingebruiknameschouwAanwezigen}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Findings: {{ingebruiknameschouwBevindingen}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "It concerns {{ingebruiknameDeelAreaal}} and builds on internal inspection {{ingebruiknameschouwInternReferentie}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Carried out by the directievoerder with the contractor and the toezichthouder"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-accorderen-dechargedossier",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Approve the discharge dossier and inform the projectleider"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The AO approves the discharge dossier — discharging the project — and informs the projectleider."
+    },
+    {
+      "id": "F_Akkoord",
+      "type": "select",
+      "label": "Discharge dossier approved",
+      "key": "dechargedossierAkkoord",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Door",
+      "type": "textfield",
+      "label": "Approved by",
+      "key": "dechargedossierAkkoordDoor",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Opm",
+      "type": "textarea",
+      "label": "Comments",
+      "key": "dechargedossierOpmerkingen"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Approved on",
+      "key": "dechargedossierGeaccordeerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

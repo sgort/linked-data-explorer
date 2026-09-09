@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-updaten-risicodossier-uitvoering",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Update the risk dossier for contract management"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Update the risicodossier for contract management, using the execution ground rules, the contractor offer and the work specification."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Risk dossier reference",
+      "key": "risicodossierReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aanbieding",
+      "type": "textfield",
+      "label": "Contractor offer reference",
+      "key": "aanbiedingAannemerReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Wijzigingen",
+      "type": "textarea",
+      "label": "Risks added or changed",
+      "key": "risicodossierWijzigingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Updated on",
+      "key": "risicodossierBijgewerktOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

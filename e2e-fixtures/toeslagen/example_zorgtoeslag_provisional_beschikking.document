@@ -1,0 +1,499 @@
+{
+  "id": "example_zorgtoeslag_provisional_beschikking",
+  "name": "Zorgtoeslag Voorlopige Beschikking (Example)",
+  "description": "Formele beschikking Awb voor de voorlopige zorgtoeslag — ZorgtoeslagProvisionalSubProcess",
+  "processKey": "AwbZorgtoeslagProcess",
+  "serviceId": "ZorgtoeslagProvisional",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "e2e",
+  "language": "en",
+  "organization": "toeslagen",
+  "createdAt": "2026-03-17T00:00:00.000Z",
+  "updatedAt": "2026-03-17T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{dossierReference}}",
+      "variableKey": "dossierReference",
+      "source": "process",
+      "label": "Dossiernummer"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{applicationDate}}",
+      "variableKey": "applicationDate",
+      "source": "process",
+      "label": "Aanvraagdatum"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{applicantId}}",
+      "variableKey": "applicantId",
+      "source": "process",
+      "label": "BSN / Aanvrager-ID"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{provisionalDecision}}",
+      "variableKey": "provisionalDecision",
+      "source": "dmn_output",
+      "label": "Beslissing voorlopige toeslag"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{finalMessage}}",
+      "variableKey": "finalMessage",
+      "source": "dmn_output",
+      "label": "Beslissingstekst"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{provisionalAmount}}",
+      "variableKey": "provisionalAmount",
+      "source": "dmn_output",
+      "label": "Maandbedrag (EUR)"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh_org_name",
+          "type": "text",
+          "label": "Organisatienaam",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Belastingdienst / Toeslagen"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Afdeling Zorgtoeslag",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "lh_separator",
+          "type": "separator",
+          "label": "Scheidingslijn"
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": [
+        {
+          "id": "ci_address",
+          "type": "text",
+          "label": "Contactgegevens",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Postbus 385"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "6400 AJ Heerlen"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Tel: 0800 - 0543 (gratis)"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "E-mail: toeslagen@belastingdienst.nl"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "www.belastingdienst.nl/toeslagen"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref_header",
+          "type": "text",
+          "label": "Kenmerk en datum",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Kenmerk: {{dossierReference}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Datum: {{applicationDate}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Betreft: Beslissing voorlopige zorgtoeslag {{applicationDate}}"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "ref_subject",
+          "type": "text",
+          "label": "Geachte aanvrager",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Geachte aanvrager (BSN: {{applicantId}}),"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "body_intro",
+          "type": "text",
+          "label": "Inleiding",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Op uw aanvraag voor zorgtoeslag hebben wij op basis van uw geschatte inkomen en huishoudenssamenstelling het volgende voorlopige besluit genomen."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_decision_heading",
+          "type": "text",
+          "label": "Besluit",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Besluit"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_decision",
+          "type": "variable",
+          "variableKey": "provisionalDecision",
+          "label": "Beslissing voorlopige toeslag (variabel)"
+        },
+        {
+          "id": "body_amount",
+          "type": "variable",
+          "variableKey": "provisionalAmount",
+          "label": "Maandbedrag (variabel)"
+        },
+        {
+          "id": "body_message",
+          "type": "variable",
+          "variableKey": "finalMessage",
+          "label": "Beslissingstekst (variabel)"
+        },
+        {
+          "id": "body_motivation_heading",
+          "type": "text",
+          "label": "Motivering",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Motivering"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_motivation",
+          "type": "text",
+          "label": "Motiveringstekst",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Dit besluit is genomen op grond van de Wet op de zorgtoeslag (Wzt) en de Algemene wet bestuursrecht (Awb)."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "De voorlopige toeslag is berekend op basis van uw opgegeven of geschatte inkomen voor het lopende jaar en uw huishoudenssamenstelling."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Na afloop van het toeslagjaar ontvangt u een definitieve berekening op basis van uw werkelijke jaarinkomen (Wzt art. 16)."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": [
+        {
+          "id": "cl_settlement_notice",
+          "type": "text",
+          "label": "Definitieve afrekening",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Na vaststelling van uw definitieve jaarinkomen door de Belastingdienst ontvangt u een definitieve beschikking."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Afhankelijk van uw werkelijke inkomen kan de toeslag worden bijgesteld. U ontvangt dan een nabetaling of ontvangt een terugvorderingsbericht."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "cl_appeal_heading",
+          "type": "text",
+          "label": "Bezwaarmogelijkheid",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Bezwaar en beroep"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "cl_appeal_text",
+          "type": "text",
+          "label": "Bezwaartekst",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Tegen dit besluit kunt u binnen zes weken na de verzenddatum bezwaar maken (Awb 6:7)."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "U stuurt uw bezwaarschrift naar: Belastingdienst/Toeslagen, t.a.v. Bezwaar en Beroep, Postbus 385, 6400 AJ Heerlen."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Vermeld in uw bezwaarschrift: uw naam, adres en BSN, de datum, het kenmerk ({{dossierReference}}), en de redenen van uw bezwaar."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so_closing",
+          "type": "text",
+          "label": "Afsluiting",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Hoogachtend,"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "so_spacer",
+          "type": "spacer",
+          "label": "Ruimte handtekening"
+        },
+        {
+          "id": "so_name",
+          "type": "text",
+          "label": "Naam en functie",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Namens de Belastingdienst / Toeslagen,"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": []
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Hoofd afdeling Zorgtoeslag"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "annex": null
+  }
+}

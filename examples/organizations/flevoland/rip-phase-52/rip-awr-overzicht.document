@@ -1,0 +1,264 @@
+{
+  "id": "rip-awr-overzicht",
+  "name": "RIP — Deviation Reporting Overview (Afwijkingenrapportage AWR)",
+  "description": "The AWR overview of deviations falling outside the contract, assessed by the cost and contract specialist before it is issued.",
+  "processKey": "RipR52Process",
+  "serviceId": "RipR52",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{awrOverzichtReferentie}}",
+      "variableKey": "awrOverzichtReferentie",
+      "source": "process",
+      "label": "AWR overview reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{awrOverzichtVerstuurdOp}}",
+      "variableKey": "awrOverzichtVerstuurdOp",
+      "source": "process",
+      "label": "Sent on"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{awrOverzichtBedrag}}",
+      "variableKey": "awrOverzichtBedrag",
+      "source": "process",
+      "label": "Overview value"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{awrOverzichtInhoud}}",
+      "variableKey": "awrOverzichtInhoud",
+      "source": "process",
+      "label": "Deviations"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{awrBevindingen}}",
+      "variableKey": "awrBevindingen",
+      "source": "process",
+      "label": "Assessment findings"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{awrAkkoord}}",
+      "variableKey": "awrAkkoord",
+      "source": "process",
+      "label": "Approved"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{onderhandelingUitkomst}}",
+      "variableKey": "onderhandelingUitkomst",
+      "source": "process",
+      "label": "Negotiation outcome"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{awrUitgegevenAan}}",
+      "variableKey": "awrUitgegevenAan",
+      "source": "process",
+      "label": "Issued to"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{awrUitgegevenOp}}",
+      "variableKey": "awrUitgegevenOp",
+      "source": "process",
+      "label": "Issued on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "AWR {{awrOverzichtReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Deviation reporting overview",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Deviation reporting overview"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "AWR overview {{awrOverzichtReferentie}} for project {{projectNumber}} — {{projectName}} was sent for assessment on {{awrOverzichtVerstuurdOp}} and covers EUR {{awrOverzichtBedrag}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Deviations: {{awrOverzichtInhoud}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Assessment: {{awrBevindingen}} Approved: {{awrAkkoord}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Where it was not approved, the prices were renegotiated with the contractor — {{onderhandelingUitkomst}} — and the overview resubmitted."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Issued to {{awrUitgegevenAan}} on {{awrUitgegevenOp}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Assessed by the cost and contract specialist, issued by the directievoerder"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

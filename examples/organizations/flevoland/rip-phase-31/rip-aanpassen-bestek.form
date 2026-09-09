@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-aanpassen-bestek",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the specification amended"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the bestek amended in line with the review findings."
+    },
+    {
+      "id": "F_Versie",
+      "type": "textfield",
+      "label": "Amended bestek version",
+      "key": "aangepastBestekVersie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Verwerkt",
+      "type": "textarea",
+      "label": "How the findings were incorporated",
+      "key": "verwerkteBevindingenBestek",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aangepast",
+      "type": "datetime",
+      "label": "Amended on",
+      "key": "bestekAangepastOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

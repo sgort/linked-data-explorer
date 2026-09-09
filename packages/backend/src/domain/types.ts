@@ -6,6 +6,7 @@ export type Bpmn = {
   xml: string;
   processRole: string;
   calledElement?: string;
+  shellId?: string;
   linkedDmnTemplates: string[];
   status: string;
   readonly: boolean;

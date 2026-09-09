@@ -28,6 +28,7 @@ export class BpmnService {
           xml: process.xml,
           processRole: process.processRole ?? 'standalone',
           calledElement: process.calledElement,
+          shellId: process.shellId,
           linkedDmnTemplates: process.linkedDmnTemplates,
           status: process.status,
           language: process.language,

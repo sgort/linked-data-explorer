@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-herstellen-dossier",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Repair the tender dossier"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Complete the missing parts of the tender dossier and resubmit it for checking."
+    },
+    {
+      "id": "F_Hersteld",
+      "type": "textarea",
+      "label": "What was added or corrected",
+      "key": "dossierHerstelToelichting",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Repaired on",
+      "key": "dossierHersteldOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

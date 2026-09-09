@@ -166,7 +166,7 @@ export interface DocumentTemplate {
   createdAt: string;
   updatedAt: string;
   readonly?: boolean;
-  status?: 'example' | 'wip';
+  status?: 'example' | 'wip' | 'e2e';
   /** ISO 639-1 language code (e.g. 'en', 'nl', 'de'). Undefined means language-agnostic. */
   language?: 'en' | 'nl' | 'de';
   /** Organization key (e.g. 'flevoland', 'heusden'). Used for list grouping. */

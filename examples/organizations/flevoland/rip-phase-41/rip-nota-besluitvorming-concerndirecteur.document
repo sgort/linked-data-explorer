@@ -1,0 +1,232 @@
+{
+  "id": "rip-nota-besluitvorming-concerndirecteur",
+  "name": "RIP — Decision Note, Concerndirecteur (Nota besluitvorming)",
+  "description": "Sjabloon nota besluitvorming for the concern director, used when the award deviates from the funding source.",
+  "processKey": "RipR41Process",
+  "serviceId": "RipR41",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{notaConcerndirecteurReferentie}}",
+      "variableKey": "notaConcerndirecteurReferentie",
+      "source": "process",
+      "label": "Decision note reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{afwijkingDekkingsbron}}",
+      "variableKey": "afwijkingDekkingsbron",
+      "source": "process",
+      "label": "Deviation"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{notaConcerndirecteurToelichting}}",
+      "variableKey": "notaConcerndirecteurToelichting",
+      "source": "process",
+      "label": "Substantiation"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{notaConcerndirecteurVastgesteld}}",
+      "variableKey": "notaConcerndirecteurVastgesteld",
+      "source": "process",
+      "label": "Adopted"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{notaConcerndirecteurVastgesteldDoor}}",
+      "variableKey": "notaConcerndirecteurVastgesteldDoor",
+      "source": "process",
+      "label": "Adopted by"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{notaConcerndirecteurVastgesteldOp}}",
+      "variableKey": "notaConcerndirecteurVastgesteldOp",
+      "source": "process",
+      "label": "Adopted on"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{notaConcerndirecteurOpmerkingen}}",
+      "variableKey": "notaConcerndirecteurOpmerkingen",
+      "source": "process",
+      "label": "Comments"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Nota {{notaConcerndirecteurReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Decision note — concern director",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Decision note — concern director"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The award for project {{projectNumber}} — {{projectName}} deviates from the funding source by EUR {{afwijkingDekkingsbron}}, so the decision goes to the concern director."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Substantiation: {{notaConcerndirecteurToelichting}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Adopted: {{notaConcerndirecteurVastgesteld}}, by {{notaConcerndirecteurVastgesteldDoor}} on {{notaConcerndirecteurVastgesteldOp}}. {{notaConcerndirecteurOpmerkingen}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Adopted by the concern director"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

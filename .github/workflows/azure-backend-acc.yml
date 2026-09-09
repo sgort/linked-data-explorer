@@ -1,6 +1,23 @@
 name: Deploy Backend to Acceptance
 
 on:
+  # The backend's 1140 tests used to run only AFTER a merge, because this
+  # workflow triggered on push alone. A backend pull request therefore reached
+  # acc with `audit` as its only check -- which validates workflows and
+  # renovate.json and says nothing about whether the code works. Dependency
+  # bumps were verified by a person remembering to check the branch out, and a
+  # genuine defect (the example-fixture-parity failure on
+  # feature/rip-r21-signature-tag) sat on a pushed branch for days because no
+  # pull request ever ran that test. Issue #46.
+  #
+  # The frontend workflow already worked this way; this brings the backend into
+  # line rather than inventing a pattern.
+  pull_request:
+    branches:
+      - acc
+    paths:
+      - 'packages/backend/**'
+      - '.github/workflows/azure-backend-acc.yml'
   push:
     branches:
       - acc
@@ -9,8 +26,23 @@ on:
       - '.github/workflows/azure-backend-acc.yml'
   workflow_dispatch:
 
+# Serialise deployments to one environment. Keyed on the pull-request
+# NUMBER rather than the ref: keyed on github.ref alone, the
+# pull_request(closed) teardown and the push deploy that a merge fires
+# simultaneously land in one group and cancel each other at random.
+# Learned in ronl-business-api on 2026-08-29.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Default to read-only; jobs opt into more only where required.
+permissions:
+  contents: read
+
 jobs:
   deploy:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     environment:
       name: acceptance
@@ -18,12 +50,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version: '22.23.2'
 
       - name: Install dependencies
         working-directory: packages/backend
@@ -32,6 +66,14 @@ jobs:
       - name: Run linter
         working-directory: packages/backend
         run: npm run lint
+
+      - name: Typecheck
+        working-directory: packages/backend
+        run: npm run typecheck
+
+      - name: Unit tests
+        working-directory: packages/backend
+        run: npm test
 
       - name: Build TypeScript
         working-directory: packages/backend
@@ -46,7 +88,13 @@ jobs:
           grep -n "v1/health" dist/routes/index.js || echo "ERROR: v1 routes not found!"
           grep -n "sparqlService" dist/routes/health.routes.js || echo "ERROR: sparqlService not found!"
 
+      # Everything from here on deploys. On a pull request the job stops after
+      # lint, typecheck, tests and build -- which is the point of #46: get the
+      # verdict before the merge, not after it. Gating each step rather than
+      # splitting the job keeps the check name `Deploy Backend to Acceptance`
+      # stable, so no ruleset or branch-protection entry has to change.
       - name: Prepare deployment package
+        if: github.event_name != 'pull_request'
         working-directory: packages/backend
         run: |
           mkdir -p deploy
@@ -78,16 +126,19 @@ jobs:
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT = false" >> .deployment
 
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
+        if: github.event_name != 'pull_request'
+        uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
         with:
           app-name: 'ronl-linkeddata-backend-acc'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_ACC }}
           package: './packages/backend/deploy'
 
       - name: Wait for deployment
+        if: github.event_name != 'pull_request'
         run: sleep 20
 
       - name: Health check
+        if: github.event_name != 'pull_request'
         run: |
           echo "Checking backend health..."
           
@@ -108,6 +159,7 @@ jobs:
           exit 1
 
       - name: Verify v1 endpoints
+        if: github.event_name != 'pull_request'
         run: |
           echo "Checking v1 endpoints..."
           
@@ -130,7 +182,7 @@ jobs:
           fi
 
       - name: Deployment success
-        if: success()
+        if: success() && github.event_name != 'pull_request'
         run: |
           echo "🚀 Backend successfully deployed to acceptance!"
           echo "URL: https://acc.backend.linkeddata.open-regels.nl"

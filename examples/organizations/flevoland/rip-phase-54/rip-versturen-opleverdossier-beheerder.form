@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-versturen-opleverdossier-beheerder",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the delivery dossier to the beheerder, cc the projectleider"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Send the approved opleverdossier to the beheerder, with the projectleider in copy."
+    },
+    {
+      "id": "F_Aan",
+      "type": "textfield",
+      "label": "Sent to",
+      "key": "opleverdossierVerstuurdAan",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "opleverdossierVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -171,9 +171,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         defaultInputs: inputs,
         tags: [`${chain.length}-dmn`, templateType],
         complexity: (chain.length === 1 ? 'simple' : chain.length <= 3 ? 'medium' : 'complex') as
-          | 'simple'
-          | 'medium'
-          | 'complex',
+          'simple' | 'medium' | 'complex',
         estimatedTime: validation?.estimatedTime || chain.length * 150 + 50,
         isPublic: false,
         endpoint,

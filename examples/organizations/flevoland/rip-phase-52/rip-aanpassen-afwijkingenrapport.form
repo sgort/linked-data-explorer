@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-aanpassen-afwijkingenrapport",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Amend the deviation report"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The deviation report was not accepted. The contractor amends it and it is aligned again."
+    },
+    {
+      "id": "F_Aanpassing",
+      "type": "textarea",
+      "label": "What was amended",
+      "key": "afwijkingenrapportAanpassing",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Amended on",
+      "key": "afwijkingenrapportAangepastOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+# Normalise line endings across platforms.
+#
+# Without this, a Windows checkout with core.autocrlf=true produces CRLF working
+# files, while packages/backend/.prettierrc sets "endOfLine": "lf". Prettier then
+# fails `format:check` on files whose committed content is already correct, and
+# `prettier --write` cannot fix it: Git normalises the change straight back, so
+# there is nothing to commit. Forcing LF in the working tree closes that loop.
+
+# Default: let Git detect text vs binary, and check text out as LF everywhere.
+* text=auto eol=lf
+
+# Windows batch files are the one text type that genuinely needs CRLF — cmd.exe
+# mis-parses LF-only .bat/.cmd. None exist today; this keeps it that way if one
+# is ever added. (.ps1 is fine with LF and stays on the default above.)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Explicit binary, so no line-ending translation is ever attempted on them.
+*.png binary
+*.ico binary

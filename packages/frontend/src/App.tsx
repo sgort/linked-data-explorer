@@ -7,7 +7,6 @@ import {
   Download,
   FileOutput,
   GitBranch,
-  HelpCircle,
   Landmark,
   LayoutTemplate,
   Loader2,
@@ -34,7 +33,6 @@ import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
 import RopaEditor from './components/RopaEditor/RopaEditor';
 import ShaclValidator from './components/ShaclValidator';
-import Tutorial from './components/Tutorial/Tutorial';
 import { executeSparqlQuery } from './services/sparqlService';
 import { SparqlResponse, ViewMode } from './types';
 import { ALL_QUERIES, PRESET_ENDPOINTS, SAMPLE_QUERIES } from './utils/constants';
@@ -239,7 +237,14 @@ const App: React.FC = () => {
           <Database size={20} />
         </div>
 
-        <div className="flex-1 w-full flex flex-col items-center gap-4 mt-4">
+        {/* min-h-0 is load-bearing, not decoration. A flex child defaults to
+            min-height:auto and so refuses to shrink below its content, which
+            makes overflow-y-auto a no-op: on a short window the icons overflow
+            the rail instead of scrolling, pushing Changelog — and the Settings
+            button below this div — past the bottom edge with no way to reach
+            them. Settings stays outside this element deliberately, so it
+            remains pinned while only the icon list scrolls. */}
+        <div className="flex-1 min-h-0 w-full flex flex-col items-center gap-4 mt-4 overflow-y-auto rail-scroll">
           <button
             onClick={() => setViewMode(ViewMode.QUERY)}
             className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.QUERY ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
@@ -321,14 +326,6 @@ const App: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setViewMode(ViewMode.TUTORIAL)}
-            className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.TUTORIAL ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-            title="Getting Started"
-          >
-            <HelpCircle size={24} />
-          </button>
-
-          <button
             onClick={() => setViewMode(ViewMode.CHANGELOG)}
             className={`p-3 rounded-xl transition-all ${viewMode === ViewMode.CHANGELOG ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
             title="Changelog"
@@ -360,7 +357,6 @@ const App: React.FC = () => {
           </div>
 
           {viewMode !== ViewMode.CHANGELOG &&
-            viewMode !== ViewMode.TUTORIAL &&
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
             viewMode !== ViewMode.VALIDATE &&
@@ -428,10 +424,22 @@ const App: React.FC = () => {
 
         {/* Workspace Panels */}
         <div className="flex-1 flex overflow-hidden relative">
-          {/* Tutorial View (Full Width) */}
-          {viewMode === ViewMode.TUTORIAL && (
-            <div className="flex-1 overflow-hidden">
-              <Tutorial />
+          {/* Error Overlay — a direct child of the workspace container rather than
+              of the Right Panel, which is hidden in Orchestration, BPMN, Form,
+              Document, ROPA, DSO and both validator views. handleRefreshCache can
+              only be triggered from Orchestration, so its failures used to set the
+              error state correctly and then have nowhere to render. */}
+          {error && (
+            <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+              <div className="text-sm whitespace-pre-wrap font-medium flex-1">{error}</div>
+              <button
+                onClick={() => setError(null)}
+                className="ml-auto text-red-400 hover:text-red-700 text-xl font-bold leading-none"
+                aria-label="Dismiss error"
+              >
+                &times;
+              </button>
             </div>
           )}
 
@@ -503,7 +511,6 @@ const App: React.FC = () => {
           {/* Settings Panel Overlay */}
           {showSettings &&
             viewMode !== ViewMode.CHANGELOG &&
-            viewMode !== ViewMode.TUTORIAL &&
             viewMode !== ViewMode.VALIDATE &&
             viewMode !== ViewMode.SHACL && (
               <div className="absolute top-0 left-0 z-30 w-[450px] h-full bg-white border-r border-slate-200 shadow-2xl p-5 animate-in slide-in-from-left fade-in duration-200 flex flex-col">
@@ -706,7 +713,6 @@ const App: React.FC = () => {
           {viewMode !== ViewMode.VISUALIZE &&
             viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.ORCHESTRATION &&
-            viewMode !== ViewMode.TUTORIAL &&
             viewMode !== ViewMode.BPMN &&
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
@@ -767,7 +773,6 @@ const App: React.FC = () => {
           {/* Right Panel */}
           {viewMode !== ViewMode.CHANGELOG &&
             viewMode !== ViewMode.ORCHESTRATION &&
-            viewMode !== ViewMode.TUTORIAL &&
             viewMode !== ViewMode.BPMN &&
             viewMode !== ViewMode.FORM &&
             viewMode !== ViewMode.DOCUMENT &&
@@ -776,21 +781,6 @@ const App: React.FC = () => {
             viewMode !== ViewMode.VALIDATE &&
             viewMode !== ViewMode.SHACL && (
               <div className="flex-1 bg-slate-50 relative flex flex-col min-w-0 overflow-hidden">
-                {/* Error Overlay */}
-                {error && (
-                  <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
-                    <div className="text-sm whitespace-pre-wrap font-medium flex-1">{error}</div>
-                    <button
-                      onClick={() => setError(null)}
-                      className="ml-auto text-red-400 hover:text-red-700 text-xl font-bold leading-none"
-                      aria-label="Dismiss error"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                )}
-
                 {viewMode === ViewMode.VISUALIZE ? (
                   <div className="flex-1 p-4 h-full overflow-hidden">
                     <GraphView data={sparqlResult} />

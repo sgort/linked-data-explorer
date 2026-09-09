@@ -1,0 +1,62 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-terugsturen-bankgarantie",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the bank guarantee returned"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the bank guarantee returned to the contractor, where one was given."
+    },
+    {
+      "id": "F_Vantoepassing",
+      "type": "select",
+      "label": "A bank guarantee was given",
+      "key": "bankgarantieVanToepassing",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Bank guarantee reference",
+      "key": "bankgarantieReferentie"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Returned on",
+      "key": "bankgarantieTeruggestuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

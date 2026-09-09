@@ -1,0 +1,269 @@
+{
+  "id": "rip-brief-eindafrekening",
+  "name": "RIP — Final-Account Letter (Brief eindafrekening)",
+  "description": "The letter conveying the final account to the contractor, submitted for decision-making and placed in VISI.",
+  "processKey": "RipR54Process",
+  "serviceId": "RipR54",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{briefEindafrekeningReferentie}}",
+      "variableKey": "briefEindafrekeningReferentie",
+      "source": "process",
+      "label": "Letter reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{eindafrekeningReferentie}}",
+      "variableKey": "eindafrekeningReferentie",
+      "source": "process",
+      "label": "Final account reference"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{eindafrekeningBedrag}}",
+      "variableKey": "eindafrekeningBedrag",
+      "source": "process",
+      "label": "Final account amount"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{briefEindafrekeningInhoud}}",
+      "variableKey": "briefEindafrekeningInhoud",
+      "source": "process",
+      "label": "Letter content"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{briefEindafrekeningIngediendOp}}",
+      "variableKey": "briefEindafrekeningIngediendOp",
+      "source": "process",
+      "label": "Submitted on"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{besluitvormingEindafrekeningReferentie}}",
+      "variableKey": "besluitvormingEindafrekeningReferentie",
+      "source": "process",
+      "label": "Decision-making reference"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{briefEindafrekeningVerstuurdAan}}",
+      "variableKey": "briefEindafrekeningVerstuurdAan",
+      "source": "process",
+      "label": "Sent to"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{briefEindafrekeningVerstuurdOp}}",
+      "variableKey": "briefEindafrekeningVerstuurdOp",
+      "source": "process",
+      "label": "Sent on"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{eindafrekeningInVisiOp}}",
+      "variableKey": "eindafrekeningInVisiOp",
+      "source": "process",
+      "label": "Placed in VISI on"
+    },
+    {
+      "id": "b12",
+      "placeholder": "{{eindafrekeningVisiReferentie}}",
+      "variableKey": "eindafrekeningVisiReferentie",
+      "source": "process",
+      "label": "VISI message reference"
+    },
+    {
+      "id": "b13",
+      "placeholder": "{{gereedgemeldOp}}",
+      "variableKey": "gereedgemeldOp",
+      "source": "process",
+      "label": "Reported complete on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Brief {{briefEindafrekeningReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Final-account letter",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Final-account letter"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Letter {{briefEindafrekeningReferentie}} for project {{projectNumber}} — {{projectName}} conveys eindafrekening {{eindafrekeningReferentie}} of EUR {{eindafrekeningBedrag}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "{{briefEindafrekeningInhoud}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "It was submitted for decision-making on {{briefEindafrekeningIngediendOp}} under {{besluitvormingEindafrekeningReferentie}}, and sent to {{briefEindafrekeningVerstuurdAan}} on {{briefEindafrekeningVerstuurdOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "The letter was placed in VISI on {{eindafrekeningInVisiOp}} under message {{eindafrekeningVisiReferentie}}, and the work reported complete on {{gereedgemeldOp}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the ondersteuner"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

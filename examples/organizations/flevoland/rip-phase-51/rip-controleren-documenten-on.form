@@ -1,0 +1,73 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-controleren-documenten-on",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Check the contractor documents"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Check the documents submitted by the contractor: the execution planning, the health and safety plan and the work plans."
+    },
+    {
+      "id": "F_Planning",
+      "type": "textfield",
+      "label": "Execution planning reference",
+      "key": "uitvoeringsplanningReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Vg",
+      "type": "textfield",
+      "label": "Health and safety plan reference",
+      "key": "vgPlanReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Werkplannen",
+      "type": "textfield",
+      "label": "Work plans reference",
+      "key": "werkplannenReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Bevindingen",
+      "type": "textarea",
+      "label": "Findings",
+      "key": "documentenBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Checked on",
+      "key": "documentenGecontroleerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

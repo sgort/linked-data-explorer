@@ -1,0 +1,71 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-controleren-aanbestedingsdocumenten",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Check the tender documents are ready for upload"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "The procurement adviser checks the aanbestedingsdossier is complete before it goes to the procurement procedure."
+    },
+    {
+      "id": "F_Dossier",
+      "type": "textfield",
+      "label": "Tender dossier reference",
+      "key": "aanbestedingsdossierReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Volledig",
+      "type": "select",
+      "label": "Dossier complete",
+      "key": "dossierVolledig",
+      "values": [
+        {
+          "label": "Yes",
+          "value": "ja"
+        },
+        {
+          "label": "No",
+          "value": "nee"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Ontbreekt",
+      "type": "textarea",
+      "label": "What is missing, if anything",
+      "key": "dossierOntbrekendeStukken"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Checked on",
+      "key": "dossierGecontroleerdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

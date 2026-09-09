@@ -92,7 +92,7 @@
     <bpmn:userTask id="Sub_CaseReview"
                    name="Case review: final settlement decision"
                    camunda:formRef="zorgtoeslag-final-review"
-                   camunda:formRefBinding="latest"
+                   camunda:formRefBinding="deployment"
                    camunda:candidateGroups="caseworker">
       <bpmn:incoming>Flow_Sub_Calc_Review</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Review_Resolve</bpmn:outgoing>

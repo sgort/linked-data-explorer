@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-verzoek-inrichten-better-performance",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the request to set up Better Performance"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Request the Better Performance environment for the project."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Request reference",
+      "key": "betterPerformanceVerzoekReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Request sent on",
+      "key": "betterPerformanceVerzoekVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

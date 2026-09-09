@@ -1,0 +1,262 @@
+{
+  "id": "rip-verzoek-uitstel-oplevering",
+  "name": "RIP — Request for (Postponement of) Delivery (Uitstel tot oplevering)",
+  "description": "The contractor request to deliver the work or to postpone delivery, with the assessments it passes through.",
+  "processKey": "RipR52Process",
+  "serviceId": "RipR52",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{opleveringVerzoekReferentie}}",
+      "variableKey": "opleveringVerzoekReferentie",
+      "source": "process",
+      "label": "Request reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{opleveringVerzoekSoort}}",
+      "variableKey": "opleveringVerzoekSoort",
+      "source": "process",
+      "label": "Request concerns"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{opleveringVerzochtOp}}",
+      "variableKey": "opleveringVerzochtOp",
+      "source": "process",
+      "label": "Requested on"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{opnemingReferentie}}",
+      "variableKey": "opnemingReferentie",
+      "source": "process",
+      "label": "Inspection request reference"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{opleveringVerzoekMotivering}}",
+      "variableKey": "opleveringVerzoekMotivering",
+      "source": "process",
+      "label": "Substantiation"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{opleveringBevindingenDv}}",
+      "variableKey": "opleveringBevindingenDv",
+      "source": "process",
+      "label": "Directievoerder assessment"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{opleveringAdvies}}",
+      "variableKey": "opleveringAdvies",
+      "source": "process",
+      "label": "Advice"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{opleveringVerzoekToegekend}}",
+      "variableKey": "opleveringVerzoekToegekend",
+      "source": "process",
+      "label": "Granted"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{opleveringBesluitMotivering}}",
+      "variableKey": "opleveringBesluitMotivering",
+      "source": "process",
+      "label": "Decision substantiation"
+    },
+    {
+      "id": "b12",
+      "placeholder": "{{opleveringBesluitOp}}",
+      "variableKey": "opleveringBesluitOp",
+      "source": "process",
+      "label": "Decided on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Verzoek {{opleveringVerzoekReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Request for (postponement of) delivery",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Request for (postponement of) delivery"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Request {{opleveringVerzoekReferentie}} for project {{projectNumber}} — {{projectName}} concerns {{opleveringVerzoekSoort}} and was submitted on {{opleveringVerzochtOp}}, following inspection request {{opnemingReferentie}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Substantiation: {{opleveringVerzoekMotivering}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Directievoerder assessment: {{opleveringBevindingenDv}} Advice: {{opleveringAdvies}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Granted: {{opleveringVerzoekToegekend}} — {{opleveringBesluitMotivering}} Decided on {{opleveringBesluitOp}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Submitted by the contractor, decided by the AO"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

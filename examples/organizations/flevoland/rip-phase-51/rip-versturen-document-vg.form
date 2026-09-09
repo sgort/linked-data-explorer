@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-versturen-document-vg",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the health and safety document for assessment"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Send the contractor health and safety plan to the B&O Infra health and safety adviser for assessment."
+    },
+    {
+      "id": "F_Aan",
+      "type": "textfield",
+      "label": "Sent to",
+      "key": "vgDocumentVerstuurdAan",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "vgDocumentVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

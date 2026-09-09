@@ -1,0 +1,55 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-aanpassen-do",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Have the DO amended by the external firm"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Have the external engineering firm amend the detailed design in line with the findings."
+    },
+    {
+      "id": "F_Versie",
+      "type": "textfield",
+      "label": "Amended DO version",
+      "key": "aangepastDoVersie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Verwerkt",
+      "type": "textarea",
+      "label": "How the findings were incorporated",
+      "key": "verwerkteBevindingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aangepast",
+      "type": "datetime",
+      "label": "Amended on",
+      "key": "doAangepastOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

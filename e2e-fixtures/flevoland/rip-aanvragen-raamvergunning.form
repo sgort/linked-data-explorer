@@ -1,0 +1,59 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-aanvragen-raamvergunning",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Apply for framework permit (raamvergunning)"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record the framework permit application submitted through the Omgevingsloket."
+    },
+    {
+      "id": "Field_VergunningType",
+      "type": "select",
+      "label": "Permit type",
+      "key": "raamvergunningType",
+      "validate": { "required": true },
+      "values": [
+        { "label": "Omgevingsvergunning", "value": "omgevingsvergunning" },
+        { "label": "Watervergunning", "value": "watervergunning" },
+        { "label": "Ontheffing", "value": "ontheffing" },
+        { "label": "Other", "value": "overig" }
+      ]
+    },
+    {
+      "id": "Field_IngediendOp",
+      "type": "datetime",
+      "label": "Submitted on",
+      "key": "raamvergunningIngediendOp",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_OmgevingsloketReferentie",
+      "type": "textfield",
+      "label": "Omgevingsloket reference",
+      "key": "omgevingsloketReferentie",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_Toelichting",
+      "type": "textarea",
+      "label": "Notes",
+      "key": "raamvergunningToelichting"
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

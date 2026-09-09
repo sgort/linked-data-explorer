@@ -288,10 +288,7 @@ ORDER BY ?identifier
 
           // NEW: Validation metadata from RONL Ontology v1.0
           validationStatus: binding.validationStatus?.value as
-            | 'validated'
-            | 'in-review'
-            | 'not-validated'
-            | undefined,
+            'validated' | 'in-review' | 'not-validated' | undefined,
           validatedBy: binding.validatedBy?.value,
           validatedByName: binding.validatedByName?.value, // Already fetched by SPARQL query
           validatedAt: binding.validatedAt?.value,

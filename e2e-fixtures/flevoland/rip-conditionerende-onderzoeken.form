@@ -1,0 +1,71 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-conditionerende-onderzoeken",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Conditioning studies"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record which conditioning studies were carried out for this project and what they found. The design team needs these results before the draft VO can be finalised."
+    },
+    {
+      "id": "Field_OnderzoekBodem",
+      "type": "checkbox",
+      "label": "Soil survey (bodemonderzoek) completed",
+      "key": "conditionerendOnderzoekBodem"
+    },
+    {
+      "id": "Field_OnderzoekArcheologie",
+      "type": "checkbox",
+      "label": "Archaeological survey completed",
+      "key": "conditionerendOnderzoekArcheologie"
+    },
+    {
+      "id": "Field_OnderzoekEcologie",
+      "type": "checkbox",
+      "label": "Ecological survey completed",
+      "key": "conditionerendOnderzoekEcologie"
+    },
+    {
+      "id": "Field_OnderzoekWater",
+      "type": "checkbox",
+      "label": "Water and soil balance study completed",
+      "key": "conditionerendOnderzoekWater"
+    },
+    {
+      "id": "Field_OnderzoekNge",
+      "type": "checkbox",
+      "label": "Unexploded ordnance (NGE) survey completed",
+      "key": "conditionerendOnderzoekNge"
+    },
+    {
+      "id": "Field_Bevindingen",
+      "type": "textarea",
+      "label": "Findings",
+      "key": "conditionerendeOnderzoeken",
+      "description": "Summarise what the studies found and any constraint this places on the design.",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_Afgerond",
+      "type": "datetime",
+      "label": "Studies completed on",
+      "key": "conditionerendeOnderzoekenAfgerond",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

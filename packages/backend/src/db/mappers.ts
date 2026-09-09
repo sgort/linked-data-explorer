@@ -11,6 +11,7 @@ export function mapBpmn(row: BpmnRow): Bpmn {
     xml: row.xml,
     processRole: row.process_role,
     calledElement: row.called_element ?? undefined,
+    shellId: row.shell_id ?? undefined,
     linkedDmnTemplates: row.linked_dmn_templates ?? [],
     status: row.status,
     readonly: row.readonly,

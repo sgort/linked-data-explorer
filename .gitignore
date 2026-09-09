@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Test coverage reports (Jest + Vitest, both packages)
+coverage
+
 # Keep committed (environment configs)
 # .env.development
 # .env.acceptance
@@ -25,6 +28,9 @@ dist-ssr
 
 # Hand-authored ambient declarations (not generated output) — keep tracked
 !packages/backend/src/types/shacl-rdf.d.ts
+
+# Hand-authored Jest config (not generated output) — keep tracked
+!packages/backend/jest.config.js
 
 # But keep the source JSON
 !testData.json
@@ -45,8 +51,13 @@ dist-ssr
 *.sw?
 .claudesync
 
-# Claude Code local config & per-machine memory (machine-specific, not portable)
-.claude/
+# Claude Code local config & per-machine memory (machine-specific, not portable).
+# Exception: .claude/commands/ is shared tooling (e.g. bump-release), tracked
+# like ronl-business-api's convention — everything else here (settings,
+# per-project memory) stays local.
+.claude/*
+!.claude/commands/
+CLAUDE.md
 
 # Local env overrides (committed envs are .env.development / .acceptance / .production)
 .env
@@ -54,3 +65,8 @@ dist-ssr
 # flatten script & dir
 flatten_directory.sh
 flattened
+
+# Semgrep Guardian writes a guardian.yml + lock wherever it is invoked, so these
+# appear at the repo root and under any directory a scan was run from. Local
+# tooling state, not project config.
+.semgrep/

@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-versturen-contractdocumenten",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the reviewed contract and tender documents"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Send the reviewed contract and tender document set on, so the tender phase can be prepared."
+    },
+    {
+      "id": "F_Verstuurd",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "contractdocumentenVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Aan",
+      "type": "textfield",
+      "label": "Sent to",
+      "key": "contractdocumentenVerstuurdAan",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

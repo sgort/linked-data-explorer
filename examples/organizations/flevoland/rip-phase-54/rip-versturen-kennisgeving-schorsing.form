@@ -1,0 +1,64 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-versturen-kennisgeving-schorsing",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Send the notice of temporary suspension"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Not all restpunten were completed, so the contractor is temporarily suspended from taking part in the groslijst."
+    },
+    {
+      "id": "F_Ref",
+      "type": "textfield",
+      "label": "Notice reference",
+      "key": "kennisgevingReferentie",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Grond",
+      "type": "textarea",
+      "label": "Grounds for suspension",
+      "key": "schorsingGrond",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Duur",
+      "type": "textfield",
+      "label": "Duration of the suspension",
+      "key": "schorsingDuur",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Sent on",
+      "key": "kennisgevingVerstuurdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

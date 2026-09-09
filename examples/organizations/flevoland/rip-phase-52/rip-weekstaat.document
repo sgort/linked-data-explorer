@@ -1,0 +1,285 @@
+{
+  "id": "rip-weekstaat",
+  "name": "RIP — Weekly Statement (Weekstaat)",
+  "description": "The contractor weekly statement of quantities carried out, and its assessment by the toezichthouder and the directievoerder.",
+  "processKey": "RipR52Process",
+  "serviceId": "RipR52",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{weekstaatReferentie}}",
+      "variableKey": "weekstaatReferentie",
+      "source": "process",
+      "label": "Weekly statement reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{weeknummer}}",
+      "variableKey": "weeknummer",
+      "source": "process",
+      "label": "Week number"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{weekstaatOpgesteldOp}}",
+      "variableKey": "weekstaatOpgesteldOp",
+      "source": "process",
+      "label": "Drawn up on"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{weekstaatVerstuurdAan}}",
+      "variableKey": "weekstaatVerstuurdAan",
+      "source": "process",
+      "label": "Sent to"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{weekstaatVerstuurdOp}}",
+      "variableKey": "weekstaatVerstuurdOp",
+      "source": "process",
+      "label": "Sent on"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{weekstaatHoeveelheden}}",
+      "variableKey": "weekstaatHoeveelheden",
+      "source": "process",
+      "label": "Quantities"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{weekstaatBevindingenTzh}}",
+      "variableKey": "weekstaatBevindingenTzh",
+      "source": "process",
+      "label": "Toezichthouder findings"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{weekstaatBevindingenDv}}",
+      "variableKey": "weekstaatBevindingenDv",
+      "source": "process",
+      "label": "Directievoerder findings"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{weekstaatAkkoord}}",
+      "variableKey": "weekstaatAkkoord",
+      "source": "process",
+      "label": "Approved"
+    },
+    {
+      "id": "b12",
+      "placeholder": "{{weekstaatBedrag}}",
+      "variableKey": "weekstaatBedrag",
+      "source": "process",
+      "label": "Value entered"
+    },
+    {
+      "id": "b13",
+      "placeholder": "{{besteksadministratieReferentie}}",
+      "variableKey": "besteksadministratieReferentie",
+      "source": "process",
+      "label": "Specification administration"
+    },
+    {
+      "id": "b14",
+      "placeholder": "{{weekstaatIngevoerdOp}}",
+      "variableKey": "weekstaatIngevoerdOp",
+      "source": "process",
+      "label": "Entered on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Weekstaat {{weekstaatReferentie}} · week {{weeknummer}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Weekly statement",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Weekly statement"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Weekstaat {{weekstaatReferentie}} for week {{weeknummer}} of project {{projectNumber}} — {{projectName}} was drawn up on {{weekstaatOpgesteldOp}} and sent to {{weekstaatVerstuurdAan}} on {{weekstaatVerstuurdOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Quantities carried out: {{weekstaatHoeveelheden}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Toezichthouder findings: {{weekstaatBevindingenTzh}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Directievoerder findings: {{weekstaatBevindingenDv}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Approved: {{weekstaatAkkoord}}. Once approved, EUR {{weekstaatBedrag}} is entered in specification administration {{besteksadministratieReferentie}} on {{weekstaatIngevoerdOp}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the contractor, assessed by the directievoerder"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

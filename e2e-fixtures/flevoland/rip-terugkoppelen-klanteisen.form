@@ -1,0 +1,46 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-terugkoppelen-klanteisen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Feed back client requirements"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Record which client requirements were honoured and which were declined, and when this was fed back to stakeholders."
+    },
+    {
+      "id": "Field_Gehonoreerd",
+      "type": "textarea",
+      "label": "Requirements honoured",
+      "key": "klanteisenGehonoreerd",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Field_Afgewezen",
+      "type": "textarea",
+      "label": "Requirements declined, with reason",
+      "key": "klanteisenAfgewezen"
+    },
+    {
+      "id": "Field_TeruggekoppeldOp",
+      "type": "datetime",
+      "label": "Fed back to stakeholders on",
+      "key": "klanteisenTeruggekoppeldOp",
+      "validate": { "required": true }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

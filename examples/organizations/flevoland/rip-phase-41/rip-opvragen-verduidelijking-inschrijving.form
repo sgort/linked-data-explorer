@@ -1,0 +1,52 @@
+{
+  "e2eFixture": true,
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "rip-opvragen-verduidelijking-inschrijving",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Request clarification of the tender"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Ask the tenderer to clarify the tender, then check the unit prices again."
+    },
+    {
+      "id": "F_Vraag",
+      "type": "textarea",
+      "label": "Clarification requested",
+      "key": "verduidelijkingVraag",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "F_Antwoord",
+      "type": "textarea",
+      "label": "Clarification received",
+      "key": "verduidelijkingAntwoord"
+    },
+    {
+      "id": "F_Op",
+      "type": "datetime",
+      "label": "Requested on",
+      "key": "verduidelijkingOpgevraagdOp",
+      "subtype": "date",
+      "dateLabel": "Date",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Submit",
+      "action": "submit"
+    }
+  ]
+}

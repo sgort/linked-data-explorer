@@ -1,0 +1,262 @@
+{
+  "id": "rip-overdrachtsverklaring",
+  "name": "RIP — Transfer Declaration (Overdrachtsverklaring)",
+  "description": "The declaration transferring the completed asset to the beheerder, signed by the beheerder and the vestigingsmanager.",
+  "processKey": "RipR61Process",
+  "serviceId": "RipR61",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "wip",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "updatedAt": "2026-09-02T00:00:00.000Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{projectNumber}}",
+      "variableKey": "projectNumber",
+      "source": "process",
+      "label": "Project number"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{projectName}}",
+      "variableKey": "projectName",
+      "source": "process",
+      "label": "Project name"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{overdrachtsverklaringReferentie}}",
+      "variableKey": "overdrachtsverklaringReferentie",
+      "source": "process",
+      "label": "Transfer declaration reference"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{overdrachtsverklaringVersie}}",
+      "variableKey": "overdrachtsverklaringVersie",
+      "source": "process",
+      "label": "Version"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{overdrachtsverklaringOp}}",
+      "variableKey": "overdrachtsverklaringOp",
+      "source": "process",
+      "label": "Drawn up on"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{overgedragenAreaal}}",
+      "variableKey": "overgedragenAreaal",
+      "source": "process",
+      "label": "Asset transferred"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{overdrachtsverklaringAan}}",
+      "variableKey": "overdrachtsverklaringAan",
+      "source": "process",
+      "label": "Sent to"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{overdrachtsverklaringTerTekeningOp}}",
+      "variableKey": "overdrachtsverklaringTerTekeningOp",
+      "source": "process",
+      "label": "Sent for signature on"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{overdrachtsverklaringBevindingen}}",
+      "variableKey": "overdrachtsverklaringBevindingen",
+      "source": "process",
+      "label": "Assessment findings"
+    },
+    {
+      "id": "b10",
+      "placeholder": "{{overdrachtsverklaringAkkoord}}",
+      "variableKey": "overdrachtsverklaringAkkoord",
+      "source": "process",
+      "label": "Signed"
+    },
+    {
+      "id": "b11",
+      "placeholder": "{{overdrachtsverklaringGetekendDoor}}",
+      "variableKey": "overdrachtsverklaringGetekendDoor",
+      "source": "process",
+      "label": "Signed by"
+    },
+    {
+      "id": "b12",
+      "placeholder": "{{overdrachtsverklaringBeoordeeldOp}}",
+      "variableKey": "overdrachtsverklaringBeoordeeldOp",
+      "source": "process",
+      "label": "Assessed on"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh1",
+          "type": "text",
+          "label": "Organisation header",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Province of Flevoland"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Infrastructure — Regular Infrastructure Projects"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref1",
+          "type": "text",
+          "label": "Document reference",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Overdrachtsverklaring {{overdrachtsverklaringReferentie}} · project {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "bd1",
+          "type": "text",
+          "label": "Transfer declaration",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Transfer declaration"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Transfer declaration {{overdrachtsverklaringReferentie}} (version {{overdrachtsverklaringVersie}}) for project {{projectNumber}} — {{projectName}} was drawn up on {{overdrachtsverklaringOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Asset transferred: {{overgedragenAreaal}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "It was sent to {{overdrachtsverklaringAan}} for signature on {{overdrachtsverklaringTerTekeningOp}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Assessment: {{overdrachtsverklaringBevindingen}} Signed: {{overdrachtsverklaringAkkoord}}, by {{overdrachtsverklaringGetekendDoor}} on {{overdrachtsverklaringBeoordeeldOp}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": []
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so1",
+          "type": "text",
+          "label": "Signatures",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Drawn up by the projectleider, signed by the beheerder and the vestigingsmanager"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Project: {{projectNumber}} — {{projectName}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": []
+    },
+    "annex": {
+      "blocks": []
+    }
+  }
+}

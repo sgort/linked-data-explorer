@@ -6,31 +6,79 @@ on:
       - acc
     paths:
       - 'packages/frontend/**'
+      - '.github/workflows/azure-frontend-acc.yml'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - acc
     paths:
       - 'packages/frontend/**'
+      - '.github/workflows/azure-frontend-acc.yml'
+
+# Serialise deployments to one environment. Keyed on the pull-request
+# NUMBER rather than the ref: keyed on github.ref alone, the
+# pull_request(closed) teardown and the push deploy that a merge fires
+# simultaneously land in one group and cancel each other at random.
+# Learned in ronl-business-api on 2026-08-29.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Default to read-only; jobs opt into more only where required.
+permissions:
+  contents: read
 
 jobs:
   build_and_deploy_job:
+    permissions:
+      contents: read
+      pull-requests: write
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
+          persist-credentials: false
           lfs: false
       - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version: "20.20.2"
           cache: "npm"
+      # The Static Web Apps action builds inside its own container and runs
+      # none of our scripts, so lint and tests get explicit steps ahead of it.
+      # Installing from the workspace root, since the only lockfile is there.
+      - name: Install dependencies
+        run: npm ci
+      - name: Run linter
+        run: npm run lint --workspace=packages/frontend
+      - name: Typecheck
+        run: npm run typecheck --workspace=packages/frontend
+      - name: Unit tests
+        run: npm test --workspace=packages/frontend
       - name: Build And Deploy
         id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
+        # Stamps the bundle with which BUILD it is, not just which release —
+        # the changelog version is authored at release time, so ACC and
+        # production can serve different builds of the same version string.
+        #
+        # These sit on the deploy step rather than a build step because there
+        # is no build step: app_build_command hands the build to Oryx inside
+        # the action's own container, and the action forwards the runner's
+        # environment into it. That is also why nothing is derived from git at
+        # build time — .git is not guaranteed to exist in that container, and a
+        # build id that silently fails to resolve is worse than none.
+        #
+        # Absent (local builds, forks), src/utils/buildInfo.ts renders
+        # 'local build'. On a pull request github.sha is the merge commit
+        # GitHub synthesises, so a preview's SHA matches no commit in the
+        # branch — that is the commit that was built, not a bug to chase.
+        env:
+          VITE_BUILD_SHA: ${{ github.sha }}
+          VITE_BUILD_RUN: ${{ github.run_number }}
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BRAVE_BAY_04F351E03 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
@@ -44,13 +92,14 @@ jobs:
       ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
+    permissions: {}
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     name: Close Pull Request Job
     steps:
       - name: Close Pull Request
         id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BRAVE_BAY_04F351E03 }}
           action: "close"
