@@ -66,6 +66,79 @@ describe('VendorModal', () => {
     expect(await screen.findByText('network down')).toBeTruthy();
   });
 
+  test('a reported failure with no message falls back to a generic one', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ json: async () => ({ success: false }) });
+    render(
+      <VendorModal dmnIdentifier="age-check" dmnTitle="Age check" endpoint="e" onClose={vi.fn()} />
+    );
+    expect(await screen.findByText('Failed to fetch vendor services')).toBeTruthy();
+  });
+
+  test('a rejection that is not an Error still leaves the modal readable', async () => {
+    global.fetch = vi.fn().mockRejectedValue('not an Error instance');
+    render(
+      <VendorModal dmnIdentifier="age-check" dmnTitle="Age check" endpoint="e" onClose={vi.fn()} />
+    );
+    expect(await screen.findByText('Unknown error')).toBeTruthy();
+    expect(screen.queryByText('Loading vendor services...')).toBeNull();
+  });
+
+  test('every optional vendor detail is rendered when the record carries it', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({
+        success: true,
+        data: {
+          vendorServices: [
+            vendor({
+              implementedByName: 'Common Ground Platform',
+              description: 'Hosted age check for municipalities',
+              serviceUrl: 'https://acme.example.com/age-check',
+              provider: {
+                name: 'Acme BV',
+                logoUrl: 'https://acme.example.com/logo.svg',
+                homepage: 'https://acme.example.com',
+              },
+            }),
+          ],
+        },
+      }),
+    });
+
+    render(
+      <VendorModal dmnIdentifier="age-check" dmnTitle="Age check" endpoint="e" onClose={vi.fn()} />
+    );
+
+    expect(await screen.findByText('Hosted age check for municipalities')).toBeTruthy();
+    expect(screen.getByAltText('Acme BV')).toHaveAttribute(
+      'src',
+      'https://acme.example.com/logo.svg'
+    );
+    expect(screen.getByText('Common Ground Platform')).toBeTruthy();
+    expect(screen.getByText('Access Service').closest('a')).toHaveAttribute(
+      'href',
+      'https://acme.example.com/age-check'
+    );
+    expect(screen.getByText('https://acme.example.com').closest('a')).toHaveAttribute(
+      'href',
+      'https://acme.example.com'
+    );
+  });
+
+  test('optional vendor details are left out when the record omits them', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({ success: true, data: { vendorServices: [vendor()] } }),
+    });
+
+    render(
+      <VendorModal dmnIdentifier="age-check" dmnTitle="Age check" endpoint="e" onClose={vi.fn()} />
+    );
+
+    expect(await screen.findByText('Acme BV')).toBeTruthy();
+    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByText('Access Service')).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
   test('renders license/access-type badges and contact details', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       json: async () => ({

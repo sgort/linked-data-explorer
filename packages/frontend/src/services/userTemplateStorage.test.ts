@@ -50,6 +50,22 @@ describe('getUserTemplates / getUserTemplateById', () => {
     localStorage.setItem('linkeddata-explorer-user-templates', 'not json');
     expect(getUserTemplates(ENDPOINT)).toEqual([]);
   });
+
+  test('return [] / null for an endpoint absent from a populated store', () => {
+    // Distinct from the empty-store case above: here `stored` parses fine and
+    // the lookup misses. Without the `|| []` fallback this hands back
+    // undefined and every caller that maps over the result throws.
+    saveUserTemplate('https://other.example.com/sparql', baseTemplate());
+
+    expect(getUserTemplates(ENDPOINT)).toEqual([]);
+    expect(getUserTemplateById(ENDPOINT, 'no-such-id')).toBeNull();
+  });
+});
+
+describe('getAllUserTemplates', () => {
+  test('returns [] when nothing has been stored at all', () => {
+    expect(getAllUserTemplates()).toEqual([]);
+  });
 });
 
 describe('saveUserTemplate', () => {
@@ -68,6 +84,15 @@ describe('saveUserTemplate', () => {
     expect(getUserTemplates(ENDPOINT)).toHaveLength(1);
     expect(getAllUserTemplates()).toHaveLength(2);
   });
+
+  test('appends to the endpoint bucket instead of resetting it', () => {
+    // The `if (!storage[endpoint])` initialiser must not run on the second
+    // save; if it did, each save would discard everything saved before it.
+    const first = saveUserTemplate(ENDPOINT, baseTemplate());
+    const second = saveUserTemplate(ENDPOINT, { ...baseTemplate(), name: 'Second chain' });
+
+    expect(getUserTemplates(ENDPOINT).map((t) => t.id)).toEqual([first.id, second.id]);
+  });
 });
 
 describe('updateUserTemplate', () => {
@@ -81,8 +106,19 @@ describe('updateUserTemplate', () => {
     expect(updated?.updatedAt).not.toBe(saved.updatedAt);
   });
 
-  test('returns null when the endpoint has no templates at all', () => {
+  test('returns null when nothing is stored at all', () => {
     expect(updateUserTemplate(ENDPOINT, 'no-such-id', { name: 'x' })).toBeNull();
+  });
+
+  test('returns null when the store holds no bucket for this endpoint', () => {
+    // A different path than the empty-store case above, which returns at the
+    // `if (!stored)` guard and never reaches the endpoint lookup. Here the
+    // store parses and the lookup misses, and no other endpoint's bucket may
+    // be touched on the way out.
+    const other = saveUserTemplate('https://other.example.com/sparql', baseTemplate());
+
+    expect(updateUserTemplate(ENDPOINT, 'no-such-id', { name: 'x' })).toBeNull();
+    expect(getUserTemplates('https://other.example.com/sparql')).toEqual([other]);
   });
 
   test('returns null when the id does not match any template', () => {
@@ -98,8 +134,15 @@ describe('deleteUserTemplate', () => {
     expect(getUserTemplates(ENDPOINT)).toEqual([]);
   });
 
-  test('returns false when the endpoint has no templates at all', () => {
+  test('returns false when nothing is stored at all', () => {
     expect(deleteUserTemplate(ENDPOINT, 'no-such-id')).toBe(false);
+  });
+
+  test('returns false when the store holds no bucket for this endpoint', () => {
+    saveUserTemplate('https://other.example.com/sparql', baseTemplate());
+
+    expect(deleteUserTemplate(ENDPOINT, 'no-such-id')).toBe(false);
+    expect(getAllUserTemplates()).toHaveLength(1);
   });
 
   test('returns false when the id does not match any template', () => {

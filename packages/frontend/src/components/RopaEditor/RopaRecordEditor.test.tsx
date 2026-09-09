@@ -82,6 +82,26 @@ afterEach(() => {
   getForms.mockReset();
 });
 
+/**
+ * Runs `act` and fails if it raised an uncaught error.
+ *
+ * The guards in handleHydrate/handleWriteBpmnLink exist to stop a missing
+ * process, form or component list from being dereferenced. React reports a
+ * throw inside a click handler through window's error event instead of
+ * rejecting the click, so without this listener a test asserting "nothing was
+ * added" passes just as happily when the handler died halfway through.
+ */
+async function withoutUncaughtErrors(act: () => Promise<void>) {
+  const onError = vi.fn();
+  window.addEventListener('error', onError);
+  try {
+    await act();
+  } finally {
+    window.removeEventListener('error', onError);
+  }
+  expect(onError).not.toHaveBeenCalled();
+}
+
 describe('RopaRecordEditor — blank vs. existing record', () => {
   test('a null record renders the blank-record defaults', () => {
     getProcesses.mockReturnValue([]);
@@ -209,7 +229,7 @@ describe('RopaRecordEditor — Personal Data Fields / hydrate', () => {
     expect(screen.getByText('Hydrate from forms')).toBeDisabled();
   });
 
-  test("hydrates new fields from the linked BPMN process's camunda:formRef forms, skipping keyless components and already-present keys", async () => {
+  test("hydrates new fields from the linked BPMN process's camunda:formRef forms, skipping keyless components", async () => {
     getProcesses.mockReturnValue([
       process({
         xml: '<bpmn:definitions><bpmn:userTask camunda:formRef="form-1" /></bpmn:definitions>',
@@ -237,6 +257,102 @@ describe('RopaRecordEditor — Personal Data Fields / hydrate', () => {
 
     expect(await screen.findByText('leeftijd')).toBeTruthy();
     expect(screen.getAllByRole('row')).toHaveLength(2); // header row + 1 field row
+  });
+
+  test('hydrating twice does not duplicate a field that is already recorded', async () => {
+    getProcesses.mockReturnValue([
+      process({
+        xml: '<bpmn:definitions><bpmn:userTask camunda:formRef="form-1" /></bpmn:definitions>',
+      }),
+    ]);
+    getForms.mockReturnValue([
+      form({
+        schema: {
+          id: 'form-1',
+          components: [
+            { key: 'leeftijd', label: 'Leeftijd' },
+            { key: 'inkomen', label: 'Inkomen' },
+          ],
+        },
+      }),
+    ]);
+
+    render(
+      <RopaRecordEditor
+        record={record({
+          personalDataFields: [
+            {
+              id: 'existing',
+              ropaRecordId: 'r1',
+              formId: 'form-1',
+              fieldKey: 'leeftijd',
+              fieldLabel: 'Leeftijd (curated)',
+              dataCategory: 'other',
+              specialCategory: false,
+              sortOrder: 0,
+            },
+          ],
+        })}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Personal Data Fields' }));
+    await userEvent.click(screen.getByText('Hydrate from forms'));
+
+    // 'inkomen' is added; 'leeftijd' keeps the label the user curated rather
+    // than gaining a second row from the form.
+    expect(await screen.findByText('inkomen')).toBeTruthy();
+    expect(screen.getAllByRole('row')).toHaveLength(3); // header + 2 fields
+    expect(screen.getByDisplayValue('Leeftijd (curated)')).toBeTruthy();
+  });
+
+  test('hydrating is a no-op when no stored process matches the record', async () => {
+    getProcesses.mockReturnValue([process({ bpmnProcessId: 'SomeOtherProcess' })]);
+    getForms.mockReturnValue([form()]);
+
+    render(
+      <RopaRecordEditor
+        record={record({ personalDataFields: [] })}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Personal Data Fields' }));
+    await withoutUncaughtErrors(() => userEvent.click(screen.getByText('Hydrate from forms')));
+
+    expect(getForms).not.toHaveBeenCalled();
+    expect(screen.queryByRole('row')).toBeNull();
+  });
+
+  test('hydrating skips form refs with no stored form and forms with no components', async () => {
+    getProcesses.mockReturnValue([
+      process({
+        xml:
+          '<bpmn:definitions>' +
+          '<bpmn:userTask camunda:formRef="deleted-form" />' +
+          '<bpmn:userTask camunda:formRef="empty-form" />' +
+          '</bpmn:definitions>',
+      }),
+    ]);
+    getForms.mockReturnValue([form({ id: 'f2', schema: { id: 'empty-form' } })]);
+
+    render(
+      <RopaRecordEditor
+        record={record({ personalDataFields: [] })}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Personal Data Fields' }));
+    await withoutUncaughtErrors(() => userEvent.click(screen.getByText('Hydrate from forms')));
+
+    // Neither ref yields a field, and neither takes the tab down with it.
+    expect(screen.queryByRole('row')).toBeNull();
+    expect(screen.getByText('Hydrate from forms')).toBeTruthy();
   });
 
   test('removing a field row deletes it from the table', async () => {
@@ -350,6 +466,67 @@ describe('RopaRecordEditor — BPMN link', () => {
     expect(saveProcess).toHaveBeenCalledWith(
       expect.objectContaining({ xml: expect.not.stringContaining('ronl:ropaRef') })
     );
+  });
+
+  test('rewriting an existing link replaces the ropaRef instead of adding a second one', async () => {
+    getProcesses.mockReturnValue([
+      process({
+        xml: '<bpmn:definitions xmlns:ronl="http://ronl.nl/schema/1.0"><bpmn:process ronl:ropaRef="r-old" /></bpmn:definitions>',
+      }),
+    ]);
+    render(<RopaRecordEditor record={record()} onSave={vi.fn()} onCancel={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'BPMN Link' }));
+    await userEvent.click(screen.getByText('Write ronl:ropaRef to BPMN'));
+
+    const [[saved]] = saveProcess.mock.calls;
+    expect(saved.xml).toContain('ronl:ropaRef="r1"');
+    expect(saved.xml).not.toContain('r-old');
+    // The namespace was already declared; declaring it twice makes the XML
+    // invalid and bpmn-js refuses to open the diagram.
+    expect(saved.xml.match(/xmlns:ronl=/g)).toHaveLength(1);
+  });
+
+  test('a ropaRef pointing at another record is flagged rather than shown as linked', async () => {
+    getProcesses.mockReturnValue([
+      process({
+        xml: '<bpmn:definitions xmlns:ronl="http://ronl.nl/schema/1.0"><bpmn:process ronl:ropaRef="r-other" /></bpmn:definitions>',
+      }),
+    ]);
+    render(<RopaRecordEditor record={record()} onSave={vi.fn()} onCancel={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'BPMN Link' }));
+
+    expect(await screen.findByText('Points to a different record')).toBeTruthy();
+    expect(screen.queryByText('✓ Linked')).toBeNull();
+  });
+
+  test('writing the link does nothing when no stored process matches', async () => {
+    getProcesses.mockReturnValue([process({ bpmnProcessId: 'SomeOtherProcess' })]);
+    render(<RopaRecordEditor record={record()} onSave={vi.fn()} onCancel={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'BPMN Link' }));
+    await withoutUncaughtErrors(() =>
+      userEvent.click(screen.getByText('Write ronl:ropaRef to BPMN'))
+    );
+
+    expect(saveProcess).not.toHaveBeenCalled();
+  });
+
+  test('a record with no id and no process shows placeholders and cannot be written', async () => {
+    getProcesses.mockReturnValue([]);
+    render(<RopaRecordEditor record={null} onSave={vi.fn()} onCancel={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'BPMN Link' }));
+
+    expect(screen.getByText('— not set —')).toBeTruthy();
+    expect(screen.getByText('— save the record first —')).toBeTruthy();
+    expect(screen.getByText('Write ronl:ropaRef to BPMN')).toBeDisabled();
+    expect(
+      screen.getByText(
+        'Save the record on the Record tab first — the ID is required to write the link.'
+      )
+    ).toBeTruthy();
   });
 });
 

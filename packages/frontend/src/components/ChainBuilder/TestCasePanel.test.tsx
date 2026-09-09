@@ -76,6 +76,51 @@ describe('TestCasePanel', () => {
     expect(screen.getByText('1 input')).toBeTruthy();
   });
 
+  test('the input count is pluralised for anything other than exactly one input', () => {
+    getTestCasesForChain.mockReturnValue([
+      testCase({ id: 'tc-none', name: 'No inputs', inputs: {} }),
+      testCase({ id: 'tc-two', name: 'Two inputs', inputs: { age: 30, income: 1000 } }),
+    ]);
+    render(
+      <TestCasePanel chain={[dmn()]} endpoint="e" currentInputs={{}} onLoadTestCase={vi.fn()} />
+    );
+
+    expect(screen.getByText('0 inputs')).toBeTruthy();
+    expect(screen.getByText('2 inputs')).toBeTruthy();
+  });
+
+  test('a test case description is shown under its name', () => {
+    getTestCasesForChain.mockReturnValue([
+      testCase({ description: 'Applicant just over the age threshold' }),
+    ]);
+    render(
+      <TestCasePanel chain={[dmn()]} endpoint="e" currentInputs={{}} onLoadTestCase={vi.fn()} />
+    );
+
+    expect(screen.getByText('Applicant just over the age threshold')).toBeTruthy();
+  });
+
+  test('a test case that has been run before shows its last-run date', () => {
+    const lastRun = '2026-03-05T10:00:00.000Z';
+    getTestCasesForChain.mockReturnValue([testCase({ lastRun })]);
+    render(
+      <TestCasePanel chain={[dmn()]} endpoint="e" currentInputs={{}} onLoadTestCase={vi.fn()} />
+    );
+
+    // toLocaleDateString is the platform's, not the component's — the component
+    // decides only whether to render the stamp at all, and in what wording.
+    expect(screen.getByText(`• Last run: ${new Date(lastRun).toLocaleDateString()}`)).toBeTruthy();
+  });
+
+  test('a test case that has never been run shows no last-run stamp', () => {
+    getTestCasesForChain.mockReturnValue([testCase()]);
+    render(
+      <TestCasePanel chain={[dmn()]} endpoint="e" currentInputs={{}} onLoadTestCase={vi.fn()} />
+    );
+
+    expect(screen.queryByText(/Last run:/)).toBeNull();
+  });
+
   test('clicking a test case updates its lastRun and calls onLoadTestCase', async () => {
     getTestCasesForChain.mockReturnValue([testCase()]);
     const onLoadTestCase = vi.fn();
@@ -111,6 +156,23 @@ describe('TestCasePanel', () => {
 
     expect(deleteTestCase).toHaveBeenCalledWith('e', ['age-check'], 'tc1');
     expect(screen.queryByText('Happy path')).toBeNull();
+  });
+
+  test('a confirmed delete that the storage layer rejects leaves the test case in place', async () => {
+    // The list is only filtered when deleteTestCase reports success. Drop that
+    // guard and the row disappears from the panel while the record survives in
+    // localStorage — a stale list that reappears on the next mount.
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    getTestCasesForChain.mockReturnValue([testCase()]);
+    deleteTestCase.mockReturnValue(false);
+    render(
+      <TestCasePanel chain={[dmn()]} endpoint="e" currentInputs={{}} onLoadTestCase={vi.fn()} />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '' }));
+
+    expect(deleteTestCase).toHaveBeenCalledWith('e', ['age-check'], 'tc1');
+    expect(screen.getByText('Happy path')).toBeTruthy();
   });
 
   test('cancelling the delete confirmation leaves the test case in place', async () => {

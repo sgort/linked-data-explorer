@@ -162,6 +162,123 @@ describe('ExportChain', () => {
     expect(screen.getByText('Export Chain')).toBeTruthy();
   });
 
+  test('a failed export with no error text falls back to a generic message', async () => {
+    validateChainForExport.mockReturnValue({ valid: true, errors: [] });
+    exportChain.mockResolvedValue({ success: false });
+    render(
+      <ExportChain
+        dmnIds={['age-check']}
+        inputs={{}}
+        chainDmns={[dmn()]}
+        validation={validation()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Export/ }));
+    await userEvent.click(screen.getAllByRole('button', { name: /Export/ })[1]);
+
+    expect(await screen.findByText('Export failed')).toBeTruthy();
+  });
+
+  test('an exportChain rejection surfaces the thrown message', async () => {
+    validateChainForExport.mockReturnValue({ valid: true, errors: [] });
+    exportChain.mockRejectedValue(new Error('Serializer crashed'));
+    render(
+      <ExportChain
+        dmnIds={['age-check']}
+        inputs={{}}
+        chainDmns={[dmn()]}
+        validation={validation()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Export/ }));
+    await userEvent.click(screen.getAllByRole('button', { name: /Export/ })[1]);
+
+    expect(await screen.findByText('Serializer crashed')).toBeTruthy();
+    expect(screen.getByText('Export Chain')).toBeTruthy();
+  });
+
+  test('a rejection that is not an Error still leaves the modal usable', async () => {
+    validateChainForExport.mockReturnValue({ valid: true, errors: [] });
+    exportChain.mockRejectedValue('not an Error instance');
+    render(
+      <ExportChain
+        dmnIds={['age-check']}
+        inputs={{}}
+        chainDmns={[dmn()]}
+        validation={validation()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Export/ }));
+    await userEvent.click(screen.getAllByRole('button', { name: /Export/ })[1]);
+
+    expect(await screen.findByText('Unknown error')).toBeTruthy();
+    // The finally block must still clear isExporting, or the footer button
+    // stays stuck on "Exporting…" with no way to retry.
+    expect(screen.getAllByRole('button', { name: /Export/ })[1]).not.toBeDisabled();
+  });
+
+  test('the chain summary pluralises the DMN count', async () => {
+    validateChainForExport.mockReturnValue({ valid: true, errors: [] });
+    render(
+      <ExportChain
+        dmnIds={['age-check', 'income-check']}
+        inputs={{ age: 30 }}
+        chainDmns={[dmn(), dmn({ id: 'd2', identifier: 'income-check' })]}
+        validation={validation()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Export/ }));
+
+    expect(screen.getByText('2 DMNs • 1 input')).toBeTruthy();
+  });
+
+  test('Enter in the filename field runs the export', async () => {
+    validateChainForExport.mockReturnValue({ valid: true, errors: [] });
+    exportChain.mockResolvedValue({ success: true });
+    render(
+      <ExportChain
+        dmnIds={['age-check']}
+        inputs={{}}
+        chainDmns={[dmn()]}
+        validation={validation()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Export/ }));
+    await userEvent.type(screen.getByPlaceholderText('Enter filename...'), '-v2{Enter}');
+
+    expect(exportChain).toHaveBeenCalledWith(
+      ['age-check'],
+      {},
+      [dmn()],
+      expect.objectContaining({ filename: 'chain-1-dmns-v2' })
+    );
+  });
+
+  test('Enter with an empty filename does not run the export', async () => {
+    validateChainForExport.mockReturnValue({ valid: true, errors: [] });
+    render(
+      <ExportChain
+        dmnIds={['age-check']}
+        inputs={{}}
+        chainDmns={[dmn()]}
+        validation={validation()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Export/ }));
+    const input = screen.getByPlaceholderText('Enter filename...');
+    await userEvent.clear(input);
+    await userEvent.type(input, '{Enter}');
+
+    expect(exportChain).not.toHaveBeenCalled();
+    expect(screen.getByText('Export Chain')).toBeTruthy();
+  });
+
   test('Cancel closes the modal and resets the filename', async () => {
     validateChainForExport.mockReturnValue({ valid: true, errors: [] });
     render(
