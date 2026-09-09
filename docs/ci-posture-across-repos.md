@@ -10,21 +10,22 @@ memory.
 
 | repository           | `acc` at  |
 | -------------------- | --------- |
-| ttl-editor           | `bd71dd9` |
-| linked-data-explorer | `afb182e` |
+| ttl-editor           | `6e8e019` |
+| linked-data-explorer | `36c4246` |
 | ronl-business-api    | `04e38c8` |
 
 ---
 
 ## Summary
 
-|                               | ttl-editor           | linked-data-explorer | ronl-business-api    |
-| ----------------------------- | -------------------- | -------------------- | -------------------- |
-| **Build id in the changelog** | ✅                   | ✅                   | ✅                   |
-| **check-supply-chain**        | ✅ blocking          | ✅ blocking          | ⚠️ non-blocking      |
-| **Per-file 80% branch floor** | ✅ native thresholds | ✅ native thresholds | ✅ native thresholds |
-| **Formatting checked in CI**  | ✅                   | ✅                   | —                    |
-| **Tests run before merge**    | ✅                   | ✅                   | ⚠️ frontend only     |
+|                               | ttl-editor           | linked-data-explorer | ronl-business-api       |
+| ----------------------------- | -------------------- | -------------------- | ----------------------- |
+| **Build id in the changelog** | ✅                   | ✅                   | ✅                      |
+| **check-supply-chain**        | ✅ blocking          | ✅ blocking          | ⚠️ non-blocking         |
+| **Per-file 80% branch floor** | ✅ native thresholds | ✅ native thresholds | ✅ native thresholds    |
+| **Formatting checked in CI**  | ✅                   | ✅                   | —                       |
+| **Tests run before merge**    | ✅                   | ✅                   | ⚠️ frontend only        |
+| **Mirror in sync**            | ✅                   | ✅                   | ⚠️ both branches differ |
 
 Nothing in that table is uniform by accident. Each application has a different
 build shape, and the differences below are re-derived per repository rather than
@@ -148,11 +149,45 @@ changelog is code-split, so the string lands in a separate chunk and grepping th
 entry bundle looks exactly like failure. Confirm the chunk hash changes between
 the two builds; if it does not, the second build did not run.
 
-### Known gap
+### Exercised, at last, in two of the three
 
-**Production is wired everywhere and exercised nowhere.** All three applications
-carry the `env:` block in their production workflows, and none of those workflows
-has run since. Worth one glance at the changelog on each first production release.
+**ttl-editor ran its production workflow on 2026-09-09** and the Changelog tab
+renders a real build id. That was the first execution of any of these `env:`
+blocks in production, and it is the only evidence that the placement is right:
+until a workflow runs, a correctly-written block and an unreachable one look
+identical.
+
+It closes as a gap rather than as a formality, because the promotion that carried
+it was also the Create React App to Vite cutover. `output_location` moved from
+`build` to `dist` in the same commit as the build script, which is what the ACC
+workflow's own comment insists on — a stale value there "uploads an empty
+directory and reports SUCCESS". Promoting the migration in parts would have
+separated them.
+
+Verified in the order that distinguishes the failure modes: the build id first
+(`local build` would mean the block never reached Oryx), then a hard refresh (the
+lazy chunks 404 if `output_location` is wrong), then a DMN round trip against the
+production backend.
+
+**Linked Data Explorer followed the same day**, promoting `acc` to `main` and
+publishing nineteen changelog entries at once — ten weeks, `1.9.9` to
+`2026.09.2`. Its production changelog now reads `build 007b350 · #39`, confirmed
+by eye rather than inferred from a green workflow.
+
+Two things that repository's run adds to ttl-editor's:
+
+- **The pair is what makes it a build id.** `007b350` is the merge commit of the
+  promotion pull request, and `#39` is the run that built it. A redeploy of that
+  same commit would produce `#40` — which is the whole reason the run number is
+  carried alongside the SHA rather than the SHA alone.
+- **Reading the changelog is the check; a green deploy is not.** The workflow
+  succeeds identically whether the `env:` block reached the artifact or not. That
+  is the same asymmetry as ttl-editor's `output_location`: the failure mode is a
+  successful-looking deploy of something wrong.
+
+**Still wired and unexercised in the third.** RONL Business API carries the block
+in its production workflow and has not run it. Worth one glance at the changelog
+on its first production release.
 
 ---
 
@@ -553,6 +588,60 @@ artifact, with the real deploy being a manual script run from a clean `acc` afte
 the release pull request merges. Nothing in that job has an external side effect,
 so there is nothing to gate — the change is the trigger alone.
 
+### A ruleset scoped to one branch gates one branch
+
+Worth stating because it is easy to read a repository as protected when only half
+of it is. ttl-editor's `acc supply-chain gate` ruleset applies to `refs/heads/acc`
+and nothing else. `main` has branch protection — a pull request is required — but
+**zero required approvals and no required status checks at all**. So on the
+promotion pull request, `audit` and the production build ran and reported, and
+neither could have blocked the merge.
+
+That is defensible: `main` is promoted from `acc`, and those commits already
+passed the gate on their own `acc` pull request. But the promotion pull request is
+the one carrying a build-system change into production, and it is gated by nobody.
+Read the checks there rather than trusting the button.
+
+The same question is worth asking of the other two: a ruleset naming one branch
+says nothing about any other.
+
+**Linked Data Explorer was asked, and had the same hole.** Its only ruleset was
+`acc supply-chain gate`, `include: ["refs/heads/acc"]`, `exclude: []`. `main` had
+nothing at all — not even the pull request ttl-editor's `main` requires. Anyone
+could have pushed to it directly, or squashed a promotion and orphaned every SHA
+cited across all seventy-five changelog entries.
+
+Closed on 2026-09-09 with a `main promotion gate` ruleset created **before** the
+promotion pull request was opened, mirroring the `acc` one: `deletion`,
+`non_fast_forward`, `pull_request` with `allowed_merge_methods: ["merge"]`, and
+`required_status_checks: [audit]` with `strict: false`.
+
+Three things that were load-bearing, in the order they mattered:
+
+- **Check the audit reaches the branch before requiring it.** A required check
+  that no trigger produces blocks the pull request permanently. It works here
+  only because `zizmor.yml` triggers on a bare `pull_request:` with no branch
+  filter — a fix that landed in the same release, after branch-filtered audits
+  had blocked four stacked pull requests. Requiring `audit` on `main` before that
+  fix would have deadlocked the promotion.
+- **Omitting a ruleset parameter is not the same as setting it false.** The
+  create call left `require_extra_approval_for_unattributed_changes` out of the
+  payload; GitHub stored it as **`true`**. With 206 commits across three author
+  identities, zero required approvals and no second maintainer to approve, that
+  would have deadlocked the very pull request the ruleset existed to protect —
+  and it was invisible in the create response's shape. Caught by reading the
+  stored ruleset back rather than trusting the write. Set it explicitly.
+- **The promotion pull request is the proof, and it is free.** On opening, it
+  reported `mergeStateStatus=BLOCKED` on the pending `audit`, then moved to
+  `UNSTABLE` once that passed. That is a gate demonstrating it bites without
+  anything being pushed. **Do not test a branch ruleset by pushing to the
+  branch** — if it is misconfigured the push succeeds, and the test was the
+  promotion.
+
+The `acc` and `main` rulesets therefore differ by one parameter, deliberately.
+Worth recording somewhere durable, or it reads as drift the next time someone
+compares them.
+
 **Production workflows are deliberately excluded from that treatment** in Linked
 Data Explorer, on evidence rather than preference:
 
@@ -565,6 +654,92 @@ A `pull_request` trigger on a production workflow would make every pull request
 to `main` wait on a human approval **before the tests could run** — an approval
 gate in front of the check meant to inform it. `main` is promoted from `acc`, so
 those commits already ran the full suite on their `acc` pull request.
+
+**A protected environment protects the jobs that declare it, and no others.**
+That table describes the environment; it does not describe what reaches
+production. Of Linked Data Explorer's three production workflows, exactly one
+names it:
+
+| production workflow | declares `environment:` | on merge to `main` |
+| ------------------- | ----------------------- | ------------------ |
+| backend             | ✅ `production`         | waits for approval |
+| frontend            | —                       | ships unattended   |
+| ropa-site           | —                       | ships unattended   |
+
+Confirmed on the 2026-09-09 promotion: the backend run paused and recorded
+`approved by sgort`, while the other two deployed straight through. **The
+asymmetry is deliberate here** — but "the production environment requires
+reviewers" is a true sentence that describes one third of what deploys, and
+reading it as coverage would be wrong.
+
+### A workflow's own file in its `paths:` filter is a trigger
+
+Predicted from the content path alone, ropa-site should not have deployed on that
+promotion: `git diff main acc -- packages/ropa-site` was empty. It deployed
+anyway, twice — once on the pull request, once on the merge.
+
+Its filter has two entries, and the second is itself:
+
+```yaml
+paths:
+  - "packages/ropa-site/**"
+  - ".github/workflows/azure-ropa-site-prod.yml"
+```
+
+The workflow file had changed by 21 lines between the branches — pinning and
+hardening from the supply-chain work — so the trigger matched. That second entry
+is correct and worth keeping: a change to how a thing deploys should redeploy it.
+But it means **a path-filtered workflow is not confined to its package**, and any
+repository-wide sweep across workflow files rearms every filter that names its
+own file.
+
+The practical rule when predicting what a merge will deploy: read the whole
+`paths:` list, not the entry that looks like the package.
+
+### A commit message can turn every gate off
+
+GitHub Actions honours `[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]` and
+`[actions skip]` **anywhere in a commit message**, including in prose that is
+merely discussing them. It does not distinguish a marker from a quotation.
+
+Observed on a ttl-editor pull request whose commit message explained that two
+files had come to exist on only one remote because they were originally committed
+with such a marker — and quoted it. Every workflow was skipped:
+
+```
+gh pr checks 110       no checks reported
+gh run list --branch   (empty)
+mergeStateStatus       BLOCKED
+```
+
+**The failure mode is silence, not red.** `audit` is a required check under the
+`acc` ruleset, so the pull request could never become mergeable, and there was no
+failing run to explain why — the checks list was not failing, it was empty. That
+is the same shape as the `continue-on-error` problem recorded above, approached
+from the opposite direction: there a check ran and reported a success it had not
+earned; here a required check never ran at all and reported nothing.
+
+The fix was to describe the marker in words instead of containing one. Two
+consequences to carry:
+
+- **A skip marker in a merged commit can suppress the deploy on the branch it
+  lands on**, not only the checks on the pull request. Had it survived, the same
+  string could have skipped the acceptance deploy on the push to `acc`.
+- **The marker is how the two remotes diverged in the first place**, which is the
+  subject of the next section. It is a signal that something bypassed review
+  rather than a convenience for a documentation-only change — `paths-ignore`
+  expresses that intent without switching the gates off.
+
+Note what limits the blast radius here, because it is a repository setting and not
+a law. ttl-editor composes merge commits as `merge_commit_title=PR_TITLE` with
+`merge_commit_message=BLANK`, so a pull request body never reaches the merge
+commit — only the title does. A repository configured with `PR_BODY` instead would
+let a marker quoted anywhere in a description suppress the deploy on the branch it
+merges to. Check that setting before writing prose about skip markers in a pull
+request, as this one does.
+
+This section is itself the test case: it names all five markers in full, and it is
+safe to do so because they sit in a file rather than in a commit message.
 
 ### Formatting
 
@@ -600,17 +775,138 @@ Three mechanics matter if this is replicated:
 
 ---
 
-## 5. Open work
+## 5. The second remote
 
-| repository           | issue | what                                                                                  |
-| -------------------- | ----- | ------------------------------------------------------------------------------------- |
-| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                              |
-| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor            |
-| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped      |
-| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective     |
-| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                   |
-| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip |
-| all three            | —     | production build ids are wired but unexercised                                        |
+All three applications are mirrored to `git.open-regels.nl` as well as GitHub.
+None of the mechanisms above knows that. Every gate in this document runs on
+GitHub Actions, so the mirror is outside all of them — and a mirror nothing
+checks is not a backup, it is a second place for content to be.
+
+### Verified state
+
+By `git ls-remote` against both remotes, which needs no local clone and touches
+nothing:
+
+| repository           | `acc`                    | `main`                   |
+| -------------------- | ------------------------ | ------------------------ |
+| ttl-editor           | ✅ `6e8e019` both        | ✅ `bbda389` both        |
+| linked-data-explorer | ✅ `36c4246` both        | ✅ `007b350` both        |
+| ronl-business-api    | ⚠️ `04e38c8` / `66940d9` | ⚠️ `d6a3cee` / `53a4c0a` |
+
+RONL Business API disagrees on **both** branches. Which side is ahead is not
+knowable from `ls-remote` alone and is not guessed here; it needs the audit
+below.
+
+### Behind is not the same as diverged
+
+Linked Data Explorer's mirror was stale too, and needed none of the surgery
+below. On 2026-09-09 `gitlab/acc` sat 114 commits behind `origin/acc` and
+`gitlab/main` 253 behind `origin/main` — **and zero ahead of either.** Both were
+strict ancestors, so both synced as plain fast-forwards: no force, no archive
+branch, no tree comparison, nothing at risk.
+
+One command separates the two cases before anything is pushed:
+
+```bash
+git merge-base --is-ancestor gitlab/<branch> origin/<branch>
+```
+
+Ancestor means fast-forward, and the reconciliation is one push. Not an ancestor
+means the mirror holds commits GitHub has never seen, and everything from "compare
+trees" onward applies. Running that check first is what tells you which of the two
+situations you are in; commit counts alone do not, because "253 behind" and "18
+ahead and 306 behind" both read as "stale".
+
+**Push the remote-tracking ref, not the local branch.** The obvious
+`git push gitlab acc` pushes whatever the local branch happens to be, and local
+branches drift. Here local `main` was still at a four-month-old merge node that
+`origin/main` had never contained — `git push gitlab main` would have sent that
+tree to the mirror. The safe form names the source explicitly:
+
+```bash
+git push gitlab origin/acc:refs/heads/acc
+git push gitlab origin/main:refs/heads/main
+```
+
+That pushes exactly what GitHub has, regardless of the state of the clone doing
+the pushing.
+
+### What ttl-editor's divergence turned out to be
+
+`gitlab/main` had not moved since **4 March 2026** while GitHub moved 306 commits
+past it. It carried 18 commits GitHub had never seen. Seventeen were cross-remote
+sync merges with no content of their own, and the eighteenth turned out to have
+reached GitHub by another route.
+
+But the trees disagreed by more than the commits did. Nine files existed on
+`gitlab/main` and not on `origin/main`; seven were Create React App leftovers the
+Vite migration had deliberately removed, and **two were example TTLs that existed
+nowhere on GitHub at all** — not on `main`, not on `acc`. Both had originally been
+committed with a CI-skip marker, which is how they came to be on one remote and
+not the other without anything noticing.
+
+**Compare trees, not commit counts.** "18 commits ahead" was almost entirely
+noise; `git diff --name-status origin/main gitlab/main` filtered to additions is
+what found the two files that mattered:
+
+```bash
+git diff --name-status origin/main gitlab/main | awk '$1=="A"{print $2}'
+```
+
+Then check each result against every branch on the other remote, not just the
+matching one — the files were absent from `origin/main` _and_ `origin/acc`, and
+checking only `main` would have understated it.
+
+### Reconciling, in an order that matters
+
+Once the content is safe, a stale mirror wants a reset rather than a merge: a
+merge would drag seventeen contentless sync commits into the history permanently.
+But "safe" has to be true on **both** remotes before the reset, and the obvious
+order gets that wrong.
+
+1. **Land the missing content on GitHub.** Cherry-pick the commit that recovers
+   it, rather than merging the branch it sits on — that branch was based on the
+   stale remote, so its tree carries the whole pre-migration world with it.
+2. **Push `acc` to the mirror.** This is the step easy to skip. After step 1 the
+   files were on GitHub, but on GitLab they still existed _only on the branch
+   about to be overwritten_. Pushing `acc` first put them on `gitlab/acc`, so the
+   reset could not remove them from GitLab entirely.
+3. **Archive the ref being replaced.** `git push gitlab gitlab/main:refs/heads/archive/gitlab-main-<date>`.
+   A force-push leaves the old head unreachable and eventually collectable; an
+   archive branch costs nothing and makes the operation reversible.
+4. **Reset with `--force-with-lease=main:<old-sha>`**, naming the SHA, so the push
+   refuses if anything moved underneath.
+
+Before step 4, confirm every file about to disappear has a successor. Seven did
+here — `.eslintrc.json` → `eslint.config.mjs`, `public/index.html` → `index.html`,
+`src/index.js` → `src/index.jsx`, and so on. That last one was a guess at
+`src/main.jsx` first, and checking rather than assuming is the point: "successor
+missing" is a reason to stop.
+
+### What would have caught it earlier
+
+Nothing in place did, and nothing added since does. The mirror has no CI, so the
+only signal available is comparison, and the cheapest form is the `ls-remote`
+table above — four seconds, no clone, safe to run anywhere. Worth running at each
+release rather than discovering the answer six months later.
+
+---
+
+## 6. Open work
+
+| repository           | issue | what                                                                                   |
+| -------------------- | ----- | -------------------------------------------------------------------------------------- |
+| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                               |
+| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor             |
+| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped       |
+| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective      |
+| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                    |
+| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip  |
+| ronl-business-api    | —     | production build id wired but unexercised; the other two have now run theirs           |
+| ttl-editor           | —     | `main` has no required status checks, so the promotion PR is gated by nobody           |
+| ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                      |
+| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows    |
+| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod |
 
 Closed since the previous revision: Linked Data Explorer's frontend zero-margin
 entry, by
@@ -619,6 +915,20 @@ entry, by
 different reason — not "nobody got to it yet" but "the branches are d3's", which
 is a decision rather than a backlog item. Issue numbers are per repository
 throughout this table; the `#83` in the first row is a different repository's.
+
+Also closed for Linked Data Explorer: its unexercised production build id, its
+unprotected `main`, and its stale mirror — all on 2026-09-09, in that order,
+because each was a precondition for the next. Note the ttl-editor row above
+survives that: closing the gap in one repository says nothing about the other,
+which is the point of the row existing per repository rather than per mechanism.
+
+The two new Linked Data Explorer rows are both things noticed while doing
+something else. **#80** would have CI running a Node older than the `engines`
+floor it declares in the same pull request; npm only warns without
+`engine-strict`, which is why its build is green, and it wants resolving on its
+own branch rather than on a release cut. The `1.9.12` row is cosmetic — a legacy
+status label from before `Released` was the convention — but it now renders a
+"Latest" badge on a July entry sitting below `2026.09.2` in production.
 
 On #84 specifically: `@ronl/shared` currently holds **no executable logic at
 all** — types, constant seed data and re-exports. So nothing is escaping the
@@ -655,8 +965,23 @@ counted.
    with room" are different states, and only the second survives an unrelated
    change. Both repositories on native thresholds reached 80% with files at zero
    or one branch of slack, and in both the config comment is where that belongs.
-8. **Mutation-check any test written to reach the floor.** A test written after
+8. **Check the second remote, if there is one.** Every gate here runs on GitHub
+   Actions; a mirror is outside all of them. Compare trees rather than commit
+   counts, and treat a CI-skip marker in the history as a likely cause.
+9. **Mutation-check any test written to reach the floor.** A test written after
    the code passes immediately, which says nothing about whether it can fail.
    Break the branch it targets, watch that test fail, restore. This is the step
    that separates margin from theatre, and in Linked Data Explorer it caught five
    of thirty-one new tests asserting nothing.
+10. **Enumerate every branch a ruleset does _not_ name.** Protection is scoped to
+    the refs it includes and to nothing else, and `main` is the branch most likely
+    to have been forgotten — it is also the one that deploys. Ask the same
+    question of protected environments: they cover the jobs that declare them, not
+    the workflows that deploy alongside.
+11. **Read a ruleset back after writing it.** Omitted parameters are not
+    false — GitHub fills them with its own defaults, and one of those defaults can
+    require an approval nobody is able to give. The create response's shape does
+    not show it; fetching the stored ruleset does.
+12. **Predict what a merge deploys from the whole `paths:` list.** A workflow that
+    names its own file in its filter fires when only that file changed, so a
+    repository-wide pass over workflows rearms every such filter at once.
