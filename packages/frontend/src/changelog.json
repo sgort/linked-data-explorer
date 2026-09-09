@@ -2,6 +2,194 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.09.2",
+      "status": "Released",
+      "date": "9 sep 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "aeb8ee5",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "CI posture record brought up to both repositories' current heads",
+          "details": [
+            "The cross-repository CI record cites an acc head per application and claims to have been verified rather than remembered, so two heads moving meant re-deriving what changed rather than patching around it. ttl-editor's ratchet script is gone — all three applications are now on native per-file thresholds — and its deletion is recorded together with the three findings from the run that allowed it.",
+            "Two corrections are written up in place rather than quietly swapped. CaseworkerCasePanel.tsx does not exist and never has; the file at exactly 80.00% was ChainBuilder/TestCasePanel.tsx, and the wrong name had reached a commit message, a config comment and the document itself. And \"files measured\" now states its rule — files carrying at least one branch, 68 of the 77 in the report — because the earlier 64 is not reproducible and cannot be a real change.",
+            "Also revised: the formatting advice, which had assumed this repository's per-workspace Prettier fan-out was the shape to copy. It is not — ttl-editor is one package with one .prettierignore, so a root-level run is correct there."
+          ]
+        },
+        {
+          "sha": "ef5a8b8",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Frontend dependencies updated",
+          "details": [
+            "bpmn-js to 18.25.1, bpmn-js-properties-panel to 5.65, @bpmn-io/properties-panel to 3.52, plus @testing-library/user-event, @types/react-dom, eslint-plugin-react-refresh and typescript-eslint 8.68.",
+            "Verified locally on a scratch branch off acc before merge rather than trusting the pull request's own green tick, which had run against a tree two merges stale: npm ci, lint, the full suite (1140 backend, 1073 frontend), build, typecheck and check-format all clean."
+          ]
+        },
+        {
+          "sha": "e417797",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "The per-file 80% branch floor gains room to breathe",
+          "details": [
+            "The floor landed measured-clean but with no slack: TestCasePanel.tsx sat at exactly 80.00% and thirteen more files between 80 and 85, so the first uncovered branch added to any of them would have turned CI red on an unrelated change. Twelve files raised, package branches 90.59% to 92.88%, files under 85% from 14 to 1, tests 1042 to 1073. No production code changed — test files only, plus the config comment.",
+            "Every test was mutation-checked: a test written against code that already exists passes on the first run, which proves nothing about whether it can fail, so each had the branch it targets deliberately broken and had to fail before being kept. That caught five of the new tests asserting nothing. Four share a shape worth knowing on any React codebase — an assertion that \"nothing happened\" stays true when the handler throws partway through, because React reports a throw inside a click handler on window's error event rather than rejecting the click.",
+            "Three guards were left uncovered deliberately, each behind a submit button already disabled on the same condition, and GraphView.tsx stays at 82.26% because its eleven remaining branches are inside d3's simulation tick and drag handlers. The config comment records why, so whoever next meets the floor there knows the answer is to test their new branch rather than lower the threshold."
+          ]
+        },
+        {
+          "sha": "16d7d9c",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "CI posture recorded across the three applications",
+          "details": [
+            "Build provenance, supply-chain verification and the per-file branch floor were rolled out across ttl-editor, linked-data-explorer and ronl-business-api during September 2026. This records where each stands and, more usefully, why they are not identical — written from measurement rather than memory, citing each repository's acc head, its actual workflow triggers and its real pin counts.",
+            "The differences are the point. Which step the build-id env: block belongs on depends on whether the runner or an Oryx container performs the build, and copying any one of these three configurations into another repository without re-deriving it would produce a check that passes and enforces nothing. It also records what is not yet true rather than presenting three green ticks."
+          ]
+        },
+        {
+          "sha": "09a9259",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Per-file 80% branch floor enforced, and two audit gaps closed",
+          "details": [
+            "Per-file branch thresholds in jest.config.js and vite.config.ts. Jest takes a glob key it applies to each matching file individually; Vitest takes thresholds with perFile: true. Against a package average the threshold is inert — backend sits at 92.22% and frontend at 90.59%, and one file falling to 40% barely moves either. Branches specifically, because statement and line coverage largely restate \"was this file imported\" and an uncovered branch is a decision no test has ever checked.",
+            "Also closes #46: azure-backend-acc.yml triggered on push alone, so 1140 backend tests ran only after the merge and a backend pull request reached acc with audit as its only check. The pull_request trigger arrives with six deploy-side steps gated on the event, arranged as per-step conditions rather than a job split so the check name stays stable and no ruleset entry changes."
+          ]
+        },
+        {
+          "sha": "0d5d564",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "check-supply-chain promoted to a blocking check",
+          "details": [
+            "Removes continue-on-error: true from the audit job's pin-truth step. A register that no longer describes the workflows now fails the gate.",
+            "What it was waiting on is resolved. Renovate rewrites workflow pins and their version comments together and never touches SECURITY-PIPELINE.md, so every action bump fails the register half until the register is updated by hand — and blocking on that would fail a required check on routine dependency updates, which is how gates get resented and then bypassed. The answer was to update the register on the bump's branch before merging, so the check is green on the pull request rather than only on acc afterwards. Exercised twice before this promotion."
+          ]
+        },
+        {
+          "sha": "689fa1e",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Register moved to setup-node v7.0.0 alongside its bump",
+          "details": [
+            "Second exercise of the habit recorded under \"Keeping this register true\". check-supply-chain reported the gap on the bump's own branch: the workflow pinned setup-node at 820762786026 (v7.0.0) while SECURITY-PIPELINE.md still recorded only 49933ea5288c (v4.4.0), a digest no workflow used any more.",
+            "Pin truth passed — the digest resolves to the version its comment claims. Only the register was stale, which is exactly the drift the check exists to catch."
+          ]
+        },
+        {
+          "sha": "e0b7d88",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "actions/setup-node updated to v7",
+          "details": [
+            "Pinned by digest with the version carried in the trailing comment, as the supply-chain register requires. The register was moved to match on this same branch."
+          ]
+        },
+        {
+          "sha": "283cc60",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Register moved to checkout v7.0.1 alongside its bump",
+          "details": [
+            "First exercise of the habit recorded in SECURITY-PIPELINE.md. The branch left the register describing a policy the workflows no longer followed, and check-supply-chain said so on the audit run for the pull request: the workflow pinned checkout at 3d3c42e5aac5 (v7.0.1) while the register recorded only 11d5960a3267 (v4.4.0) and a37ce9120846 (v3.7.0).",
+            "Pin truth passed there — Renovate's digest and its rewritten comment agree with each other and with GitHub. The check was right and the register was stale."
+          ]
+        },
+        {
+          "sha": "2a392a9",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "actions/checkout updated to v7",
+          "details": [
+            "The bump that first exercised the register-on-the-branch habit; the register was moved to match before this merged."
+          ]
+        },
+        {
+          "sha": "9dd2e19",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "check-supply-chain adopted as a non-blocking step in the audit job",
+          "details": [
+            "zizmor validates pin format — that a uses: names a 40-character SHA. It cannot say the SHA is the right one, so a wrong or hostile digest carrying a plausible version comment passes zizmor, Prettier and review alike. check-supply-chain.mjs closes that gap: it resolves every digest against the GitHub API and compares the register in SECURITY-PIPELINE.md with the workflows — digests, versions and multiplicities.",
+            "Copied verbatim from ttl-editor's acc after sgort/ttl-editor#86. Taking it before that fix would have imported two false positives this repository is uniquely shaped to trigger: actions/checkout is pinned at two digests here, mid-upgrade, and the register correctly records both rows. Rows are now matched by digest rather than by action name."
+          ]
+        },
+        {
+          "sha": "43257e2",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Getting Started removed, and the icon rail no longer overflows",
+          "details": [
+            "Deletes the Tutorial view entirely — the component, its tests, and the 596 lines of tutorial.json behind it — and unwires it from App.tsx: the import, the HelpCircle icon, the nav button, the render block, and the four viewMode guards that kept other panels hidden while it was showing. ViewMode.TUTORIAL is gone from the enum.",
+            "Kept in one commit with the rail fix because the second is what makes the first safe to reason about: the rail was already losing icons off the bottom, and removing one only moved the threshold rather than fixing it."
+          ]
+        },
+        {
+          "sha": "668a16d",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Backend dependencies updated",
+          "details": [
+            "@types/pg to 8.23.1 and typescript-eslint to 8.68.",
+            "Verified locally before merge on the same scratch branch as the frontend bump, which also proved the two lockfile changes combine cleanly — the backend workflow runs no tests on a pull request's own checks, so a green tick there says nothing about whether a dependency broke anything."
+          ]
+        },
+        {
+          "sha": "20cfe4a",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Prettier kept off Semgrep Guardian's scratch files",
+          "details": [
+            "Guardian writes a .semgrep/ directory into the working tree, one per directory it scans, and check-format failed on the guardian.yml inside them. .gitignore already excluded .semgrep/ so the files never reach a commit; .prettierignore did not, so a clean tree still reported two style violations in files nobody authored."
+          ]
+        },
+        {
+          "sha": "62855df",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "The changelog identifies the build, not just the release",
+          "details": [
+            "The version in the changelog is authored at release time, so it names a release rather than a build of it: acceptance and production can serve different builds of the same version string, and redeploying unchanged code produces a new artifact carrying the same version. \"Which build am I looking at?\" was unanswerable from the running application.",
+            "The commit SHA says what was built; the run number distinguishes two builds of identical code, which is what makes the pair a build id rather than a code id. Both render as one small monospace line under the changelog subtitle — build 570fd98 · #412 — with the full 40-character SHA on the title attribute so it can be copied for a lookup. With nothing injected it reads \"local build\": never blank, and never resembling a deployed artifact when it is not one."
+          ]
+        },
+        {
+          "sha": "7ecfe42",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "R5.3 (vervroegde) Ingebruikname / Oplevering bundle added for Flevoland",
+          "details": [
+            "Models R5_3 (vervroegde) Ingebruikname / Oplevering as RipR53Process: 15 nodes, 14 flows, 3 lanes, 7 forms, 6 documents. This closes the last gap in the Flevoland ladder — R5.3 was the one phase left unmodelled for want of a design, so R5.2 and R5.4 were built to step over it, and the sheet lands exactly where those two said it would.",
+            "The shape is a single early choice, oplevering or (vervroegde) ingebruikname, opening two near-mirror paths that never rejoin: interne schouw, then schouw met aannemer en toezichthouder, then vaststellen, then exit. They differ only in what they are called, which sjabloon they use, and where they leave to. There is no loop anywhere in the phase — a rejected schouw sends its restpunten back to R5.2 rather than round again here."
+          ]
+        },
+        {
+          "sha": "544cbf0",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "R5.3 reference sheet added, and Semgrep Guardian state ignored",
+          "details": [
+            "R5_3 (vervroegde) Ingebruikname / Oplevering, dated 3-9-2026, is the design that was missing when the rest of the ladder was modelled. It enters from R5.2 \"Werk gereed?\" and leaves either to R5.4 Oplevering en onderhoudsperiode when the oplevering is agreed, or back to R5.2 \"Start werk buiten\" when restpunten remain.",
+            "Only the reference PDF is added here; the bundle generated from it follows in a separate commit."
+          ]
+        },
+        {
+          "sha": "7fa37a3",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Every pull request is audited, not only those targeting acc or main",
+          "details": [
+            "The Supply-chain audit triggered on pull_request filtered to branches acc and main, so a stacked pull request based on a feature branch matched no trigger and accumulated no audit at all — while still reporting mergeStateStatus=CLEAN with zero checks, which reads as ready and is not.",
+            "The moment its parent merged and GitHub retargeted it to acc, the acc supply-chain gate applied, the required audit was missing, and the pull request blocked permanently: a retarget emits no pull_request event, so nothing ever ran it. Closing and reopening was the only way out, and it was needed four times in one session on 2026-09-02."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.09.1",
       "status": "Released",
       "date": "2 sep 2026",
