@@ -11,14 +11,20 @@ Explorer runs the same scan, required on both `acc` and `main`. It is described
 under §2 rather than given a section of its own, because it is the other half of
 the supply chain that `check-supply-chain` was never able to see.
 
+**This page is the single documented source for ttl-editor and Linked Data
+Explorer.** Until 2026-09-11 each repository carried its own copy; the two had
+drifted in both directions — each gaining sections the other lacked — so
+ttl-editor's copy was deleted and its README now points here.
+
 Verified against each repository's `acc` at the heads below, not written from
 memory. ttl-editor's and Linked Data Explorer's rows were re-verified on 11
-September 2026, after each promoted v2026.09.3 with its Semgrep gate; RONL
-Business API's is as of its last pass.
+September 2026, after each promoted v2026.09.3 with its Semgrep gate, and
+ttl-editor's again after its first lock-file maintenance; RONL Business API's is
+as of its last pass.
 
 | repository           | `acc` at  |
 | -------------------- | --------- |
-| ttl-editor           | `7f95502` |
+| ttl-editor           | `c4a8585` |
 | linked-data-explorer | `af1341a` |
 | ronl-business-api    | `04e38c8` |
 
@@ -482,14 +488,29 @@ narrowing the filter, not widening it. **Check the plan before copying this
 filter change**, and size the Renovate cap against the slots, not the other way
 round.
 
-**ttl-editor has no `lockFileMaintenance` at all.** Its residual Supply Chain
-findings — `brace-expansion`, `picomatch`, `postcss-selector-parser` — each have a
-newer version inside the range already declared, and this repository's refresh
-closed the same `brace-expansion` and `picomatch` lines.
-[ttl-editor#112](https://github.com/sgort/ttl-editor/issues/112) put them down to
-needing an upstream release or an `overrides` entry. The likelier explanation is
-the one found here: nothing ever refreshed that lockfile. Worth checking before
-anything else is concluded about them.
+**ttl-editor had no `lockFileMaintenance` at all**, and that turned out to be
+the whole explanation for its seven residual Supply Chain findings, which
+[ttl-editor#112](https://github.com/sgort/ttl-editor/issues/112) had put down
+to needing an upstream release. It was checked before anything changed: in a
+scratch worktree, an in-range refresh and a Semgrep scan predicted 7 → 0.
+[ttl-editor#134](https://github.com/sgort/ttl-editor/pull/134) enabled it with the
+same two safeguards as here — `prPriority`, and majors behind Dependency Dashboard
+approval — and the first refresh,
+[ttl-editor#135](https://github.com/sgort/ttl-editor/pull/135), delivered exactly
+the predicted versions: 202 packages moved, none within the cooldown, `package.json`
+untouched, scan on `acc` at 0. ttl-editor needed neither of this repository's
+other two fixes: its deploy workflows filter with `paths-ignore` for documentation
+only, so a lockfile change already builds and deploys, and as a single package it
+has no group rules to multiply the pull request.
+
+**The same check found that npm 10 cannot perform that refresh.** npm 10.9.4,
+bundled with Node 22, crashes in its resolver — `Cannot read properties of null
+(reading 'edgesOut')`, in `#loadPeerSet` while walking `vitest`'s optional peer
+chain, `jsdom` to `canvas` — on both a from-scratch resolution and `npm update`.
+npm 11.19.1 resolves the same tree cleanly, and so did Renovate. `npm ci` is
+unaffected because it only installs from the lockfile, and CI runs Node 24, so
+the failure lands only on a workstation running Node 22 that tries to add or
+update a package. ttl-editor's README now says to use Node 24 / npm 11.
 
 |                     |                                                                       |
 | ------------------- | --------------------------------------------------------------------- |
@@ -528,7 +549,8 @@ queued to correct it.
 
 The triage that produced this gate
 ([ttl-editor#112](https://github.com/sgort/ttl-editor/issues/112)) opened by
-reporting **36 findings** and closed at **7**. Almost none of that movement was
+reporting **36 findings**, closed at **7**, and reached **0** once its lockfile was
+first refreshed. Almost none of that movement was
 vulnerabilities being fixed:
 
 |     |                                                                     |
@@ -540,6 +562,7 @@ vulnerabilities being fixed:
 | 12  | test files taken out of Code scanning                               |
 | 11  | after a fix, a suppression, and one finding that got worse first    |
 | 7   | CI honours dashboard triage; a local `--dry-run` does not           |
+| 0   | the lockfile finally refreshed — nothing had ever done so (#135)    |
 
 Three lessons generalise beyond this repository, and are the reason this section
 records the trajectory rather than only the endpoint:
@@ -562,12 +585,15 @@ read 14. Only set-differencing the scanned file lists caught it.
 
 #### What remains, and what it costs
 
-Seven findings remain, all transitive npm packages — `brace-expansion`,
-`picomatch`, `postcss-selector-parser` — reached only through build and test
-tooling. Four are classed Unreachable and three Undetermined; the only runtime
-dependencies are `react`, `react-dom` and `lucide-react`. They cannot be closed
-by a Renovate bump, only by an upstream release or an `overrides` entry, which is
-not worth the resolution risk for code that never reaches a browser.
+Nothing remains. The last seven findings — `brace-expansion`, `picomatch` and
+`postcss-selector-parser`, transitive and reached only through build and test
+tooling — were first written off as closable only by an upstream release or an
+`overrides` entry. That was wrong: each had a newer version inside the range
+already declared, and nothing had moved them because ttl-editor had no
+lock-file maintenance. Its first refresh
+([ttl-editor#135](https://github.com/sgort/ttl-editor/pull/135)) took them to
+1.1.18, 2.3.2 and 6.1.4 and the scan on `acc` to **0 findings**. See "Renovate
+maintains dependencies, not the tree" below.
 
 Two costs come with making it required, both accepted deliberately:
 
@@ -1208,23 +1234,22 @@ release rather than discovering the answer six months later.
 
 ## 6. Open work
 
-| repository           | issue | what                                                                                          |
-| -------------------- | ----- | --------------------------------------------------------------------------------------------- |
-| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                                      |
-| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor                    |
-| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped              |
-| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective             |
-| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                           |
-| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip         |
-| ronl-business-api    | —     | production build id wired but unexercised; the other two have now run theirs                  |
-| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                     |
-| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                        |
-| linked-data-explorer | #96   | Tailwind Play CDN runs from a third-party origin in the production frontend                   |
-| linked-data-explorer | #97   | remaining: confirm Monday's run opens one lock-file-maintenance PR, and the slot stays free   |
-| ttl-editor           | —     | no `lockFileMaintenance`; its residual Supply Chain findings are likely closable by a refresh |
-| ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                             |
-| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows           |
-| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod        |
+| repository           | issue | what                                                                                        |
+| -------------------- | ----- | ------------------------------------------------------------------------------------------- |
+| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                                    |
+| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor                  |
+| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped            |
+| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective           |
+| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                         |
+| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip       |
+| ronl-business-api    | —     | production build id wired but unexercised; the other two have now run theirs                |
+| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                   |
+| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                      |
+| linked-data-explorer | #96   | Tailwind Play CDN runs from a third-party origin in the production frontend                 |
+| linked-data-explorer | #97   | remaining: confirm Monday's run opens one lock-file-maintenance PR, and the slot stays free |
+| ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                           |
+| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows         |
+| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod      |
 
 Closed since the previous revision: Linked Data Explorer's frontend zero-margin
 entry, by
@@ -1308,3 +1333,9 @@ counted.
     opened between writing it and merging it slips through. Count from the
     platform's own API — search can lag a close by seconds — and act on what is
     open then.
+14. **Before enabling a refresh, run it once where you can see it fail.** An
+    in-range lockfile refresh in a scratch worktree, then a scan, predicts the
+    outcome and exercises the tool that has to do the work. It is how
+    ttl-editor's 7 → 0 was known before any configuration changed, and how
+    npm 10's resolver crash was found before it could surface as a failed
+    Renovate pull request.
