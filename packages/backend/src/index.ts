@@ -10,6 +10,7 @@ import { versionMiddleware } from './middleware/version.middleware';
 import { externalTaskWorker } from './services/externalTaskWorker.service';
 import { migrate } from './db/migrate';
 import { rootHandler } from './utils/rootViews';
+import { isPublicPath } from './utils/publicPaths';
 
 const app: Express = express();
 
@@ -41,11 +42,11 @@ const corsOptions: cors.CorsOptions = {
 app.use(helmet());
 
 // apply CORS to both normal requests and preflight
-const isPublicPath = (path: string) =>
-  path.startsWith('/v1/ropa/public') || path.startsWith('/v1/bundles/public');
 
 app.use((req, res, next) => {
   if (isPublicPath(req.path)) {
+    // Wildcard by design, for the public read-only mounts only -- see utils/publicPaths.ts.
+    // nosemgrep: javascript.express.web.cors-permissive-express.cors-permissive-express
     cors({ origin: '*', methods: ['GET', 'OPTIONS'] })(req, res, next);
   } else {
     cors(corsOptions)(req, res, next);
@@ -53,6 +54,8 @@ app.use((req, res, next) => {
 });
 app.options('*', (req, res, next) => {
   if (isPublicPath(req.path)) {
+    // Wildcard by design, for the public read-only mounts only -- see utils/publicPaths.ts.
+    // nosemgrep: javascript.express.web.cors-permissive-express.cors-permissive-express
     cors({ origin: '*', methods: ['GET', 'OPTIONS'] })(req, res, next);
   } else {
     cors(corsOptions)(req, res, next);
