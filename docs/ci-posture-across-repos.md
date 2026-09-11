@@ -12,13 +12,14 @@ under §2 rather than given a section of its own, because it is the other half o
 the supply chain that `check-supply-chain` was never able to see.
 
 Verified against each repository's `acc` at the heads below, not written from
-memory. ttl-editor's row was re-verified on 11 September 2026, after its Semgrep
-gate landed and v2026.09.3 was promoted; the other two are as of their last pass.
+memory. ttl-editor's and Linked Data Explorer's rows were re-verified on 11
+September 2026, after each promoted v2026.09.3 with its Semgrep gate; RONL
+Business API's is as of its last pass.
 
 | repository           | `acc` at  |
 | -------------------- | --------- |
 | ttl-editor           | `7f95502` |
-| linked-data-explorer | `36c4246` |
+| linked-data-explorer | `af1341a` |
 | ronl-business-api    | `04e38c8` |
 
 ---
@@ -180,7 +181,10 @@ production backend.
 **Linked Data Explorer followed the same day**, promoting `acc` to `main` and
 publishing nineteen changelog entries at once — ten weeks, `1.9.9` to
 `2026.09.2`. Its production changelog now reads `build 007b350 · #39`, confirmed
-by eye rather than inferred from a green workflow.
+by eye rather than inferred from a green workflow. v2026.09.3, promoted on
+2026-09-11, moved production to `build 35a44f8 · #41` — so far verified from the
+deploy log's injected `VITE_BUILD_SHA` and `VITE_BUILD_RUN`, not yet by eye,
+which by this section's own argument is the check that counts.
 
 Two things that repository's run adds to ttl-editor's:
 
@@ -449,6 +453,24 @@ closed the same day:
   autopilot anyway. Behind approval they wait as checkboxes and hold no slot.
   `vulnerabilityAlerts` sets `dependencyDashboardApproval: false` explicitly, so
   a security fix that happens to be a major version never waits on a click.
+
+Three things were observed rather than predicted once these landed:
+
+- **The dashboard confirmed the grouping fix before any scheduled run did.** It
+  listed one lock-file-maintenance entry where it had listed three, and the two
+  workspace major groups moved under _Pending Approval_, holding no slot. The
+  dashboard reflects the branches Renovate computes from the current config, so
+  this is evidence rather than hope.
+- **The widened filters worked in both directions on their first two pull
+  requests.** A frontend-only dependency bump ran the backend job, and a
+  backend-only bump ran the frontend build — each testing the app its shared
+  lockfile could move, where the old filters would have tested one.
+- **A pull request landed in the gap before the rule did.** `npm` 12, a major,
+  was opened seven minutes before the approval rule merged and took the last
+  free slot, putting the queue back at five of five. It was closed with that
+  reason, leaving four of five and lock-file maintenance as the only update
+  waiting. A rule that gates new pull requests does nothing for one already
+  open.
 
 The cost of the first change is Static Web Apps previews: every lockfile pull
 request now holds one on the acceptance app. That is affordable here and would
@@ -1076,8 +1098,14 @@ nothing:
 | repository           | `acc`                    | `main`                   |
 | -------------------- | ------------------------ | ------------------------ |
 | ttl-editor           | ✅ `6e8e019` both        | ✅ `bbda389` both        |
-| linked-data-explorer | ✅ `36c4246` both        | ✅ `007b350` both        |
+| linked-data-explorer | ✅ `af1341a` both        | ✅ `35a44f8` both        |
 | ronl-business-api    | ⚠️ `04e38c8` / `66940d9` | ⚠️ `d6a3cee` / `53a4c0a` |
+
+Linked Data Explorer's row is as of 2026-09-11, and a tick here means synced at
+the last check, not kept in sync. The mirror is pushed by hand, so every merge
+leaves it behind until the next push. It had drifted again by then — `acc` 24
+commits behind, `main` 17 — and was re-synced the same way as below: both sides
+strict ancestors, so two plain fast-forwards from GitHub's refs.
 
 RONL Business API disagrees on **both** branches. Which side is ahead is not
 knowable from `ls-remote` alone and is not guessed here; it needs the audit
@@ -1192,7 +1220,7 @@ release rather than discovering the answer six months later.
 | ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                     |
 | ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                        |
 | linked-data-explorer | #96   | Tailwind Play CDN runs from a third-party origin in the production frontend                   |
-| linked-data-explorer | #97   | lockfile-only changes are never built, tested or deployed; lock-file maintenance was starved  |
+| linked-data-explorer | #97   | remaining: confirm Monday's run opens one lock-file-maintenance PR, and the slot stays free   |
 | ttl-editor           | —     | no `lockFileMaintenance`; its residual Supply Chain findings are likely closable by a refresh |
 | ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                             |
 | linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows           |
@@ -1275,3 +1303,8 @@ counted.
 12. **Predict what a merge deploys from the whole `paths:` list.** A workflow that
     names its own file in its filter fires when only that file changed, so a
     repository-wide pass over workflows rearms every such filter at once.
+13. **Re-count the queue after a gating rule lands, not before.** A rule that
+    holds new pull requests back leaves open ones where they are, and anything
+    opened between writing it and merging it slips through. Count from the
+    platform's own API — search can lag a close by seconds — and act on what is
+    open then.
