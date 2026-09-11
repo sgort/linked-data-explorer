@@ -12,13 +12,14 @@ under §2 rather than given a section of its own, because it is the other half o
 the supply chain that `check-supply-chain` was never able to see.
 
 Verified against each repository's `acc` at the heads below, not written from
-memory. ttl-editor's row was re-verified on 11 September 2026, after its Semgrep
-gate landed and v2026.09.3 was promoted; the other two are as of their last pass.
+memory. ttl-editor's and Linked Data Explorer's rows were re-verified on 11
+September 2026, after each promoted v2026.09.3 with its Semgrep gate; RONL
+Business API's is as of its last pass.
 
 | repository           | `acc` at  |
 | -------------------- | --------- |
 | ttl-editor           | `7f95502` |
-| linked-data-explorer | `36c4246` |
+| linked-data-explorer | `af1341a` |
 | ronl-business-api    | `04e38c8` |
 
 ---
@@ -180,7 +181,10 @@ production backend.
 **Linked Data Explorer followed the same day**, promoting `acc` to `main` and
 publishing nineteen changelog entries at once — ten weeks, `1.9.9` to
 `2026.09.2`. Its production changelog now reads `build 007b350 · #39`, confirmed
-by eye rather than inferred from a green workflow.
+by eye rather than inferred from a green workflow. v2026.09.3, promoted on
+2026-09-11, moved production to `build 35a44f8 · #41` — so far verified from the
+deploy log's injected `VITE_BUILD_SHA` and `VITE_BUILD_RUN`, not yet by eye,
+which by this section's own argument is the check that counts.
 
 Two things that repository's run adds to ttl-editor's:
 
@@ -353,18 +357,45 @@ Three things differed when it was ported to Linked Data Explorer, a monorepo:
 
 Its first full scan in CI, on `4d4d46d`, found **76** findings, none blocking:
 66 Supply Chain and 10 Code, after the `.semgrepignore` had taken out 6 in test
-files and 4 under `examples/`. It closed the day at **5**:
+files and 4 under `examples/`. It closed the day at **4**:
 
 | step                                                                                                     | findings | how                                                                                                                                                   |
 | -------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | first full scan                                                                                          | 76       | 66 Supply Chain, 10 Code                                                                                                                              |
 | lock-file maintenance ([linked-data-explorer#92](https://github.com/sgort/linked-data-explorer/pull/92)) | 13       | Supply Chain 66 → 3; one refresh, no manifest change                                                                                                  |
 | triage hardening ([linked-data-explorer#95](https://github.com/sgort/linked-data-explorer/pull/95))      | 5        | Code 10 → 2: one fix retired a finding, seven carry a scoped `nosemgrep` with its reason, and a latent defect nobody had flagged was fixed on the way |
+| last false positive, suppressed in code                                                                  | 4        | Code 2 → 1: `insecure-object-assign` given a scoped `nosemgrep` with its reason, rather than a dashboard ignore                                       |
 
-The two Code findings left are a true positive — the Tailwind Play CDN running
-from a third-party origin in production
+The one Code finding left is a true positive — the Tailwind Play CDN running from
+a third-party origin in production
 ([linked-data-explorer#96](https://github.com/sgort/linked-data-explorer/issues/96))
-— and one false positive for dashboard triage. The three Supply Chain findings
+— and it will clear because the script is removed, not because anything is
+suppressed.
+
+**Every suppression here lives in the code, none in the dashboard.** All eight
+false positives carry a scoped `nosemgrep` naming the single rule, on the single
+line, with the reason directly above it: four `cors-permissive-express` on the
+two deliberately public endpoints, three `detect-non-literal-regexp` on RegExps
+whose interpolated name is now a closed TypeScript union, and one
+`insecure-object-assign` whose only caller passes the literal
+`{ lastRun: <timestamp> }`. The last was first proposed as a dashboard ignore and
+moved into the code instead.
+
+ttl-editor made the other choice for four of its six, and both work — its
+dashboard ignores survived two line shifts without re-triage. The difference is
+where the reasoning lives. A `nosemgrep` travels with the line, is visible in
+review, and survives the Semgrep project being recreated. A dashboard ignore is
+platform state: nobody reading the file can see it, and it is lost with the
+project. Prefer the code; use the dashboard where the file cannot carry a comment
+— ttl-editor's two `renovate.json` findings are JSON, which is why those two had
+no alternative.
+
+Each comment also says **when it stops being true**. `insecure-object-assign` is
+safe because of its current caller, not because of the line, so its comment ends
+"revisit if `updateTestCase` ever receives imported or URL-supplied data". The
+same shape runs through this triage and ttl-editor's: safe because of today's
+wiring, not because of the function. A suppression that states only why it is
+fine today reads as settled long after it has stopped being so. The three Supply Chain findings
 are bound by a tilde range in `express` (`qs`) and by a major version
 (`@tiptap/core`), and cannot be closed by a refresh.
 
@@ -399,7 +430,57 @@ group rules without `matchUpdateTypes` catch lock-file maintenance too, and CI
 built and tested none of them: all three acceptance workflows are path-filtered to
 their own package, and the root `package-lock.json` is in none of those filters.
 Both gaps are
-[linked-data-explorer#97](https://github.com/sgort/linked-data-explorer/issues/97).
+[linked-data-explorer#97](https://github.com/sgort/linked-data-explorer/issues/97),
+closed the same day:
+
+- **The root `package-lock.json` and `package.json` are now in all four
+  deploy workflows' filters**, acc and production, push and pull request. A
+  lockfile-only change is built, tested and deployed like any other, and a
+  lockfile-only promotion redeploys production instead of leaving it on the
+  previous tree.
+- **The per-workspace group rules list every update type except
+  `lockFileMaintenance`**, so one refresh is one pull request. Lock-file
+  maintenance's own default is `groupName: null`; the rules were overriding it.
+- **Lock-file maintenance has `prPriority: 10`** — which turned out to be the
+  weaker half. Priority only orders branches eligible in the same run, and
+  lock-file maintenance is eligible only inside its Monday schedule. Within
+  minutes of two Renovate pull requests being merged to free slots, an unrelated
+  update took one and three more were queued for the other, all eligible any
+  day. Priority alone would never have kept a slot for Monday.
+- **Major updates now need Dependency Dashboard approval**, and that is what does
+  keep it. The queue competing with lock-file maintenance was almost entirely
+  majors — `npm` 12 and two workspace major groups — which nobody merges on
+  autopilot anyway. Behind approval they wait as checkboxes and hold no slot.
+  `vulnerabilityAlerts` sets `dependencyDashboardApproval: false` explicitly, so
+  a security fix that happens to be a major version never waits on a click.
+
+Three things were observed rather than predicted once these landed:
+
+- **The dashboard confirmed the grouping fix before any scheduled run did.** It
+  listed one lock-file-maintenance entry where it had listed three, and the two
+  workspace major groups moved under _Pending Approval_, holding no slot. The
+  dashboard reflects the branches Renovate computes from the current config, so
+  this is evidence rather than hope.
+- **The widened filters worked in both directions on their first two pull
+  requests.** A frontend-only dependency bump ran the backend job, and a
+  backend-only bump ran the frontend build — each testing the app its shared
+  lockfile could move, where the old filters would have tested one.
+- **A pull request landed in the gap before the rule did.** `npm` 12, a major,
+  was opened seven minutes before the approval rule merged and took the last
+  free slot, putting the queue back at five of five. It was closed with that
+  reason, leaving four of five and lock-file maintenance as the only update
+  waiting. A rule that gates new pull requests does nothing for one already
+  open.
+
+The cost of the first change is Static Web Apps previews: every lockfile pull
+request now holds one on the acceptance app. That is affordable here and would
+not be everywhere. Linked Data Explorer's frontend apps are on the **Standard**
+plan, 10 staging environments per app, so `prConcurrentLimit: 5` leaves five for
+people. ronl-business-api's frontend is on **Free**, 3 per app — the ceiling five
+pull requests exhausted on 2026-08-28, and why its fix went the other way:
+narrowing the filter, not widening it. **Check the plan before copying this
+filter change**, and size the Renovate cap against the slots, not the other way
+round.
 
 **ttl-editor has no `lockFileMaintenance` at all.** Its residual Supply Chain
 findings — `brace-expansion`, `picomatch`, `postcss-selector-parser` — each have a
@@ -1017,8 +1098,14 @@ nothing:
 | repository           | `acc`                    | `main`                   |
 | -------------------- | ------------------------ | ------------------------ |
 | ttl-editor           | ✅ `6e8e019` both        | ✅ `bbda389` both        |
-| linked-data-explorer | ✅ `36c4246` both        | ✅ `007b350` both        |
+| linked-data-explorer | ✅ `af1341a` both        | ✅ `35a44f8` both        |
 | ronl-business-api    | ⚠️ `04e38c8` / `66940d9` | ⚠️ `d6a3cee` / `53a4c0a` |
+
+Linked Data Explorer's row is as of 2026-09-11, and a tick here means synced at
+the last check, not kept in sync. The mirror is pushed by hand, so every merge
+leaves it behind until the next push. It had drifted again by then — `acc` 24
+commits behind, `main` 17 — and was re-synced the same way as below: both sides
+strict ancestors, so two plain fast-forwards from GitHub's refs.
 
 RONL Business API disagrees on **both** branches. Which side is ahead is not
 knowable from `ls-remote` alone and is not guessed here; it needs the audit
@@ -1133,7 +1220,7 @@ release rather than discovering the answer six months later.
 | ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                     |
 | ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                        |
 | linked-data-explorer | #96   | Tailwind Play CDN runs from a third-party origin in the production frontend                   |
-| linked-data-explorer | #97   | lockfile-only changes are never built, tested or deployed; lock-file maintenance was starved  |
+| linked-data-explorer | #97   | remaining: confirm Monday's run opens one lock-file-maintenance PR, and the slot stays free   |
 | ttl-editor           | —     | no `lockFileMaintenance`; its residual Supply Chain findings are likely closable by a refresh |
 | ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                             |
 | linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows           |
@@ -1216,3 +1303,8 @@ counted.
 12. **Predict what a merge deploys from the whole `paths:` list.** A workflow that
     names its own file in its filter fires when only that file changed, so a
     repository-wide pass over workflows rearms every such filter at once.
+13. **Re-count the queue after a gating rule lands, not before.** A rule that
+    holds new pull requests back leaves open ones where they are, and anything
+    opened between writing it and merging it slips through. Count from the
+    platform's own API — search can lag a close by seconds — and act on what is
+    open then.

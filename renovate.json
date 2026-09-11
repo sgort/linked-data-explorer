@@ -8,7 +8,13 @@
     "than floating. See SECURITY-PIPELINE.md.",
     "baseBranchPatterns targets acc, this repository's integration and",
     "default branch. main is promoted from acc and must never receive",
-    "dependency pull requests directly."
+    "dependency pull requests directly.",
+    "prConcurrentLimit 5 is a sized cap, not a default. Pull requests that touch",
+    "packages/frontend/** or the root lockfile each hold a Static Web Apps preview",
+    "on the acceptance app, which is on the Standard plan: 10 staging environments.",
+    "Five for Renovate leaves five for people. Lower it and lock-file maintenance",
+    "starves again (#97); raise it and previews can run out, as they did on",
+    "ronl-business-api's Free-plan app (3 environments) on 2026-08-28."
   ],
   "extends": [
     "config:recommended",
@@ -23,15 +29,19 @@
       "14-day wait would delay exactly the updates that must not wait, which",
       "is why such policies get disabled mid-incident. Requires GitHub",
       "Dependabot ALERTS to be enabled on the repository; Dependabot security",
-      "UPDATES must stay off, or it opens competing PRs that ignore the cooldown."
+      "UPDATES must stay off, or it opens competing PRs that ignore the cooldown.",
+      "dependencyDashboardApproval is set false here explicitly, because major",
+      "updates below need approval: a security fix that happens to be a major",
+      "version must not wait on a checkbox."
     ],
     "minimumReleaseAge": null,
-    "labels": ["security"]
+    "labels": ["security"],
+    "dependencyDashboardApproval": false
   },
   "packageRules": [
     {
       "description": [
-        "Actions land across all seven workflows at once, so they are grouped",
+        "Actions land across all eight workflows at once, so they are grouped",
         "separately from the workspace dependencies below."
       ],
       "matchManagers": ["github-actions"],
@@ -57,18 +67,86 @@
       "description": [
         "Three deployables, three groups. An update that breaks one workspace",
         "should not be entangled with the other two in a single pull request -",
-        "each has its own deploy workflow and its own acceptance site."
+        "each has its own deploy workflow and its own acceptance site.",
+        "matchUpdateTypes lists every update type EXCEPT lockFileMaintenance.",
+        "Without it these rules stamped a group name onto lock-file maintenance",
+        "too, so one refresh arrived as three identical pull requests - #92, #93",
+        "and #94, byte-identical lockfiles - tripling its share of",
+        "prConcurrentLimit. Its own default is groupName null. See #97."
       ],
       "matchFileNames": ["packages/backend/**"],
-      "groupName": "backend dependencies"
+      "groupName": "backend dependencies",
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest",
+        "rollback",
+        "bump",
+        "replacement"
+      ]
     },
     {
       "matchFileNames": ["packages/frontend/**"],
-      "groupName": "frontend dependencies"
+      "groupName": "frontend dependencies",
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest",
+        "rollback",
+        "bump",
+        "replacement"
+      ]
     },
     {
       "matchFileNames": ["packages/ropa-site/**"],
-      "groupName": "ropa-site dependencies"
+      "groupName": "ropa-site dependencies",
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest",
+        "rollback",
+        "bump",
+        "replacement"
+      ]
+    },
+    {
+      "description": [
+        "Major updates wait in the Dependency Dashboard (#36) as checkboxes and hold",
+        "no slot in prConcurrentLimit until someone ticks one. The queue competing",
+        "with lock-file maintenance was almost entirely majors - npm 12 and two",
+        "workspace major groups spanning express, eslint, jest, typescript, vite and",
+        "tiptap - which nobody merges on autopilot anyway. Without this, freeing",
+        "slots bought minutes: on 2026-09-11, of two slots freed by merging, one was",
+        "taken within minutes by an unrelated update and three more were queued for",
+        "the other, all eligible any day - so the last slot would be gone long before",
+        "lock-file maintenance's Monday window opened. See #97."
+      ],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": [
+        "Lock-file maintenance is the only thing that moves the transitive tree,",
+        "and it was starved: enabled on 2026-08-29, it then sat rate-limited",
+        "behind open feature bumps until forced by hand, while rollup stayed at a",
+        "January version. When it ran, one refresh closed 63 of 66 Semgrep Supply",
+        "Chain findings. prPriority makes it the first branch created when a slot",
+        "frees - but only against branches eligible in the same run, and lock-file",
+        "maintenance is only eligible inside its Monday schedule. During the week,",
+        "updates eligible any time fill every free slot first, so priority alone",
+        "cannot keep one for it; majors needing approval, above, is what does. See #97."
+      ],
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "prPriority": 10
     }
   ],
   "prConcurrentLimit": 5,
