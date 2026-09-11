@@ -437,9 +437,18 @@ closed the same day:
 - **The per-workspace group rules list every update type except
   `lockFileMaintenance`**, so one refresh is one pull request. Lock-file
   maintenance's own default is `groupName: null`; the rules were overriding it.
-- **Lock-file maintenance has `prPriority: 10`**, so it takes the first free
-  slot. It cannot evict an open pull request, so a short backlog is still the
-  other half.
+- **Lock-file maintenance has `prPriority: 10`** — which turned out to be the
+  weaker half. Priority only orders branches eligible in the same run, and
+  lock-file maintenance is eligible only inside its Monday schedule. Within
+  minutes of two Renovate pull requests being merged to free slots, an unrelated
+  update took one and three more were queued for the other, all eligible any
+  day. Priority alone would never have kept a slot for Monday.
+- **Major updates now need Dependency Dashboard approval**, and that is what does
+  keep it. The queue competing with lock-file maintenance was almost entirely
+  majors — `npm` 12 and two workspace major groups — which nobody merges on
+  autopilot anyway. Behind approval they wait as checkboxes and hold no slot.
+  `vulnerabilityAlerts` sets `dependencyDashboardApproval: false` explicitly, so
+  a security fix that happens to be a major version never waits on a click.
 
 The cost of the first change is Static Web Apps previews: every lockfile pull
 request now holds one on the acceptance app. That is affordable here and would
