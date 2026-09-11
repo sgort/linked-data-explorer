@@ -2,6 +2,62 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.09.4",
+      "status": "Released",
+      "date": "11 sep 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "bd52eac",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Major dependency updates wait for approval, so the lockfile refresh gets a slot",
+          "details": [
+            "Major updates now wait in the Dependency Dashboard as checkboxes and hold no slot in Renovate's concurrency limit until someone approves one. The queue that kept crowding out lock-file maintenance was almost entirely majors — npm 12 and two workspace major groups spanning express, eslint, jest, typescript, vite and tiptap — which are never merged on autopilot anyway.",
+            "Giving lock-file maintenance priority alone had not been enough: it only orders branches eligible in the same run, and lock-file maintenance is eligible only inside its Monday schedule, so updates eligible any day filled every free slot first. Security fixes are exempt from the new approval step, so one that happens to be a major version never waits on a click."
+          ]
+        },
+        {
+          "sha": "4ef0848",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Backend dependency updates",
+          "details": [
+            "axios 1.20.0 and @types/n3 1.26.2. Rebased onto the current tree before merging, so its lockfile was regenerated against the refreshed dependencies rather than the January ones, and verified locally with lint, the full test suite and the backend build."
+          ]
+        },
+        {
+          "sha": "3e903af",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Frontend dependency updates",
+          "details": [
+            "bpmn-js 18.26.0, @bpmn-io/properties-panel 3.53.0, camunda-bpmn-moddle 7.0.2 and @testing-library/react 16.3.3. Rebased onto the current tree before merging and verified locally with lint, the full test suite and the build. It was also the first pull request on which a frontend-only change ran the backend's tests as well, because the shared lockfile now reaches both workflows."
+          ]
+        },
+        {
+          "sha": "4b3a1c0",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Lockfile-only changes are built, tested and deployed",
+          "details": [
+            "The root package-lock.json and package.json now trigger the backend and frontend workflows in acceptance and production. Before, a change to the lockfile alone — Renovate's lock-file maintenance above all — was built, tested and deployed by nothing: the 338-package refresh in v2026.09.3 reached acceptance only because an unrelated change happened to follow it.",
+            "Renovate's per-workspace group rules no longer catch lock-file maintenance, so one refresh arrives as one pull request instead of three identical ones, and lock-file maintenance takes priority for the first free slot. The concurrency limit stays at five, sized against the acceptance app's ten preview environments."
+          ]
+        },
+        {
+          "sha": "8d88652",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "The last Semgrep false positive is suppressed in the code, not the dashboard",
+          "details": [
+            "An Object.assign in test-case storage was flagged as a prototype-pollution risk; its only caller passes a fixed timestamp field, and the data is the user's own. The suppression now lives on the line with its reason, and says when it would stop being true. Every Code suppression in this repository is now in the source rather than in dashboard state, leaving one open Code finding: the Tailwind Play CDN."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.09.3",
       "status": "Released",
       "date": "11 sep 2026",
