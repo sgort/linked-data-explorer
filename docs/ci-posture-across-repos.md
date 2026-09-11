@@ -426,7 +426,30 @@ group rules without `matchUpdateTypes` catch lock-file maintenance too, and CI
 built and tested none of them: all three acceptance workflows are path-filtered to
 their own package, and the root `package-lock.json` is in none of those filters.
 Both gaps are
-[linked-data-explorer#97](https://github.com/sgort/linked-data-explorer/issues/97).
+[linked-data-explorer#97](https://github.com/sgort/linked-data-explorer/issues/97),
+closed the same day:
+
+- **The root `package-lock.json` and `package.json` are now in all four
+  deploy workflows' filters**, acc and production, push and pull request. A
+  lockfile-only change is built, tested and deployed like any other, and a
+  lockfile-only promotion redeploys production instead of leaving it on the
+  previous tree.
+- **The per-workspace group rules list every update type except
+  `lockFileMaintenance`**, so one refresh is one pull request. Lock-file
+  maintenance's own default is `groupName: null`; the rules were overriding it.
+- **Lock-file maintenance has `prPriority: 10`**, so it takes the first free
+  slot. It cannot evict an open pull request, so a short backlog is still the
+  other half.
+
+The cost of the first change is Static Web Apps previews: every lockfile pull
+request now holds one on the acceptance app. That is affordable here and would
+not be everywhere. Linked Data Explorer's frontend apps are on the **Standard**
+plan, 10 staging environments per app, so `prConcurrentLimit: 5` leaves five for
+people. ronl-business-api's frontend is on **Free**, 3 per app — the ceiling five
+pull requests exhausted on 2026-08-28, and why its fix went the other way:
+narrowing the filter, not widening it. **Check the plan before copying this
+filter change**, and size the Renovate cap against the slots, not the other way
+round.
 
 **ttl-editor has no `lockFileMaintenance` at all.** Its residual Supply Chain
 findings — `brace-expansion`, `picomatch`, `postcss-selector-parser` — each have a
