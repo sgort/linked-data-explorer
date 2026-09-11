@@ -353,18 +353,45 @@ Three things differed when it was ported to Linked Data Explorer, a monorepo:
 
 Its first full scan in CI, on `4d4d46d`, found **76** findings, none blocking:
 66 Supply Chain and 10 Code, after the `.semgrepignore` had taken out 6 in test
-files and 4 under `examples/`. It closed the day at **5**:
+files and 4 under `examples/`. It closed the day at **4**:
 
 | step                                                                                                     | findings | how                                                                                                                                                   |
 | -------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | first full scan                                                                                          | 76       | 66 Supply Chain, 10 Code                                                                                                                              |
 | lock-file maintenance ([linked-data-explorer#92](https://github.com/sgort/linked-data-explorer/pull/92)) | 13       | Supply Chain 66 → 3; one refresh, no manifest change                                                                                                  |
 | triage hardening ([linked-data-explorer#95](https://github.com/sgort/linked-data-explorer/pull/95))      | 5        | Code 10 → 2: one fix retired a finding, seven carry a scoped `nosemgrep` with its reason, and a latent defect nobody had flagged was fixed on the way |
+| last false positive, suppressed in code                                                                  | 4        | Code 2 → 1: `insecure-object-assign` given a scoped `nosemgrep` with its reason, rather than a dashboard ignore                                       |
 
-The two Code findings left are a true positive — the Tailwind Play CDN running
-from a third-party origin in production
+The one Code finding left is a true positive — the Tailwind Play CDN running from
+a third-party origin in production
 ([linked-data-explorer#96](https://github.com/sgort/linked-data-explorer/issues/96))
-— and one false positive for dashboard triage. The three Supply Chain findings
+— and it will clear because the script is removed, not because anything is
+suppressed.
+
+**Every suppression here lives in the code, none in the dashboard.** All eight
+false positives carry a scoped `nosemgrep` naming the single rule, on the single
+line, with the reason directly above it: four `cors-permissive-express` on the
+two deliberately public endpoints, three `detect-non-literal-regexp` on RegExps
+whose interpolated name is now a closed TypeScript union, and one
+`insecure-object-assign` whose only caller passes the literal
+`{ lastRun: <timestamp> }`. The last was first proposed as a dashboard ignore and
+moved into the code instead.
+
+ttl-editor made the other choice for four of its six, and both work — its
+dashboard ignores survived two line shifts without re-triage. The difference is
+where the reasoning lives. A `nosemgrep` travels with the line, is visible in
+review, and survives the Semgrep project being recreated. A dashboard ignore is
+platform state: nobody reading the file can see it, and it is lost with the
+project. Prefer the code; use the dashboard where the file cannot carry a comment
+— ttl-editor's two `renovate.json` findings are JSON, which is why those two had
+no alternative.
+
+Each comment also says **when it stops being true**. `insecure-object-assign` is
+safe because of its current caller, not because of the line, so its comment ends
+"revisit if `updateTestCase` ever receives imported or URL-supplied data". The
+same shape runs through this triage and ttl-editor's: safe because of today's
+wiring, not because of the function. A suppression that states only why it is
+fine today reads as settled long after it has stopped being so. The three Supply Chain findings
 are bound by a tilde range in `express` (`qs`) and by a major version
 (`@tiptap/core`), and cannot be closed by a refresh.
 
