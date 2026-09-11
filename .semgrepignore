@@ -1,0 +1,61 @@
+# Paths Semgrep should not scan, in .gitignore syntax.
+#
+# Semgrep already limits itself to files tracked by git, so node_modules,
+# dist/ and coverage/ in every workspace are excluded by .gitignore without
+# needing a line here. This file is for paths that ARE tracked and ARE meant to
+# be, but are not application code.
+
+# Reference material at the repository root: sample TTL, DMN and organisation
+# exports used by hand and by the e2e fixtures. Not loaded by any package.
+#
+# The leading slash is load-bearing. A bare `examples/` is .gitignore syntax for
+# "a directory named examples at ANY depth", which would also swallow
+# packages/frontend/public/examples/ -- and Vite copies public/ into the build,
+# so that one IS served and must keep being scanned. ttl-editor hit exactly
+# this: its first .semgrepignore used the bare form and silently dropped a
+# served file, caught only by diffing the scanned file lists, because the
+# finding counts agreed either way.
+#
+# What it silences today, from a dry run on cfa6b40: eval-detected,
+# hardcoded-password-default-argument x2 and use-defused-xml-parse, all in
+# scripts under examples/organizations/.
+/examples/
+
+# Test files are excluded from Code scanning, but NOT from Secrets scanning,
+# which carries its own separate ignore list in the Semgrep project settings and
+# keeps covering them. A hardcoded credential in a test is the one finding class
+# here worth having, and it survives this rule.
+#
+# Reading a fixture off disk means path.resolve; asserting on generated text
+# means building a RegExp from a variable. Both are ordinary test code, so
+# path-join-resolve-traversal and detect-non-literal-regexp fire on it forever
+# -- six findings on cfa6b40 -- and triaging each new test file by hand is not a
+# strategy. The narrower fix, scoping those two rules to non-test paths, is not
+# available: Semgrep has no per-rule path setting, and forking two registry
+# rules to add paths.exclude is more to maintain than this is worth.
+#
+# Also clears six PartialParsing warnings, where the parser trips on a
+# TypeScript generic call in the ChainBuilder, DocumentComposer and
+# exportService tests. Warn-level, and verified not to fail the job under
+# --no-suppress-errors -- but noise in every log.
+#
+# Every test file in this repository is .test.ts or .test.tsx; there are no
+# .spec files and no JavaScript tests. Widen this if that changes.
+*.test.ts
+*.test.tsx
+
+# Restores two rules from Semgrep's built-in default ignore list, which this file
+# REPLACES rather than extends. Without them, adding this file quietly brought 16
+# files back into scope that were not scanned before -- test fixtures, curl
+# templates and a Vitest setup file under packages/backend/tests/ and
+# packages/frontend/src/test/. Found by diffing the scanned file sets: the
+# finding count came out exactly as predicted either way, 86 to 76, because none
+# of those files happened to trip a rule. The count agreeing proved nothing.
+#
+# Bare on purpose, unlike /examples/ above: every directory of either name in
+# this repository is test support, and none is under a served public/ tree.
+# The other defaults -- node_modules/, dist/, build/, vendor/, *.min.js -- are
+# not restored because nothing matching them is tracked, and Semgrep scans only
+# tracked files.
+test/
+tests/
