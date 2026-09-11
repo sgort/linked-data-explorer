@@ -2,6 +2,46 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.09.3",
+      "status": "Released",
+      "date": "11 sep 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "f347bbf",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Hardening from the first Semgrep triage",
+          "details": [
+            "Wildcard CORS for the two public read-only endpoints matched on a bare path prefix, so any future sibling route whose name began with \"public\" — /v1/ropa/publications, say — would have inherited it instead of the credentialed allowlist. It now matches the mount or a path below it, never a sibling.",
+            "The BPMN modeler wrote process metadata into the XML unescaped, and through String.replace, where $1, $& and $' are expanded: a value of A$'B wrote the rest of the document into the attribute. Values are now escaped on write and decoded on read. Latent rather than live — all four values come from selectors — but fixed where it lives, not where it is currently called from.",
+            "A DMN export failure now logs the DMN id as data rather than inside the console format string, where a stray %s swallowed the error the line exists to report. Semgrep's ten application Code findings go to two: the Tailwind Play CDN, tracked separately as a true positive, and one false positive for dashboard triage."
+          ]
+        },
+        {
+          "sha": "eed4ebb",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "The transitive dependency tree refreshed for the first time since January",
+          "details": [
+            "Renovate's lock-file maintenance, forced after it had been rate-limited behind open pull requests since it was enabled. It moved 338 packages, 82 of them runtime dependencies — axios, dompurify, bpmn-js, diagram-js and the @rdfjs packages among them — every one within a range the manifests already declared, and none published within the 14-day cooldown.",
+            "It closed 63 of 66 Semgrep Supply Chain findings in one change, including all five that Semgrep classed as reachable, all HIGH: js-yaml in the lint and coverage tooling, and rollup, which sat at 4.55.1 from January although 4.59.0 was out in February."
+          ]
+        },
+        {
+          "sha": "f0ed220",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Semgrep scans every pull request, and now gates acc and main",
+          "details": [
+            "Semgrep Code and Supply Chain run on every pull request and on every push to acc and main, in one job covering all three workspaces through the single root lockfile. Supply Chain covers what nothing else here did: check-supply-chain verifies GitHub Actions pins and says nothing about package-lock.json.",
+            "Introduced as a reporting check, it became a required check in both the acc and main rulesets once the first baseline had been triaged from 86 findings to 5, none blocking — so the application now reaches acceptance and production only through a scan of the exact commit being deployed."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.09.2",
       "status": "Released",
       "date": "9 sep 2026",
