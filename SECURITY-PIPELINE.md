@@ -232,7 +232,39 @@ The audit workflow deliberately has **no `paths:` filter**. Every other workflow
 here is path-filtered; filtering this one would let a pull request skip the gate
 by touching nothing the filter watches.
 
-The `acc` ruleset requires a pull request and a passing `audit` check, so the
-gate is not advisory — a branch that reintroduces a floating tag cannot merge.
-That includes releases: `/bump-release` was rewritten to land through a pull
-request for exactly this reason.
+Two rulesets make the gate binding rather than advisory — a branch that
+reintroduces a floating tag cannot merge. That includes releases: `/bump-release`
+was rewritten to land through a pull request for exactly this reason.
+
+### What the rulesets require
+
+A ruleset is GitHub state, not a file: nothing in a diff records it, and nothing
+here is enforced by being written down. It is written down because otherwise the
+only account of what gates `acc` and `main` lives in a settings page nobody reads
+until something is already stuck.
+
+| Ruleset                 | Id         | Ref               | Required checks | Merge methods |
+| ----------------------- | ---------- | ----------------- | --------------- | ------------- |
+| `acc supply-chain gate` | `21794157` | `refs/heads/acc`  | `audit`, `scan` | merge only    |
+| `main promotion gate`   | `22630654` | `refs/heads/main` | `audit`, `scan` | merge only    |
+
+`audit` is `zizmor.yml`; `scan` is `semgrep.yml`, added to both on 2026-09-11.
+Both workflows trigger on `pull_request` with no branch or path filter, which is
+what makes them safe to require: neither can go missing on any base.
+
+**The two rulesets differ in one parameter, deliberately.**
+`require_extra_approval_for_unattributed_changes` is `true` on `acc` and `false`
+on `main`. The `main` ruleset was created without it, GitHub stored it as `true`,
+and with zero required approvals and no second maintainer to give one, that
+would have deadlocked the very promotion the ruleset exists to protect. Rewrite
+either ruleset from a template and this is the line that drifts back.
+
+Worth knowing before it bites:
+
+- **`bypass_actors` is empty on both.** There is no administrator override. If
+  semgrep.dev is unreachable or `SEMGREP_APP_TOKEN` is revoked, merges to `acc`
+  **and to `main`** stop until a ruleset is edited — for this repository that
+  includes promotion to production.
+- **No forks today.** A pull request from a fork would carry no secret, so `scan`
+  could not start and would block it. See ttl-editor#128 for the fork-safe
+  shape, should that ever change.

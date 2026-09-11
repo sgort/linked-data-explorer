@@ -7,7 +7,7 @@ verification, and a per-file test-coverage floor.
 
 A **fourth** now exists in two of the three: ttl-editor gates merges on a Semgrep
 scan covering the npm dependency tree and the application code, and Linked Data
-Explorer runs the same scan, reporting but not yet required. It is described
+Explorer runs the same scan, required on both `acc` and `main`. It is described
 under §2 rather than given a section of its own, because it is the other half of
 the supply chain that `check-supply-chain` was never able to see.
 
@@ -29,7 +29,7 @@ gate landed and v2026.09.3 was promoted; the other two are as of their last pass
 | ----------------------------- | -------------------- | -------------------- | ----------------------- |
 | **Build id in the changelog** | ✅                   | ✅                   | ✅                      |
 | **check-supply-chain**        | ✅ blocking          | ✅ blocking          | ⚠️ non-blocking         |
-| **Semgrep Code + SCA**        | ✅ blocking          | ⏳ reporting         | —                       |
+| **Semgrep Code + SCA**        | ✅ blocking          | ✅ blocking          | —                       |
 | **Per-file 80% branch floor** | ✅ native thresholds | ✅ native thresholds | ✅ native thresholds    |
 | **Formatting checked in CI**  | ✅                   | ✅                   | —                       |
 | **Tests run before merge**    | ✅                   | ✅                   | ⚠️ frontend only        |
@@ -326,8 +326,9 @@ ttl-editor closed that in September 2026 with a `Semgrep` workflow whose `scan`
 job is a required check alongside `audit`. It runs Semgrep Code and Supply Chain
 against an authenticated scan, reporting to the `sgort/ttl-editor` project in
 Semgrep Cloud. Linked Data Explorer adopted the same workflow on 11 September
-2026 and runs it as a reporting check before requiring it; RONL Business API does
-not have it yet.
+2026, ran it as a reporting check while the baseline was triaged, and required it
+on both `acc` and `main` the same day — the difference from ttl-editor being that
+its `main` was already gated. RONL Business API does not have it yet.
 
 Three things differed when it was ported to Linked Data Explorer, a monorepo:
 
@@ -838,7 +839,9 @@ cited across all seventy-five changelog entries.
 Closed on 2026-09-09 with a `main promotion gate` ruleset created **before** the
 promotion pull request was opened, mirroring the `acc` one: `deletion`,
 `non_fast_forward`, `pull_request` with `allowed_merge_methods: ["merge"]`, and
-`required_status_checks: [audit]` with `strict: false`.
+`required_status_checks: [audit]` with `strict: false`. `scan` joined `audit` in
+both rulesets on 2026-09-11; read back after writing, each ruleset changed in
+that one field and no other.
 
 Three things that were load-bearing, in the order they mattered:
 
