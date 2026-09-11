@@ -22,7 +22,7 @@ release cannot reach this repository merely by being published.
 
 ## What is pinned
 
-Every action reference in all seven workflows is a 40-character commit hash with
+Every action reference in all eight workflows is a 40-character commit hash with
 its human-readable version in a trailing comment. The comment is not decoration:
 a digest nobody can read is a pin nobody will maintain, and Renovate moves the
 two together.
@@ -35,7 +35,23 @@ two together.
 | `azure/webapps-deploy`         | `02a81bead70021f5284939794bcec79c271ab383` | v3.0.8           |
 | `zizmorcore/zizmor-action`     | `3dc1ecc9bcb9e94e9b2c709687979e1298497054` | v0.6.2           |
 
-`zizmor 1.29.0` reports **0 findings** across all seven workflows.
+`zizmor 1.29.0` reports **0 findings** across all eight workflows.
+
+**Hand-pinned tools.** Two tools are pinned by an inline version argument rather
+than by a manifest entry, so Renovate's managers do not see them and they are
+bumped by hand. Neither appears in the table above, which lists actions only —
+`check-supply-chain` matches rows by action and digest.
+
+| Tool     | Pin                                                | Where         |
+| -------- | -------------------------------------------------- | ------------- |
+| zizmor   | `version: '1.29.0'` input to `zizmor-action`       | `zizmor.yml`  |
+| renovate | `npx --package renovate@44.50.3` for the validator | `zizmor.yml`  |
+| semgrep  | `pip install semgrep==1.176.1` into a venv         | `semgrep.yml` |
+
+`semgrep.yml` is the Semgrep Code and Supply Chain scan. Supply Chain covers the
+`package-lock.json` tree, which nothing above does: this page pins what the
+pipeline _executes_, and the lockfile's integrity hashes pin what `npm ci`
+_installs_, but neither says whether an installed version is vulnerable.
 
 Node dependencies install through `npm ci` in the frontend and backend build
 jobs, which installs the lockfile exactly and fails rather than resolving

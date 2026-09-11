@@ -5,8 +5,9 @@ and RONL Business API (`ronl-business-api`) stand on three mechanisms that were
 rolled out across all of them in September 2026 — build provenance, supply-chain
 verification, and a per-file test-coverage floor.
 
-A **fourth** now exists in one of the three: ttl-editor gates merges on a Semgrep
-scan covering the npm dependency tree and the application code. It is described
+A **fourth** now exists in two of the three: ttl-editor gates merges on a Semgrep
+scan covering the npm dependency tree and the application code, and Linked Data
+Explorer runs the same scan, reporting but not yet required. It is described
 under §2 rather than given a section of its own, because it is the other half of
 the supply chain that `check-supply-chain` was never able to see.
 
@@ -28,7 +29,7 @@ gate landed and v2026.09.3 was promoted; the other two are as of their last pass
 | ----------------------------- | -------------------- | -------------------- | ----------------------- |
 | **Build id in the changelog** | ✅                   | ✅                   | ✅                      |
 | **check-supply-chain**        | ✅ blocking          | ✅ blocking          | ⚠️ non-blocking         |
-| **Semgrep Code + SCA**        | ✅ blocking          | —                    | —                       |
+| **Semgrep Code + SCA**        | ✅ blocking          | ⏳ reporting         | —                       |
 | **Per-file 80% branch floor** | ✅ native thresholds | ✅ native thresholds | ✅ native thresholds    |
 | **Formatting checked in CI**  | ✅                   | ✅                   | —                       |
 | **Tests run before merge**    | ✅                   | ✅                   | ⚠️ frontend only        |
@@ -318,7 +319,34 @@ and the difference only shows on the day the bot is wrong or stalled.
 ttl-editor closed that in September 2026 with a `Semgrep` workflow whose `scan`
 job is a required check alongside `audit`. It runs Semgrep Code and Supply Chain
 against an authenticated scan, reporting to the `sgort/ttl-editor` project in
-Semgrep Cloud. The other two repositories do not have it yet.
+Semgrep Cloud. Linked Data Explorer adopted the same workflow on 11 September
+2026 and runs it as a reporting check before requiring it; RONL Business API does
+not have it yet.
+
+Three things differed when it was ported to Linked Data Explorer, a monorepo:
+
+- **One job still covers everything.** All three workspaces resolve through the
+  single root `package-lock.json`, so Supply Chain reads one lockfile and there is
+  no per-workspace fan-out to keep in step with the workspace list.
+- **The same `examples/` trap, independently present.** A root `examples/` holds
+  reference material, and `packages/frontend/public/examples/` is served — Vite
+  copies `public/` into the build. The ignore rule is `/examples/`, anchored, for
+  exactly the reason ttl-editor learned the hard way.
+- **Its sibling workflows all cancel in progress unconditionally.** `semgrep.yml`
+  uses their group key but cancels only on `pull_request`, because a cancelled
+  push run leaves the Semgrep Cloud baseline half-written.
+- **A `.semgrepignore` replaces Semgrep's built-in default ignore list; it does
+  not extend it.** The defaults exclude `test/` and `tests/` directories, and
+  the first version of this file silently brought 16 files under
+  `packages/backend/tests/` and `packages/frontend/src/test/` back into scope.
+  The finding count came out exactly as predicted either way, because none of
+  them happened to trip a rule — only diffing the scanned file sets showed it.
+  ttl-editor has no such directories today, so its file is unaffected, but it
+  would be the day one is added.
+
+Its local dry run on `cfa6b40` found 86 findings, none blocking: 66 Supply Chain,
+all transitive and unreachable, and 20 Code — 6 in test files and 4 under
+`examples/`, both then excluded, leaving 10 in application code to triage.
 
 |                     |                                                                       |
 | ------------------- | --------------------------------------------------------------------- |
@@ -1029,21 +1057,21 @@ release rather than discovering the answer six months later.
 
 ## 6. Open work
 
-| repository           | issue | what                                                                                      |
-| -------------------- | ----- | ----------------------------------------------------------------------------------------- |
-| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                                  |
-| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor                |
-| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped          |
-| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective         |
-| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                       |
-| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip     |
-| ronl-business-api    | —     | production build id wired but unexercised; the other two have now run theirs              |
-| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                 |
-| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                    |
-| linked-data-explorer | —     | no Semgrep scan yet: npm dependency tree is remediated by Renovate and verified by nobody |
-| ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                         |
-| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows       |
-| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod    |
+| repository           | issue | what                                                                                   |
+| -------------------- | ----- | -------------------------------------------------------------------------------------- |
+| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                               |
+| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor             |
+| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped       |
+| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective      |
+| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                    |
+| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip  |
+| ronl-business-api    | —     | production build id wired but unexercised; the other two have now run theirs           |
+| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight              |
+| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                 |
+| linked-data-explorer | —     | Semgrep `scan` reports but is not yet required; 10 application Code findings to triage |
+| ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                      |
+| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows    |
+| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod |
 
 Closed since the previous revision: Linked Data Explorer's frontend zero-margin
 entry, by
