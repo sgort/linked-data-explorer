@@ -18,12 +18,22 @@ on:
     paths:
       - 'packages/backend/**'
       - '.github/workflows/azure-backend-acc.yml'
+      # The root lockfile and manifest, because every workspace resolves through
+      # them. Without these, a lockfile-only change -- Renovate's lock-file
+      # maintenance above all -- was built, tested and deployed by nothing: #92
+      # moved 338 packages, 82 of them runtime, and CI ran audit and scan alone.
+      # A backend-only bump reaches this workflow too, because the lockfile is
+      # shared and a hoisted dependency can move under either workspace. #97.
+      - 'package-lock.json'
+      - 'package.json'
   push:
     branches:
       - acc
     paths:
       - 'packages/backend/**'
       - '.github/workflows/azure-backend-acc.yml'
+      - 'package-lock.json'
+      - 'package.json'
   workflow_dispatch:
 
 # Serialise deployments to one environment. Keyed on the pull-request

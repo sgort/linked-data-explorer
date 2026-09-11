@@ -25,6 +25,11 @@ on:
     paths:
       - 'packages/backend/**'
       - '.github/workflows/azure-backend-production.yml'
+      # The root lockfile and manifest, so a lockfile-only promotion redeploys
+      # rather than leaving production on the previous tree. See the acc
+      # workflow and #97.
+      - 'package-lock.json'
+      - 'package.json'
   workflow_dispatch:
 
 # Same serialisation as the acc workflow, but production runs QUEUE

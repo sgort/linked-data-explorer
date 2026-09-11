@@ -7,6 +7,11 @@ on:
     paths:
       - 'packages/frontend/**'
       - '.github/workflows/azure-frontend-production.yml'
+      # The root lockfile and manifest, so a lockfile-only promotion redeploys
+      # rather than leaving production on the previous tree. See the acc
+      # workflow and #97.
+      - 'package-lock.json'
+      - 'package.json'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
@@ -14,6 +19,8 @@ on:
     paths:
       - 'packages/frontend/**'
       - '.github/workflows/azure-frontend-production.yml'
+      - 'package-lock.json'
+      - 'package.json'
 
 # Same serialisation as the acc workflow, but production runs QUEUE
 # rather than cancel: interrupting a live production deployment to
