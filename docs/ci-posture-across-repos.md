@@ -5,12 +5,18 @@ and RONL Business API (`ronl-business-api`) stand on three mechanisms that were
 rolled out across all of them in September 2026 — build provenance, supply-chain
 verification, and a per-file test-coverage floor.
 
+A **fourth** now exists in one of the three: ttl-editor gates merges on a Semgrep
+scan covering the npm dependency tree and the application code. It is described
+under §2 rather than given a section of its own, because it is the other half of
+the supply chain that `check-supply-chain` was never able to see.
+
 Verified against each repository's `acc` at the heads below, not written from
-memory.
+memory. ttl-editor's row was re-verified on 11 September 2026, after its Semgrep
+gate landed and v2026.09.3 was promoted; the other two are as of their last pass.
 
 | repository           | `acc` at  |
 | -------------------- | --------- |
-| ttl-editor           | `6e8e019` |
+| ttl-editor           | `7f95502` |
 | linked-data-explorer | `36c4246` |
 | ronl-business-api    | `04e38c8` |
 
@@ -22,6 +28,7 @@ memory.
 | ----------------------------- | -------------------- | -------------------- | ----------------------- |
 | **Build id in the changelog** | ✅                   | ✅                   | ✅                      |
 | **check-supply-chain**        | ✅ blocking          | ✅ blocking          | ⚠️ non-blocking         |
+| **Semgrep Code + SCA**        | ✅ blocking          | —                    | —                       |
 | **Per-file 80% branch floor** | ✅ native thresholds | ✅ native thresholds | ✅ native thresholds    |
 | **Formatting checked in CI**  | ✅                   | ✅                   | —                       |
 | **Tests run before merge**    | ✅                   | ✅                   | ⚠️ frontend only        |
@@ -298,6 +305,113 @@ register rows by digest precisely so a split pin stays expressible. Keying by
 action alone was a real defect: the second row overwrote the first and every
 workflow on the other digest read as disagreeing. Do not collapse such rows to
 tidy a table.
+
+### The other supply chain: the npm tree
+
+`check-supply-chain` verifies that **GitHub Actions** digest pins resolve to the
+versions their comments claim. It says nothing about the packages in
+`package-lock.json`. Neither does zizmor, nor the coverage floor. So across all
+three applications, npm dependency vulnerabilities were remediated by Renovate
+and verified by nobody — a bot being trusted rather than a gate being enforced,
+and the difference only shows on the day the bot is wrong or stalled.
+
+ttl-editor closed that in September 2026 with a `Semgrep` workflow whose `scan`
+job is a required check alongside `audit`. It runs Semgrep Code and Supply Chain
+against an authenticated scan, reporting to the `sgort/ttl-editor` project in
+Semgrep Cloud. The other two repositories do not have it yet.
+
+|                     |                                                                       |
+| ------------------- | --------------------------------------------------------------------- |
+| Workflow            | `.github/workflows/semgrep.yml`                                       |
+| Job / check context | `scan`                                                                |
+| Trigger             | `pull_request` unfiltered, `push` on `acc` and `main`                 |
+| Scanner             | `semgrep==1.176.1`, hand-pinned, registered in `SECURITY-PIPELINE.md` |
+| Auth                | `SEMGREP_APP_TOKEN` repository secret, Agent (CI) scope               |
+
+#### Four decisions worth keeping
+
+**A separate workflow, not a step in the audit job.** `audit` is already a
+required check, so a step there would have been blocking from the day it merged.
+A separate workflow reports on every pull request and gates nothing until its
+job is added to the ruleset — which makes promotion a ruleset change, reversible
+without touching the file. `continue-on-error` is the obvious alternative and is
+the wrong tool for the reason §2 already records.
+
+**The token is not optional.** Semgrep Supply Chain resolves only on an
+authenticated scan. An unauthenticated `semgrep scan --config=p/…` gets the
+open-source SAST rules and no SCA at all, which would omit the entire reason the
+job exists.
+
+**`--no-suppress-errors`.** By default `semgrep ci` prints _"there were errors
+during analysis but Semgrep will succeed"_ and exits 0. That default is exactly
+how a broken local install went unnoticed for weeks: the scan crashed on a
+missing `git` binary and still reported success. In CI, a tool that cannot run is
+a failure.
+
+**`concurrency` cancels superseded pull-request runs but never a `push` run.**
+The push runs on `acc` and `main` write the Semgrep Cloud baseline; cancelling
+one leaves the dashboard describing a scan that never finished, with nothing
+queued to correct it.
+
+#### The finding count is not the measure
+
+The triage that produced this gate
+([ttl-editor#112](https://github.com/sgort/ttl-editor/issues/112)) opened by
+reporting **36 findings** and closed at **7**. Almost none of that movement was
+vulnerabilities being fixed:
+
+|     |                                                                     |
+| --- | ------------------------------------------------------------------- |
+| 36  | scanned against a local checkout 51 commits behind `origin/acc`     |
+| 17  | the real figure on the branch head — Renovate had already closed 19 |
+| 14  | `examples/` excluded; reference material is not application code    |
+| 16  | a new test file arrived carrying two more                           |
+| 12  | test files taken out of Code scanning                               |
+| 11  | after a fix, a suppression, and one finding that got worse first    |
+| 7   | CI honours dashboard triage; a local `--dry-run` does not           |
+
+Three lessons generalise beyond this repository, and are the reason this section
+records the trajectory rather than only the endpoint:
+
+**A scan run by hand is pinned to whatever is checked out.** Nothing in
+`semgrep ci` output names the commit it describes. The first triage described a
+lockfile drift that did not exist, because `node_modules` had been installed from
+one ref and `package-lock.json` read from another. A scan in CI cannot make that
+mistake, and that — not any individual finding — is what the gate buys.
+
+**"The finding will go away" is a prediction, not a plan.** Three fixes were
+justified partly on retiring a finding. None did. `prototype-pollution-loop`
+matches the _shape_ of a loop, not whether its keys are guarded; one fix made its
+own finding fire twice. Verify after, not before.
+
+**Check the set, not the total.** A `.semgrepignore` entry of `examples/` rather
+than `/examples/` silently dropped a served `.dmn` file from the scan, because
+`.gitignore` syntax matches a directory of that name at any depth. Both counts
+read 14. Only set-differencing the scanned file lists caught it.
+
+#### What remains, and what it costs
+
+Seven findings remain, all transitive npm packages — `brace-expansion`,
+`picomatch`, `postcss-selector-parser` — reached only through build and test
+tooling. Four are classed Unreachable and three Undetermined; the only runtime
+dependencies are `react`, `react-dom` and `lucide-react`. They cannot be closed
+by a Renovate bump, only by an upstream release or an `overrides` entry, which is
+not worth the resolution risk for code that never reaches a browser.
+
+Two costs come with making it required, both accepted deliberately:
+
+- **Forked pull requests cannot pass it.** Secrets are not passed to fork runs,
+  so `semgrep ci` cannot start and `--no-suppress-errors` fails the step. The
+  repository has one fork, which has opened a pull request before. Accepted
+  because the maintainer knows its author;
+  [#128](https://github.com/sgort/ttl-editor/issues/128) tracks removing the
+  edge. **Any repository adopting this without that luxury should do #128
+  first.**
+- **`bypass_actors` is empty and semgrep.dev is a third-party dependency in the
+  merge path.** If it is unreachable, or the token is revoked, merges to `acc`
+  stop until the ruleset is edited. `check-supply-chain` accepted an analogous
+  risk for the GitHub API — but the GitHub API is a dependency of the platform
+  anyway, and semgrep.dev is not. That is a genuinely new class of outage.
 
 ---
 
@@ -592,15 +706,36 @@ so there is nothing to gate — the change is the trigger alone.
 
 Worth stating because it is easy to read a repository as protected when only half
 of it is. ttl-editor's `acc supply-chain gate` ruleset applies to `refs/heads/acc`
-and nothing else. `main` has branch protection — a pull request is required — but
-**zero required approvals and no required status checks at all**. So on the
-promotion pull request, `audit` and the production build ran and reported, and
-neither could have blocked the merge.
+and nothing else, and requires two status checks there: `audit` (`zizmor.yml`) and,
+since 11 September 2026, `scan` (`semgrep.yml`). `main` has branch protection — a
+pull request is required — but **zero required approvals and no required status
+checks at all**. So on the promotion pull request, `audit`, `scan` and the
+production build ran and reported, and none of them could have blocked the merge.
 
-That is defensible: `main` is promoted from `acc`, and those commits already
-passed the gate on their own `acc` pull request. But the promotion pull request is
-the one carrying a build-system change into production, and it is gated by nobody.
-Read the checks there rather than trusting the button.
+That asymmetry widened rather than narrowed when `scan` was added: every control
+ttl-editor has now gates its `acc`, and none gates its `main`. (Linked Data
+Explorer is the opposite case — see below.)
+
+In ttl-editor that is **decided, not merely defensible** — weighed on 11 September
+2026 and deliberately kept. `main` is promoted from `acc`, and those commits
+already passed `audit` and `scan` on their own `acc` pull request, so re-running
+them adds latency without adding information about the code.
+
+The argument against stands and is worth keeping in view: the promotion pull
+request is the one carrying changes into production, and it is gated by nobody.
+"Already checked on `acc`" is true of the commits, not of the merge — a promotion
+can be opened from a stale `acc`, or carry a conflict resolution that appears in no
+earlier pull request. Read the checks there rather than trusting the button.
+
+If it is ever revisited, `audit` and `scan` are the two that could be required:
+both trigger on `pull_request` unfiltered with no paths filter, so neither can go
+missing on any base. **`Build and deploy PROD` cannot**, as things stand — its
+`paths-ignore` means a documentation-only promotion never triggers it, and a
+required check that never reports wedges the pull request permanently. That is the
+same hole this document describes above, in the other dimension. Seventeen of the
+v2026.09.3 promotion's 42 files matched that filter, so it is an ordinary case
+rather than a corner one. The full analysis is in
+[ttl-editor#131](https://github.com/sgort/ttl-editor/issues/131).
 
 The same question is worth asking of the other two: a ruleset naming one branch
 says nothing about any other.
@@ -894,19 +1029,21 @@ release rather than discovering the answer six months later.
 
 ## 6. Open work
 
-| repository           | issue | what                                                                                   |
-| -------------------- | ----- | -------------------------------------------------------------------------------------- |
-| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                               |
-| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor             |
-| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped       |
-| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective      |
-| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                    |
-| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip  |
-| ronl-business-api    | —     | production build id wired but unexercised; the other two have now run theirs           |
-| ttl-editor           | —     | `main` has no required status checks, so the promotion PR is gated by nobody           |
-| ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                      |
-| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows    |
-| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod |
+| repository           | issue | what                                                                                      |
+| -------------------- | ----- | ----------------------------------------------------------------------------------------- |
+| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                                  |
+| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor                |
+| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped          |
+| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective         |
+| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                       |
+| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip     |
+| ronl-business-api    | —     | production build id wired but unexercised; the other two have now run theirs              |
+| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                 |
+| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                    |
+| linked-data-explorer | —     | no Semgrep scan yet: npm dependency tree is remediated by Renovate and verified by nobody |
+| ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                         |
+| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows       |
+| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod    |
 
 Closed since the previous revision: Linked Data Explorer's frontend zero-margin
 entry, by
