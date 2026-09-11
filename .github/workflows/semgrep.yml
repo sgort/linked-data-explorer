@@ -20,11 +20,18 @@ name: Semgrep
 # request cannot skip the scan by targeting an unwatched base or by touching
 # nothing watched. push stays filtered to the two branches that deploy.
 #
-# NOT yet a required check in either ruleset. That comes once the baseline is
-# known and triaged -- at which point the trigger shape above stops being
-# precautionary and becomes load-bearing, because a required check that no
-# trigger produces wedges a pull request permanently. Promotion is a ruleset
-# change rather than a change to this file. `continue-on-error` would be the
+# `scan` IS a required check in BOTH rulesets -- "acc supply-chain gate" and
+# "main promotion gate" -- added on 2026-09-11 once the baseline was triaged from
+# 86 findings to 5, none blocking. So the trigger shape above is now load-bearing
+# rather than precautionary: a required check that no trigger produces wedges a
+# pull request permanently, and on main that pull request is the promotion.
+# Promotion to required was a ruleset change, which is why nothing in this file
+# moved when it happened; see SECURITY-PIPELINE.md, "What the rulesets require".
+#
+# No fork caveat here, unlike ttl-editor: this repository has no forks, so no
+# pull request arrives without SEMGREP_APP_TOKEN. If one ever does, semgrep ci
+# cannot start, --no-suppress-errors fails the step, and the required check
+# blocks it -- see ttl-editor#128 for the fork-safe shape. `continue-on-error` would be the
 # obvious alternative and is the wrong tool, for the reason zizmor.yml already
 # spells out: it rewrites the STEP's reported conclusion as well as the job's,
 # so a finding shows up only in the log while every check reads "success".
