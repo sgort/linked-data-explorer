@@ -244,7 +244,7 @@ async function exportAsPackage(
         const dmnXml = await fetchDmnXml(dmnId);
         zip.file(`${dmnId}.dmn`, dmnXml);
       } catch (error) {
-        console.error(`Failed to fetch DMN ${dmnId}:`, error);
+        console.error('Failed to fetch DMN %s:', dmnId, error);
         // Continue with other DMNs even if one fails
       }
     }

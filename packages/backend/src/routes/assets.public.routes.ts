@@ -8,6 +8,9 @@ import logger from '../utils/logger';
 const router = Router();
 
 // Fully open CORS — consumed by the RONL Business API caseworker dashboard
+// Kept although index.ts already applies it, so the router is correct when mounted on
+// its own -- as its tests do. Public, read-only, no credentials; see utils/publicPaths.ts.
+// nosemgrep: javascript.express.web.cors-permissive-express.cors-permissive-express
 router.use(cors({ origin: '*', methods: ['GET', 'OPTIONS'] }));
 
 router.get('/', async (_req: Request, res: Response) => {

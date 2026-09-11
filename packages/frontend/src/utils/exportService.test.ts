@@ -323,8 +323,34 @@ describe('exportChain — package (ZIP)', () => {
     expect(result.success).toBe(true);
     expect(await entriesOf(result.content)).toEqual(['README.md', 'age-check.dmn', 'chain.bpmn']);
     expect(consoleError).toHaveBeenCalledWith(
-      'Failed to fetch DMN missing:',
+      'Failed to fetch DMN %s:',
+      'missing',
       expect.objectContaining({ message: 'Failed to fetch DMN missing: Not Found' })
+    );
+  });
+
+  // console.error treats its FIRST argument as a format string, so a DMN id placed
+  // there is interpreted: '%s' consumes the next argument -- here, the error object --
+  // and the log line loses the very thing it exists to report. The id is data, and
+  // belongs in an argument position, never in the format.
+  test('passes the DMN id as data, never as part of the console format string', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        String(url).includes('missing')
+          ? { ok: false, statusText: 'Not Found', text: async () => '' }
+          : { ok: true, statusText: 'OK', text: async () => '<definitions />' }
+      )
+    );
+
+    await exportChain(['age-check', 'missing%s'], {}, [dmn()], options({ format: 'package' }));
+
+    const call = consoleError.mock.calls.find((c) => String(c[1]).includes('missing%s'));
+    expect(call?.[0]).toBe('Failed to fetch DMN %s:');
+    expect(call?.[1]).toBe('missing%s');
+    expect(call?.[2]).toEqual(
+      expect.objectContaining({ message: expect.stringContaining('Not Found') })
     );
   });
 
