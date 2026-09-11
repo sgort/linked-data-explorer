@@ -7,6 +7,9 @@ import logger from '../utils/logger';
 const router = Router();
 
 // Fully open CORS — this route is consumed by ropa.flevoland.nl and similar
+// Kept although index.ts already applies it, so the router is correct when mounted on
+// its own -- as its tests do. Public, read-only, no credentials; see utils/publicPaths.ts.
+// nosemgrep: javascript.express.web.cors-permissive-express.cors-permissive-express
 router.use(cors({ origin: '*', methods: ['GET', 'OPTIONS'] }));
 
 router.get('/', async (req: Request, res: Response) => {

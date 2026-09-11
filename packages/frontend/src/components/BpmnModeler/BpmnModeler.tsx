@@ -5,6 +5,7 @@ import { BpmnService } from '../../services/bpmnService';
 import { BpmnProcess } from '../../types';
 import { ASYLUM_MIGRATION_EXAMPLE_XML, DEFAULT_BPMN_XML } from '../../utils/bpmnTemplates';
 import { EXAMPLE_VERSIONS, getStoredVersion, setStoredVersion } from '../../utils/exampleVersions';
+import { applyRonlAttr, readRonlAttr, type RonlAttr } from '../../utils/ronlAttributes';
 import BpmnCanvas from './BpmnCanvas';
 import ProcessList from './ProcessList';
 
@@ -82,24 +83,6 @@ type FooterDraft = {
   dsoActiviteitUrn?: string;
 };
 
-/** Rewrites a single ronl:* attribute on the <bpmn:process> tag. */
-function applyRonlAttr(xml: string, attr: string, value: string | undefined): string {
-  let out = xml;
-  if (!out.includes('xmlns:ronl=')) {
-    out = out.replace(/(<(?:bpmn:)?definitions\b)/, '$1 xmlns:ronl="http://ronl.nl/schema/1.0"');
-  }
-  if (value) {
-    if (out.includes(`ronl:${attr}=`)) {
-      out = out.replace(new RegExp(`ronl:${attr}="[^"]*"`), `ronl:${attr}="${value}"`);
-    } else {
-      out = out.replace(/(<(?:bpmn:)?process\b[^>]*?)(\/?>)/, `$1 ronl:${attr}="${value}"$2`);
-    }
-  } else {
-    out = out.replace(new RegExp(`\\s*ronl:${attr}="[^"]*"`), '');
-  }
-  return out;
-}
-
 const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   const [processes, setProcesses] = useState<BpmnProcess[]>(BpmnService.getProcesses());
   const [activeProcessId, setActiveProcessId] = useState<string | null>(null);
@@ -113,15 +96,14 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   /** Read the effective value for a footer field: draft wins, then process field, then XML. */
   const readEffective = <K extends keyof FooterDraft>(
     key: K,
-    xmlAttr: string
+    xmlAttr: RonlAttr
   ): FooterDraft[K] | undefined => {
     if (key in draft) return draft[key];
     if (key === 'language' || key === 'organization') {
       const v = activeProcess?.[key as 'language' | 'organization'];
       if (v) return v as FooterDraft[K];
     }
-    const m = currentXml.match(new RegExp(`ronl:${xmlAttr}="([^"]+)"`));
-    return (m?.[1] as FooterDraft[K]) ?? undefined;
+    return readRonlAttr(currentXml, xmlAttr) as FooterDraft[K] | undefined;
   };
 
   /** True when the user has unsaved canvas edits or unsaved footer edits. */
