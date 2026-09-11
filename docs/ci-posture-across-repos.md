@@ -316,6 +316,12 @@ three applications, npm dependency vulnerabilities were remediated by Renovate
 and verified by nobody — a bot being trusted rather than a gate being enforced,
 and the difference only shows on the day the bot is wrong or stalled.
 
+That sentence was written as if Renovate maintained the whole tree. **It
+maintains direct dependencies.** The transitive tree moves only through
+`lockFileMaintenance`, which `config:recommended` leaves disabled — and in Linked
+Data Explorer the day the bot was wrong had already come and gone unnoticed. See
+"Renovate maintains dependencies, not the tree" below.
+
 ttl-editor closed that in September 2026 with a `Semgrep` workflow whose `scan`
 job is a required check alongside `audit`. It runs Semgrep Code and Supply Chain
 against an authenticated scan, reporting to the `sgort/ttl-editor` project in
@@ -344,9 +350,64 @@ Three things differed when it was ported to Linked Data Explorer, a monorepo:
   ttl-editor has no such directories today, so its file is unaffected, but it
   would be the day one is added.
 
-Its local dry run on `cfa6b40` found 86 findings, none blocking: 66 Supply Chain,
-all transitive and unreachable, and 20 Code — 6 in test files and 4 under
-`examples/`, both then excluded, leaving 10 in application code to triage.
+Its first full scan in CI, on `4d4d46d`, found **76** findings, none blocking:
+66 Supply Chain and 10 Code, after the `.semgrepignore` had taken out 6 in test
+files and 4 under `examples/`. It closed the day at **5**:
+
+| step                                                                                                     | findings | how                                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| first full scan                                                                                          | 76       | 66 Supply Chain, 10 Code                                                                                                                              |
+| lock-file maintenance ([linked-data-explorer#92](https://github.com/sgort/linked-data-explorer/pull/92)) | 13       | Supply Chain 66 → 3; one refresh, no manifest change                                                                                                  |
+| triage hardening ([linked-data-explorer#95](https://github.com/sgort/linked-data-explorer/pull/95))      | 5        | Code 10 → 2: one fix retired a finding, seven carry a scoped `nosemgrep` with its reason, and a latent defect nobody had flagged was fixed on the way |
+
+The two Code findings left are a true positive — the Tailwind Play CDN running
+from a third-party origin in production
+([linked-data-explorer#96](https://github.com/sgort/linked-data-explorer/issues/96))
+— and one false positive for dashboard triage. The three Supply Chain findings
+are bound by a tilde range in `express` (`qs`) and by a major version
+(`@tiptap/core`), and cannot be closed by a refresh.
+
+**Only CI's reachability can be trusted.** The local dry run reported every one
+of the 66 as `reachable: false`, and this page repeated that as "all transitive
+and unreachable". The CI scan classified the same 66 as **5 Reachable, 23
+Undetermined and 38 Unreachable** — and the five reachable ones were all HIGH.
+The local JSON's `reachable` field stayed `false` even where a reachability rule
+existed, and the Pro engine was installed locally too, so that is not the
+difference. Why the two disagree was not established. What was: a local
+`--dry-run` is fine for Code findings and for checking what an ignore file
+excludes, and not for deciding whether a Supply Chain finding matters.
+
+#### Renovate maintains dependencies, not the tree
+
+When Linked Data Explorer's `scan` first ran, `rollup` was still at 4.55.1, where
+it had sat since January although 4.59.0 was published in February. Two separate
+failures had stacked:
+
+- **`lockFileMaintenance` was not enabled until 2026-08-29.** Before that, nothing
+  refreshed a transitive dependency at all — Renovate's recommended preset leaves
+  it off, and it only ever proposes the packages a manifest names.
+- **Once enabled, it was starved.** `prConcurrentLimit: 5` was full of open
+  feature bumps, two of them eleven days old, so all three lock-file-maintenance
+  branches sat in the Dependency Dashboard as rate-limited. Nothing appeared until
+  they were forced by hand.
+
+When it finally ran, **one refresh closed 63 of 66 Supply Chain findings**,
+including all five reachable ones, every fix inside a range the manifests already
+declared. It arrived as three identical pull requests, because per-workspace
+group rules without `matchUpdateTypes` catch lock-file maintenance too, and CI
+built and tested none of them: all three acceptance workflows are path-filtered to
+their own package, and the root `package-lock.json` is in none of those filters.
+Both gaps are
+[linked-data-explorer#97](https://github.com/sgort/linked-data-explorer/issues/97).
+
+**ttl-editor has no `lockFileMaintenance` at all.** Its residual Supply Chain
+findings — `brace-expansion`, `picomatch`, `postcss-selector-parser` — each have a
+newer version inside the range already declared, and this repository's refresh
+closed the same `brace-expansion` and `picomatch` lines.
+[ttl-editor#112](https://github.com/sgort/ttl-editor/issues/112) put them down to
+needing an upstream release or an `overrides` entry. The likelier explanation is
+the one found here: nothing ever refreshed that lockfile. Worth checking before
+anything else is concluded about them.
 
 |                     |                                                                       |
 | ------------------- | --------------------------------------------------------------------- |
@@ -1057,21 +1118,23 @@ release rather than discovering the answer six months later.
 
 ## 6. Open work
 
-| repository           | issue | what                                                                                   |
-| -------------------- | ----- | -------------------------------------------------------------------------------------- |
-| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                               |
-| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor             |
-| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped       |
-| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective      |
-| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                    |
-| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip  |
-| ronl-business-api    | —     | production build id wired but unexercised; the other two have now run theirs           |
-| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight              |
-| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                 |
-| linked-data-explorer | —     | Semgrep `scan` reports but is not yet required; 10 application Code findings to triage |
-| ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                      |
-| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows    |
-| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod |
+| repository           | issue | what                                                                                          |
+| -------------------- | ----- | --------------------------------------------------------------------------------------------- |
+| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                                      |
+| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor                    |
+| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped              |
+| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective             |
+| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                           |
+| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip         |
+| ronl-business-api    | —     | production build id wired but unexercised; the other two have now run theirs                  |
+| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                     |
+| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                        |
+| linked-data-explorer | #96   | Tailwind Play CDN runs from a third-party origin in the production frontend                   |
+| linked-data-explorer | #97   | lockfile-only changes are never built, tested or deployed; lock-file maintenance was starved  |
+| ttl-editor           | —     | no `lockFileMaintenance`; its residual Supply Chain findings are likely closable by a refresh |
+| ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                             |
+| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows           |
+| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod        |
 
 Closed since the previous revision: Linked Data Explorer's frontend zero-margin
 entry, by
