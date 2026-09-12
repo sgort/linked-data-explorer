@@ -5,11 +5,17 @@ and RONL Business API (`ronl-business-api`) stand on three mechanisms that were
 rolled out across all of them in September 2026 — build provenance, supply-chain
 verification, and a per-file test-coverage floor.
 
-A **fourth** now exists in two of the three: ttl-editor gates merges on a Semgrep
-scan covering the npm dependency tree and the application code, and Linked Data
-Explorer runs the same scan, required on both `acc` and `main`. It is described
-under §2 rather than given a section of its own, because it is the other half of
-the supply chain that `check-supply-chain` was never able to see.
+A **fourth** now exists in all three: a Semgrep scan covering the npm dependency
+tree and the application code. ttl-editor and Linked Data Explorer require it to
+merge; RONL Business API adopted it on 12 September 2026 and runs it as a
+reporting check while its baseline is triaged — 435 findings, none blocking. It
+is described under §2 rather than given a section of its own, because it is the
+other half of the supply chain that `check-supply-chain` was never able to see.
+
+A **fifth** exists in all three as of the same day, and is the only one that
+cannot run in CI: `scripts/check-mirror.sh`, called at each release, compares the
+GitLab mirror against GitHub and distinguishes _behind_ from _diverged_. §5
+explains why a runner cannot do it.
 
 **This page is the single documented source for ttl-editor and Linked Data
 Explorer.** Until 2026-09-11 each repository carried its own copy; the two had
@@ -17,35 +23,85 @@ drifted in both directions — each gaining sections the other lacked — so
 ttl-editor's copy was deleted and its README now points here.
 
 Verified against each repository's `acc` at the heads below, not written from
-memory. ttl-editor's and Linked Data Explorer's rows were re-verified on 11
-September 2026, after each promoted v2026.09.3 with its Semgrep gate, and
-ttl-editor's again after its first lock-file maintenance; RONL Business API's were
-re-verified on 12 September 2026, the day it promoted `acc` to production for the
-first time since 17 July.
+memory — rulesets read from the API, workflow triggers and steps parsed from the
+YAML, thresholds read from the config that declares them, mirror state from
+`ls-remote` against both remotes.
 
-| repository           | `acc` at  |
-| -------------------- | --------- |
-| ttl-editor           | `c4a8585` |
-| linked-data-explorer | `af1341a` |
-| ronl-business-api    | `8f5c225` |
+Revised **12 September 2026**, after RONL Business API promoted `acc` to
+production for the first time since 17 July and then closed nine of the eleven
+alignment items it had been carrying — leaving one skipped and one out of scope,
+both named in §"What changed" below. ttl-editor's and Linked Data Explorer's rows
+were re-verified the same day.
+
+| repository           | `acc` at  | `main` at |
+| -------------------- | --------- | --------- |
+| ttl-editor           | `f7fe80f` | `f5bae6a` |
+| linked-data-explorer | `daa4816` | `be6bc54` |
+| ronl-business-api    | `0a3a891` | `04840ed` |
 
 ---
 
 ## Summary
 
-|                               | ttl-editor           | linked-data-explorer | ronl-business-api    |
-| ----------------------------- | -------------------- | -------------------- | -------------------- |
-| **Build id in the changelog** | ✅                   | ✅                   | ✅                   |
-| **check-supply-chain**        | ✅ blocking          | ✅ blocking          | ⚠️ non-blocking      |
-| **Semgrep Code + SCA**        | ✅ blocking          | ✅ blocking          | —                    |
-| **Per-file 80% branch floor** | ✅ native thresholds | ✅ native thresholds | ✅ native thresholds |
-| **Formatting checked in CI**  | ✅                   | ✅                   | —                    |
-| **Tests run before merge**    | ✅                   | ✅                   | ⚠️ frontend only     |
-| **Mirror in sync**            | ✅                   | ✅                   | ✅ both, 12 Sep      |
+|                               | ttl-editor            | linked-data-explorer      | ronl-business-api     |
+| ----------------------------- | --------------------- | ------------------------- | --------------------- |
+| **Build id in the changelog** | ✅                    | ✅                        | ✅ exercised in PROD  |
+| **check-supply-chain**        | ✅ blocking           | ✅ blocking               | ✅ blocking           |
+| **Semgrep Code + SCA**        | ✅ required           | ✅ required               | ⚠️ runs, not required |
+| **Per-file 80% branch floor** | ✅ 1 runner           | ✅ 2 runners              | ✅ 5 runners          |
+| **Formatting checked in CI**  | ✅                    | ✅                        | ✅                    |
+| **Tests run before merge**    | ✅                    | ✅                        | ✅                    |
+| **Renovate lock-file maint.** | ✅                    | ✅                        | ✅                    |
+| **One Node version**          | ✅ single literal     | ⚠️ 3 literals, #80        | ✅ `.nvmrc`, one file |
+| **`acc` ruleset**             | PR + `audit` + `scan` | + `deletion`, `non-ff`    | ⚠️ PR + `audit` only  |
+| **`main` ruleset**            | ⚠️ classic, no checks | ✅ full, `audit` + `scan` | ✅ full, `audit`      |
+| **Mirror checked at release** | ✅ `check-mirror`     | ✅ `check-mirror`         | ✅ `check-mirror`     |
+| **Mirror in sync**            | ✅ both               | ✅ both                   | ✅ both               |
 
 Nothing in that table is uniform by accident. Each application has a different
 build shape, and the differences below are re-derived per repository rather than
 copied.
+
+### What changed on 12 September 2026
+
+RONL Business API worked from an eleven-item list and closed **nine** of them in
+a day, in the order that made each one cheap. One was skipped and one was
+deliberately out of scope. The list is reproduced here because the **shape** of
+what remains is the useful part, not the ticks:
+
+| item    |                                    | outcome                                                                  |
+| ------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| **C1**  | `acc` ruleset: `deletion` + non-ff | ❌ **not done** — still PR + `audit` only. The one item skipped          |
+| **C2**  | Backend tests before merge         | ✅ `pull_request` trigger added, #87 closed                              |
+| **C3**  | `check-supply-chain` blocking      | ✅ `continue-on-error` removed, #83 closed                               |
+| **C4**  | Formatting checked in CI           | ✅ `npm ci` + `check-format` in the `audit` job                          |
+| **C5**  | Semgrep Code + Supply Chain        | ✅ workflow + `.semgrepignore`; **`scan` deliberately not required yet** |
+| **C6**  | Renovate lock-file maintenance     | ✅ plus majors-behind-approval replacing the global flag                 |
+| **C7**  | One Node version                   | ✅ `.nvmrc` at an exact `22.22.0`, read by all eight deploy workflows    |
+| **C8**  | Mirror in sync                     | ✅ `check-mirror` in **all three** repositories, called at each release  |
+| **C9**  | Backend deploy in a workflow       | — out of scope, #34/#35 remain open                                      |
+| **C10** | Branch-floor loose ends            | ✅ #84 and #85 closed                                                    |
+| **C11** | Refresh `the-gate-has-teeth.md`    | ✅ three false claims corrected in place rather than deleted             |
+
+**C1 is the item to notice.** Work started at C2 and never came back to it, so
+RONL Business API's two rulesets differ in a way nobody decided:
+
+| on     | `deletion`                  | `non_fast_forward`            |
+| ------ | --------------------------- | ----------------------------- |
+| `acc`  | — (blocked by classic only) | **absent — force-push works** |
+| `main` | ✅ ruleset                  | ✅ ruleset                    |
+
+Worth reading precisely rather than as "unprotected". Deletion of `acc` is
+blocked, but by **classic branch protection** (`allow_deletions: false`), not by
+the ruleset — a second mechanism doing the job the first was supposed to, which
+is its own kind of drift. Force-push is genuinely open: classic protection has
+`allow_force_pushes: true` and no ruleset rule overrides it, so `acc` can be
+rewritten by anyone who can push to it, while `main` — created the same week —
+cannot.
+
+Checked with `gh api repos/…/rules/branches/acc`, which reports the **effective**
+rules from every ruleset at once, rather than by reading one ruleset and assuming
+it is the only one.
 
 ---
 
@@ -291,15 +347,19 @@ Exercised twice in Linked Data Explorer before that repository promoted its step
 to blocking. In each case the register moved on the bump's branch, the check went
 green there, and the pull request merged green.
 
-### Why one repository is still non-blocking
+### All three now block — and the last one is the clearest evidence why
 
-RONL Business API adopted the check non-blocking and has not yet promoted it.
-This is tracked, and the reason to finish it is specific:
+RONL Business API adopted the check non-blocking and promoted it on 12 September
+2026 ([#83](https://github.com/sgort/ronl-business-api/issues/83)). It was
+waiting on one thing: evidence that the register gets updated on a bump's **own
+branch** rather than after the merge — the habit §"The habit this depends on"
+describes. Its own Renovate bump supplied it, and the same pull request supplied
+the argument against waiting any longer.
 
 **`continue-on-error` hides more than it looks like it hides.** It does not
 merely keep the job green — it rewrites the **step's** reported conclusion too,
 and the honest result (`outcome: failure`) is not exposed by the REST API at all.
-Observed on a real pull request:
+Observed on that pull request, before its register was fixed:
 
 ```
 job: audit
@@ -307,11 +367,24 @@ job conclusion: success
 step: Verify pin truth and register agreement -> success
 ```
 
-…while that same step's log read `1 finding(s)`. The checks list, the job and the
-step all said success. **Only the log told the truth.**
+…while that same step's log read:
+
+```
+1 finding(s):
+  [register] zizmorcore/zizmor-action: workflow pins cc914d7f3750… (v0.6.4)
+             but SECURITY-PIPELINE.md records only 3dc1ecc9bcb9… (v0.6.2)
+```
+
+The checks list, the job and the step all said success. **Only the log told the
+truth.**
 
 A check nobody can see fail is not protecting anything; it is a check that has to
 be _remembered_, which is the condition the registers drifted in to begin with.
+
+**If the network half ever proves flaky, the remedy is `--offline`**, which keeps
+register agreement blocking and drops only the half that resolves digests against
+the GitHub API. Restoring `continue-on-error` is not a remedy — it restores the
+invisibility above.
 
 ### A deploy credential can be wrong in a way nothing names
 
@@ -382,7 +455,17 @@ against an authenticated scan, reporting to the `sgort/ttl-editor` project in
 Semgrep Cloud. Linked Data Explorer adopted the same workflow on 11 September
 2026, ran it as a reporting check while the baseline was triaged, and required it
 on both `acc` and `main` the same day — the difference from ttl-editor being that
-its `main` was already gated. RONL Business API does not have it yet.
+its `main` was already gated.
+
+**RONL Business API adopted the same workflow on 12 September 2026**, and is the
+one place to look for what the first day actually costs: its first full scan
+found **435 findings, none policy-blocking** — 249 reachable, 101 undetermined
+and 69 unreachable Supply Chain findings across 1,266 npm dependencies, plus 16
+Code findings. `scan` is deliberately **not** a required check there while that
+baseline is triaged; promotion is a ruleset edit, reversible without touching the
+file. Note the order that implies: lock-file maintenance first, since one refresh
+closed 63 of 66 Supply Chain findings here, and triaging by hand before
+refreshing would be work thrown away.
 
 Three things differed when it was ported to Linked Data Explorer, a monorepo:
 
@@ -920,14 +1003,18 @@ where the three diverge most, and where the remaining work is.
 | -------------------- | ---------------------------------------------------------------------------------------- |
 | ttl-editor           | ✅ both Static Web Apps workflows run `npm run test:ci` on `push` **and** `pull_request` |
 | linked-data-explorer | ✅ backend and frontend, acc workflows                                                   |
-| ronl-business-api    | ⚠️ **frontend, pa-demo and public-site only**                                            |
+| ronl-business-api    | ✅ all five workspaces, since 2026-09-12                                                 |
 
-**RONL Business API's backend workflow triggers on `push` alone**
-([ronl-business-api#87](https://github.com/sgort/ronl-business-api/issues/87)).
-Its 2008 tests run only _after_ a merge, so its backend branch threshold gates
-nothing on a pull request — it would fail on `acc`, after the fact, rather than
-on the branch that caused it. The floor is real in four of its five workspaces
-and retrospective in the fifth.
+**RONL Business API's backend workflow used to trigger on `push` alone**
+([ronl-business-api#87](https://github.com/sgort/ronl-business-api/issues/87),
+closed 2026-09-12). Its 2008 tests ran only _after_ a merge, so its backend branch
+threshold gated nothing on a pull request — it would fail on `acc`, after the
+fact, rather than on the branch that caused it. The floor was real in four of its
+five workspaces and retrospective in the fifth.
+
+It proved itself immediately: an `axios` 1.18 security bump broke the backend
+build on the pull request, with 1,859 tests passing and one suite failing to
+compile on a widened header type. Before the trigger existed, that lands on `acc`.
 
 This is the same gap Linked Data Explorer closed, where it had let a genuine
 defect sit on a pushed branch for days because no pull request ever ran the test
@@ -1189,9 +1276,11 @@ nothing:
 
 | repository           | `acc`             | `main`            |
 | -------------------- | ----------------- | ----------------- |
-| ttl-editor           | ✅ `6e8e019` both | ✅ `bbda389` both |
-| linked-data-explorer | ✅ `af1341a` both | ✅ `35a44f8` both |
-| ronl-business-api    | ✅ `8f5c225` both | ✅ `04840ed` both |
+| ttl-editor           | ✅ `f7fe80f` both | ✅ `f5bae6a` both |
+| linked-data-explorer | ✅ `daa4816` both | ✅ `be6bc54` both |
+| ronl-business-api    | ✅ `0a3a891` both | ✅ `04840ed` both |
+
+All six refs verified by `ls-remote` against both remotes on 12 September 2026.
 
 Linked Data Explorer's row is as of 2026-09-11, and a tick here means synced at
 the last check, not kept in sync. The mirror is pushed by hand, so every merge
@@ -1299,10 +1388,34 @@ missing" is a reason to stop.
 
 ### What would have caught it earlier
 
-Nothing in place did, and nothing added since does. The mirror has no CI, so the
-only signal available is comparison, and the cheapest form is the `ls-remote`
-table above — four seconds, no clone, safe to run anywhere. Worth running at each
-release rather than discovering the answer six months later.
+Nothing in place did. Since 12 September 2026 something does, in all three
+repositories: **`scripts/check-mirror.sh`**, wired into each repository's own
+`/bump-release` step and runnable as `npm run check-mirror`.
+
+It cannot run in CI, and that is a property of the mirror rather than a
+shortcoming: the `gitlab` remote lives in `.git/config` and no tracked file names
+the host, so an Actions runner has no such remote, no key for it and no route to
+it. It runs where the push actually happens.
+
+Two details carried straight from this section:
+
+- **It prints the remote-tracking form**, `git push gitlab
+origin/acc:refs/heads/acc`, never `git push gitlab acc` — the distinction that
+  would otherwise have sent Linked Data Explorer's four-month-old local `main` to
+  its mirror.
+- **It separates behind from diverged** with `merge-base --is-ancestor`, which a
+  commit count cannot: "253 behind" and "18 ahead and 306 behind" both read as
+  "stale". Behind prints the fast-forward command; diverged refuses to suggest a
+  push at all and points at the archive procedure above.
+
+It never pushes. Writing to a shared remote stays a human's decision, so it
+prints the command and exits non-zero. All four paths — match, behind, diverged,
+missing — were exercised against a scratch bare repository standing in as a
+mirror, rather than reasoned about.
+
+**It closes the observation half, not the drift.** Nothing still keeps the mirror
+synced _between_ releases; it drifts on every merge, and a release is simply the
+point where that is now noticed rather than discovered six months later.
 
 ---
 
@@ -1310,10 +1423,13 @@ release rather than discovering the answer six months later.
 
 | repository           | issue | what                                                                                        |
 | -------------------- | ----- | ------------------------------------------------------------------------------------------- |
-| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                                    |
-| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor                  |
-| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped            |
-| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective           |
+| ronl-business-api    | —     | **`acc` ruleset lacks `deletion` and `non_fast_forward`** — its own `main` has both         |
+| ronl-business-api    | —     | Semgrep `scan` runs but is not required; a 435-finding baseline still to triage             |
+| ronl-business-api    | #34   | the backend deploy bundle's dependencies come from `npm install`, with no lockfile          |
+| ronl-business-api    | #35   | the backend deploy is a hand-run script, outside every gate on this page                    |
+| ronl-business-api    | #37   | PR previews cannot reach the backend, so they only prove pages render                       |
+| ronl-business-api    | #38   | a `package.json`-only change triggers a full backend build                                  |
+| linked-data-explorer | #113  | three hand-maintained Node pins, and nothing keeps them in step                             |
 | linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                         |
 | ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip       |
 | ronl-business-api    | #99   | the public process filter tests for `active`, a status LDE's schema forbids                 |
@@ -1324,9 +1440,23 @@ release rather than discovering the answer six months later.
 | ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                      |
 | linked-data-explorer | #96   | Tailwind Play CDN runs from a third-party origin in the production frontend                 |
 | linked-data-explorer | #97   | remaining: confirm Monday's run opens one lock-file-maintenance PR, and the slot stays free |
-| ronl-business-api    | —     | nothing keeps the mirror synced: it drifts on every merge, pushed by hand                   |
+| all three            | —     | nothing keeps the mirrors synced _between_ releases; `check-mirror` only observes           |
 | linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows         |
 | linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod      |
+
+**Closed for RONL Business API on 2026-09-12**, in one pass: #83
+(check-supply-chain promoted to blocking), #84 (`@ronl/shared` kept free of logic,
+with a check that enforces it rather than a convention that asks), #85 (the
+unreachable `PHASE_NOT_MODELLED` branch and its three permanently-skipped tests),
+#87 (backend tests before merge) and #36 (one Node version, read from `.nvmrc`).
+Its mirror row is narrowed rather than closed — see §5.
+
+**The first two rows are the ones to read twice**, because neither is a new
+discovery. The ruleset gap is an omission: the alignment work started at C2 and
+never returned to C1, so one repository now carries two rulesets that differ in a
+way nobody decided. The Semgrep row is deliberate — a gate required before its
+baseline is triaged is a gate that gets bypassed — but deliberate is not the same
+as done.
 
 Closed since the previous revision: Linked Data Explorer's frontend zero-margin
 entry, by
