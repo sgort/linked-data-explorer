@@ -28,10 +28,10 @@ YAML, thresholds read from the config that declares them, mirror state from
 `ls-remote` against both remotes.
 
 Revised **12 September 2026**, after RONL Business API promoted `acc` to
-production for the first time since 17 July and then closed nine of the eleven
-alignment items it had been carrying — leaving one skipped and one out of scope,
-both named in §"What changed" below. ttl-editor's and Linked Data Explorer's rows
-were re-verified the same day.
+production for the first time since 17 July and then closed ten of the eleven
+alignment items it had been carrying — the eleventh being out of scope rather
+than skipped, and named in §"What changed" below. ttl-editor's and Linked Data
+Explorer's rows were re-verified the same day.
 
 | repository           | `acc` at  | `main` at |
 | -------------------- | --------- | --------- |
@@ -43,20 +43,20 @@ were re-verified the same day.
 
 ## Summary
 
-|                               | ttl-editor            | linked-data-explorer      | ronl-business-api     |
-| ----------------------------- | --------------------- | ------------------------- | --------------------- |
-| **Build id in the changelog** | ✅                    | ✅                        | ✅ exercised in PROD  |
-| **check-supply-chain**        | ✅ blocking           | ✅ blocking               | ✅ blocking           |
-| **Semgrep Code + SCA**        | ✅ required           | ✅ required               | ⚠️ runs, not required |
-| **Per-file 80% branch floor** | ✅ 1 runner           | ✅ 2 runners              | ✅ 5 runners          |
-| **Formatting checked in CI**  | ✅                    | ✅                        | ✅                    |
-| **Tests run before merge**    | ✅                    | ✅                        | ✅                    |
-| **Renovate lock-file maint.** | ✅                    | ✅                        | ✅                    |
-| **One Node version**          | ✅ single literal     | ⚠️ 3 literals, #80        | ✅ `.nvmrc`, one file |
-| **`acc` ruleset**             | PR + `audit` + `scan` | + `deletion`, `non-ff`    | ⚠️ PR + `audit` only  |
-| **`main` ruleset**            | ⚠️ classic, no checks | ✅ full, `audit` + `scan` | ✅ full, `audit`      |
-| **Mirror checked at release** | ✅ `check-mirror`     | ✅ `check-mirror`         | ✅ `check-mirror`     |
-| **Mirror in sync**            | ✅ both               | ✅ both                   | ✅ both               |
+|                               | ttl-editor            | linked-data-explorer      | ronl-business-api         |
+| ----------------------------- | --------------------- | ------------------------- | ------------------------- |
+| **Build id in the changelog** | ✅                    | ✅                        | ✅ exercised in PROD      |
+| **check-supply-chain**        | ✅ blocking           | ✅ blocking               | ✅ blocking               |
+| **Semgrep Code + SCA**        | ✅ required           | ✅ required               | ⚠️ runs, not required     |
+| **Per-file 80% branch floor** | ✅ 1 runner           | ✅ 2 runners              | ✅ 5 runners              |
+| **Formatting checked in CI**  | ✅                    | ✅                        | ✅                        |
+| **Tests run before merge**    | ✅                    | ✅                        | ✅                        |
+| **Renovate lock-file maint.** | ✅                    | ✅                        | ✅                        |
+| **One Node version**          | ✅ single literal     | ⚠️ 3 literals, #80        | ✅ `.nvmrc`, one file     |
+| **`acc` ruleset**             | PR + `audit` + `scan` | + `deletion`, `non-ff`    | ✅ + `deletion`, `non-ff` |
+| **`main` ruleset**            | ⚠️ classic, no checks | ✅ full, `audit` + `scan` | ✅ full, `audit`          |
+| **Mirror checked at release** | ✅ `check-mirror`     | ✅ `check-mirror`         | ✅ `check-mirror`         |
+| **Mirror in sync**            | ✅ both               | ✅ both                   | ✅ both                   |
 
 Nothing in that table is uniform by accident. Each application has a different
 build shape, and the differences below are re-derived per repository rather than
@@ -64,14 +64,15 @@ copied.
 
 ### What changed on 12 September 2026
 
-RONL Business API worked from an eleven-item list and closed **nine** of them in
-a day, in the order that made each one cheap. One was skipped and one was
-deliberately out of scope. The list is reproduced here because the **shape** of
-what remains is the useful part, not the ticks:
+RONL Business API worked from an eleven-item list and closed **ten** of them in a
+day, in the order that made each one cheap — the eleventh being out of scope
+rather than skipped. The list is reproduced here because the **shape** of the
+work is the useful part, not the ticks: one item was passed over at the start and
+only came back last, which is the failure mode worth remembering.
 
 | item    |                                    | outcome                                                                  |
 | ------- | ---------------------------------- | ------------------------------------------------------------------------ |
-| **C1**  | `acc` ruleset: `deletion` + non-ff | ❌ **not done** — still PR + `audit` only. The one item skipped          |
+| **C1**  | `acc` ruleset: `deletion` + non-ff | ✅ closed last, a month after `main` got the same two rules              |
 | **C2**  | Backend tests before merge         | ✅ `pull_request` trigger added, #87 closed                              |
 | **C3**  | `check-supply-chain` blocking      | ✅ `continue-on-error` removed, #83 closed                               |
 | **C4**  | Formatting checked in CI           | ✅ `npm ci` + `check-format` in the `audit` job                          |
@@ -83,25 +84,37 @@ what remains is the useful part, not the ticks:
 | **C10** | Branch-floor loose ends            | ✅ #84 and #85 closed                                                    |
 | **C11** | Refresh `the-gate-has-teeth.md`    | ✅ three false claims corrected in place rather than deleted             |
 
-**C1 is the item to notice.** Work started at C2 and never came back to it, so
-RONL Business API's two rulesets differ in a way nobody decided:
+**C1 was the item to notice, and it closed last.** Work started at C2 and only
+came back to it at the end of the day, so for a month RONL Business API's two
+rulesets differed in a way nobody had decided — `main` carrying `deletion` and
+`non_fast_forward` from the day it was created during the promotion, `acc`
+carrying neither. Both now have all four rules.
 
-| on     | `deletion`                  | `non_fast_forward`            |
-| ------ | --------------------------- | ----------------------------- |
-| `acc`  | — (blocked by classic only) | **absent — force-push works** |
-| `main` | ✅ ruleset                  | ✅ ruleset                    |
+**They still differ in exactly one parameter, deliberately:**
 
-Worth reading precisely rather than as "unprotected". Deletion of `acc` is
-blocked, but by **classic branch protection** (`allow_deletions: false`), not by
-the ruleset — a second mechanism doing the job the first was supposed to, which
-is its own kind of drift. Force-push is genuinely open: classic protection has
-`allow_force_pushes: true` and no ruleset rule overrides it, so `acc` can be
-rewritten by anyone who can push to it, while `main` — created the same week —
-cannot.
+|        | `require_extra_approval_for_unattributed_changes` |
+| ------ | ------------------------------------------------- |
+| `acc`  | `true`                                            |
+| `main` | **`false`**                                       |
 
-Checked with `gh api repos/…/rules/branches/acc`, which reports the **effective**
-rules from every ruleset at once, rather than by reading one ruleset and assuming
-it is the only one.
+`main`'s was set false on purpose: its promotion carried commits under three
+author identities against a ruleset requiring **zero** approvals, so the flag
+would have demanded an approval nobody could give. Preserved rather than
+harmonised when `acc` was updated, and now recorded in that repository's
+`SECURITY-PIPELINE.md` and `the-gate-has-teeth.md` as well, so the next person to
+compare them does not read it as drift.
+
+**Classic branch protection reports `allow_force_pushes: true` on both branches,
+and that is not a hole.** It never was for `main` either. The ruleset's
+`non_fast_forward` is what refuses the push; the classic setting is a vestigial
+second layer that the effective-rules view sees past.
+
+That distinction is why this row was checked with
+`gh api repos/…/rules/branches/<branch>`, which reports the **effective** rules
+from every ruleset at once. Reading one ruleset, or the classic protection
+endpoint alone, gives the wrong answer — an earlier draft of this very section
+claimed `acc` "can still be deleted", which the effective view disproved:
+deletion was already blocked, by the classic layer rather than the ruleset.
 
 ---
 
@@ -1423,7 +1436,6 @@ point where that is now noticed rather than discovered six months later.
 
 | repository           | issue | what                                                                                        |
 | -------------------- | ----- | ------------------------------------------------------------------------------------------- |
-| ronl-business-api    | —     | **`acc` ruleset lacks `deletion` and `non_fast_forward`** — its own `main` has both         |
 | ronl-business-api    | —     | Semgrep `scan` runs but is not required; a 435-finding baseline still to triage             |
 | ronl-business-api    | #34   | the backend deploy bundle's dependencies come from `npm install`, with no lockfile          |
 | ronl-business-api    | #35   | the backend deploy is a hand-run script, outside every gate on this page                    |
@@ -1451,12 +1463,18 @@ unreachable `PHASE_NOT_MODELLED` branch and its three permanently-skipped tests)
 #87 (backend tests before merge) and #36 (one Node version, read from `.nvmrc`).
 Its mirror row is narrowed rather than closed — see §5.
 
-**The first two rows are the ones to read twice**, because neither is a new
-discovery. The ruleset gap is an omission: the alignment work started at C2 and
-never returned to C1, so one repository now carries two rulesets that differ in a
-way nobody decided. The Semgrep row is deliberate — a gate required before its
-baseline is triaged is a gate that gets bypassed — but deliberate is not the same
-as done.
+Two of the day's closures carry no issue number and would otherwise go
+unrecorded: **C1**, which gave `acc` the `deletion` and `non_fast_forward` rules
+`main` had carried since the promotion, and **C11**, which corrected three claims
+in that repository's `the-gate-has-teeth.md` that its own gates had falsified.
+
+**The first row is the one to read twice.** The Semgrep gap is deliberate — a
+gate required before its baseline is triaged is a gate that gets bypassed — but
+deliberate is not the same as done, and 435 findings do not triage themselves.
+
+The ruleset gap that sat above it closed the same day, last of the eleven. It is
+worth remembering as a shape rather than a ticket: work that starts at item two
+does not come back to item one on its own.
 
 Closed since the previous revision: Linked Data Explorer's frontend zero-margin
 entry, by
