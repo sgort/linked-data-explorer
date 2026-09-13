@@ -196,8 +196,8 @@ TTL scores higher because it writes the assessment down: its `renovate.json`
 defers Tailwind CSS 4 and ESLint 10 with reasons — ESLint 10 because three plugins
 do not yet declare support and `npm` installs anyway with only a warning, so a v10
 pull request would go green while broken. That is the assessment this
-recommendation asks for. RBA has 31 majors queued behind the checkbox, none yet
-assessed.
+recommendation asks for. RBA has 18 majors pending approval behind the checkbox —
+41 distinct packages once its grouped updates are unpacked — none yet assessed.
 
 ### 8 — Periodic, tool-driven updates
 
