@@ -76,11 +76,13 @@ jest.mock('../utils/config', () => ({
 import { promises as fs } from 'fs';
 import SHACLValidator from 'rdf-validate-shacl';
 import { constructGraph } from './triplydb.service';
+import logger from '../utils/logger';
 import { ShaclValidationService, shaclValidationService } from './shacl-validation.service';
 
 const mockReadFile = fs.readFile as unknown as jest.Mock;
 const mockReaddir = fs.readdir as unknown as jest.Mock;
 const mockConstructGraph = constructGraph as jest.Mock;
+const mockLogError = (logger as unknown as { error: jest.Mock }).error;
 const validatorState = (
   SHACLValidator as unknown as { state: { reports: any[]; instances: number } }
 ).state;
@@ -123,6 +125,7 @@ beforeEach(() => {
   mockReadFile.mockReset();
   mockReaddir.mockReset();
   mockConstructGraph.mockReset();
+  mockLogError.mockClear();
   validatorState.reports = [];
   validatorState.instances = 0;
   configMock.triplydb.endpoint = 'https://default.example/sparql';
@@ -169,7 +172,49 @@ describe('shape layer loading', () => {
 
     expect(result.layers['cpsv-ap'].loaded).toBe(false);
     expect(result.layers.cprmv.loaded).toBe(false);
+    // Nothing was checked, so nothing may be reported as passing.
+    expect(result.complete).toBe(false);
+    expect(result.valid).toBe(false);
+  });
+
+  test('reports a complete shape set when every layer loaded', async () => {
+    allShapesPresent();
+
+    const result = await service().validateFile(ttl([]));
+
+    expect(result.complete).toBe(true);
     expect(result.valid).toBe(true);
+  });
+
+  test('fails closed: a graph with no violations is not valid while a layer is missing', async () => {
+    mockReadFile.mockResolvedValue(SHAPE_TTL);
+    mockReaddir.mockRejectedValue(new Error('ENOENT'));
+
+    const result = await service().validateFile(ttl([]));
+
+    expect(result.summary.errors).toBe(0);
+    expect(result.layers['ronl-custom'].loaded).toBe(false);
+    expect(result.complete).toBe(false);
+    expect(result.valid).toBe(false);
+  });
+
+  test('logs an error naming every layer that failed to load', async () => {
+    mockReadFile.mockRejectedValue(new Error('ENOENT'));
+    mockReaddir.mockResolvedValue([]);
+
+    await service().validateFile(ttl([]));
+
+    expect(mockLogError).toHaveBeenCalledTimes(1);
+    const [, meta] = mockLogError.mock.calls[0];
+    expect([...meta.missing].sort()).toEqual(['cprmv', 'cpsv-ap', 'ronl-custom']);
+  });
+
+  test('logs no error when every layer loaded', async () => {
+    allShapesPresent();
+
+    await service().validateFile(ttl([]));
+
+    expect(mockLogError).not.toHaveBeenCalled();
   });
 
   test('leaves a layer unloaded when its shape directory is missing', async () => {
@@ -201,6 +246,7 @@ describe('validateFile', () => {
     const result = await service().validateFile('INVALID turtle');
 
     expect(result.valid).toBe(false);
+    expect(result.complete).toBe(false);
     expect(result.parseError).toBe('Unexpected "]" on line 3');
     expect(result.summary).toEqual({ errors: 0, warnings: 0, infos: 0 });
     expect(result.layers['cpsv-ap']).toEqual({
@@ -659,5 +705,42 @@ describe('validateMerged', () => {
 describe('module exports', () => {
   test('the singleton is a ShaclValidationService', () => {
     expect(shaclValidationService).toBeInstanceOf(ShaclValidationService);
+  });
+});
+
+describe('getLayerStatus', () => {
+  test('reports every layer loaded and the set complete', async () => {
+    allShapesPresent();
+
+    const status = await service().getLayerStatus();
+
+    expect(status.complete).toBe(true);
+    expect(status.layers).toEqual({
+      cprmv: { label: 'CPRMV 0.4.1', loaded: true },
+      'cpsv-ap': { label: 'CPSV-AP 3.2.0', loaded: true },
+      'ronl-custom': { label: 'RONL Custom', loaded: true },
+    });
+  });
+
+  test('reports a missing layer and the set incomplete', async () => {
+    mockReadFile.mockResolvedValue(SHAPE_TTL);
+    mockReaddir.mockRejectedValue(new Error('ENOENT'));
+
+    const status = await service().getLayerStatus();
+
+    expect(status.complete).toBe(false);
+    expect(status.layers['ronl-custom'].loaded).toBe(false);
+    expect(status.layers['cpsv-ap'].loaded).toBe(true);
+  });
+
+  test('reuses the loaded shapes rather than reading them again', async () => {
+    allShapesPresent();
+    const svc = service();
+
+    await svc.validateFile(ttl([]));
+    const reads = mockReadFile.mock.calls.length;
+    await svc.getLayerStatus();
+
+    expect(mockReadFile.mock.calls).toHaveLength(reads);
   });
 });

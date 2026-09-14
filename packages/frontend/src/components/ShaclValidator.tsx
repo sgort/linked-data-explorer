@@ -49,6 +49,8 @@ interface LayerResult {
 
 interface ValidationResult {
   valid: boolean;
+  /** Every shape layer loaded. Absent from backends older than the field. */
+  complete?: boolean;
   parseError: string | null;
   layers: {
     cprmv: LayerResult;
@@ -189,6 +191,29 @@ function LayerSection({ layer }: { layer: LayerResult }) {
   );
 }
 
+// ── Verdict ───────────────────────────────────────────────────────────────────
+
+type Verdict = 'valid' | 'invalid' | 'unchecked';
+
+/**
+ * Green only when every shape layer ran. A file with no errors while a layer did
+ * not load is "unchecked", not valid. `complete` is derived from the layers when
+ * the backend predates it: such a backend reported `valid: true` with every layer
+ * unloaded, and the frontend and backend deploy separately.
+ */
+function verdictOf(result: ValidationResult) {
+  const layerList = Object.values(result.layers);
+  const unloadedLayers = layerList.filter((l) => !l.loaded).length;
+  const complete = result.complete ?? unloadedLayers === 0;
+
+  let verdict: Verdict;
+  if (result.valid && complete) verdict = 'valid';
+  else if (!result.parseError && result.summary.errors === 0 && !complete) verdict = 'unchecked';
+  else verdict = 'invalid';
+
+  return { verdict, unloadedLayers, layerCount: layerList.length };
+}
+
 // ── Entry card ────────────────────────────────────────────────────────────────
 
 interface EntryCardProps {
@@ -199,6 +224,9 @@ interface EntryCardProps {
 
 function EntryCard({ entry, onRemove, onValidate }: EntryCardProps) {
   const { id, name, size, isValidating, result, error } = entry;
+  const { verdict, unloadedLayers, layerCount } = result
+    ? verdictOf(result)
+    : { verdict: null, unloadedLayers: 0, layerCount: 0 };
 
   return (
     <div className="flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden min-w-0 flex-1 basis-80">
@@ -266,19 +294,40 @@ function EntryCard({ entry, onRemove, onValidate }: EntryCardProps) {
             {/* Summary */}
             <div
               className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border ${
-                result.valid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                verdict === 'valid'
+                  ? 'bg-green-50 border-green-200'
+                  : verdict === 'unchecked'
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-red-50 border-red-200'
               }`}
             >
-              {result.valid ? (
+              {verdict === 'valid' ? (
                 <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
+              ) : verdict === 'unchecked' ? (
+                <AlertTriangle size={16} className="text-amber-500 flex-shrink-0" />
               ) : (
                 <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
               )}
               <span
-                className={`text-xs font-semibold ${result.valid ? 'text-green-700' : 'text-red-700'}`}
+                className={`text-xs font-semibold ${
+                  verdict === 'valid'
+                    ? 'text-green-700'
+                    : verdict === 'unchecked'
+                      ? 'text-amber-700'
+                      : 'text-red-700'
+                }`}
               >
-                {result.valid ? 'Valid' : 'Invalid'}
+                {verdict === 'valid'
+                  ? 'Valid'
+                  : verdict === 'unchecked'
+                    ? 'Not validated'
+                    : 'Invalid'}
               </span>
+              {verdict === 'unchecked' && (
+                <span className="text-[10px] text-amber-700">
+                  {unloadedLayers} of {layerCount} shape layers not loaded
+                </span>
+              )}
               <div className="flex gap-1 ml-auto flex-wrap justify-end">
                 {result.summary.errors > 0 && (
                   <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-medium">
@@ -295,7 +344,7 @@ function EntryCard({ entry, onRemove, onValidate }: EntryCardProps) {
                     {result.summary.infos}I
                   </span>
                 )}
-                {result.valid && result.summary.warnings === 0 && (
+                {verdict === 'valid' && result.summary.warnings === 0 && (
                   <span className="text-[10px] text-green-600 font-medium">All checks passed</span>
                 )}
               </div>
