@@ -17,6 +17,11 @@ cannot run in CI: `scripts/check-mirror.sh`, called at each release, compares th
 GitLab mirror against GitHub and distinguishes _behind_ from _diverged_. §5
 explains why a runner cannot do it.
 
+A **sixth** runs outside CI as well, as of 14 September 2026:
+`scripts/check-deps.sh`, which stops a dev server from starting on an install
+that no longer matches `package-lock.json` and names `npm ci` as the fix. §2
+covers it with the rest of the npm tree.
+
 **This page is the single documented source for ttl-editor and Linked Data
 Explorer.** Until 2026-09-11 each repository carried its own copy; the two had
 drifted in both directions — each gaining sections the other lacked — so
@@ -27,7 +32,11 @@ memory — rulesets read from the API, workflow triggers and steps parsed from t
 YAML, thresholds read from the config that declares them, mirror state from
 `ls-remote` against both remotes.
 
-Revised **12 September 2026**, after RONL Business API promoted `acc` to
+Revised **14 September 2026**: repository heads and mirror state re-verified that
+day. Other rows carry over from 12 September unless §"What changed on
+14 September 2026" says otherwise.
+
+Previously revised **12 September 2026**, after RONL Business API promoted `acc` to
 production for the first time since 17 July and then closed ten of the eleven
 alignment items it had been carrying — the eleventh being out of scope rather
 than skipped, and named in §"What changed" below. ttl-editor's and Linked Data
@@ -35,9 +44,9 @@ Explorer's rows were re-verified the same day.
 
 | repository           | `acc` at  | `main` at |
 | -------------------- | --------- | --------- |
-| ttl-editor           | `f7fe80f` | `f5bae6a` |
-| linked-data-explorer | `daa4816` | `be6bc54` |
-| ronl-business-api    | `0a3a891` | `04840ed` |
+| ttl-editor           | `2ada306` | `f5bae6a` |
+| linked-data-explorer | `1544939` | `01fcd67` |
+| ronl-business-api    | `130bfc1` | `311d732` |
 
 ---
 
@@ -57,10 +66,42 @@ Explorer's rows were re-verified the same day.
 | **`main` ruleset**            | ⚠️ classic, no checks | ✅ full, `audit` + `scan` | ✅ full, `audit`          |
 | **Mirror checked at release** | ✅ `check-mirror`     | ✅ `check-mirror`         | ✅ `check-mirror`         |
 | **Mirror in sync**            | ✅ both               | ✅ both                   | ✅ both                   |
+| **Install checked at start**  | ✅ `start`            | ✅ `dev`, three scripts   | ✅ `dev`                  |
 
 Nothing in that table is uniform by accident. Each application has a different
 build shape, and the differences below are re-derived per repository rather than
 copied.
+
+### What changed on 14 September 2026
+
+One day across all three repositories, and two findings nobody had planned for.
+
+| repository           | change                                                                                       | pull request                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| ronl-business-api    | `deps:check` stops firing on every release bump, and names `npm ci`                          | [#128](https://github.com/sgort/ronl-business-api/pull/128)    |
+| linked-data-explorer | the same check, new here                                                                     | [#121](https://github.com/sgort/linked-data-explorer/pull/121) |
+| linked-data-explorer | Renovate's action bump, with the register moved on its own branch                            | [#104](https://github.com/sgort/linked-data-explorer/pull/104) |
+| linked-data-explorer | SHACL shapes shipped to production; validation fails closed; both backend deploys gate on it | [#123](https://github.com/sgort/linked-data-explorer/pull/123) |
+| linked-data-explorer | that gate waits for the new build to answer                                                  | [#124](https://github.com/sgort/linked-data-explorer/pull/124) |
+| linked-data-explorer | promoted to production, no release cut                                                       | [#125](https://github.com/sgort/linked-data-explorer/pull/125) |
+| ttl-editor           | the same check, new here                                                                     | [#142](https://github.com/sgort/ttl-editor/pull/142)           |
+
+**Linked Data Explorer's production SHACL Validator had been checking nothing.**
+Every file reported Valid with all three shape layers _Not loaded_; the same
+file on acceptance was Invalid with 25 errors. Two faults had stacked: the shape
+files were only ever copied into the acceptance deploy package, and a layer that
+did not load counted as a layer with no errors. §4 has the workflow half, under
+"A fix made in one environment's workflow is half a fix".
+
+**The deploy check written for it failed its first run, on a sound deploy.** It
+read the previous build, still answering after the deploy step had returned. §1
+records why, under "A post-deploy check has to know which build answered", and
+two issues track the exact fix: [linked-data-explorer#122](https://github.com/sgort/linked-data-explorer/issues/122) and
+[ronl-business-api#129](https://github.com/sgort/ronl-business-api/issues/129).
+
+**Nothing had checked a workstation's install against its lockfile**, in any of
+the three. §2 has the measurement and the check, under "The tree on a
+workstation".
 
 ### What changed on 12 September 2026
 
@@ -292,6 +333,52 @@ Two details that only a first run surfaces:
   page in a browser; a prerendered-HTML grep is the wrong probe and reads as
   failure.
 
+### A post-deploy check has to know which build answered
+
+Everything above concerns the frontends. The backends report a **release**, not
+a build: `/v1/health` returns the hand-authored `version` from `package.json`,
+so every deploy between two releases answers with the same string. On
+14 September Linked Data Explorer's acceptance backend reported `2026.09.4` with
+an uptime placing its start after #121's deploy — the string the build before it
+had reported too.
+
+That stopped being academic the same day.
+[linked-data-explorer#123](https://github.com/sgort/linked-data-explorer/pull/123) added a step to both backend
+deploy workflows that fails unless `/v1/health` reports `shacl.complete: true`.
+Its first run, on acceptance, failed a sound deploy:
+
+| step                                                         | UTC      |
+| ------------------------------------------------------------ | -------- |
+| _Deploy to Azure Web App_ finished                           | 10:21:15 |
+| _Health check_ passed                                        | 10:21:36 |
+| SHACL check gave up: `shacl.complete` null, 3 attempts, 34 s | 10:22:10 |
+| new build started (uptime 163 s at 10:25:07)                 | 10:22:24 |
+
+`null` meant a response with no `shacl` block at all — **the previous build,
+still answering.** The existing _Health check_ step had passed against it, and
+always would: it asks for HTTP 200, which either build returns.
+[linked-data-explorer#124](https://github.com/sgort/linked-data-explorer/pull/124) widened the wait to 12 attempts,
+15 s apart. The production deploy then logged four
+`Attempt n/12: shacl.complete is null` lines before
+`✅ SHACL shape layers all loaded`, about a minute after Azure reported the deploy
+done. The 34-second window would have failed production exactly as it failed
+acceptance.
+
+Two things to carry:
+
+- **A deploy action returning is not the new build serving.** App Service kept
+  the old process answering for a minute or more while the new one started. A
+  check that runs straight after the deploy step is checking the old build,
+  unless it can tell the two apart.
+- **Waiting for a field is a proxy.** It works only while the old build lacks the
+  field. The next deploy's old build has it, so a pass there proves nothing about
+  which build answered — the acceptance redeploy of #124 passed on its first
+  attempt, and cannot say which build it read. The exact form is a `build` block carrying the
+  commit SHA, asserted against the SHA the workflow deployed:
+  [linked-data-explorer#122](https://github.com/sgort/linked-data-explorer/issues/122) for the workflow-deployed
+  backend, [ronl-business-api#129](https://github.com/sgort/ronl-business-api/issues/129) for the script-deployed
+  one, which must also refuse to deploy a commit GitHub does not have.
+
 ---
 
 ## 2. Supply-chain verification — is the pin telling the truth?
@@ -359,6 +446,12 @@ green result to merge on.
 Exercised twice in Linked Data Explorer before that repository promoted its step
 to blocking. In each case the register moved on the bump's branch, the check went
 green there, and the pull request merged green.
+
+A third time on 14 September, after it blocked: [linked-data-explorer#104](https://github.com/sgort/linked-data-explorer/pull/104)
+moved `zizmorcore/zizmor-action`, and its `audit` failed on register agreement
+alone — pin truth held. The row was updated on the bump's branch, the check went
+green there, and it merged green. That is the habit working, and also the
+reminder that it is still a habit: the row had to be written by hand.
 
 ### All three now block — and the last one is the clearest evidence why
 
@@ -749,6 +842,60 @@ Two costs come with making it required, both accepted deliberately:
   stop until the ruleset is edited. `check-supply-chain` accepted an analogous
   risk for the GitHub API — but the GitHub API is a dependency of the platform
   anyway, and semgrep.dev is not. That is a genuinely new class of outage.
+
+#### The tree on a workstation: nothing checked the install
+
+CI installs with `npm ci` everywhere, so the tree that passes the tests matches
+the lockfile. The tree a developer runs had no such guarantee. `git merge
+--ff-only` brings lockfile changes and installs nothing, so a dev server starts on
+whatever was installed last — and every scan above describes the lockfile, not
+that tree.
+
+Measured on one workstation on 14 September, after routine fast-forwards,
+excluding optional packages:
+
+|                      | installed at a different version | missing |
+| -------------------- | -------------------------------- | ------- |
+| linked-data-explorer | 152                              | 95      |
+| ttl-editor           | 53                               | 86      |
+
+All three now check at dev-server start —
+[ronl-business-api#128](https://github.com/sgort/ronl-business-api/pull/128),
+[linked-data-explorer#121](https://github.com/sgort/linked-data-explorer/pull/121) and
+[ttl-editor#142](https://github.com/sgort/ttl-editor/pull/142) — with the same `scripts/check-deps.sh`
+comparing `package-lock.json` against a snapshot written after each install.
+Four details decided whether it works:
+
+- **Compare parsed JSON, ignoring the repository's own versions.** RONL Business
+  API's first version compared bytes, and refused to start the dev servers after
+  every release: a bump rewrites the root and workspace `version` fields in the
+  lockfile and nothing else. Those describe what the repository publishes, not
+  what is installed. Third-party versions and dependency lists are still
+  compared, and parsing makes line endings irrelevant.
+- **Name `npm ci`, not `npm install`.** `npm install` re-resolves the caret
+  ranges and, with no package-manager cooldown, can pull a transitive version
+  published that morning — ICTU's recommendations 3, 4 and 6, assessed in
+  [`ICTU-dependencies-assessment.md`](ICTU-dependencies-assessment.md). RONL
+  Business API's check had named `npm install`.
+- **Write the snapshot in Node where a container you do not own installs.** It
+  runs as `postinstall`, and Oryx runs `npm install` for both Static Web Apps
+  builds it owns — Linked Data Explorer's frontend and ttl-editor — so the
+  script runs inside the `staticappsclient` container, as both repositories'
+  pull-request deploy logs show. That container runs npm, so it runs node;
+  nothing promises it a shell. RONL Business API builds on the runner and keeps
+  a bash snapshot.
+- **A root `prepare` runs where root devDependencies are absent.** Linked Data
+  Explorer's backend workflows run `npm ci` with `working-directory:
+packages/backend`, which skips the root devDependencies but still runs the root
+  lifecycle scripts. #121's first version replaced `husky install || true` with a
+  bare `husky`, on the claim that husky was present wherever it ran; the backend
+  deploy on that pull request failed with `sh: 1: husky: not found`, exit 127.
+  `prepare` is now `husky || true` — husky 9 exits 0 on every path once it runs,
+  so the `|| true` can hide only its absence.
+
+Like `check-mirror`, it runs where the state it describes exists — on the
+developer's machine — and gates nothing in CI. The first start after each merge
+asks for `npm ci` once, because no snapshot has been written before.
 
 ---
 
@@ -1196,6 +1343,37 @@ own file.
 The practical rule when predicting what a merge will deploy: read the whole
 `paths:` list, not the entry that looks like the package.
 
+### A fix made in one environment's workflow is half a fix
+
+Linked Data Explorer's backend reads its SHACL shape files at runtime from
+`packages/backend/shapes/`, and `tsc` emits only `dist/`, so the deploy package
+needs them copied in. [`968b4a5`](https://github.com/sgort/linked-data-explorer/commit/968b4a5), on 4 June 2026, added
+that copy to `azure-backend-acc.yml` and to no other workflow. The production
+workflow never gained it. For three months the two differed in a step nobody had
+decided, and nothing compared them: acceptance worked, so the feature worked.
+
+It surfaced on 14 September, when the validator was tried in production: every file
+Valid, every layer _Not loaded_. The service logged a warning per missing file,
+and a unit test asserted `valid: true` for a missing layer — the fail-open was
+pinned, not overlooked.
+
+[linked-data-explorer#123](https://github.com/sgort/linked-data-explorer/pull/123) closed it at three points, each
+catching a different failure:
+
+- **The package, in both workflows.** After the copy, the files the service's
+  layer list names must exist, or the step fails before anything deploys.
+- **The service.** `valid` requires every layer to have loaded; the frontend
+  shows _Not validated_, never _Valid_, for a clean result with a layer missing.
+- **The running app.** `/v1/health` reports `shacl.complete` without changing
+  `status` — a 503 would invite platform health probes to act on one feature —
+  and both deploy workflows fail unless it reads `true`. §1 records what its
+  first run taught.
+
+The rule: **where acceptance and production have separate workflow files, a
+change to one is a change to carry, not a fix.** Diff the pair whenever either
+changes; the expected differences are few, and the missing copy would have been
+one of the lines left over.
+
 ### A commit message can turn every gate off
 
 GitHub Actions honours `[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]` and
@@ -1289,11 +1467,14 @@ nothing:
 
 | repository           | `acc`             | `main`            |
 | -------------------- | ----------------- | ----------------- |
-| ttl-editor           | ✅ `f7fe80f` both | ✅ `f5bae6a` both |
-| linked-data-explorer | ✅ `daa4816` both | ✅ `be6bc54` both |
-| ronl-business-api    | ✅ `0a3a891` both | ✅ `04840ed` both |
+| ttl-editor           | ✅ `2ada306` both | ✅ `f5bae6a` both |
+| linked-data-explorer | ✅ `1544939` both | ✅ `01fcd67` both |
+| ronl-business-api    | ✅ `130bfc1` both | ✅ `311d732` both |
 
-All six refs verified by `ls-remote` against both remotes on 12 September 2026.
+All six refs verified by `ls-remote` against both remotes on 14 September 2026,
+after each repository's last merge that day. Every merge was followed by a
+fast-forward push: four times in Linked Data Explorer, once in each of the
+others. The paragraphs below describe earlier passes.
 
 Linked Data Explorer's row is as of 2026-09-11, and a tick here means synced at
 the last check, not kept in sync. The mirror is pushed by hand, so every merge
@@ -1434,27 +1615,39 @@ point where that is now noticed rather than discovered six months later.
 
 ## 6. Open work
 
-| repository           | issue | what                                                                                        |
-| -------------------- | ----- | ------------------------------------------------------------------------------------------- |
-| ronl-business-api    | —     | Semgrep `scan` runs but is not required; a 435-finding baseline still to triage             |
-| ronl-business-api    | #34   | the backend deploy bundle's dependencies come from `npm install`, with no lockfile          |
-| ronl-business-api    | #35   | the backend deploy is a hand-run script, outside every gate on this page                    |
-| ronl-business-api    | #37   | PR previews cannot reach the backend, so they only prove pages render                       |
-| ronl-business-api    | #38   | a `package.json`-only change triggers a full backend build                                  |
-| linked-data-explorer | #113  | three hand-maintained Node pins, and nothing keeps them in step                             |
-| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                         |
-| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip       |
-| ronl-business-api    | #99   | the public process filter tests for `active`, a status LDE's schema forbids                 |
-| linked-data-explorer | #111  | the other half of #99: decide whether a bundle can ever be published `active`               |
-| ronl-business-api    | #96   | PROD's `KEYCLOAK_CLIENT_SECRET` is still the realm-export placeholder                       |
-| ronl-business-api    | #97   | `az … -o tsv \| gh secret set` stores a trailing newline; the deploy failure names nothing  |
-| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                   |
-| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                      |
-| linked-data-explorer | #96   | Tailwind Play CDN runs from a third-party origin in the production frontend                 |
-| linked-data-explorer | #97   | remaining: confirm Monday's run opens one lock-file-maintenance PR, and the slot stays free |
-| all three            | —     | nothing keeps the mirrors synced _between_ releases; `check-mirror` only observes           |
-| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows         |
-| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod      |
+| repository           | issue | what                                                                                                                   |
+| -------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------- |
+| ronl-business-api    | —     | Semgrep `scan` runs but is not required; a 435-finding baseline still to triage                                        |
+| ronl-business-api    | #34   | the backend deploy bundle's dependencies come from `npm install`, with no lockfile                                     |
+| ronl-business-api    | #35   | the backend deploy is a hand-run script, outside every gate on this page                                               |
+| ronl-business-api    | #37   | PR previews cannot reach the backend, so they only prove pages render                                                  |
+| ronl-business-api    | #38   | a `package.json`-only change triggers a full backend build                                                             |
+| linked-data-explorer | #113  | three hand-maintained Node pins, and nothing keeps them in step                                                        |
+| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                                                    |
+| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip                                  |
+| ronl-business-api    | #99   | the public process filter tests for `active`, a status LDE's schema forbids                                            |
+| linked-data-explorer | #111  | the other half of #99: decide whether a bundle can ever be published `active`                                          |
+| ronl-business-api    | #96   | PROD's `KEYCLOAK_CLIENT_SECRET` is still the realm-export placeholder                                                  |
+| ronl-business-api    | #97   | `az … -o tsv \| gh secret set` stores a trailing newline; the deploy failure names nothing                             |
+| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                                              |
+| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                                                 |
+| linked-data-explorer | #96   | Tailwind Play CDN runs from a third-party origin in the production frontend                                            |
+| linked-data-explorer | #97   | remaining: 14 Sep's Monday window passed with lock-file maintenance still _Awaiting Schedule_ and no PR; confirm a run |
+| linked-data-explorer | #122  | the backend's `/v1/health` reports a release, not a build; a deploy check cannot tell which build answered             |
+| ronl-business-api    | #129  | the same for its script-deployed backend, which also deploys commits GitHub may not have                               |
+| linked-data-explorer | #119  | the gaps against ICTU's dependency guideline, tracked for all three repositories                                       |
+| all three            | —     | nothing keeps the mirrors synced _between_ releases; `check-mirror` only observes                                      |
+| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows                                    |
+| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod                                 |
+
+**Closed on 14 September 2026**, neither from this table: Linked Data Explorer's
+production SHACL Validator reporting unchecked files as valid
+([#123](https://github.com/sgort/linked-data-explorer/pull/123), [#124](https://github.com/sgort/linked-data-explorer/pull/124), promoted in
+[#125](https://github.com/sgort/linked-data-explorer/pull/125)), and the unchecked workstation install in all three
+([ronl-business-api#128](https://github.com/sgort/ronl-business-api/pull/128),
+[linked-data-explorer#121](https://github.com/sgort/linked-data-explorer/pull/121),
+[ttl-editor#142](https://github.com/sgort/ttl-editor/pull/142)). Both were found by using the thing, not by
+auditing it.
 
 **Closed for RONL Business API on 2026-09-12**, in one pass: #83
 (check-supply-chain promoted to blocking), #84 (`@ronl/shared` kept free of logic,
@@ -1577,3 +1770,15 @@ counted.
     ttl-editor's 7 → 0 was known before any configuration changed, and how
     npm 10's resolver crash was found before it could surface as a failed
     Renovate pull request.
+15. **Diff the acceptance and production workflows whenever either changes.**
+    Two files deploying one application drift a step at a time, and acceptance
+    working says nothing about production. Linked Data Explorer's production
+    backend shipped without its SHACL shapes for three months that way.
+16. **Make a post-deploy check identify the build that answered.** The deploy
+    step returning does not mean the new build is serving; the old one can
+    answer for a minute or more, and an HTTP 200 check passes against either.
+    Assert the deployed commit where the application can report it.
+17. **Check the install against the lockfile before a dev server starts.** A
+    fast-forward moves the lockfile and installs nothing. Compare parsed JSON
+    rather than bytes, name `npm ci`, and write the snapshot in Node wherever a
+    container you do not own runs `postinstall`.
