@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+echo ""
+echo "Checking dependencies..."
+echo ""
+
+STALE=false
+MARKER="node_modules/.package-lock-installed.json"
+
+# Compares the lockfile against the snapshot scripts/write-deps-marker.sh
+# (the root "postinstall" script) takes after every install, ignoring this
+# repository's OWN version numbers.
+#
+# A byte comparison is not enough: every release bump rewrites the `version`
+# of the root and of each workspace package in package-lock.json, so a byte
+# comparison would refuse to start the dev servers after every release even
+# though no dependency had changed. Those fields describe what we publish, not
+# what is installed. Third-party entries (every key containing `node_modules/`)
+# keep their `version`, and workspace entries keep their `dependencies` lists,
+# so upgrading a package or adding one to a workspace still counts as a change.
+#
+# Parsing the JSON also makes line endings irrelevant.
+#
+# Exit codes: 0 in sync, 1 dependencies differ, 2 a file could not be read.
+lockfile_matches_marker() {
+  node -e '
+    const fs = require("fs");
+    const normalise = (path) => {
+      const lock = JSON.parse(fs.readFileSync(path, "utf8"));
+      delete lock.version;
+      for (const [key, entry] of Object.entries(lock.packages || {})) {
+        if (!key.includes("node_modules/") && entry && typeof entry === "object") {
+          delete entry.version;
+        }
+      }
+      return JSON.stringify(lock);
+    };
+    try {
+      process.exit(normalise(process.argv[1]) === normalise(process.argv[2]) ? 0 : 1);
+    } catch (error) {
+      console.error(error.message);
+      process.exit(2);
+    }
+  ' "package-lock.json" "$MARKER"
+}
+
+# 1. node_modules must exist at the workspace root
+if [ ! -d "node_modules" ]; then
+  echo -e "${RED}✗ node_modules is missing.${NC}"
+  STALE=true
+elif [ ! -f "$MARKER" ]; then
+  echo -e "${YELLOW}⚠ $MARKER missing${NC} — install marker not found."
+  STALE=true
+else
+  rc=0
+  lockfile_matches_marker || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    echo -e "${GREEN}✓ Installed dependencies are in sync with package-lock.json${NC}"
+  elif [ "$rc" -eq 1 ]; then
+    echo -e "${YELLOW}⚠ package-lock.json has changed since the last install${NC} — dependencies changed since you last installed."
+    STALE=true
+  else
+    echo -e "${YELLOW}⚠ package-lock.json or the install marker could not be read${NC} — treating the install as stale."
+    STALE=true
+  fi
+fi
+
+echo ""
+
+if [ "$STALE" = true ]; then
+  # `npm ci`, not `npm install`. The committed lockfile is the source of truth
+  # here: `npm ci` installs exactly what it records, never rewrites it, and
+  # fails loudly if package.json and the lockfile disagree. `npm install`
+  # re-resolves the caret ranges instead, and with no package-manager cooldown
+  # it can pull a transitive version published that morning. See
+  # docs/ICTU-dependencies-assessment.md, recommendations 3, 4 and 6.
+  # `npm install <package>` remains the way to add or upgrade one.
+  echo -e "${RED}Dependencies are not ready.${NC} Install them from the lockfile:"
+  echo ""
+  echo "  npm ci"
+  echo ""
+  echo "  npm ci removes node_modules first, so stop any running dev servers."
+  echo ""
+  exit 1
+fi
+
+echo -e "${GREEN}Dependencies are ready.${NC}"
+echo ""
