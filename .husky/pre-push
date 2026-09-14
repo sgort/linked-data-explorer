@@ -1,3 +1,7 @@
 #!/bin/sh
+# First, so a push from an install that no longer matches package-lock.json
+# stops here with the fix named (npm ci), instead of lint and check-format
+# running on the wrong tool versions and failing on files that are fine.
+npm run deps:check
 npm run lint
 npm run check-format
