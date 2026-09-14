@@ -27,6 +27,7 @@ function makeApp() {
 
 const RESULT = {
   valid: false,
+  complete: false,
   parseError: null,
   layers: {
     'cpsv-ap': { label: 'CPSV-AP', loaded: true, issues: [] },

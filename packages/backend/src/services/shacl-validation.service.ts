@@ -5,8 +5,13 @@
 // SHACL validation for CPSV-AP 3.2.0 (+ custom RONL) Turtle files. Mirrors the
 // DMN validator's architecture and response shape so the frontend can reuse the
 // existing LayerSection / IssueRow components: the result is
-// `{ valid, parseError, layers: {...}, summary: { errors, warnings, infos } }`,
+// `{ valid, complete, parseError, layers: {...}, summary: { errors, warnings, infos } }`,
 // with violations grouped into layers by the shape file they originated from.
+//
+// Fail closed: `valid` requires every shape layer to have loaded (`complete`).
+// A layer whose shapes are missing checks nothing, so a file with no violations
+// against the layers that did load has not been shown to conform. Production
+// once served every layer unloaded and reported every file Valid.
 //
 // Two entry points:
 //   - validateFile(content)            — validate the uploaded Turtle against the
@@ -49,16 +54,25 @@ export interface ShaclIssue {
 
 export interface ShaclLayerResult {
   label: string;
-  /** false when no shape files were present for this layer (e.g. SEMIC shapes not vendored yet) — lets the UI distinguish "not evaluated" from "passed". */
+  /** false when no shape files were present for this layer — lets the UI distinguish "not evaluated" from "passed". */
   loaded: boolean;
   issues: ShaclIssue[];
 }
 
 export interface ShaclValidationResult {
+  /** True only when the content parsed, every layer loaded, and no layer reported an error. */
   valid: boolean;
+  /** True when every shape layer loaded. False on a parse error, since nothing was evaluated. */
+  complete: boolean;
   parseError: string | null;
   layers: Record<ShaclLayerKey, ShaclLayerResult>;
   summary: { errors: number; warnings: number; infos: number };
+}
+
+/** Which shape layers loaded, without validating anything. Reported by /v1/health. */
+export interface ShaclLayerStatus {
+  complete: boolean;
+  layers: Record<ShaclLayerKey, { label: string; loaded: boolean }>;
 }
 
 // ── Shape layer configuration ─────────────────────────────────────────────────
@@ -66,8 +80,8 @@ export interface ShaclValidationResult {
 // shapes/ lives at the package root (packages/backend/shapes). __dirname is
 // .../src/services under ts-node and .../dist/services after build; ../../shapes
 // resolves to packages/backend/shapes in both. NOTE: the build only emits dist/,
-// so the deploy workflow must also copy shapes/ into the deploy bundle (see the
-// kickoff follow-up) or these reads return ENOENT in Azure.
+// so both backend deploy workflows copy shapes/ into the deploy bundle and verify
+// the files LAYER_SPECS names are there. Keep those checks in step with this list.
 const SHAPES_ROOT = path.resolve(__dirname, '../../shapes');
 
 interface LayerSpec {
@@ -171,10 +185,10 @@ export class ShaclValidationService {
   }
 
   /**
-   * Load and cache one SHACLValidator per layer. Missing shape files / directories
-   * are tolerated — the corresponding layer simply has no validator and reports no
-   * issues (this is the expected state for the CPSV-AP layers until the SEMIC
-   * shapes are vendored).
+   * Load and cache one SHACLValidator per layer. A missing shape file or directory
+   * does not stop the others loading: that layer has no validator, every result
+   * reports `complete: false` and so `valid: false`, and the gap is logged as an
+   * error and reported by /v1/health.
    */
   private loadLayers(): Promise<LoadedLayer[]> {
     if (this.layersPromise) return this.layersPromise;
@@ -224,10 +238,28 @@ export class ShaclValidationService {
 
       const loaded = layers.filter((l) => l.validator).map((l) => l.key);
       logger.info('[SHACL] Shape layers loaded', { withShapes: loaded });
+
+      const missing = layers.filter((l) => !l.validator).map((l) => l.key);
+      if (missing.length > 0) {
+        logger.error('[SHACL] Shape layers missing: every validation will report not valid', {
+          missing,
+          shapesRoot: SHAPES_ROOT,
+        });
+      }
       return layers;
     })();
 
     return this.layersPromise;
+  }
+
+  /** Report which layers loaded, loading the shapes first if nothing has yet. */
+  async getLayerStatus(): Promise<ShaclLayerStatus> {
+    const loaded = await this.loadLayers();
+    const layers = {} as ShaclLayerStatus['layers'];
+    for (const layer of loaded) {
+      layers[layer.key] = { label: layer.label, loaded: layer.validator !== null };
+    }
+    return { complete: loaded.every((l) => l.validator !== null), layers };
   }
 
   private emptyLayers(): Record<ShaclLayerKey, ShaclLayerResult> {
@@ -307,8 +339,11 @@ export class ShaclValidationService {
       }
     }
 
+    const complete = loaded.every((l) => l.validator !== null);
+
     return {
-      valid: parseError === null && summary.errors === 0,
+      valid: parseError === null && summary.errors === 0 && complete,
+      complete,
       parseError,
       layers,
       summary,
@@ -328,6 +363,7 @@ export class ShaclValidationService {
       });
       return {
         valid: false,
+        complete: false,
         parseError: err instanceof Error ? err.message : 'Failed to parse Turtle content.',
         layers: this.emptyLayers(),
         summary: { errors: 0, warnings: 0, infos: 0 },
@@ -355,6 +391,7 @@ export class ShaclValidationService {
       });
       return {
         valid: false,
+        complete: false,
         parseError: err instanceof Error ? err.message : 'Failed to parse Turtle content.',
         layers: this.emptyLayers(),
         summary: { errors: 0, warnings: 0, infos: 0 },

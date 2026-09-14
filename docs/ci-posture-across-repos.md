@@ -5,40 +5,116 @@ and RONL Business API (`ronl-business-api`) stand on three mechanisms that were
 rolled out across all of them in September 2026 — build provenance, supply-chain
 verification, and a per-file test-coverage floor.
 
-A **fourth** now exists in two of the three: ttl-editor gates merges on a Semgrep
-scan covering the npm dependency tree and the application code, and Linked Data
-Explorer runs the same scan, required on both `acc` and `main`. It is described
-under §2 rather than given a section of its own, because it is the other half of
-the supply chain that `check-supply-chain` was never able to see.
+A **fourth** now exists in all three: a Semgrep scan covering the npm dependency
+tree and the application code. ttl-editor and Linked Data Explorer require it to
+merge; RONL Business API adopted it on 12 September 2026 and runs it as a
+reporting check while its baseline is triaged — 435 findings, none blocking. It
+is described under §2 rather than given a section of its own, because it is the
+other half of the supply chain that `check-supply-chain` was never able to see.
+
+A **fifth** exists in all three as of the same day, and is the only one that
+cannot run in CI: `scripts/check-mirror.sh`, called at each release, compares the
+GitLab mirror against GitHub and distinguishes _behind_ from _diverged_. §5
+explains why a runner cannot do it.
+
+**This page is the single documented source for ttl-editor and Linked Data
+Explorer.** Until 2026-09-11 each repository carried its own copy; the two had
+drifted in both directions — each gaining sections the other lacked — so
+ttl-editor's copy was deleted and its README now points here.
 
 Verified against each repository's `acc` at the heads below, not written from
-memory. ttl-editor's and Linked Data Explorer's rows were re-verified on 11
-September 2026, after each promoted v2026.09.3 with its Semgrep gate; RONL
-Business API's is as of its last pass.
+memory — rulesets read from the API, workflow triggers and steps parsed from the
+YAML, thresholds read from the config that declares them, mirror state from
+`ls-remote` against both remotes.
 
-| repository           | `acc` at  |
-| -------------------- | --------- |
-| ttl-editor           | `7f95502` |
-| linked-data-explorer | `af1341a` |
-| ronl-business-api    | `04e38c8` |
+Revised **12 September 2026**, after RONL Business API promoted `acc` to
+production for the first time since 17 July and then closed ten of the eleven
+alignment items it had been carrying — the eleventh being out of scope rather
+than skipped, and named in §"What changed" below. ttl-editor's and Linked Data
+Explorer's rows were re-verified the same day.
+
+| repository           | `acc` at  | `main` at |
+| -------------------- | --------- | --------- |
+| ttl-editor           | `f7fe80f` | `f5bae6a` |
+| linked-data-explorer | `daa4816` | `be6bc54` |
+| ronl-business-api    | `0a3a891` | `04840ed` |
 
 ---
 
 ## Summary
 
-|                               | ttl-editor           | linked-data-explorer | ronl-business-api       |
-| ----------------------------- | -------------------- | -------------------- | ----------------------- |
-| **Build id in the changelog** | ✅                   | ✅                   | ✅                      |
-| **check-supply-chain**        | ✅ blocking          | ✅ blocking          | ⚠️ non-blocking         |
-| **Semgrep Code + SCA**        | ✅ blocking          | ✅ blocking          | —                       |
-| **Per-file 80% branch floor** | ✅ native thresholds | ✅ native thresholds | ✅ native thresholds    |
-| **Formatting checked in CI**  | ✅                   | ✅                   | —                       |
-| **Tests run before merge**    | ✅                   | ✅                   | ⚠️ frontend only        |
-| **Mirror in sync**            | ✅                   | ✅                   | ⚠️ both branches differ |
+|                               | ttl-editor            | linked-data-explorer      | ronl-business-api         |
+| ----------------------------- | --------------------- | ------------------------- | ------------------------- |
+| **Build id in the changelog** | ✅                    | ✅                        | ✅ exercised in PROD      |
+| **check-supply-chain**        | ✅ blocking           | ✅ blocking               | ✅ blocking               |
+| **Semgrep Code + SCA**        | ✅ required           | ✅ required               | ⚠️ runs, not required     |
+| **Per-file 80% branch floor** | ✅ 1 runner           | ✅ 2 runners              | ✅ 5 runners              |
+| **Formatting checked in CI**  | ✅                    | ✅                        | ✅                        |
+| **Tests run before merge**    | ✅                    | ✅                        | ✅                        |
+| **Renovate lock-file maint.** | ✅                    | ✅                        | ✅                        |
+| **One Node version**          | ✅ single literal     | ⚠️ 3 literals, #80        | ✅ `.nvmrc`, one file     |
+| **`acc` ruleset**             | PR + `audit` + `scan` | + `deletion`, `non-ff`    | ✅ + `deletion`, `non-ff` |
+| **`main` ruleset**            | ⚠️ classic, no checks | ✅ full, `audit` + `scan` | ✅ full, `audit`          |
+| **Mirror checked at release** | ✅ `check-mirror`     | ✅ `check-mirror`         | ✅ `check-mirror`         |
+| **Mirror in sync**            | ✅ both               | ✅ both                   | ✅ both                   |
 
 Nothing in that table is uniform by accident. Each application has a different
 build shape, and the differences below are re-derived per repository rather than
 copied.
+
+### What changed on 12 September 2026
+
+RONL Business API worked from an eleven-item list and closed **ten** of them in a
+day, in the order that made each one cheap — the eleventh being out of scope
+rather than skipped. The list is reproduced here because the **shape** of the
+work is the useful part, not the ticks: one item was passed over at the start and
+only came back last, which is the failure mode worth remembering.
+
+| item    |                                    | outcome                                                                  |
+| ------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| **C1**  | `acc` ruleset: `deletion` + non-ff | ✅ closed last, a month after `main` got the same two rules              |
+| **C2**  | Backend tests before merge         | ✅ `pull_request` trigger added, #87 closed                              |
+| **C3**  | `check-supply-chain` blocking      | ✅ `continue-on-error` removed, #83 closed                               |
+| **C4**  | Formatting checked in CI           | ✅ `npm ci` + `check-format` in the `audit` job                          |
+| **C5**  | Semgrep Code + Supply Chain        | ✅ workflow + `.semgrepignore`; **`scan` deliberately not required yet** |
+| **C6**  | Renovate lock-file maintenance     | ✅ plus majors-behind-approval replacing the global flag                 |
+| **C7**  | One Node version                   | ✅ `.nvmrc` at an exact `22.22.0`, read by all eight deploy workflows    |
+| **C8**  | Mirror in sync                     | ✅ `check-mirror` in **all three** repositories, called at each release  |
+| **C9**  | Backend deploy in a workflow       | — out of scope, #34/#35 remain open                                      |
+| **C10** | Branch-floor loose ends            | ✅ #84 and #85 closed                                                    |
+| **C11** | Refresh `the-gate-has-teeth.md`    | ✅ three false claims corrected in place rather than deleted             |
+
+**C1 was the item to notice, and it closed last.** Work started at C2 and only
+came back to it at the end of the day, so for a month RONL Business API's two
+rulesets differed in a way nobody had decided — `main` carrying `deletion` and
+`non_fast_forward` from the day it was created during the promotion, `acc`
+carrying neither. Both now have all four rules.
+
+**They still differ in exactly one parameter, deliberately:**
+
+|        | `require_extra_approval_for_unattributed_changes` |
+| ------ | ------------------------------------------------- |
+| `acc`  | `true`                                            |
+| `main` | **`false`**                                       |
+
+`main`'s was set false on purpose: its promotion carried commits under three
+author identities against a ruleset requiring **zero** approvals, so the flag
+would have demanded an approval nobody could give. Preserved rather than
+harmonised when `acc` was updated, and now recorded in that repository's
+`SECURITY-PIPELINE.md` and `the-gate-has-teeth.md` as well, so the next person to
+compare them does not read it as drift.
+
+**Classic branch protection reports `allow_force_pushes: true` on both branches,
+and that is not a hole.** It never was for `main` either. The ruleset's
+`non_fast_forward` is what refuses the push; the classic setting is a vestigial
+second layer that the effective-rules view sees past.
+
+That distinction is why this row was checked with
+`gh api repos/…/rules/branches/<branch>`, which reports the **effective** rules
+from every ruleset at once. Reading one ruleset, or the classic protection
+endpoint alone, gives the wrong answer — an earlier draft of this very section
+claimed `acc` "can still be deleted", which the effective view disproved:
+deletion was already blocked, by the classic layer rather than the ruleset.
 
 ---
 
@@ -197,9 +273,24 @@ Two things that repository's run adds to ttl-editor's:
   is the same asymmetry as ttl-editor's `output_location`: the failure mode is a
   successful-looking deploy of something wrong.
 
-**Still wired and unexercised in the third.** RONL Business API carries the block
-in its production workflow and has not run it. Worth one glance at the changelog
-on its first production release.
+**Exercised in the third on 2026-09-12**, and in a fourth surface with it. RONL
+Business API promoted `acc` to production for the first time since 17 July, and
+its caseworker changelog now reads `build 04840ed · #12` — confirmed by eye, not
+inferred from a green deploy. Its public site, which gained the same treatment in
+the same release, reads `publiek.open-regels.nl · v2026.09.6 · build 04840ed · #2`
+in its footer.
+
+Two details that only a first run surfaces:
+
+- **The same commit, two run numbers.** `#12` and `#2` are different workflows
+  deploying the same merge commit, which is exactly why the run number is carried
+  alongside the SHA: the pair identifies an artifact, the SHA alone identifies
+  source that several artifacts share.
+- **The public site's footer is client-rendered.** Its prerendered HTML carries the
+  route's data but no footer at all, so grepping the served HTML for the build id
+  finds nothing while the entry bundle contains it. Grep the bundle, or read the
+  page in a browser; a prerendered-HTML grep is the wrong probe and reads as
+  failure.
 
 ---
 
@@ -269,15 +360,19 @@ Exercised twice in Linked Data Explorer before that repository promoted its step
 to blocking. In each case the register moved on the bump's branch, the check went
 green there, and the pull request merged green.
 
-### Why one repository is still non-blocking
+### All three now block — and the last one is the clearest evidence why
 
-RONL Business API adopted the check non-blocking and has not yet promoted it.
-This is tracked, and the reason to finish it is specific:
+RONL Business API adopted the check non-blocking and promoted it on 12 September
+2026 ([#83](https://github.com/sgort/ronl-business-api/issues/83)). It was
+waiting on one thing: evidence that the register gets updated on a bump's **own
+branch** rather than after the merge — the habit §"The habit this depends on"
+describes. Its own Renovate bump supplied it, and the same pull request supplied
+the argument against waiting any longer.
 
 **`continue-on-error` hides more than it looks like it hides.** It does not
 merely keep the job green — it rewrites the **step's** reported conclusion too,
 and the honest result (`outcome: failure`) is not exposed by the REST API at all.
-Observed on a real pull request:
+Observed on that pull request, before its register was fixed:
 
 ```
 job: audit
@@ -285,11 +380,52 @@ job conclusion: success
 step: Verify pin truth and register agreement -> success
 ```
 
-…while that same step's log read `1 finding(s)`. The checks list, the job and the
-step all said success. **Only the log told the truth.**
+…while that same step's log read:
+
+```
+1 finding(s):
+  [register] zizmorcore/zizmor-action: workflow pins cc914d7f3750… (v0.6.4)
+             but SECURITY-PIPELINE.md records only 3dc1ecc9bcb9… (v0.6.2)
+```
+
+The checks list, the job and the step all said success. **Only the log told the
+truth.**
 
 A check nobody can see fail is not protecting anything; it is a check that has to
 be _remembered_, which is the condition the registers drifted in to begin with.
+
+**If the network half ever proves flaky, the remedy is `--offline`**, which keeps
+register agreement blocking and drops only the half that resolves digests against
+the GitHub API. Restoring `continue-on-error` is not a remedy — it restores the
+invisibility above.
+
+### A deploy credential can be wrong in a way nothing names
+
+Not a pin problem, but it belongs beside them: it is how a credential reaches CI,
+and the failure it produces points nowhere near the cause.
+
+RONL Business API lost a production deploy to this on 2026-09-12. The documented
+way to read a token out of Azure is `-o tsv`, and the documented way to set a
+secret without it passing through shell history is to pipe into `gh secret set`.
+Composing the two stores a **trailing newline**: 120 bytes where the key is 119.
+
+Every build step then passes, and the Static Web Apps action fails with:
+
+```
+DeploymentId: 61da559c-1017-42cc-8ad9-24951f2932ce
+An unknown exception has occurred
+```
+
+No mention of authentication, of the token, or of the target app — and the
+DeploymentId printing first suggests the upload began and Azure failed, which
+sends you to inspect the resource rather than the secret. Re-setting the same
+value through `tr -d '\r\n'` fixed it with no other change.
+
+The general shape is worth carrying: **a secret cannot be read back to be
+checked.** Nothing in review, in the workflow, or in the run log can show that a
+stored credential differs from the intended one by one invisible byte. Either
+strip whitespace at the point of setting, or wrap it in a helper that always does
+— documenting the trap is the weakest of the three.
 
 ### The dependency this accepts
 
@@ -332,7 +468,17 @@ against an authenticated scan, reporting to the `sgort/ttl-editor` project in
 Semgrep Cloud. Linked Data Explorer adopted the same workflow on 11 September
 2026, ran it as a reporting check while the baseline was triaged, and required it
 on both `acc` and `main` the same day — the difference from ttl-editor being that
-its `main` was already gated. RONL Business API does not have it yet.
+its `main` was already gated.
+
+**RONL Business API adopted the same workflow on 12 September 2026**, and is the
+one place to look for what the first day actually costs: its first full scan
+found **435 findings, none policy-blocking** — 249 reachable, 101 undetermined
+and 69 unreachable Supply Chain findings across 1,266 npm dependencies, plus 16
+Code findings. `scan` is deliberately **not** a required check there while that
+baseline is triaged; promotion is a ruleset edit, reversible without touching the
+file. Note the order that implies: lock-file maintenance first, since one refresh
+closed 63 of 66 Supply Chain findings here, and triaging by hand before
+refreshing would be work thrown away.
 
 Three things differed when it was ported to Linked Data Explorer, a monorepo:
 
@@ -482,14 +628,29 @@ narrowing the filter, not widening it. **Check the plan before copying this
 filter change**, and size the Renovate cap against the slots, not the other way
 round.
 
-**ttl-editor has no `lockFileMaintenance` at all.** Its residual Supply Chain
-findings — `brace-expansion`, `picomatch`, `postcss-selector-parser` — each have a
-newer version inside the range already declared, and this repository's refresh
-closed the same `brace-expansion` and `picomatch` lines.
-[ttl-editor#112](https://github.com/sgort/ttl-editor/issues/112) put them down to
-needing an upstream release or an `overrides` entry. The likelier explanation is
-the one found here: nothing ever refreshed that lockfile. Worth checking before
-anything else is concluded about them.
+**ttl-editor had no `lockFileMaintenance` at all**, and that turned out to be
+the whole explanation for its seven residual Supply Chain findings, which
+[ttl-editor#112](https://github.com/sgort/ttl-editor/issues/112) had put down
+to needing an upstream release. It was checked before anything changed: in a
+scratch worktree, an in-range refresh and a Semgrep scan predicted 7 → 0.
+[ttl-editor#134](https://github.com/sgort/ttl-editor/pull/134) enabled it with the
+same two safeguards as here — `prPriority`, and majors behind Dependency Dashboard
+approval — and the first refresh,
+[ttl-editor#135](https://github.com/sgort/ttl-editor/pull/135), delivered exactly
+the predicted versions: 202 packages moved, none within the cooldown, `package.json`
+untouched, scan on `acc` at 0. ttl-editor needed neither of this repository's
+other two fixes: its deploy workflows filter with `paths-ignore` for documentation
+only, so a lockfile change already builds and deploys, and as a single package it
+has no group rules to multiply the pull request.
+
+**The same check found that npm 10 cannot perform that refresh.** npm 10.9.4,
+bundled with Node 22, crashes in its resolver — `Cannot read properties of null
+(reading 'edgesOut')`, in `#loadPeerSet` while walking `vitest`'s optional peer
+chain, `jsdom` to `canvas` — on both a from-scratch resolution and `npm update`.
+npm 11.19.1 resolves the same tree cleanly, and so did Renovate. `npm ci` is
+unaffected because it only installs from the lockfile, and CI runs Node 24, so
+the failure lands only on a workstation running Node 22 that tries to add or
+update a package. ttl-editor's README now says to use Node 24 / npm 11.
 
 |                     |                                                                       |
 | ------------------- | --------------------------------------------------------------------- |
@@ -528,7 +689,8 @@ queued to correct it.
 
 The triage that produced this gate
 ([ttl-editor#112](https://github.com/sgort/ttl-editor/issues/112)) opened by
-reporting **36 findings** and closed at **7**. Almost none of that movement was
+reporting **36 findings**, closed at **7**, and reached **0** once its lockfile was
+first refreshed. Almost none of that movement was
 vulnerabilities being fixed:
 
 |     |                                                                     |
@@ -540,6 +702,7 @@ vulnerabilities being fixed:
 | 12  | test files taken out of Code scanning                               |
 | 11  | after a fix, a suppression, and one finding that got worse first    |
 | 7   | CI honours dashboard triage; a local `--dry-run` does not           |
+| 0   | the lockfile finally refreshed — nothing had ever done so (#135)    |
 
 Three lessons generalise beyond this repository, and are the reason this section
 records the trajectory rather than only the endpoint:
@@ -562,12 +725,15 @@ read 14. Only set-differencing the scanned file lists caught it.
 
 #### What remains, and what it costs
 
-Seven findings remain, all transitive npm packages — `brace-expansion`,
-`picomatch`, `postcss-selector-parser` — reached only through build and test
-tooling. Four are classed Unreachable and three Undetermined; the only runtime
-dependencies are `react`, `react-dom` and `lucide-react`. They cannot be closed
-by a Renovate bump, only by an upstream release or an `overrides` entry, which is
-not worth the resolution risk for code that never reaches a browser.
+Nothing remains. The last seven findings — `brace-expansion`, `picomatch` and
+`postcss-selector-parser`, transitive and reached only through build and test
+tooling — were first written off as closable only by an upstream release or an
+`overrides` entry. That was wrong: each had a newer version inside the range
+already declared, and nothing had moved them because ttl-editor had no
+lock-file maintenance. Its first refresh
+([ttl-editor#135](https://github.com/sgort/ttl-editor/pull/135)) took them to
+1.1.18, 2.3.2 and 6.1.4 and the scan on `acc` to **0 findings**. See "Renovate
+maintains dependencies, not the tree" below.
 
 Two costs come with making it required, both accepted deliberately:
 
@@ -850,14 +1016,18 @@ where the three diverge most, and where the remaining work is.
 | -------------------- | ---------------------------------------------------------------------------------------- |
 | ttl-editor           | ✅ both Static Web Apps workflows run `npm run test:ci` on `push` **and** `pull_request` |
 | linked-data-explorer | ✅ backend and frontend, acc workflows                                                   |
-| ronl-business-api    | ⚠️ **frontend, pa-demo and public-site only**                                            |
+| ronl-business-api    | ✅ all five workspaces, since 2026-09-12                                                 |
 
-**RONL Business API's backend workflow triggers on `push` alone**
-([ronl-business-api#87](https://github.com/sgort/ronl-business-api/issues/87)).
-Its 2008 tests run only _after_ a merge, so its backend branch threshold gates
-nothing on a pull request — it would fail on `acc`, after the fact, rather than
-on the branch that caused it. The floor is real in four of its five workspaces
-and retrospective in the fifth.
+**RONL Business API's backend workflow used to trigger on `push` alone**
+([ronl-business-api#87](https://github.com/sgort/ronl-business-api/issues/87),
+closed 2026-09-12). Its 2008 tests ran only _after_ a merge, so its backend branch
+threshold gated nothing on a pull request — it would fail on `acc`, after the
+fact, rather than on the branch that caused it. The floor was real in four of its
+five workspaces and retrospective in the fifth.
+
+It proved itself immediately: an `axios` 1.18 security bump broke the backend
+build on the pull request, with 1,859 tests passing and one suite failing to
+compile on a widened header type. Before the trigger existed, that lands on `acc`.
 
 This is the same gap Linked Data Explorer closed, where it had let a genuine
 defect sit on a pushed branch for days because no pull request ever ran the test
@@ -910,6 +1080,28 @@ rather than a corner one. The full analysis is in
 
 The same question is worth asking of the other two: a ruleset naming one branch
 says nothing about any other.
+
+**RONL Business API was asked on 2026-09-12, and answered the opposite way to
+ttl-editor.** Its `main` had classic branch protection only: a pull request
+required, **zero** required status checks, `allow_force_pushes: true` and
+`enforce_admins: false` — so an administrator could push to it directly, and the
+branch that deploys production was the least protected of the two. A
+`main promotion gate` ruleset was created before the promotion pull request was
+opened, mirroring the `acc` one: `deletion`, `non_fast_forward`, `pull_request`
+with `allowed_merge_methods: ["merge"]`, and `required_status_checks: [audit]`,
+with no bypass actors.
+
+It proved itself on the pull request it existed for: `mergeStateStatus` read
+`BLOCKED` while `audit` ran, then cleared. That is a gate demonstrating it bites
+without anything being pushed to the branch to test it — the same argument this
+page already makes against testing a ruleset by pushing.
+
+Two parameters were set deliberately rather than by default, both for reasons
+recorded above: `require_extra_approval_for_unattributed_changes: false`, because
+the promotion carried three author identities and zero required approvals would
+otherwise have deadlocked it; and `audit` as the **only** required check, because
+every deploy workflow there is push-only and a required check that never reports
+wedges the pull request permanently.
 
 **Linked Data Explorer was asked, and had the same hole.** Its only ruleset was
 `acc supply-chain gate`, `include: ["refs/heads/acc"]`, `exclude: []`. `main` had
@@ -1095,11 +1287,13 @@ checks is not a backup, it is a second place for content to be.
 By `git ls-remote` against both remotes, which needs no local clone and touches
 nothing:
 
-| repository           | `acc`                    | `main`                   |
-| -------------------- | ------------------------ | ------------------------ |
-| ttl-editor           | ✅ `6e8e019` both        | ✅ `bbda389` both        |
-| linked-data-explorer | ✅ `af1341a` both        | ✅ `35a44f8` both        |
-| ronl-business-api    | ⚠️ `04e38c8` / `66940d9` | ⚠️ `d6a3cee` / `53a4c0a` |
+| repository           | `acc`             | `main`            |
+| -------------------- | ----------------- | ----------------- |
+| ttl-editor           | ✅ `f7fe80f` both | ✅ `f5bae6a` both |
+| linked-data-explorer | ✅ `daa4816` both | ✅ `be6bc54` both |
+| ronl-business-api    | ✅ `0a3a891` both | ✅ `04840ed` both |
+
+All six refs verified by `ls-remote` against both remotes on 12 September 2026.
 
 Linked Data Explorer's row is as of 2026-09-11, and a tick here means synced at
 the last check, not kept in sync. The mirror is pushed by hand, so every merge
@@ -1107,9 +1301,17 @@ leaves it behind until the next push. It had drifted again by then — `acc` 24
 commits behind, `main` 17 — and was re-synced the same way as below: both sides
 strict ancestors, so two plain fast-forwards from GitHub's refs.
 
-RONL Business API disagrees on **both** branches. Which side is ahead is not
-knowable from `ls-remote` alone and is not guessed here; it needs the audit
-below.
+RONL Business API's row is as of 2026-09-12, and it is the one that had never been
+audited. The answer turned out to be the dull case rather than ttl-editor's: both
+GitLab branches were **strict ancestors** — `acc` 8 commits behind, `main` 184 —
+so each synced as a plain fast-forward from GitHub's refs, with no divergence, no
+archive branch and no force. The `merge-base --is-ancestor` check below is what
+established that before anything was pushed, and it is the whole difference
+between this case and the surgery further down.
+
+It drifted three more times the same day, as each promotion pull request merged,
+and was pushed again each time. That is the point of the row: not "synced", but
+"synced at the last check".
 
 ### Behind is not the same as diverged
 
@@ -1199,32 +1401,80 @@ missing" is a reason to stop.
 
 ### What would have caught it earlier
 
-Nothing in place did, and nothing added since does. The mirror has no CI, so the
-only signal available is comparison, and the cheapest form is the `ls-remote`
-table above — four seconds, no clone, safe to run anywhere. Worth running at each
-release rather than discovering the answer six months later.
+Nothing in place did. Since 12 September 2026 something does, in all three
+repositories: **`scripts/check-mirror.sh`**, wired into each repository's own
+`/bump-release` step and runnable as `npm run check-mirror`.
+
+It cannot run in CI, and that is a property of the mirror rather than a
+shortcoming: the `gitlab` remote lives in `.git/config` and no tracked file names
+the host, so an Actions runner has no such remote, no key for it and no route to
+it. It runs where the push actually happens.
+
+Two details carried straight from this section:
+
+- **It prints the remote-tracking form**, `git push gitlab
+origin/acc:refs/heads/acc`, never `git push gitlab acc` — the distinction that
+  would otherwise have sent Linked Data Explorer's four-month-old local `main` to
+  its mirror.
+- **It separates behind from diverged** with `merge-base --is-ancestor`, which a
+  commit count cannot: "253 behind" and "18 ahead and 306 behind" both read as
+  "stale". Behind prints the fast-forward command; diverged refuses to suggest a
+  push at all and points at the archive procedure above.
+
+It never pushes. Writing to a shared remote stays a human's decision, so it
+prints the command and exits non-zero. All four paths — match, behind, diverged,
+missing — were exercised against a scratch bare repository standing in as a
+mirror, rather than reasoned about.
+
+**It closes the observation half, not the drift.** Nothing still keeps the mirror
+synced _between_ releases; it drifts on every merge, and a release is simply the
+point where that is now noticed rather than discovered six months later.
 
 ---
 
 ## 6. Open work
 
-| repository           | issue | what                                                                                          |
-| -------------------- | ----- | --------------------------------------------------------------------------------------------- |
-| ronl-business-api    | #83   | promote check-supply-chain from non-blocking to blocking                                      |
-| ronl-business-api    | #84   | `@ronl/shared` has no test runner, so logic placed there escapes the floor                    |
-| ronl-business-api    | #85   | an unreachable `PHASE_NOT_MODELLED` branch keeps three tests permanently skipped              |
-| ronl-business-api    | #87   | the backend runs no tests on a pull request, so its branch floor is retrospective             |
-| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                           |
-| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip         |
-| ronl-business-api    | —     | production build id wired but unexercised; the other two have now run theirs                  |
-| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                     |
-| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                        |
-| linked-data-explorer | #96   | Tailwind Play CDN runs from a third-party origin in the production frontend                   |
-| linked-data-explorer | #97   | remaining: confirm Monday's run opens one lock-file-maintenance PR, and the slot stays free   |
-| ttl-editor           | —     | no `lockFileMaintenance`; its residual Supply Chain findings are likely closable by a refresh |
-| ronl-business-api    | —     | both `acc` and `main` differ between GitHub and GitLab; unaudited                             |
-| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows           |
-| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod        |
+| repository           | issue | what                                                                                        |
+| -------------------- | ----- | ------------------------------------------------------------------------------------------- |
+| ronl-business-api    | —     | Semgrep `scan` runs but is not required; a 435-finding baseline still to triage             |
+| ronl-business-api    | #34   | the backend deploy bundle's dependencies come from `npm install`, with no lockfile          |
+| ronl-business-api    | #35   | the backend deploy is a hand-run script, outside every gate on this page                    |
+| ronl-business-api    | #37   | PR previews cannot reach the backend, so they only prove pages render                       |
+| ronl-business-api    | #38   | a `package.json`-only change triggers a full backend build                                  |
+| linked-data-explorer | #113  | three hand-maintained Node pins, and nothing keeps them in step                             |
+| linked-data-explorer | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                         |
+| ttl-editor           | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip       |
+| ronl-business-api    | #99   | the public process filter tests for `active`, a status LDE's schema forbids                 |
+| linked-data-explorer | #111  | the other half of #99: decide whether a bundle can ever be published `active`               |
+| ronl-business-api    | #96   | PROD's `KEYCLOAK_CLIENT_SECRET` is still the realm-export placeholder                       |
+| ronl-business-api    | #97   | `az … -o tsv \| gh secret set` stores a trailing newline; the deploy failure names nothing  |
+| ttl-editor           | #131  | `main` has no required status checks — decided and kept, not an oversight                   |
+| ttl-editor           | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                      |
+| linked-data-explorer | #96   | Tailwind Play CDN runs from a third-party origin in the production frontend                 |
+| linked-data-explorer | #97   | remaining: confirm Monday's run opens one lock-file-maintenance PR, and the slot stays free |
+| all three            | —     | nothing keeps the mirrors synced _between_ releases; `check-mirror` only observes           |
+| linked-data-explorer | #80   | Node 24 bump sets `engines.node >=24.20.0` but pins `24.19.0` in all four workflows         |
+| linked-data-explorer | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod      |
+
+**Closed for RONL Business API on 2026-09-12**, in one pass: #83
+(check-supply-chain promoted to blocking), #84 (`@ronl/shared` kept free of logic,
+with a check that enforces it rather than a convention that asks), #85 (the
+unreachable `PHASE_NOT_MODELLED` branch and its three permanently-skipped tests),
+#87 (backend tests before merge) and #36 (one Node version, read from `.nvmrc`).
+Its mirror row is narrowed rather than closed — see §5.
+
+Two of the day's closures carry no issue number and would otherwise go
+unrecorded: **C1**, which gave `acc` the `deletion` and `non_fast_forward` rules
+`main` had carried since the promotion, and **C11**, which corrected three claims
+in that repository's `the-gate-has-teeth.md` that its own gates had falsified.
+
+**The first row is the one to read twice.** The Semgrep gap is deliberate — a
+gate required before its baseline is triaged is a gate that gets bypassed — but
+deliberate is not the same as done, and 435 findings do not triage themselves.
+
+The ruleset gap that sat above it closed the same day, last of the eleven. It is
+worth remembering as a shape rather than a ticket: work that starts at item two
+does not come back to item one on its own.
 
 Closed since the previous revision: Linked Data Explorer's frontend zero-margin
 entry, by
@@ -1239,6 +1489,19 @@ unprotected `main`, and its stale mirror — all on 2026-09-09, in that order,
 because each was a precondition for the next. Note the ttl-editor row above
 survives that: closing the gap in one repository says nothing about the other,
 which is the point of the row existing per repository rather than per mechanism.
+
+**RONL Business API closed the same three on 2026-09-12**, in the same order and
+for the same reason, plus
+[ronl-business-api#71](https://github.com/sgort/ronl-business-api/issues/71) —
+the promotion itself, which had been open since 3 September. Its `main` had gone
+57 days without a deploy, so the three were not independent chores: the mirror
+audit and the `main` ruleset both had to come first, and the build id could only
+be exercised by the promotion they were protecting.
+
+That repository's row above is therefore the mirror's standing gap rather than an
+unaudited state. Worth keeping as a row: it drifted three times on the day of the
+promotion alone, once per merged pull request, and each time someone had to
+remember.
 
 The two new Linked Data Explorer rows are both things noticed while doing
 something else. **#80** would have CI running a Node older than the `engines`
@@ -1308,3 +1571,9 @@ counted.
     opened between writing it and merging it slips through. Count from the
     platform's own API — search can lag a close by seconds — and act on what is
     open then.
+14. **Before enabling a refresh, run it once where you can see it fail.** An
+    in-range lockfile refresh in a scratch worktree, then a scan, predicts the
+    outcome and exercises the tool that has to do the work. It is how
+    ttl-editor's 7 → 0 was known before any configuration changed, and how
+    npm 10's resolver crash was found before it could surface as a failed
+    Renovate pull request.

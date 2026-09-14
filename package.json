@@ -7,9 +7,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=@linked-data-explorer/frontend",
-    "dev:backend": "npm run dev --workspace=@linked-data-explorer/backend",
-    "dev:full": "concurrently \"npm run dev\" \"npm run dev:backend\"",
+    "dev": "npm run deps:check && npm run dev --workspace=@linked-data-explorer/frontend",
+    "dev:backend": "npm run deps:check && npm run dev --workspace=@linked-data-explorer/backend",
+    "dev:full": "npm run deps:check && concurrently \"npm run dev --workspace=@linked-data-explorer/frontend\" \"npm run dev --workspace=@linked-data-explorer/backend\"",
+    "deps:check": "bash scripts/check-deps.sh",
     "build": "npm run build --workspace=@linked-data-explorer/frontend",
     "preview": "npm run preview --workspace=@linked-data-explorer/frontend",
     "lint": "npm run lint --workspaces --if-present",
@@ -19,7 +20,9 @@
     "format": "npm run format --workspaces --if-present",
     "check-format": "npm run check-format --workspaces --if-present",
     "check-supply-chain": "node scripts/check-supply-chain.mjs",
-    "postinstall": "husky install || true"
+    "check-mirror": "bash scripts/check-mirror.sh",
+    "prepare": "husky || true",
+    "postinstall": "node scripts/write-deps-marker.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.2.4",

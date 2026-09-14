@@ -34,6 +34,7 @@ function layers(overrides: Record<string, LayerOverride> = {}) {
 function result(overrides: Record<string, unknown> = {}) {
   return {
     valid: true,
+    complete: true,
     parseError: null,
     layers: layers(),
     summary: { errors: 0, warnings: 0, infos: 0 },
@@ -252,6 +253,71 @@ describe('ShaclValidator validation modes', () => {
 });
 
 describe('ShaclValidator results', () => {
+  test('reports a file as not validated, never valid, when a shape layer did not load', async () => {
+    fetchMock.mockResolvedValue(
+      ok(result({ valid: false, complete: false, layers: layers({ cprmv: { loaded: false } }) }))
+    );
+
+    const { container } = render(<ShaclValidator apiBaseUrl={API} />);
+    await addFiles(container, [ttlFile()]);
+    await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+
+    expect(await screen.findByText('Not validated')).toBeTruthy();
+    expect(screen.getByText('1 of 3 shape layers not loaded')).toBeTruthy();
+    expect(screen.queryByText('Valid')).toBeNull();
+    expect(screen.queryByText('Invalid')).toBeNull();
+    expect(screen.queryByText('All checks passed')).toBeNull();
+  });
+
+  // The frontend and backend deploy separately. A backend from before `complete`
+  // existed reports `valid: true` with every layer unloaded — exactly what
+  // production served — and that must not render green.
+  test('does not trust a valid verdict from a backend that loaded no shapes', async () => {
+    fetchMock.mockResolvedValue(
+      ok(
+        result({
+          valid: true,
+          complete: undefined,
+          layers: layers({
+            cprmv: { loaded: false },
+            'cpsv-ap': { loaded: false },
+            'ronl-custom': { loaded: false },
+          }),
+        })
+      )
+    );
+
+    const { container } = render(<ShaclValidator apiBaseUrl={API} />);
+    await addFiles(container, [ttlFile()]);
+    await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+
+    expect(await screen.findByText('Not validated')).toBeTruthy();
+    expect(screen.getByText('3 of 3 shape layers not loaded')).toBeTruthy();
+    expect(screen.queryByText('Valid')).toBeNull();
+    expect(screen.queryByText('All checks passed')).toBeNull();
+  });
+
+  test('still reports Invalid when a loaded layer found errors, even if another did not load', async () => {
+    fetchMock.mockResolvedValue(
+      ok(
+        result({
+          valid: false,
+          complete: false,
+          layers: layers({ cprmv: { loaded: false } }),
+          summary: { errors: 2, warnings: 0, infos: 0 },
+        })
+      )
+    );
+
+    const { container } = render(<ShaclValidator apiBaseUrl={API} />);
+    await addFiles(container, [ttlFile()]);
+    await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+
+    expect(await screen.findByText('Invalid')).toBeTruthy();
+    expect(screen.getByText('2E')).toBeTruthy();
+    expect(screen.queryByText('Not validated')).toBeNull();
+  });
+
   test('reports a valid file with an all-clear badge', async () => {
     fetchMock.mockResolvedValue(ok(result()));
 
@@ -377,7 +443,7 @@ describe('ShaclValidator layer sections', () => {
     const { container } = render(<ShaclValidator apiBaseUrl={API} />);
     await addFiles(container, [ttlFile()]);
     await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
-    await screen.findByText('Invalid');
+    await screen.findByRole('button', { name: /CPRMV/ });
     return container;
   }
 
