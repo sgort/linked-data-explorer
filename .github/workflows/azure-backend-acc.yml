@@ -198,11 +198,16 @@ jobs:
           
           # SHACL shape layers: fail unless every layer loaded in the running app.
           # /v1/health reports it without degrading, so read the body at any HTTP code.
+          # Allow about three minutes: the previous build keeps answering while Azure
+          # starts the new one, and "Health check" above passes against either. On
+          # 14 September the new build started 14s after a 34s window had given up.
+          # A null value means a response without the block, i.e. the old build.
           shacl_complete=""
-          for _ in 1 2 3; do
-            shacl_complete=$(curl -s https://acc.backend.linkeddata.open-regels.nl/v1/health | jq -r '.shacl.complete' 2>/dev/null || true)
+          for attempt in $(seq 1 12); do
+            shacl_complete=$(curl -s -m 10 https://acc.backend.linkeddata.open-regels.nl/v1/health | jq -r '.shacl.complete' 2>/dev/null || true)
             [ "$shacl_complete" = "true" ] && break
-            sleep 10
+            echo "Attempt $attempt/12: shacl.complete is ${shacl_complete:-unreadable}"
+            [ "$attempt" -lt 12 ] && sleep 15
           done
           
           if [ "$shacl_complete" = "true" ]; then
