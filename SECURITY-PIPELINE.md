@@ -33,7 +33,7 @@ two together.
 | `actions/setup-node`           | `820762786026740c76f36085b0efc47a31fe5020` | v7.0.0           |
 | `Azure/static-web-apps-deploy` | `4d27395796ac319302594769cfe812bd207490b1` | v1 (branch head) |
 | `azure/webapps-deploy`         | `02a81bead70021f5284939794bcec79c271ab383` | v3.0.8           |
-| `zizmorcore/zizmor-action`     | `3dc1ecc9bcb9e94e9b2c709687979e1298497054` | v0.6.2           |
+| `zizmorcore/zizmor-action`     | `70fb788f84895a7701f5643d103d587e460b5c99` | v0.6.3           |
 
 `zizmor 1.29.0` reports **0 findings** across all eight workflows.
 
