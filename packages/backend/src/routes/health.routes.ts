@@ -6,6 +6,7 @@ import axios from 'axios';
 import { config } from '../utils/config';
 import { logger } from '../utils/logger';
 import { sparqlService } from '../services/sparql.service';
+import { shaclValidationService, ShaclLayerStatus } from '../services/shacl-validation.service';
 
 const router = Router();
 
@@ -26,7 +27,12 @@ import packageJson from '../../package.json';
  * Returns comprehensive health information including:
  * - Application metadata (name, version, environment)
  * - Service status (TriplyDB, Operaton)
+ * - SHACL shape layers loaded (`shacl.complete`)
  * - System uptime and timestamp
+ *
+ * An incomplete SHACL shape set does not change `status` or the HTTP code: it
+ * disables one feature, not the API, and a 503 would invite platform health
+ * probes to act on it. The deploy workflows fail on `shacl.complete` instead.
  */
 router.get('/', async (_req: Request, res: Response) => {
   const healthCheck = {
@@ -53,6 +59,9 @@ router.get('/', async (_req: Request, res: Response) => {
         lastCheck: new Date().toISOString(),
       },
     },
+
+    // SHACL shape layers; replaced below once the status is read
+    shacl: { complete: false } as ShaclLayerStatus | { complete: false; error: string },
 
     // API documentation reference (API-51 compliant)
     documentation: '/v1/openapi.json',
@@ -96,6 +105,15 @@ router.get('/', async (_req: Request, res: Response) => {
       });
       healthCheck.services.operaton.status = 'down';
       healthCheck.status = 'degraded';
+    }
+
+    // SHACL shape layers: reported only, never degrades the status (see above)
+    try {
+      healthCheck.shacl = await shaclValidationService.getLayerStatus();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.warn('SHACL shape status check failed', { error: message });
+      healthCheck.shacl = { complete: false, error: message };
     }
 
     // Update last check timestamp

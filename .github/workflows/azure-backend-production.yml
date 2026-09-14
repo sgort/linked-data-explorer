@@ -103,10 +103,31 @@ jobs:
           # Copy package.json to deploy root (NOT inside dist)
           cp package.json deploy/
           
+          # Copy SHACL shape files — read at runtime from <package-root>/shapes
+          # (SHAPES_ROOT resolves to deploy/shapes via dist/services/../../shapes).
+          # tsc does not emit these .ttl assets, so copy them explicitly.
+          cp -r shapes deploy/
+          
+          # Fail here rather than ship a backend whose SHACL validator reports every
+          # file "Not validated": the service starts without a missing layer. These
+          # paths mirror LAYER_SPECS in src/services/shacl-validation.service.ts.
+          for f in deploy/shapes/cpsv-ap/3.2.0/cpsv-ap-SHACL.ttl deploy/shapes/cprmv/0.4.1/cprmv.shacl.ttl; do
+            if [ ! -s "$f" ]; then
+              echo "❌ Missing SHACL shape file: $f"
+              exit 1
+            fi
+          done
+          if ! ls deploy/shapes/ronl/*.ttl > /dev/null 2>&1; then
+            echo "❌ No SHACL shape files in deploy/shapes/ronl/"
+            exit 1
+          fi
+          
           # Verify structure
           echo "Deployment structure:"
           ls -la deploy/
           ls -la deploy/dist/
+          echo "SHACL shapes:"
+          ls -R deploy/shapes/
           
           # Install production dependencies in deploy folder
           cd deploy
@@ -157,6 +178,23 @@ jobs:
             echo "✅ /v1/health endpoint working!"
           else
             echo "⚠️ /v1/health returned HTTP $v1_response"
+          fi
+          
+          # SHACL shape layers: fail unless every layer loaded in the running app.
+          # /v1/health reports it without degrading, so read the body at any HTTP code.
+          shacl_complete=""
+          for _ in 1 2 3; do
+            shacl_complete=$(curl -s https://backend.linkeddata.open-regels.nl/v1/health | jq -r '.shacl.complete' 2>/dev/null || true)
+            [ "$shacl_complete" = "true" ] && break
+            sleep 10
+          done
+          
+          if [ "$shacl_complete" = "true" ]; then
+            echo "✅ SHACL shape layers all loaded"
+          else
+            echo "❌ SHACL shape layers incomplete (shacl.complete: ${shacl_complete:-unreadable})"
+            curl -s https://backend.linkeddata.open-regels.nl/v1/health | jq '.shacl' || true
+            exit 1
           fi
           
           # Test /v1/dmns

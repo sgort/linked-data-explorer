@@ -9,8 +9,15 @@ jest.mock('axios');
 jest.mock('../services/sparql.service', () => ({
   sparqlService: { healthCheck: jest.fn() },
 }));
+// Mocked also to keep the service's ESM-only RDF dependencies out of Jest's
+// CommonJS runtime.
+jest.mock('../services/shacl-validation.service', () => ({
+  __esModule: true,
+  shaclValidationService: { getLayerStatus: jest.fn() },
+}));
 
 import { sparqlService } from '../services/sparql.service';
+import { shaclValidationService } from '../services/shacl-validation.service';
 import { logger } from '../utils/logger';
 import healthRoutes from './health.routes';
 import packageJson from '../../package.json';
@@ -18,6 +25,16 @@ import packageJson from '../../package.json';
 const mockHealthCheck = sparqlService.healthCheck as jest.Mock;
 const mockAxiosGet = axios.get as jest.Mock;
 const mockWarn = logger.warn as jest.Mock;
+const mockGetLayerStatus = shaclValidationService.getLayerStatus as jest.Mock;
+
+const COMPLETE_SHAPES = {
+  complete: true,
+  layers: {
+    cprmv: { label: 'CPRMV 0.4.1', loaded: true },
+    'cpsv-ap': { label: 'CPSV-AP 3.2.0', loaded: true },
+    'ronl-custom': { label: 'RONL Custom', loaded: true },
+  },
+};
 
 function makeApp() {
   const app = express();
@@ -29,6 +46,8 @@ beforeEach(() => {
   mockHealthCheck.mockReset();
   mockAxiosGet.mockReset();
   mockWarn.mockReset();
+  mockGetLayerStatus.mockReset();
+  mockGetLayerStatus.mockResolvedValue(COMPLETE_SHAPES);
 });
 
 describe('GET /v1/health', () => {
@@ -197,5 +216,46 @@ describe('outer safety net', () => {
 
     expect(res.status).toBe(503);
     expect(res.body.error).toBe('Health check failed');
+  });
+});
+
+describe('SHACL shape layers', () => {
+  beforeEach(() => {
+    mockHealthCheck.mockResolvedValue({ status: 'up', latency: 42 });
+    mockAxiosGet.mockResolvedValue({ status: 200 });
+  });
+
+  test('reports which shape layers are loaded', async () => {
+    const res = await request(makeApp()).get('/v1/health');
+
+    expect(res.body.shacl).toEqual(COMPLETE_SHAPES);
+  });
+
+  // A missing shape layer breaks one feature, not the API. It is reported for the
+  // deploy workflows to fail on, but it must not turn the endpoint into a 503 that
+  // a platform health probe would act on.
+  test('an incomplete shape set is reported without changing the health status', async () => {
+    mockGetLayerStatus.mockResolvedValue({
+      complete: false,
+      layers: { ...COMPLETE_SHAPES.layers, cprmv: { label: 'CPRMV 0.4.1', loaded: false } },
+    });
+
+    const res = await request(makeApp()).get('/v1/health');
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('healthy');
+    expect(res.body.shacl.complete).toBe(false);
+    expect(res.body.shacl.layers.cprmv.loaded).toBe(false);
+  });
+
+  test('a failure reading the shape status reports the set incomplete, not the API unhealthy', async () => {
+    mockGetLayerStatus.mockRejectedValue(new Error('EACCES'));
+
+    const res = await request(makeApp()).get('/v1/health');
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('healthy');
+    expect(res.body.shacl).toEqual({ complete: false, error: 'EACCES' });
+    expect(mockWarn).toHaveBeenCalledWith('SHACL shape status check failed', { error: 'EACCES' });
   });
 });
