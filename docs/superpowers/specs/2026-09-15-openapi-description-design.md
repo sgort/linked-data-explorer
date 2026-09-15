@@ -38,7 +38,7 @@ Each was put to the product owner as a choice. The rejected options are recorded
    - _Rejected: all 65 handlers in one PR._ Too large to review, and schema mistakes are hard to spot in bulk.
    - _Rejected: every path now with loose schemas._ The first document would say little.
 3. **The document describes errors as they are.**
-   - Linting uses the ADR 2.2.1 ruleset with exactly two rules turned off, pending #131.
+   - Linting uses the ADR 2.2.1 ruleset with its two problem-details rules turned off, pending #131. Section C records the one further exception, for the calendar version string.
    - _Rejected: migrating to problem+json first._ It is a breaking change and would delay the document considerably.
    - _Rejected: generic `spectral:oas` linting only._ ADR compliance, the reason for #129, would go unchecked.
 4. **`/v1` only.**
@@ -106,12 +106,13 @@ Route tests call it for every documented operation, so a handler change that alt
 - Its header records the source URL (`https://gitdocumentatie.logius.nl/publicatie/api/adr/2.2.1/media/linter.yaml`), the fetch date and the file's sha256.
 - It is vendored rather than fetched in CI. A live URL would let the gate change without a commit, which is exactly what pinning exists to prevent. The unversioned URL shows the risk: on 15 September 2026 `https://static.developer.overheid.nl/adr/ruleset.yaml` redirected (301) to the **2.1.0** ruleset, not 2.2.1.
 
-**Local config.** `openapi/.spectral.yaml` extends the vendored ruleset and turns off exactly two rules:
+**Local config.** `openapi/.spectral.yaml` extends the vendored ruleset and turns off exactly three rules:
 
 - `nlgov:use-problem-schema`, which requires `application/problem+json` on 4xx/5xx;
-- `nlgov:problem-schema-members`, which requires `status`, `title` and `detail`.
+- `nlgov:problem-schema-members`, which requires `status`, `title` and `detail`;
+- `nlgov:semver`, which requires `info.version` to be strict semver.
 
-Each carries a comment linking #131. Every other rule gates.
+The first two each carry a comment linking #131. `nlgov:semver` carries its own reason: the release version is calendar-based, `YYYY.MM.N` with a zero-padded month (`2026.09.4`), which is not valid semver. `info.version` is the same string the `API-Version` header sends, and rewriting it in the document would make the two disagree. This exception was found while planning #133 and approved on 15 September 2026. Every other rule gates.
 
 `nlgov:problem-invalid-input` stays on. It requires a documented 400 on every POST/PUT/PATCH and on every parameterised GET/DELETE. Where a handler genuinely cannot return 400, the phase that documents it adds a per-path override with its reason next to it, never a global one. Documenting a 400 the API does not return would break the principle behind decision 3.
 
