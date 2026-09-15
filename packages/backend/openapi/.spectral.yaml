@@ -1,0 +1,32 @@
+# packages/backend/openapi/.spectral.yaml
+#
+# Lints the built openapi.json (npm run lint:openapi) against the NL API Design
+# Rules 2.2.1 ruleset vendored beside this file. Every rule in it gates except
+# the exceptions below. Each one states its reason and is scoped as narrowly as
+# the rule allows; add one only with a reason a reviewer can check.
+
+extends:
+  - ./adr-ruleset-2.2.1.yaml
+
+rules:
+  # Error responses are the { success: false, error } envelope, not RFC 9457
+  # problem details. The document describes them as they are rather than claim
+  # a format the API does not return. Remove both lines when
+  # https://github.com/sgort/linked-data-explorer/issues/131 lands.
+  nlgov:use-problem-schema: 'off'
+  nlgov:problem-schema-members: 'off'
+
+  # The release version is calendar-based, YYYY.MM.N with a zero-padded month
+  # (2026.09.4), and info.version is the same string as the API-Version header.
+  # A zero-padded month is not valid semver, and rewriting it in the document
+  # would make the document and the header disagree.
+  nlgov:semver: 'off'
+
+overrides:
+  # GET /ropa/public takes one parameter, a free-text substring filter on the
+  # controller name. No value is invalid, the handler never answers 400, and
+  # the document does not claim it can.
+  - files:
+      - 'openapi.json#/paths/~1ropa~1public/get'
+    rules:
+      nlgov:problem-invalid-input: 'off'
