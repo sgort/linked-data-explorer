@@ -7,6 +7,7 @@ import { config } from '../utils/config';
 import { logger } from '../utils/logger';
 import { sparqlService } from '../services/sparql.service';
 import { shaclValidationService, ShaclLayerStatus } from '../services/shacl-validation.service';
+import { getBuildInfo } from '../utils/buildInfo';
 
 const router = Router();
 
@@ -26,6 +27,7 @@ import packageJson from '../../package.json';
  *
  * Returns comprehensive health information including:
  * - Application metadata (name, version, environment)
+ * - The running build (`build`): commit SHA and run number (#122)
  * - Service status (TriplyDB, Operaton)
  * - SHACL shape layers loaded (`shacl.complete`)
  * - System uptime and timestamp
@@ -33,6 +35,11 @@ import packageJson from '../../package.json';
  * An incomplete SHACL shape set does not change `status` or the HTTP code: it
  * disables one feature, not the API, and a 503 would invite platform health
  * probes to act on it. The deploy workflows fail on `shacl.complete` instead.
+ *
+ * `version` names the release and `build` names the artifact, so the two answer
+ * different questions and `version` stays as it is (API-57). An untracked build
+ * (local development, tests) is reported, never degraded. The deploy workflows
+ * wait for `build.sha` to equal the commit they deployed.
  */
 router.get('/', async (_req: Request, res: Response) => {
   const healthCheck = {
@@ -40,6 +47,7 @@ router.get('/', async (_req: Request, res: Response) => {
     name: 'Linked Data Explorer Backend',
     version: packageJson.version,
     environment: config.nodeEnv,
+    build: getBuildInfo(),
 
     // Health status
     status: 'healthy', // 'healthy' | 'degraded' | 'unhealthy'
