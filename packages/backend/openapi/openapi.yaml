@@ -952,6 +952,358 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/drd/deploy:
+    post:
+      operationId: deployDrd
+      tags: [Discovery]
+      summary: Assemble deployed DMNs into one DRD and deploy it to Operaton
+      description: >-
+        The last id in `dmnIds` is the entry point and names the deployed file.
+        Operaton's own error status is not passed through; failures answer 500.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dmnIds, deploymentName]
+              properties:
+                dmnIds:
+                  type: array
+                  minItems: 2
+                  items:
+                    type: string
+                deploymentName:
+                  type: string
+      responses:
+        '200':
+          description: The DRD was deployed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [deploymentId, entryPointId, filename, dmnCount]
+                    properties:
+                      deploymentId:
+                        type: string
+                      entryPointId:
+                        type: string
+                      filename:
+                        type: string
+                      dmnCount:
+                        type: integer
+                        minimum: 2
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`dmnIds` has fewer than two entries or `deploymentName` is blank (code INVALID_INPUT).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            Assembly or deployment failed (code DRD_DEPLOY_FAILED), or the request
+            body was not valid JSON (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/process/deploy:
+    post:
+      operationId: deployProcess
+      tags: [Discovery]
+      summary: Deploy a BPMN process bundle to Operaton
+      description: >-
+        Deploys the BPMN with its subprocesses, forms and document templates as
+        one Operaton deployment, tagged with `organization` as the tenant. When
+        `operatonUrl` is given, that Operaton instance is used instead (not
+        validated, #142). Operaton's own error status is not passed through.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bpmnXml, deploymentName, organization]
+              properties:
+                bpmnXml:
+                  type: string
+                deploymentName:
+                  type: string
+                organization:
+                  type: string
+                  description: Becomes the Operaton tenant id.
+                forms:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, schema]
+                    properties:
+                      id:
+                        type: string
+                      schema:
+                        type: object
+                subProcesses:
+                  type: array
+                  items:
+                    type: object
+                    required: [filename, xml]
+                    properties:
+                      filename:
+                        type: string
+                      xml:
+                        type: string
+                documents:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, template]
+                    properties:
+                      id:
+                        type: string
+                      template:
+                        type: object
+                operatonUrl:
+                  type: string
+                operatonUsername:
+                  type: string
+                operatonPassword:
+                  type: string
+                boardOwner:
+                  type: string
+                  description: Omit to derive it from the BPMN candidate groups; an empty string leaves it unset.
+      responses:
+        '200':
+          description: The bundle was deployed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [deploymentId, resourceCount]
+                    properties:
+                      deploymentId:
+                        type: string
+                      resourceCount:
+                        type: integer
+                        minimum: 1
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`bpmnXml`, `deploymentName` or `organization` is missing or blank (code INVALID_INPUT).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            Deployment failed (code PROCESS_DEPLOY_FAILED; the message carries
+            Operaton's error text), or the request body was not valid JSON (code
+            INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/deploy:
+    post:
+      operationId: deployDmn
+      tags: [Discovery]
+      summary: Deploy DMN XML to Operaton as it is
+      description: Operaton's own error status is not passed through; failures answer 500.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [xml, deploymentName]
+              properties:
+                xml:
+                  type: string
+                deploymentName:
+                  type: string
+                filename:
+                  type: string
+                  description: Defaults to `<deploymentName>.dmn`.
+      responses:
+        '200':
+          description: The DMN was deployed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [deploymentId]
+                    properties:
+                      deploymentId:
+                        type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`xml` or `deploymentName` is missing or blank (code INVALID_INPUT).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            Deployment failed (code DMN_DEPLOY_FAILED), or the request body was not
+            valid JSON (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/evaluate/{decisionKey}:
+    post:
+      operationId: evaluateDecision
+      tags: [Discovery]
+      summary: Evaluate a deployed decision in Operaton
+      description: >-
+        A proxy for Operaton's decision evaluation, kept byte-for-byte compatible
+        with calling Operaton directly: the result has no `success`/`data`
+        envelope, and Operaton's own error status and body are passed through.
+        Nothing is validated here; Operaton rejects invalid input itself.
+      parameters:
+        - name: decisionKey
+          in: path
+          required: true
+          description: The Operaton decision definition key.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                variables:
+                  type: object
+                  description: Input variables in Operaton's format. A missing object is sent as empty.
+                  additionalProperties:
+                    type: object
+                    required: [value]
+                    properties:
+                      value: {}
+                      type:
+                        type: string
+                        examples: [Integer]
+                      valueInfo:
+                        type: object
+      responses:
+        '200':
+          description: Operaton's decision result, one output map per result row.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/OperatonDecisionResult'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/OperatonDecisionResult'
+        '500':
+          description: >-
+            Operaton's own error body passed through (for example a
+            `RestException`), a `ProxyError` when Operaton could not be reached, or
+            `ErrorEnvelope` when the request body was not valid JSON (#143).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/OperatonProxyError'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+                  - type: object
+                    description: Operaton's error body, unchanged.
+        default:
+          description: Operaton's own error status and body, passed through unchanged.
+          content:
+            application/json:
+              schema:
+                type: object
+  /dmns/validate:
+    post:
+      operationId: validateDmn
+      tags: [Discovery]
+      summary: Validate DMN XML in five layers
+      description: >-
+        Runs locally, without Operaton or TriplyDB. The HTTP status says whether
+        the request could be processed; the verdict on the DMN is in `data.valid`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: The DMN XML.
+      responses:
+        '200':
+          description: The validation result, valid or not.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/DmnValidationResult'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            The validator failed unexpectedly (code VALIDATION_ERROR), or the
+            request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   headers:
     ApiVersion:
@@ -1573,3 +1925,87 @@ components:
           type: string
           enum: [three-hop, four-hop]
           description: Only `three-hop` cycles are detected today.
+    OperatonDecisionResult:
+      type: object
+      description: One result row, mapping each output name to its typed value.
+      additionalProperties:
+        type: object
+        required: [value, type]
+        properties:
+          value: {}
+          type:
+            type: string
+            examples: [Boolean]
+    OperatonProxyError:
+      type: object
+      description: Returned when Operaton could not be reached at all.
+      required: [type, message]
+      properties:
+        type:
+          const: ProxyError
+        message:
+          type: string
+    DmnValidationResult:
+      type: object
+      required: [valid, parseError, layers, summary]
+      properties:
+        valid:
+          type: boolean
+          description: True when the XML parsed and no layer reported an error.
+        parseError:
+          type: [string, 'null']
+        layers:
+          type: object
+          required: [base, business, execution, interaction, content]
+          properties:
+            base:
+              $ref: '#/components/schemas/ValidationLayer'
+            business:
+              $ref: '#/components/schemas/ValidationLayer'
+            execution:
+              $ref: '#/components/schemas/ValidationLayer'
+            interaction:
+              $ref: '#/components/schemas/ValidationLayer'
+            content:
+              $ref: '#/components/schemas/ValidationLayer'
+        summary:
+          type: object
+          required: [errors, warnings, infos]
+          properties:
+            errors:
+              type: integer
+              minimum: 0
+            warnings:
+              type: integer
+              minimum: 0
+            infos:
+              type: integer
+              minimum: 0
+    ValidationLayer:
+      type: object
+      required: [label, issues]
+      properties:
+        label:
+          type: string
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+    ValidationIssue:
+      type: object
+      required: [severity, code, message]
+      properties:
+        severity:
+          type: string
+          enum: [error, warning, info]
+        code:
+          type: string
+          examples: [BIZ-006]
+        message:
+          type: string
+        location:
+          type: string
+        line:
+          type: integer
+        column:
+          type: integer

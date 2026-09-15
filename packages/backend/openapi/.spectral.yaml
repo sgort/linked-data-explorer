@@ -58,3 +58,11 @@ overrides:
       - 'openapi.json#/paths/~1dmns~1%7Bidentifier%7D~1xml/get'
     rules:
       nlgov:problem-invalid-input: 'off'
+
+  # POST /dmns/evaluate/{decisionKey} is a pass-through to Operaton. It validates
+  # nothing, so it never answers 400 itself; Operaton's own validation errors come
+  # back at Operaton's status, described by the `default` response.
+  - files:
+      - 'openapi.json#/paths/~1dmns~1evaluate~1%7BdecisionKey%7D/post'
+    rules:
+      nlgov:problem-invalid-input: 'off'

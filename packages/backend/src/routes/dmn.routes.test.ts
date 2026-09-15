@@ -809,3 +809,177 @@ describe('/v1/dmns reads match their OpenAPI description', () => {
     expectToMatchOperation(failed, 'get', '/dmns/{identifier}/xml');
   });
 });
+
+describe('/v1/dmns deploy, evaluate and validate match their OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/dmns', dmnRoutes);
+    return app;
+  }
+
+  const post = (path: string) => request(makeDocumentedApp()).post(`/v1/dmns${path}`);
+
+  test('POST /dmns/evaluate/{decisionKey} passes Operaton results and errors through, as documented', async () => {
+    operaton.evaluateRaw.mockResolvedValue([{ aanspraak: { value: true, type: 'Boolean' } }]);
+    const rows = await post('/evaluate/zorgtoeslag').send({
+      variables: { inkomen: { value: 30000, type: 'Integer' } },
+    });
+    expect(rows.status).toBe(200);
+    expectToMatchOperation(rows, 'post', '/dmns/evaluate/{decisionKey}');
+
+    operaton.evaluateRaw.mockResolvedValue({ aanspraak: { value: false, type: 'Boolean' } });
+    const single = await post('/evaluate/zorgtoeslag').send({});
+    expect(single.status).toBe(200);
+    expectToMatchOperation(single, 'post', '/dmns/evaluate/{decisionKey}');
+
+    operaton.evaluateRaw.mockRejectedValue(
+      Object.assign(new Error('Request failed'), {
+        isAxiosError: true,
+        response: {
+          status: 500,
+          data: { type: 'RestException', message: 'Unknown property used in expression' },
+        },
+      })
+    );
+    const forwarded = await post('/evaluate/zorgtoeslag').send({});
+    expect(forwarded.status).toBe(500);
+    expectToMatchOperation(forwarded, 'post', '/dmns/evaluate/{decisionKey}');
+
+    operaton.evaluateRaw.mockRejectedValue(new Error('ECONNREFUSED'));
+    const proxy = await post('/evaluate/zorgtoeslag').send({});
+    expect(proxy.status).toBe(500);
+    expect(proxy.body).toEqual({ type: 'ProxyError', message: 'ECONNREFUSED' });
+    expectToMatchOperation(proxy, 'post', '/dmns/evaluate/{decisionKey}');
+  });
+
+  test('POST /dmns/validate 200, 400 and 500, as documented', async () => {
+    const layer = (label: string) => ({ label, issues: [] as unknown[] });
+    mockValidate.mockResolvedValue({
+      valid: false,
+      parseError: null,
+      layers: {
+        base: layer('Base DMN'),
+        business: {
+          label: 'Business Rules',
+          issues: [
+            {
+              severity: 'error',
+              code: 'BIZ-006',
+              message: 'Missing hit policy',
+              location: '/definitions/decision[1]',
+            },
+          ],
+        },
+        execution: layer('Execution Rules'),
+        interaction: layer('Interaction Rules'),
+        content: {
+          label: 'Content',
+          issues: [
+            {
+              severity: 'warning',
+              code: 'CON-001',
+              message: 'Untitled input',
+              line: 12,
+              column: 4,
+            },
+          ],
+        },
+      },
+      summary: { errors: 1, warnings: 1, infos: 0 },
+    });
+    const ok = await post('/validate').send({ content: '<definitions/>' });
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'post', '/dmns/validate');
+
+    const bad = await post('/validate').send({ content: 42 });
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/dmns/validate');
+
+    mockValidate.mockRejectedValue(new Error('validator crashed'));
+    const failed = await post('/validate').send({ content: '<definitions/>' });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/dmns/validate');
+  });
+
+  test('POST /dmns/deploy 400 and 500, as documented', async () => {
+    const bad = await post('/deploy').send({ deploymentName: 'Zorgtoeslag' });
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/dmns/deploy');
+
+    operaton.deployDrd.mockRejectedValue(new Error('Operaton unreachable'));
+    const failed = await post('/deploy').send({
+      xml: '<definitions/>',
+      deploymentName: 'Zorgtoeslag',
+    });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/dmns/deploy');
+  });
+
+  test('POST /dmns/drd/deploy 400, as documented', async () => {
+    const res = await post('/drd/deploy').send({ dmnIds: ['A'], deploymentName: 'Keten' });
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/dmns/drd/deploy');
+  });
+
+  test('POST /dmns/process/deploy 400, as documented', async () => {
+    const res = await post('/process/deploy').send({
+      bpmnXml: '<definitions/>',
+      deploymentName: 'Proces',
+    });
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/dmns/process/deploy');
+  });
+
+  test('POST /dmns/drd/deploy 200, as documented', async () => {
+    operaton.assembleDrd.mockResolvedValue('<definitions/>');
+    operaton.deployDrd.mockResolvedValue({ deploymentId: 'dep-1' });
+
+    const res = await post('/drd/deploy').send({
+      dmnIds: ['A', 'B', 'Entry'],
+      deploymentName: 'ZorgtoeslagDRD',
+    });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dmns/drd/deploy');
+  });
+
+  test('POST /dmns/process/deploy 200, as documented', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 5 });
+    const forms = [{ id: 'f1', schema: {} }];
+    const subProcesses = [{ filename: 'sub.bpmn', xml: '<bpmn/>' }];
+    const documents = [{ id: 'd1', template: {} }];
+
+    const res = await post('/process/deploy').send({
+      bpmnXml: '<bpmn:definitions/>',
+      deploymentName: 'RipR21Process',
+      forms,
+      subProcesses,
+      documents,
+      operatonUrl: 'http://localhost:8081/engine-rest',
+      operatonUsername: 'demo',
+      operatonPassword: 'demo',
+      boardOwner: 'flevoland',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dmns/process/deploy');
+  });
+
+  test('POST /dmns/deploy 200, as documented', async () => {
+    operaton.deployDrd.mockResolvedValue({ deploymentId: 'dep-2' });
+
+    const res = await post('/deploy').send({
+      xml: '<dmn:definitions/>',
+      deploymentName: 'test-dmn',
+      filename: 'individuele inkomenstoeslag-iknow-patched.dmn',
+    });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dmns/deploy');
+  });
+});
