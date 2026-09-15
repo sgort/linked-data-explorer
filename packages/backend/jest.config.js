@@ -2,6 +2,8 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: ['<rootDir>/src/**/*.test.ts'],
+  // Builds openapi/openapi.json from openapi.yaml before any test reads it (#129).
+  globalSetup: '<rootDir>/scripts/jest-global-setup.cjs',
   // Report every source file, not just the ones a test happens to import, so
   // untested features surface as 0% instead of being omitted from the table
   // (mirrors ronl-business-api's jest.config.js).

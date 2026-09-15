@@ -1,0 +1,66 @@
+# packages/backend/openapi/openapi.yaml
+#
+# The OpenAPI description of the Linked Data Explorer backend, written by hand
+# (#129). Served as JSON at /v1/openapi.json. scripts/build-openapi.cjs builds
+# openapi.json from this file and sets info.version from package.json, so this
+# file must not set info.version.
+#
+# Operations not described yet are listed in pending.json;
+# src/openapi/coverage.test.ts keeps both in step with the Express routes, and
+# route tests check real responses against this file (expectToMatchOperation).
+openapi: '3.1.0'
+info:
+  title: Linked Data Explorer Backend
+  description: >-
+    DMN discovery and chain execution, SHACL validation, asset storage and
+    integrations for the Linked Data Explorer.
+
+    Error responses use the `{ success: false, error }` envelope described by
+    the ErrorEnvelope schema. The move to RFC 9457 problem details is tracked in
+    https://github.com/sgort/linked-data-explorer/issues/131.
+  contact:
+    name: Steven Gort
+    email: steven.gort@ictu.nl
+    url: https://iou-architectuur.open-regels.nl/
+servers:
+  - url: https://backend.linkeddata.open-regels.nl/v1
+    description: Production
+  - url: https://acc.backend.linkeddata.open-regels.nl/v1
+    description: Acceptance
+tags:
+  - name: Discovery
+    description: What the API and its data offer.
+paths: {}
+components:
+  headers:
+    ApiVersion:
+      description: Full release version of the API (/core/version-header).
+      required: true
+      schema:
+        type: string
+        examples:
+          - '2026.09.4'
+  schemas:
+    ErrorEnvelope:
+      type: object
+      description: >-
+        The error body the backend returns today. Not RFC 9457 problem details;
+        see https://github.com/sgort/linked-data-explorer/issues/131.
+      required: [success, error]
+      properties:
+        success:
+          const: false
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              examples: [LIST_FAILED]
+            message:
+              type: string
+            details:
+              type: string
+        timestamp:
+          type: string
+          format: date-time

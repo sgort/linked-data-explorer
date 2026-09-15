@@ -9,6 +9,9 @@ build/
 # Written into the deploy artifact by the backend deploy workflows (#122)
 build-info.json
 
+# Built from openapi/openapi.yaml by scripts/build-openapi.cjs (#129)
+openapi/openapi.json
+
 # Environment variables
 .env
 .env.local
