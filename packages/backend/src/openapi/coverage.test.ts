@@ -24,6 +24,11 @@ import { listDocumentedOperations, listServedOperations } from './testing/routeO
 
 const PENDING_PATH = path.resolve(__dirname, '../../openapi/pending.json');
 
+// The pending list may only shrink (#129). Lower this in the same change that
+// documents operations (#134–#137). A route added without documentation pushes
+// the list past it and fails the test below.
+const PENDING_CEILING = 62;
+
 const pending: string[] = JSON.parse(fs.readFileSync(PENDING_PATH, 'utf8'));
 const served = listServedOperations(routeRegistry);
 const documented = listDocumentedOperations(readOpenApiDocument());
@@ -47,5 +52,9 @@ describe('OpenAPI coverage of the /v1 routes', () => {
 
   test('pending lists each operation once', () => {
     expect(new Set(pending).size).toBe(pending.length);
+  });
+
+  test('pending never grows past its ceiling', () => {
+    expect(pending.length).toBeLessThanOrEqual(PENDING_CEILING);
   });
 });

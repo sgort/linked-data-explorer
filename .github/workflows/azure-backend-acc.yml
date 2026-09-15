@@ -262,9 +262,21 @@ jobs:
           fi
 
           # OpenAPI description (#129): served, and describing the release that is
-          # running. The build check above already waited for the new artifact.
-          doc_version=$(curl -s -m 10 https://acc.backend.linkeddata.open-regels.nl/v1/openapi.json | jq -r '.info.version' 2>/dev/null || true)
-          api_version=$(curl -s -m 10 https://acc.backend.linkeddata.open-regels.nl/v1/health | jq -r '.version' 2>/dev/null || true)
+          # running. The build check above already waited for the new artifact; retry
+          # briefly so one slow response cannot fail a deploy that is already live.
+          doc_version=""
+          api_version=""
+          for attempt in $(seq 1 5); do
+            doc_version=$(curl -s -m 10 https://acc.backend.linkeddata.open-regels.nl/v1/openapi.json | jq -r '.info.version' 2>/dev/null || true)
+            api_version=$(curl -s -m 10 https://acc.backend.linkeddata.open-regels.nl/v1/health | jq -r '.version' 2>/dev/null || true)
+            if [ -n "$doc_version" ] && [ "$doc_version" != "null" ] && [ "$doc_version" = "$api_version" ]; then
+              break
+            fi
+            echo "Attempt $attempt/5: /v1/openapi.json info.version is ${doc_version:-unreadable}; /v1/health version is ${api_version:-unreadable}"
+            if [ "$attempt" -lt 5 ]; then
+              sleep 10
+            fi
+          done
           if [ -n "$doc_version" ] && [ "$doc_version" != "null" ] && [ "$doc_version" = "$api_version" ]; then
             echo "✅ /v1/openapi.json describes $doc_version"
           else

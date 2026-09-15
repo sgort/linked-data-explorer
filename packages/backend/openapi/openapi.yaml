@@ -8,6 +8,10 @@
 # Operations not described yet are listed in pending.json;
 # src/openapi/coverage.test.ts keeps both in step with the Express routes, and
 # route tests check real responses against this file (expectToMatchOperation).
+#
+# During `npm run dev` the document is built once (predev), the route caches it,
+# and nodemon does not watch this file: after editing it, run
+# `npm run build:openapi` and restart the dev server.
 openapi: '3.1.0'
 info:
   title: Linked Data Explorer Backend

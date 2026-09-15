@@ -9,7 +9,7 @@
     "build:openapi": "node scripts/build-openapi.cjs",
     "prebuild": "npm run build:openapi",
     "predev": "npm run build:openapi",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
@@ -81,5 +81,8 @@
   "engines": {
     "node": ">=20.20.2",
     "npm": ">=10.9.9"
+  },
+  "scarfSettings": {
+    "enabled": false
   }
 }

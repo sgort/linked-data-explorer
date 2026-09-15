@@ -60,7 +60,7 @@ Each was put to the product owner as a choice. The rejected options are recorded
 - `servers` lists only `https://acc.backend.linkeddata.open-regels.nl/v1` and `https://backend.linkeddata.open-regels.nl/v1`. The ADR rules require both the version segment (`nlgov:include-major-version-in-uri`) and HTTPS (`nlgov:servers-use-https`), so no local `http://` server is listed.
 - `info.contact`: name `Steven Gort`, email `steven.gort@ictu.nl`, url `https://iou-architectuur.open-regels.nl/`. This satisfies `/core/doc-openapi-contact`, which asks for a name, URL and email and advises against generic addresses.
 
-**Build.** `packages/backend/scripts/build-openapi.mjs` parses the YAML and writes `openapi/openapi.json`.
+**Build.** `packages/backend/scripts/build-openapi.cjs` parses the YAML and writes `openapi/openapi.json`, through a temporary file renamed into place so a concurrent reader never sees half-written JSON.
 
 - It sets `info.version` from `package.json`, so the document and the `API-Version` header cannot disagree.
 - It runs before `build` and `dev`.
@@ -74,7 +74,7 @@ Each was put to the product owner as a choice. The rejected options are recorded
 - A registry entry under _Discovery_ ("OpenAPI 3.1 description of this API") makes the root page list it.
 - The path is added to `PUBLIC_MOUNTS` in `utils/publicPaths.ts`, because `/core/publish-openapi` requires CORS open to all origins. The file header's reasoning still holds: the data is public and read-only.
 
-**Artifact.** Both backend deploy workflows' _Prepare deployment package_ step copies `openapi/` into `deploy/`. The step fails if `deploy/openapi/openapi.json` is missing or empty, mirroring the existing SHACL shapes check.
+**Artifact.** Both backend deploy workflows' _Prepare deployment package_ step copies the built `openapi/openapi.json` into `deploy/openapi/`. The step fails if `deploy/openapi/openapi.json` is missing or empty, mirroring the existing SHACL shapes check.
 
 ### B. Keeping the document true
 
@@ -87,7 +87,7 @@ Each was put to the product owner as a choice. The rejected options are recorded
   - a pending entry is already documented;
   - a pending entry no longer matches any served operation;
   - a documented operation is not served.
-- The list can only shrink, and the remaining work is always visible.
+- The list can only shrink: a ceiling on its length, lowered by each phase, fails the test if an entry is added. The remaining work is always visible.
 
 **Response conformance.** A test helper, `expectToMatchOperation(res, method, path)`:
 
@@ -98,6 +98,8 @@ Each was put to the product owner as a choice. The rejected options are recorded
 - asserts the `API-Version` header on 2xx responses.
 
 Route tests call it for every documented operation, so a handler change that alters a response shape fails its own test.
+
+Neither helper ships. `npm run build` compiles with `tsconfig.build.json`, which excludes `src/**/testing/**`. An ESLint `no-restricted-imports` rule stops non-test code importing them, because the exclusion alone would not: `tsc` follows imports and would compile an imported helper back into `dist`.
 
 ### C. Linting
 
@@ -116,7 +118,7 @@ The first two each carry a comment linking #131. `nlgov:semver` carries its own 
 
 `nlgov:problem-invalid-input` stays on. It requires a documented 400 on every POST/PUT/PATCH and on every parameterised GET/DELETE. Where a handler genuinely cannot return 400, the phase that documents it adds a per-path override with its reason next to it, never a global one. Documenting a 400 the API does not return would break the principle behind decision 3.
 
-**CI.** A `lint:openapi` script runs Spectral against `openapi/openapi.yaml` with that config.
+**CI.** A `lint:openapi` script builds the document and runs Spectral against the built `openapi/openapi.json` with that config. It lints the JSON rather than the YAML because the YAML deliberately has no `info.version`.
 
 - Both backend workflows run it directly after _Run linter_, so on `acc` it gates pull requests.
 - It is a `run:` step, not a new `uses:`, so `SECURITY-PIPELINE.md`'s action register and `scripts/check-supply-chain.mjs` are unaffected.
@@ -133,6 +135,8 @@ The first two each carry a comment linking #131. `nlgov:semver` carries its own 
 Maintenance was checked per ICTU guideline recommendation 1: all four have releases within the last year or a stable major, several maintainers, and permissive licences (Apache-2.0, MIT, ISC).
 
 A `--dry-run` install measured **117 added packages**, almost all transitive dependencies of Spectral. Recommendation 9 asks for explicit attention to new build dependencies. They are locked by `package-lock.json` and installed with `npm ci`, and none are shipped.
+
+One of them, `@scarf/scarf` 1.4.0 (required by five `@stoplight/spectral-*` packages), runs a `postinstall` that reports every install to scarf.sh. It is turned off with `"scarfSettings": { "enabled": false }` in the root, backend and frontend `package.json`. Scarf reads the setting from the directory npm is invoked in, and installs run from both the repository root and `packages/backend`. Found in the final review of #133.
 
 ### D. Phases
 

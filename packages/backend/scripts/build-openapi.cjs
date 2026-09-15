@@ -33,7 +33,12 @@ function buildOpenApiDocument(source, version) {
 function buildOpenApi() {
   const { version } = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8'));
   const document = buildOpenApiDocument(fs.readFileSync(SOURCE, 'utf8'), version);
-  fs.writeFileSync(TARGET, `${JSON.stringify(document, null, 2)}\n`);
+  // Write to a temporary file and rename it into place, so a concurrent reader
+  // (an overlapping Jest run, or the dev server's first request) never sees
+  // half-written JSON.
+  const temporary = `${TARGET}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(document, null, 2)}\n`);
+  fs.renameSync(temporary, TARGET);
   return TARGET;
 }
 

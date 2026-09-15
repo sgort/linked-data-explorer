@@ -68,6 +68,27 @@ module.exports = tseslint.config(
     },
   },
 
+  // Test-only helpers under src/**/testing/** import dev-only packages (ajv).
+  // tsconfig.build.json leaves them out of dist, but tsc follows imports, so a
+  // runtime import would compile them back in and fail under --omit=dev.
+  {
+    files: ['src/**/*.ts'],
+    ignores: ['**/*.test.ts', '**/*.spec.ts', 'src/**/testing/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '(^|/)testing/',
+              message: 'Test-only helpers must not be imported by runtime code.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Test files - more relaxed rules
   {
     files: ['**/*.test.ts', '**/*.spec.ts'],

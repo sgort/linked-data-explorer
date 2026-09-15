@@ -48,5 +48,8 @@
     "url": "https://github.com/sgort/linked-data-explorer.git"
   },
   "author": "Regels Overheid",
-  "license": "EUPL-1.2"
+  "license": "EUPL-1.2",
+  "scarfSettings": {
+    "enabled": false
+  }
 }
