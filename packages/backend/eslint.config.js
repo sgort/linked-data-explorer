@@ -47,6 +47,27 @@ module.exports = tseslint.config(
     },
   },
 
+  // Node build scripts (scripts/*.cjs). The '*.cjs' ignore above matches
+  // package-root files only, so these are linted, and they run as CommonJS under
+  // Node. The globals are named here rather than taken from the `globals`
+  // package, which the backend does not declare.
+  {
+    files: ['scripts/**/*.cjs'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: {
+        require: 'readonly',
+        module: 'writable',
+        __dirname: 'readonly',
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+
   // Test files - more relaxed rules
   {
     files: ['**/*.test.ts', '**/*.spec.ts'],
