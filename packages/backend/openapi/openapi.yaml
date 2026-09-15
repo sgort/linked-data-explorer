@@ -19,8 +19,11 @@ info:
     DMN discovery and chain execution, SHACL validation, asset storage and
     integrations for the Linked Data Explorer.
 
-    Error responses use the `{ success: false, error }` envelope described by
-    the ErrorEnvelope schema. The move to RFC 9457 problem details is tracked in
+    Most error responses use the `{ success: false, error }` envelope described
+    by the ErrorEnvelope schema. `/triplydb` uses TriplyDbError instead (and
+    `/triplydb/test-connection`'s 503 sends a bare `message`), and
+    `POST /dmns/evaluate/{decisionKey}` passes Operaton's own errors through, or
+    sends OperatonProxyError. The move to RFC 9457 problem details is tracked in
     https://github.com/sgort/linked-data-explorer/issues/131.
   contact:
     name: Steven Gort
@@ -170,6 +173,1147 @@ paths:
                       $ref: '#/components/schemas/PublicBundle'
         '500':
           description: The bundles could not be read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /cache/stats:
+    get:
+      operationId: getCacheStats
+      tags: [Health & monitoring]
+      summary: SPARQL result cache statistics per endpoint
+      description: >-
+        One entry per SPARQL endpoint whose DMN list is currently cached, keyed
+        by the endpoint URL. An empty object means nothing is cached.
+      responses:
+        '200':
+          description: The cache statistics.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/CacheStats'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The statistics could not be read (code CACHE_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /cache/clear:
+    delete:
+      operationId: clearCache
+      tags: [Health & monitoring]
+      summary: Clear the SPARQL result cache
+      description: >-
+        Clears the cache for one endpoint when `endpoint` is given and not empty,
+        otherwise for every endpoint.
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL whose cache to clear. Omitted or empty clears all.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The cache was cleared.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [message, endpoint]
+                    properties:
+                      message:
+                        type: string
+                        examples: [All caches cleared]
+                      endpoint:
+                        type: string
+                        description: The endpoint whose cache was cleared, or `all`.
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The cache could not be cleared (code CACHE_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /norms:
+    get:
+      operationId: listNorms
+      tags: [Discovery]
+      summary: Published rules (norms) with their dataset versions
+      description: >-
+        Rules published to TriplyDB, optionally filtered by ruleset and
+        applicable date, in the vocabulary of the requested CPRMV version. When
+        every ruleset in the result has dataset metadata, the response carries
+        `ETag` and `Cache-Control: public, max-age=3600`, and a matching
+        conditional request is answered 304; otherwise `Cache-Control: no-cache`.
+        The `endpoint` override is not validated (#142).
+      parameters:
+        - name: rulesetid
+          in: query
+          required: false
+          description: Only rules of this ruleset.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+$'
+        - name: applicable_date
+          in: query
+          required: false
+          description: Only rules applicable on this date, as YYYY-MM-DD. The shape is checked, not the calendar.
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+        - name: cprmv_version
+          in: query
+          required: false
+          description: CPRMV vocabulary version for the rule keys.
+          schema:
+            type: string
+            enum: ['0.3.0', '0.3.2', '0.4.1']
+            default: '0.3.0'
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The matching rules.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+            ETag:
+              description: Present when every ruleset in the result has dataset metadata.
+              schema:
+                type: string
+            Last-Modified:
+              description: Present with `ETag` when the latest publication date is known.
+              schema:
+                type: string
+            Cache-Control:
+              description: '`public, max-age=3600` with `ETag`, otherwise `no-cache`.'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/NormsResult'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '304':
+          description: Not modified since the conditional request's `ETag` or date.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+            ETag:
+              description: The unchanged entity tag.
+              schema:
+                type: string
+            Last-Modified:
+              description: Present with `ETag` when the latest publication date is known.
+              schema:
+                type: string
+            Cache-Control:
+              description: '`public, max-age=3600`.'
+              schema:
+                type: string
+        '400':
+          description: A query parameter is invalid (code INVALID_PARAM).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The rules could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /triplydb/query:
+    post:
+      operationId: queryTriplyDb
+      tags: [Discovery]
+      summary: Run a SPARQL query against a caller-supplied endpoint
+      description: >-
+        Forwards `query` to `endpoint` and returns the endpoint's SPARQL JSON
+        results beside `success`, without a `data` wrapper. The endpoint is not
+        validated (#142).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, query]
+              properties:
+                endpoint:
+                  type: string
+                  description: SPARQL endpoint URL.
+                query:
+                  type: string
+                  description: SPARQL query text.
+      responses:
+        '200':
+          description: The endpoint's results.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SparqlResults'
+                  - type: object
+                    required: [success]
+                    properties:
+                      success:
+                        const: true
+        '400':
+          description: '`endpoint` or `query` is missing.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        '500':
+          description: >-
+            The query failed (`TriplyDbError`), or the request body was not valid
+            JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/TriplyDbError'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+  /triplydb/update-service:
+    post:
+      operationId: updateTriplyDbService
+      tags: [Discovery]
+      summary: Sync a TriplyDB service to include every graph of its dataset
+      description: >-
+        Changes remote state. The caller supplies the TriplyDB instance and its
+        credentials, which are not validated (#142).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [config, serviceName]
+              properties:
+                config:
+                  $ref: '#/components/schemas/TriplyDbConfig'
+                serviceName:
+                  type: string
+                graphName:
+                  type: string
+                  description: Echoed back in the response when given.
+      responses:
+        '200':
+          description: The service was updated.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, graphCount]
+                properties:
+                  success:
+                    const: true
+                  message:
+                    type: string
+                  graphCount:
+                    type: integer
+                    minimum: 0
+                  graphName:
+                    type: string
+        '400':
+          description: >-
+            `config` or `serviceName` is missing, or `config` lacks `baseUrl`,
+            `account`, `dataset` or `apiToken`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        '500':
+          description: >-
+            The update failed (`TriplyDbError`), or the request body was not valid
+            JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/TriplyDbError'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+  /triplydb/list-graphs:
+    post:
+      operationId: listTriplyDbGraphs
+      tags: [Discovery]
+      summary: List the graph names of a TriplyDB dataset
+      description: The caller supplies the TriplyDB instance and its credentials, which are not validated (#142).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [config]
+              properties:
+                config:
+                  $ref: '#/components/schemas/TriplyDbConfig'
+      responses:
+        '200':
+          description: The dataset's graph names.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, graphs, count]
+                properties:
+                  success:
+                    const: true
+                  graphs:
+                    type: array
+                    items:
+                      type: string
+                  count:
+                    type: integer
+                    minimum: 0
+        '400':
+          description: '`config` is missing or lacks `baseUrl`, `account`, `dataset` or `apiToken`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        '500':
+          description: >-
+            Listing failed (`TriplyDbError`), or the request body was not valid
+            JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/TriplyDbError'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+  /triplydb/test-connection:
+    post:
+      operationId: testTriplyDbConnection
+      tags: [Discovery]
+      summary: Check that a TriplyDB dataset is reachable with the given settings
+      description: >-
+        Only the presence of `config` is checked; incomplete settings surface as a
+        failed connection (503). The target is not validated (#142).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [config]
+              properties:
+                config:
+                  type: object
+                  description: TriplyDB connection settings (`baseUrl`, `account`, `dataset`, `apiToken`).
+      responses:
+        '200':
+          description: The dataset answered.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, status]
+                properties:
+                  success:
+                    const: true
+                  message:
+                    type: string
+                    examples: [Connection successful]
+                  status:
+                    const: 200
+        '400':
+          description: '`config` is missing.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        '500':
+          description: >-
+            The check itself failed (`TriplyDbError`), or the request body was not
+            valid JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/TriplyDbError'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: The dataset did not answer. This body uses `message`, not `error`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, status]
+                properties:
+                  success:
+                    const: false
+                  message:
+                    type: string
+                    examples: [Connection failed]
+                  status:
+                    const: 503
+  /triplydb/assets:
+    get:
+      operationId: listTriplyDbAssets
+      tags: [Discovery]
+      summary: List the assets of a dataset on the Open Regels TriplyDB instance
+      description: >-
+        Queries `https://api.open-regels.triply.cc`. A private dataset needs
+        `apiToken`, which this operation takes in the query string (#142).
+      parameters:
+        - name: account
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: dataset
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: apiToken
+          in: query
+          required: false
+          description: Bearer token for a private dataset.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The dataset's assets.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, assets, count]
+                properties:
+                  success:
+                    const: true
+                  assets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TriplyDbAsset'
+                  count:
+                    type: integer
+                    minimum: 0
+        '400':
+          description: '`account` or `dataset` is missing.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        '500':
+          description: TriplyDB could not be reached, or answered with its own 500.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        default:
+          description: TriplyDB rejected the request; its HTTP status is passed through (for example 403).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+  /triplydb/health:
+    get:
+      operationId: getTriplyDbProxyHealth
+      tags: [Health & monitoring]
+      summary: Liveness of the TriplyDB proxy
+      description: Always answers 200 and does not contact TriplyDB.
+      responses:
+        '200':
+          description: The proxy is running.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service, version, timestamp, uptime]
+                properties:
+                  status:
+                    const: ok
+                  service:
+                    const: triplydb-proxy
+                  version:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                    description: Process uptime in seconds.
+  /dmns:
+    get:
+      operationId: listDmns
+      tags: [Discovery]
+      summary: DMN decision models published in the knowledge graph
+      description: >-
+        Results are cached for five minutes per endpoint. The `endpoint` override
+        is not validated (#142).
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+        - name: refresh
+          in: query
+          required: false
+          description: '`true` or `1` bypasses the cache; any other value leaves it in use.'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The decision models.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [total, dmns, fromCache]
+                    properties:
+                      total:
+                        type: integer
+                        minimum: 0
+                      dmns:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DmnModel'
+                      fromCache:
+                        type: boolean
+                        description: True unless `refresh` was requested; not a cache-hit indicator.
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The knowledge graph could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/semantic-equivalences:
+    get:
+      operationId: listDmnSemanticEquivalences
+      tags: [Discovery]
+      summary: Variables of different DMNs linked to the same concept
+      description: The `endpoint` override is not validated (#142).
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The equivalences.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SemanticEquivalence'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The knowledge graph could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/enhanced-chain-links:
+    get:
+      operationId: listDmnChainLinks
+      tags: [Discovery]
+      summary: Output-to-input links between DMNs, by identifier or shared concept
+      description: The `endpoint` override is not validated (#142).
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The chain links.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EnhancedChainLink'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The knowledge graph could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/cycles:
+    get:
+      operationId: listDmnChainCycles
+      tags: [Discovery]
+      summary: Cycles in the DMN chain graph
+      description: The `endpoint` override is not validated (#142).
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The detected cycles.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChainCycle'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The knowledge graph could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/{identifier}:
+    get:
+      operationId: getDmn
+      tags: [Discovery]
+      summary: One DMN decision model
+      description: Served from the same five-minute cache as the list. The `endpoint` override is not validated (#142).
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          description: The DMN's identifier.
+          schema:
+            type: string
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The decision model.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/DmnModel'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '404':
+          description: No DMN has this identifier (code NOT_FOUND).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The knowledge graph could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/{identifier}/xml:
+    get:
+      operationId: getDmnXml
+      tags: [Discovery]
+      summary: The deployed DMN XML, as a file download
+      description: Fetched from Operaton; `identifier` is used as the decision definition key.
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          description: The DMN's identifier, used as the Operaton decision definition key.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The DMN XML.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+            Content-Disposition:
+              description: '`attachment; filename="<identifier>.dmn"`.'
+              schema:
+                type: string
+          content:
+            application/xml:
+              schema:
+                type: string
+        '404':
+          description: Operaton has no decision definition with this key (code DMN_NOT_FOUND).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Operaton could not be reached or answered with an error (code DMN_FETCH_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/drd/deploy:
+    post:
+      operationId: deployDrd
+      tags: [Discovery]
+      summary: Assemble deployed DMNs into one DRD and deploy it to Operaton
+      description: >-
+        The last id in `dmnIds` is the entry point and names the deployed file.
+        Operaton's own error status is not passed through; failures answer 500.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dmnIds, deploymentName]
+              properties:
+                dmnIds:
+                  type: array
+                  minItems: 2
+                  items:
+                    type: string
+                deploymentName:
+                  type: string
+      responses:
+        '200':
+          description: The DRD was deployed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [deploymentId, entryPointId, filename, dmnCount]
+                    properties:
+                      deploymentId:
+                        type: string
+                      entryPointId:
+                        type: string
+                      filename:
+                        type: string
+                      dmnCount:
+                        type: integer
+                        minimum: 2
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`dmnIds` has fewer than two entries or `deploymentName` is blank (code INVALID_INPUT).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            Assembly or deployment failed (code DRD_DEPLOY_FAILED), or the request
+            body was not valid JSON (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/process/deploy:
+    post:
+      operationId: deployProcess
+      tags: [Discovery]
+      summary: Deploy a BPMN process bundle to Operaton
+      description: >-
+        Deploys the BPMN with its subprocesses, forms and document templates as
+        one Operaton deployment, tagged with `organization` as the tenant. When
+        `operatonUrl` is given, that Operaton instance is used instead (not
+        validated, #142). Operaton's own error status is not passed through.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bpmnXml, deploymentName, organization]
+              properties:
+                bpmnXml:
+                  type: string
+                deploymentName:
+                  type: string
+                organization:
+                  type: string
+                  description: Becomes the Operaton tenant id.
+                forms:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, schema]
+                    properties:
+                      id:
+                        type: string
+                      schema:
+                        type: object
+                subProcesses:
+                  type: array
+                  items:
+                    type: object
+                    required: [filename, xml]
+                    properties:
+                      filename:
+                        type: string
+                      xml:
+                        type: string
+                documents:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, template]
+                    properties:
+                      id:
+                        type: string
+                      template:
+                        type: object
+                operatonUrl:
+                  type: string
+                operatonUsername:
+                  type: string
+                operatonPassword:
+                  type: string
+                boardOwner:
+                  type: string
+                  description: Omit to derive it from the BPMN candidate groups; an empty string leaves it unset.
+      responses:
+        '200':
+          description: The bundle was deployed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [deploymentId, resourceCount]
+                    properties:
+                      deploymentId:
+                        type: string
+                      resourceCount:
+                        type: integer
+                        minimum: 1
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`bpmnXml`, `deploymentName` or `organization` is missing or blank (code INVALID_INPUT).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            Deployment failed (code PROCESS_DEPLOY_FAILED; the message carries
+            Operaton's error text), or the request body was not valid JSON (code
+            INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/deploy:
+    post:
+      operationId: deployDmn
+      tags: [Discovery]
+      summary: Deploy DMN XML to Operaton as it is
+      description: Operaton's own error status is not passed through; failures answer 500.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [xml, deploymentName]
+              properties:
+                xml:
+                  type: string
+                deploymentName:
+                  type: string
+                filename:
+                  type: string
+                  description: Defaults to `<deploymentName>.dmn` when missing or blank.
+      responses:
+        '200':
+          description: The DMN was deployed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [deploymentId]
+                    properties:
+                      deploymentId:
+                        type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`xml` or `deploymentName` is missing or blank (code INVALID_INPUT).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            Deployment failed (code DMN_DEPLOY_FAILED), or the request body was not
+            valid JSON (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/evaluate/{decisionKey}:
+    post:
+      operationId: evaluateDecision
+      tags: [Discovery]
+      summary: Evaluate a deployed decision in Operaton
+      description: >-
+        A proxy for Operaton's decision evaluation, kept byte-for-byte compatible
+        with calling Operaton directly: the result has no `success`/`data`
+        envelope, and Operaton's own error status and body are passed through.
+        Nothing is validated here; Operaton rejects invalid input itself, answering
+        400.
+      parameters:
+        - name: decisionKey
+          in: path
+          required: true
+          description: The Operaton decision definition key.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                variables:
+                  type: object
+                  description: Input variables in Operaton's format. A missing object is sent as empty.
+                  additionalProperties:
+                    type: object
+                    required: [value]
+                    properties:
+                      value: {}
+                      type:
+                        type: string
+                        examples: [Integer]
+                      valueInfo:
+                        type: object
+      responses:
+        '200':
+          description: Operaton's decision result, one output map per result row.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/OperatonDecisionResult'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/OperatonDecisionResult'
+        '400':
+          description: >-
+            Operaton rejected the input (for example a variable of the wrong
+            type), and its error body is passed through unchanged.
+          content:
+            application/json:
+              schema:
+                description: Operaton's error body, unchanged.
+        '500':
+          description: >-
+            Operaton's own error body passed through (for example a
+            `RestException`), a `ProxyError` when Operaton could not be reached, or
+            `ErrorEnvelope` when the request body was not valid JSON (#143).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/OperatonProxyError'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+                  - description: Operaton's error body, unchanged.
+        default:
+          description: Operaton's own error status and body, passed through unchanged.
+          content:
+            application/json:
+              schema: {}
+  /dmns/validate:
+    post:
+      operationId: validateDmn
+      tags: [Discovery]
+      summary: Validate DMN XML in five layers
+      description: >-
+        Runs locally, without Operaton or TriplyDB. The HTTP status says whether
+        the request could be processed; the verdict on the DMN is in `data.valid`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: The DMN XML.
+      responses:
+        '200':
+          description: The validation result, valid or not.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/DmnValidationResult'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            The validator failed unexpectedly (code VALIDATION_ERROR), or the
+            request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
           content:
             application/json:
               schema:
@@ -484,3 +1628,398 @@ components:
           type: string
         name:
           type: string
+    CacheStats:
+      type: object
+      description: >-
+        SPARQL result cache entries keyed by endpoint URL. `age` is the number of
+        seconds since the entry was cached; `count` is the number of cached DMN
+        records.
+      additionalProperties:
+        type: object
+        required: [age, count]
+        properties:
+          age:
+            type: integer
+            minimum: 0
+          count:
+            type: integer
+            minimum: 0
+    NormsResult:
+      type: object
+      required: [total, dataset_versions, cprmv_version, aggregations, rules]
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Number of rules in `rules`.
+        dataset_versions:
+          type: object
+          description: Published dataset versions per ruleset id, newest first.
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/DatasetVersion'
+        cprmv_version:
+          type: string
+          description: The CPRMV version the rule keys use.
+          examples: ['0.3.0']
+        aggregations:
+          type: object
+          required: [norms_per_rulesetid]
+          properties:
+            norms_per_rulesetid:
+              type: object
+              description: Number of rules per ruleset id.
+              additionalProperties:
+                type: integer
+                minimum: 0
+        rules:
+          type: array
+          description: >-
+            Published rules. A rule's keys are IRIs in the requested CPRMV
+            version's namespace (for example
+            `https://cprmv.open-regels.nl/0.3.0/id`), plus `rulesetid`,
+            `applicable_date`, `rulesetid_index`, `rule_id_path` and
+            `rule_id_path_key`. A nested `contains` map, keyed by rule id, is
+            present when the rule has children. The key set varies by version,
+            so rules are described as open objects.
+          items:
+            type: object
+    DatasetVersion:
+      type: object
+      required: [version, published_at, title]
+      properties:
+        version:
+          type: [string, 'null']
+          description: Null for rulesets other than the primary one.
+        published_at:
+          type: string
+          description: Publication date as published in TriplyDB, normally ISO 8601; not reformatted.
+        title:
+          type: [string, 'null']
+          description: Null for rulesets other than the primary one.
+    TriplyDbError:
+      type: object
+      description: >-
+        Error body of the TriplyDB proxy routes. Not `ErrorEnvelope`: `error` is a
+        plain message and `status` repeats the HTTP status (#131).
+      required: [success, error, status]
+      properties:
+        success:
+          const: false
+        error:
+          type: string
+        status:
+          type: integer
+    TriplyDbConfig:
+      type: object
+      description: TriplyDB connection settings supplied by the caller (#142).
+      required: [baseUrl, account, dataset, apiToken]
+      properties:
+        baseUrl:
+          type: string
+          examples: ['https://api.open-regels.triply.cc']
+        account:
+          type: string
+        dataset:
+          type: string
+        apiToken:
+          type: string
+    SparqlResults:
+      type: object
+      description: >-
+        SPARQL 1.1 Query Results JSON as returned by the endpoint, unchanged:
+        `head` and `results.bindings` for SELECT, `head` and `boolean` for ASK.
+      properties:
+        head:
+          type: object
+          properties:
+            vars:
+              type: array
+              items:
+                type: string
+        results:
+          type: object
+          properties:
+            bindings:
+              type: array
+              items:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/SparqlBinding'
+        boolean:
+          type: boolean
+    SparqlBinding:
+      type: object
+      required: [value]
+      properties:
+        type:
+          type: string
+          examples: [uri]
+        value:
+          type: string
+        datatype:
+          type: string
+        'xml:lang':
+          type: string
+    TriplyDbAsset:
+      type: object
+      required: [id, name, url, size, contentType]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+          description: Download URL of the first version, or a constructed page URL when the asset has no versions.
+        size:
+          type: number
+          minimum: 0
+          description: Size of the first version in bytes, or 0 when there is none.
+        contentType:
+          type: string
+          description: Always `image/png`; TriplyDB does not report the type.
+    DmnModel:
+      type: object
+      required: [id, identifier, title, inputs, outputs, vendorCount, xmlUrl]
+      properties:
+        id:
+          type: string
+          description: IRI of the DMN.
+        identifier:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        deploymentId:
+          type: string
+        deployedAt:
+          type: string
+          description: As published in the knowledge graph; not reformatted.
+        implementedBy:
+          type: string
+        lastTested:
+          type: string
+        testStatus:
+          type: string
+          description: Usually `passed`, `failed` or `pending`; read from the knowledge graph and not enforced.
+        service:
+          type: string
+        serviceTitle:
+          type: string
+        organization:
+          type: string
+        organizationName:
+          type: string
+        logoUrl:
+          type: string
+        xmlUrl:
+          type: string
+          description: Relative link to the DMN XML download.
+          examples: [/v1/dmns/SVB_LeeftijdsInformatie/xml]
+        inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DmnVariable'
+        outputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DmnVariable'
+        validationStatus:
+          type: string
+          description: Usually `validated`, `in-review` or `not-validated`; read from the knowledge graph and not enforced.
+        validatedBy:
+          type: string
+        validatedByName:
+          type: string
+        validatedAt:
+          type: string
+          description: As published in the knowledge graph; not reformatted.
+        validationNote:
+          type: string
+        vendorCount:
+          type: integer
+          minimum: 0
+    DmnVariable:
+      type: object
+      required: [identifier, title, type]
+      properties:
+        identifier:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          description: Usually `String`, `Integer`, `Boolean`, `Date` or `Double`; read from the knowledge graph and not enforced.
+        description:
+          type: string
+        testValue:
+          type: [string, number, boolean, 'null']
+          description: >-
+            Example value, converted according to `type`. A non-numeric value for
+            an Integer or Double variable serialises as null.
+    SemanticEquivalence:
+      type: object
+      required: [sharedConcept, concept1, concept2, dmn1, dmn2]
+      properties:
+        sharedConcept:
+          type: string
+          description: IRI of the concept both variables refer to.
+        concept1:
+          $ref: '#/components/schemas/SemanticConcept'
+        concept2:
+          $ref: '#/components/schemas/SemanticConcept'
+        dmn1:
+          $ref: '#/components/schemas/DmnReference'
+        dmn2:
+          $ref: '#/components/schemas/DmnReference'
+    SemanticConcept:
+      type: object
+      required: [uri, label, variable]
+      properties:
+        uri:
+          type: string
+        label:
+          type: string
+        notation:
+          type: string
+        variable:
+          type: object
+          required: [uri, identifier, type]
+          properties:
+            uri:
+              type: string
+            identifier:
+              type: string
+            type:
+              type: string
+              description: Read from the knowledge graph; not enforced.
+    DmnReference:
+      type: object
+      required: [uri, title]
+      properties:
+        uri:
+          type: string
+        identifier:
+          type: string
+        title:
+          type: string
+    EnhancedChainLink:
+      type: object
+      required: [dmn1, dmn2, outputVariable, inputVariable, variableType, matchType, sharedConcept]
+      properties:
+        dmn1:
+          $ref: '#/components/schemas/DmnReference'
+        dmn2:
+          $ref: '#/components/schemas/DmnReference'
+        outputVariable:
+          type: string
+        inputVariable:
+          type: string
+        variableType:
+          type: string
+        matchType:
+          type: string
+          enum: [exact, semantic]
+          description: A link that matches both ways is listed twice, once per match type.
+        sharedConcept:
+          type: string
+    ChainCycle:
+      type: object
+      required: [path, type]
+      properties:
+        path:
+          type: array
+          minItems: 3
+          items:
+            $ref: '#/components/schemas/DmnReference'
+        type:
+          type: string
+          enum: [three-hop, four-hop]
+          description: Only `three-hop` cycles are detected today.
+    OperatonDecisionResult:
+      type: object
+      description: One result row, mapping each output name to its typed value.
+      additionalProperties:
+        type: object
+        required: [value, type]
+        properties:
+          value: {}
+          type:
+            type: string
+            examples: [Boolean]
+    OperatonProxyError:
+      type: object
+      description: Returned when Operaton could not be reached at all.
+      required: [type, message]
+      properties:
+        type:
+          const: ProxyError
+        message:
+          type: string
+    DmnValidationResult:
+      type: object
+      required: [valid, parseError, layers, summary]
+      properties:
+        valid:
+          type: boolean
+          description: True when the XML parsed and no layer reported an error.
+        parseError:
+          type: [string, 'null']
+        layers:
+          type: object
+          required: [base, business, execution, interaction, content]
+          properties:
+            base:
+              $ref: '#/components/schemas/ValidationLayer'
+            business:
+              $ref: '#/components/schemas/ValidationLayer'
+            execution:
+              $ref: '#/components/schemas/ValidationLayer'
+            interaction:
+              $ref: '#/components/schemas/ValidationLayer'
+            content:
+              $ref: '#/components/schemas/ValidationLayer'
+        summary:
+          type: object
+          required: [errors, warnings, infos]
+          properties:
+            errors:
+              type: integer
+              minimum: 0
+            warnings:
+              type: integer
+              minimum: 0
+            infos:
+              type: integer
+              minimum: 0
+    ValidationLayer:
+      type: object
+      required: [label, issues]
+      properties:
+        label:
+          type: string
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+    ValidationIssue:
+      type: object
+      required: [severity, code, message]
+      properties:
+        severity:
+          type: string
+          enum: [error, warning, info]
+        code:
+          type: string
+          examples: [BIZ-006]
+        message:
+          type: string
+        location:
+          type: string
+        line:
+          type: integer
+        column:
+          type: integer

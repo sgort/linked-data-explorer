@@ -17,6 +17,9 @@ jest.mock('../services/triplydb.service', () => ({
 import * as triplydbService from '../services/triplydb.service';
 import triplydbRoutes from './triplydb.routes';
 import packageJson from '../../package.json';
+import { errorHandler } from '../middleware/error.middleware';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const svc = triplydbService as unknown as Record<string, jest.Mock>;
 
@@ -477,5 +480,190 @@ describe('GET /v1/triplydb/health', () => {
 
     expect(svc.testConnection).not.toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('/v1/triplydb matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/triplydb', triplydbRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+    return app;
+  }
+
+  const post = (path: string) => request(makeDocumentedApp()).post(`/v1/triplydb${path}`);
+
+  test('POST /query SELECT results, as documented', async () => {
+    svc.executeQuery.mockResolvedValue({
+      head: { vars: ['s', 'label'] },
+      results: {
+        bindings: [
+          {
+            s: { type: 'uri', value: 'https://regels.example/id/regel/1' },
+            label: { type: 'literal', value: 'Regel', 'xml:lang': 'nl' },
+          },
+        ],
+      },
+    });
+
+    const res = await post('/query').send({
+      endpoint: 'https://triplydb.example/sparql',
+      query: 'SELECT * WHERE { ?s ?p ?o }',
+    });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/triplydb/query');
+  });
+
+  test('POST /query ASK result, as documented', async () => {
+    svc.executeQuery.mockResolvedValue({ head: {}, boolean: true });
+
+    const res = await post('/query').send({
+      endpoint: 'https://triplydb.example/sparql',
+      query: 'ASK { ?s ?p ?o }',
+    });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/triplydb/query');
+  });
+
+  test('POST /query 400 and 500, as documented', async () => {
+    const bad = await post('/query').send({});
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/triplydb/query');
+
+    svc.executeQuery.mockRejectedValue(new Error('Failed to execute query: Query failed: 502'));
+    const failed = await post('/query').send({
+      endpoint: 'https://triplydb.example/sparql',
+      query: 'ASK {}',
+    });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/triplydb/query');
+  });
+
+  test('a malformed JSON body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+    const res = await post('/query').set('Content-Type', 'application/json').send('{"endpoint":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/triplydb/query');
+  });
+
+  test('POST /update-service 200, 400 and 500, as documented', async () => {
+    svc.updateService.mockResolvedValue({
+      success: true,
+      message: 'Service PublishTest updated to include 2 graphs',
+      graphCount: 2,
+      graphName: 'graph:a',
+    });
+    const ok = await post('/update-service').send({
+      config: CONFIG,
+      serviceName: 'PublishTest',
+      graphName: 'graph:a',
+    });
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'post', '/triplydb/update-service');
+
+    const bad = await post('/update-service').send({ serviceName: 'PublishTest' });
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/triplydb/update-service');
+
+    svc.updateService.mockRejectedValue(new Error('Failed to update service: 403'));
+    const failed = await post('/update-service').send({
+      config: CONFIG,
+      serviceName: 'PublishTest',
+    });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/triplydb/update-service');
+  });
+
+  test('POST /list-graphs 200, 400 and 500, as documented', async () => {
+    svc.listGraphs.mockResolvedValue(['graph:default', 'graph:default-1']);
+    const ok = await post('/list-graphs').send({ config: CONFIG });
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'post', '/triplydb/list-graphs');
+
+    const bad = await post('/list-graphs').send({});
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/triplydb/list-graphs');
+
+    svc.listGraphs.mockRejectedValue(new Error('Failed to list graphs: 404'));
+    const failed = await post('/list-graphs').send({ config: CONFIG });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/triplydb/list-graphs');
+  });
+
+  test('POST /test-connection 200, 503, 400 and 500, as documented', async () => {
+    svc.testConnection.mockResolvedValue(true);
+    const ok = await post('/test-connection').send({ config: CONFIG });
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'post', '/triplydb/test-connection');
+
+    svc.testConnection.mockResolvedValue(false);
+    const refused = await post('/test-connection').send({ config: CONFIG });
+    expect(refused.status).toBe(503);
+    expectToMatchOperation(refused, 'post', '/triplydb/test-connection');
+
+    const bad = await post('/test-connection').send({});
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/triplydb/test-connection');
+
+    svc.testConnection.mockRejectedValue(new Error('DNS failure'));
+    const failed = await post('/test-connection').send({ config: CONFIG });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/triplydb/test-connection');
+  });
+
+  test('GET /assets 200, 400, upstream status and 500, as documented', async () => {
+    const app = makeDocumentedApp();
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          identifier: 'a1',
+          assetName: 'logo.png',
+          createdAt: '2026-01-01T00:00:00Z',
+          versions: [{ id: 'v1', fileSize: 2048, url: 'https://triplydb.example/assets/logo.png' }],
+        },
+        {
+          identifier: 'a2',
+          assetName: 'empty.svg',
+          createdAt: '2026-01-02T00:00:00Z',
+          versions: [],
+        },
+      ],
+    });
+    const ok = await request(app).get('/v1/triplydb/assets?account=regels&dataset=dmn');
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'get', '/triplydb/assets');
+
+    const bad = await request(app).get('/v1/triplydb/assets?account=regels');
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'get', '/triplydb/assets');
+
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 403,
+      statusText: 'Forbidden',
+      text: async () => 'no access',
+    });
+    const forbidden = await request(app).get('/v1/triplydb/assets?account=regels&dataset=dmn');
+    expect(forbidden.status).toBe(403);
+    expectToMatchOperation(forbidden, 'get', '/triplydb/assets');
+
+    mockFetch.mockRejectedValue(new Error('ENOTFOUND'));
+    const failed = await request(app).get('/v1/triplydb/assets?account=regels&dataset=dmn');
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'get', '/triplydb/assets');
+  });
+
+  test('GET /health 200, as documented', async () => {
+    const res = await request(makeDocumentedApp()).get('/v1/triplydb/health');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/triplydb/health');
   });
 });

@@ -30,3 +30,33 @@ overrides:
       - 'openapi.json#/paths/~1ropa~1public/get'
     rules:
       nlgov:problem-invalid-input: 'off'
+
+  # DELETE /cache/clear takes one optional parameter, a free-text endpoint whose
+  # empty value means "all". No value is invalid, so the handler never answers 400.
+  - files:
+      - 'openapi.json#/paths/~1cache~1clear/delete'
+    rules:
+      nlgov:problem-invalid-input: 'off'
+
+  # GET /norms names two query parameters in snake_case (applicable_date,
+  # cprmv_version). Renaming them would break existing callers, so the document
+  # describes them as they are.
+  - files:
+      - 'openapi.json#/paths/~1norms/get'
+    rules:
+      nlgov:query-keys-camel-case: 'off'
+
+  # These reads never answer 400. At most they take an optional free-text
+  # SPARQL endpoint (not validated, #142; every read except /dmns/{identifier}/xml),
+  # a `refresh` flag where any value is accepted (GET /dmns only), and a path
+  # identifier that resolves to 200 or 404 (GET /dmns/{identifier} and
+  # GET /dmns/{identifier}/xml).
+  - files:
+      - 'openapi.json#/paths/~1dmns/get'
+      - 'openapi.json#/paths/~1dmns~1semantic-equivalences/get'
+      - 'openapi.json#/paths/~1dmns~1enhanced-chain-links/get'
+      - 'openapi.json#/paths/~1dmns~1cycles/get'
+      - 'openapi.json#/paths/~1dmns~1%7Bidentifier%7D/get'
+      - 'openapi.json#/paths/~1dmns~1%7Bidentifier%7D~1xml/get'
+    rules:
+      nlgov:problem-invalid-input: 'off'
