@@ -118,6 +118,8 @@ The first two each carry a comment linking #131. `nlgov:semver` carries its own 
 
 `nlgov:problem-invalid-input` stays on. It requires a documented 400 on every POST/PUT/PATCH and on every parameterised GET/DELETE. Where a handler genuinely cannot return 400, the phase that documents it adds a per-path override with its reason next to it, never a global one. Documenting a 400 the API does not return would break the principle behind decision 3.
 
+Phase 2 (#134) applied that allowance to eight operations that never answer 400: `DELETE /cache/clear`, the six `GET /dmns` reads (their only inputs are an optional unvalidated `endpoint`, a `refresh` flag and a path identifier), and the Operaton pass-through `POST /dmns/evaluate/{decisionKey}`. It also turned off `nlgov:query-keys-camel-case` for `GET /norms` alone, whose `applicable_date` and `cprmv_version` parameters are snake_case: renaming them would break existing callers. That exception was approved on 15 September 2026. Validating `endpoint` (#142) would let the `GET /dmns` exceptions be removed.
+
 **CI.** A `lint:openapi` script builds the document and runs Spectral against the built `openapi/openapi.json` with that config. It lints the JSON rather than the YAML because the YAML deliberately has no `info.version`.
 
 - Both backend workflows run it directly after _Run linter_, so on `acc` it gates pull requests.
