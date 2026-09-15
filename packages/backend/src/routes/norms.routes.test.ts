@@ -24,6 +24,8 @@ import { getAllNorms, getDatasetVersionsByRulesetid } from '../services/norms.se
 import { computeLastModified, computeNormsEtag } from '../utils/etag';
 import normsRoutes from './norms.routes';
 import packageJson from '../../package.json';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const mockGetAllNorms = getAllNorms as jest.Mock;
 const mockGetDatasetVersions = getDatasetVersionsByRulesetid as jest.Mock;
@@ -366,5 +368,64 @@ describe('GET /v1/norms failures', () => {
 
     expect(res.status).toBe(500);
     expect(res.body.error.code).toBe('QUERY_ERROR');
+  });
+});
+
+describe('/v1/norms matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/norms', normsRoutes);
+    return app;
+  }
+
+  test('200 without filters, as documented', async () => {
+    mockGetAllNorms.mockResolvedValue(normsResult());
+
+    const res = await request(makeDocumentedApp()).get('/v1/norms');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/norms');
+  });
+
+  test('200 with every filter, as documented', async () => {
+    mockGetAllNorms.mockResolvedValue(normsResult());
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/norms?rulesetid=awb&applicable_date=2026-01-01&cprmv_version=0.4.1'
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/norms');
+  });
+
+  test('400 for an unsupported cprmv_version, as documented', async () => {
+    const res = await request(makeDocumentedApp()).get('/v1/norms?cprmv_version=9.9.9');
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'get', '/norms');
+  });
+
+  test('500 when the rules query fails, as documented', async () => {
+    mockGetAllNorms.mockRejectedValue(new Error('SPARQL endpoint unreachable'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/norms');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/norms');
+  });
+
+  test('304 on a matching conditional request, as documented', async () => {
+    mockGetDatasetVersions.mockResolvedValue({
+      awb: [{ version: '1.0', publishedAt: '2026-01-01T00:00:00.000Z', title: 'Awb' }],
+    });
+
+    const res = await request(makeDocumentedApp())
+      .get('/v1/norms')
+      .query({ rulesetid: 'awb' })
+      .set('If-None-Match', ETAG);
+
+    expect(res.status).toBe(304);
+    expectToMatchOperation(res, 'get', '/norms');
   });
 });

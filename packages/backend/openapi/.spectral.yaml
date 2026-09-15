@@ -30,3 +30,18 @@ overrides:
       - 'openapi.json#/paths/~1ropa~1public/get'
     rules:
       nlgov:problem-invalid-input: 'off'
+
+  # DELETE /cache/clear takes one optional parameter, a free-text endpoint whose
+  # empty value means "all". No value is invalid, so the handler never answers 400.
+  - files:
+      - 'openapi.json#/paths/~1cache~1clear/delete'
+    rules:
+      nlgov:problem-invalid-input: 'off'
+
+  # GET /norms names two query parameters in snake_case (applicable_date,
+  # cprmv_version). Renaming them would break existing callers, so the document
+  # describes them as they are.
+  - files:
+      - 'openapi.json#/paths/~1norms/get'
+    rules:
+      nlgov:query-keys-camel-case: 'off'
