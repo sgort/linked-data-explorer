@@ -71,6 +71,10 @@ jobs:
         working-directory: packages/backend
         run: npm run lint
 
+      - name: Lint OpenAPI description
+        working-directory: packages/backend
+        run: npm run lint:openapi
+
       - name: Typecheck
         working-directory: packages/backend
         run: npm run typecheck
@@ -131,6 +135,17 @@ jobs:
           done
           if ! ls deploy/shapes/ronl/*.ttl > /dev/null 2>&1; then
             echo "❌ No SHACL shape files in deploy/shapes/ronl/"
+            exit 1
+          fi
+
+          # OpenAPI description, served at /v1/openapi.json from
+          # <package root>/openapi/openapi.json (src/openapi/document.ts). npm run
+          # build generated it; fail here rather than ship an API whose
+          # documentation link answers 500 (#129).
+          mkdir -p deploy/openapi
+          cp openapi/openapi.json deploy/openapi/
+          if [ ! -s deploy/openapi/openapi.json ]; then
+            echo "❌ Missing OpenAPI description: deploy/openapi/openapi.json"
             exit 1
           fi
           
@@ -227,6 +242,29 @@ jobs:
           else
             echo "❌ SHACL shape layers incomplete (shacl.complete: ${shacl_complete:-unreadable})"
             curl -s https://backend.linkeddata.open-regels.nl/v1/health | jq '.shacl' || true
+            exit 1
+          fi
+
+          # OpenAPI description (#129): served, and describing the release that is
+          # running. The build check above already waited for the new artifact; retry
+          # briefly so one slow response cannot fail a deploy that is already live.
+          doc_version=""
+          api_version=""
+          for attempt in $(seq 1 5); do
+            doc_version=$(curl -s -m 10 https://backend.linkeddata.open-regels.nl/v1/openapi.json | jq -r '.info.version' 2>/dev/null || true)
+            api_version=$(curl -s -m 10 https://backend.linkeddata.open-regels.nl/v1/health | jq -r '.version' 2>/dev/null || true)
+            if [ -n "$doc_version" ] && [ "$doc_version" != "null" ] && [ "$doc_version" = "$api_version" ]; then
+              break
+            fi
+            echo "Attempt $attempt/5: /v1/openapi.json info.version is ${doc_version:-unreadable}; /v1/health version is ${api_version:-unreadable}"
+            if [ "$attempt" -lt 5 ]; then
+              sleep 10
+            fi
+          done
+          if [ -n "$doc_version" ] && [ "$doc_version" != "null" ] && [ "$doc_version" = "$api_version" ]; then
+            echo "✅ /v1/openapi.json describes $doc_version"
+          else
+            echo "❌ /v1/openapi.json info.version is ${doc_version:-unreadable}; /v1/health version is ${api_version:-unreadable}"
             exit 1
           fi
           

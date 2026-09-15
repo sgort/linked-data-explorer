@@ -4,7 +4,7 @@ import { isPublicPath } from './publicPaths';
 // no credentials) instead of the credentialed allowlist in index.ts. Everything it
 // returns true for is readable cross-origin by any site, so it must be exact.
 describe('isPublicPath', () => {
-  test.each(['/v1/ropa/public', '/v1/bundles/public'])(
+  test.each(['/v1/ropa/public', '/v1/bundles/public', '/v1/openapi.json'])(
     'treats the public mount %s as public',
     (p) => {
       expect(isPublicPath(p)).toBe(true);
@@ -30,4 +30,9 @@ describe('isPublicPath', () => {
       expect(isPublicPath(p)).toBe(false);
     }
   );
+
+  // /core/publish-openapi: the document must be readable from any origin.
+  test('does not treat a path that merely starts with the document name as public', () => {
+    expect(isPublicPath('/v1/openapi.jsonp')).toBe(false);
+  });
 });

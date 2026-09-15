@@ -1,0 +1,486 @@
+# packages/backend/openapi/openapi.yaml
+#
+# The OpenAPI description of the Linked Data Explorer backend, written by hand
+# (#129). Served as JSON at /v1/openapi.json. scripts/build-openapi.cjs builds
+# openapi.json from this file and sets info.version from package.json, so this
+# file must not set info.version.
+#
+# Operations not described yet are listed in pending.json;
+# src/openapi/coverage.test.ts keeps both in step with the Express routes, and
+# route tests check real responses against this file (expectToMatchOperation).
+#
+# During `npm run dev` the document is built once (predev), the route caches it,
+# and nodemon does not watch this file: after editing it, run
+# `npm run build:openapi` and restart the dev server.
+openapi: '3.1.0'
+info:
+  title: Linked Data Explorer Backend
+  description: >-
+    DMN discovery and chain execution, SHACL validation, asset storage and
+    integrations for the Linked Data Explorer.
+
+    Error responses use the `{ success: false, error }` envelope described by
+    the ErrorEnvelope schema. The move to RFC 9457 problem details is tracked in
+    https://github.com/sgort/linked-data-explorer/issues/131.
+  contact:
+    name: Steven Gort
+    email: steven.gort@ictu.nl
+    url: https://iou-architectuur.open-regels.nl/
+servers:
+  - url: https://backend.linkeddata.open-regels.nl/v1
+    description: Production
+  - url: https://acc.backend.linkeddata.open-regels.nl/v1
+    description: Acceptance
+tags:
+  - name: Health & monitoring
+    description: Whether this instance, its build and its dependencies are working.
+  - name: Discovery
+    description: What the API and its data offer.
+  - name: Assets
+    description: Published processes and records of processing activities.
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [Health & monitoring]
+      summary: Service health, build and dependency status
+      description: >-
+        200 when TriplyDB and Operaton are reachable, 503 otherwise. An
+        incomplete SHACL shape set or an untracked build is reported in the body
+        but never changes the status.
+      responses:
+        '200':
+          description: Healthy.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '503':
+          description: >-
+            Degraded (a dependency is down) or unhealthy (the check itself
+            failed; `error` says why).
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /openapi.json:
+    get:
+      operationId: getOpenApiDescription
+      tags: [Discovery]
+      summary: This OpenAPI description
+      description: >-
+        The published contract of this API (/core/publish-openapi). Served with
+        `Access-Control-Allow-Origin: *`, so any OpenAPI viewer can load it.
+      responses:
+        '200':
+          description: The OpenAPI 3.1 document.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+            Access-Control-Allow-Origin:
+              description: Always `*`.
+              schema:
+                type: string
+                const: '*'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [openapi, info, paths]
+                properties:
+                  openapi:
+                    type: string
+                    const: '3.1.0'
+        '500':
+          description: The document could not be read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /ropa/public:
+    get:
+      operationId: listPublicRopaRecords
+      tags: [Assets]
+      summary: Active records of processing activities (GDPR Article 30)
+      description: >-
+        Public and read-only, with open CORS. Returns active records only,
+        without the controller contact, the DPO contact or the schema version.
+      parameters:
+        - name: organisation
+          in: query
+          required: false
+          description: Case-insensitive substring match on the controller name.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The active records, most recently updated first.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublicRopaRecord'
+        '500':
+          description: The records could not be read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /bundles/public:
+    get:
+      operationId: listPublicBundles
+      tags: [Assets]
+      summary: Deployed BPMN bundles with their forms, documents and subprocesses
+      description: >-
+        Public and read-only, with open CORS. Returns shell and standalone
+        processes that have been deployed, most recently deployed first.
+      responses:
+        '200':
+          description: The deployed bundles.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublicBundle'
+        '500':
+          description: The bundles could not be read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+components:
+  headers:
+    ApiVersion:
+      description: Full release version of the API (/core/version-header).
+      required: true
+      schema:
+        type: string
+        examples:
+          - '2026.09.4'
+  schemas:
+    ErrorEnvelope:
+      type: object
+      description: >-
+        The error body the backend returns today. Not RFC 9457 problem details;
+        see https://github.com/sgort/linked-data-explorer/issues/131.
+      required: [success, error]
+      properties:
+        success:
+          const: false
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              examples: [LIST_FAILED]
+            message:
+              type: string
+            details:
+              type: string
+        timestamp:
+          type: string
+          format: date-time
+    Health:
+      type: object
+      required:
+        [name, version, environment, build, status, uptime, timestamp, services, shacl, documentation]
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+          description: Release version; the same value as the API-Version header.
+        environment:
+          type: string
+        build:
+          $ref: '#/components/schemas/BuildInfo'
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        uptime:
+          type: number
+          description: Process uptime in seconds.
+        timestamp:
+          type: string
+          format: date-time
+        services:
+          type: object
+          required: [triplydb, operaton]
+          properties:
+            triplydb:
+              $ref: '#/components/schemas/DependencyStatus'
+            operaton:
+              $ref: '#/components/schemas/DependencyStatus'
+        shacl:
+          $ref: '#/components/schemas/ShaclLayerStatus'
+        documentation:
+          type: string
+          examples: [/v1/openapi.json]
+        error:
+          type: string
+          description: Present only when status is unhealthy.
+    BuildInfo:
+      type: object
+      description: >-
+        The build this instance runs, recorded in the deploy artifact (#122).
+        isTracked is true only when both sha and run are present; otherwise the
+        label is "local build".
+      required: [sha, shortSha, run, isTracked, label]
+      properties:
+        sha:
+          type: string
+          description: Full commit SHA, or empty when untracked.
+        shortSha:
+          type: string
+        run:
+          type: string
+          description: GitHub Actions run number, or empty when untracked.
+        isTracked:
+          type: boolean
+        label:
+          type: string
+          examples: ['build 5530720 · #135', local build]
+    DependencyStatus:
+      type: object
+      required: [status, latency, lastCheck]
+      properties:
+        status:
+          type: string
+          enum: [up, down, unknown]
+        latency:
+          type: number
+          description: Round trip in milliseconds; 0 when not measured.
+        lastCheck:
+          type: string
+          format: date-time
+    ShaclLayerStatus:
+      type: object
+      description: >-
+        Which SHACL shape layers loaded. Reported only; never changes the health
+        status. `layers` is present when the status was read, `error` when
+        reading it failed, and neither when the health check itself failed
+        before reaching it (status unhealthy).
+      required: [complete]
+      properties:
+        complete:
+          type: boolean
+        layers:
+          type: object
+          additionalProperties:
+            type: object
+            required: [label, loaded]
+            properties:
+              label:
+                type: string
+              loaded:
+                type: boolean
+        error:
+          type: string
+    PublicRopaRecord:
+      type: object
+      description: >-
+        A record of processing activities as published. Closed: internal fields
+        such as the controller and DPO contacts are never included.
+      additionalProperties: false
+      required:
+        - id
+        - bpmnProcessId
+        - processLevel
+        - title
+        - controllerName
+        - purpose
+        - legalBasisUri
+        - legalBasisLabel
+        - gdprArticle
+        - dataSubjects
+        - recipients
+        - thirdCountryTransfers
+        - retentionPeriod
+        - securityMeasures
+        - status
+        - personalDataFields
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        bpmnProcessId:
+          type: string
+        processLevel:
+          type: string
+          enum: [shell, subprocess]
+        title:
+          type: string
+        controllerName:
+          type: string
+        purpose:
+          type: string
+        legalBasisUri:
+          type: string
+        legalBasisLabel:
+          type: string
+        gdprArticle:
+          type: string
+        dataSubjects:
+          type: string
+        recipients:
+          type: string
+        thirdCountryTransfers:
+          type: boolean
+        thirdCountryDetails:
+          type: string
+          description: Omitted when there are no third-country transfer details.
+        retentionPeriod:
+          type: string
+        securityMeasures:
+          type: string
+        status:
+          type: string
+          const: active
+        personalDataFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/RopaPersonalDataField'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RopaPersonalDataField:
+      type: object
+      additionalProperties: false
+      required:
+        [id, ropaRecordId, formId, fieldKey, fieldLabel, dataCategory, specialCategory, sortOrder]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ropaRecordId:
+          type: string
+          format: uuid
+        formId:
+          type: string
+        fieldKey:
+          type: string
+        fieldLabel:
+          type: string
+        dataCategory:
+          type: string
+        specialCategory:
+          type: boolean
+        sortOrder:
+          type: integer
+    PublicBundle:
+      type: object
+      description: A deployed shell or standalone process with its deployed artefacts.
+      additionalProperties: false
+      required:
+        - id
+        - bpmnProcessId
+        - name
+        - processRole
+        - linkedDmnTemplates
+        - status
+        - deployedAt
+        - deployedForms
+        - deployedDocuments
+        - subprocesses
+        - updatedAt
+      properties:
+        id:
+          type: string
+        bpmnProcessId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        processRole:
+          type: string
+          enum: [shell, standalone]
+        linkedDmnTemplates:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [example, wip, e2e]
+        deployedAt:
+          type: string
+          format: date-time
+        operatonUrl:
+          type: string
+        operatonDeploymentId:
+          type: string
+        deployedForms:
+          type: array
+          items:
+            $ref: '#/components/schemas/NamedArtefact'
+        deployedDocuments:
+          type: array
+          items:
+            $ref: '#/components/schemas/NamedArtefact'
+        subprocesses:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name, bpmnProcessId, status]
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              bpmnProcessId:
+                type: string
+              status:
+                type: string
+                enum: [example, wip, e2e]
+        language:
+          type: string
+          maxLength: 2
+        organization:
+          type: string
+        boardOwner:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    NamedArtefact:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string

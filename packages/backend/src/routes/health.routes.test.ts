@@ -24,6 +24,7 @@ import { shaclValidationService } from '../services/shacl-validation.service';
 import { getBuildInfo } from '../utils/buildInfo';
 import { logger } from '../utils/logger';
 import healthRoutes from './health.routes';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 import packageJson from '../../package.json';
 
 const mockHealthCheck = sparqlService.healthCheck as jest.Mock;
@@ -79,6 +80,7 @@ describe('GET /v1/health', () => {
     expect(res.body.services.triplydb.status).toBe('up');
     expect(res.body.services.operaton.status).toBe('up');
     expect(res.headers['api-version']).toBeDefined();
+    expectToMatchOperation(res, 'get', '/health');
   });
 
   test('returns 503 degraded when TriplyDB reports down', async () => {
@@ -90,6 +92,7 @@ describe('GET /v1/health', () => {
     expect(res.status).toBe(503);
     expect(res.body.status).toBe('degraded');
     expect(res.body.services.triplydb.status).toBe('down');
+    expectToMatchOperation(res, 'get', '/health');
   });
 
   test('returns 503 degraded when the TriplyDB check itself throws', async () => {
@@ -220,6 +223,7 @@ describe('outer safety net', () => {
     expect(res.body.name).toBe('Linked Data Explorer Backend');
     expect(res.headers['api-version']).toBe(packageJson.version);
     expect(res.headers['content-type']).toMatch(/application\/json/);
+    expectToMatchOperation(res, 'get', '/health');
   });
 
   test('a non-Error failure falls back to a generic message', async () => {
@@ -260,6 +264,7 @@ describe('build provenance', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('healthy');
     expect(res.body.build).toEqual(LOCAL_BUILD);
+    expectToMatchOperation(res, 'get', '/health');
   });
 
   test('the build is still reported when a dependency is down', async () => {
@@ -310,5 +315,6 @@ describe('SHACL shape layers', () => {
     expect(res.body.status).toBe('healthy');
     expect(res.body.shacl).toEqual({ complete: false, error: 'EACCES' });
     expect(mockWarn).toHaveBeenCalledWith('SHACL shape status check failed', { error: 'EACCES' });
+    expectToMatchOperation(res, 'get', '/health');
   });
 });
