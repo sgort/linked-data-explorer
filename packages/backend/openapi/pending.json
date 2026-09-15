@@ -50,12 +50,6 @@
   "GET /process/{key}/variable-hints",
   "POST /shacl/validate",
   "POST /shacl/validate-merged",
-  "GET /triplydb/assets",
-  "GET /triplydb/health",
-  "POST /triplydb/list-graphs",
-  "POST /triplydb/query",
-  "POST /triplydb/test-connection",
-  "POST /triplydb/update-service",
   "GET /vendors",
   "GET /vendors/dmn/{identifier}"
 ]

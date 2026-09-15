@@ -352,6 +352,339 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /triplydb/query:
+    post:
+      operationId: queryTriplyDb
+      tags: [Discovery]
+      summary: Run a SPARQL query against a caller-supplied endpoint
+      description: >-
+        Forwards `query` to `endpoint` and returns the endpoint's SPARQL JSON
+        results beside `success`, without a `data` wrapper. The endpoint is not
+        validated (#142).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, query]
+              properties:
+                endpoint:
+                  type: string
+                  description: SPARQL endpoint URL.
+                query:
+                  type: string
+                  description: SPARQL query text.
+      responses:
+        '200':
+          description: The endpoint's results.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SparqlResults'
+                  - type: object
+                    required: [success]
+                    properties:
+                      success:
+                        const: true
+        '400':
+          description: '`endpoint` or `query` is missing.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        '500':
+          description: >-
+            The query failed (`TriplyDbError`), or the request body was not valid
+            JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/TriplyDbError'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+  /triplydb/update-service:
+    post:
+      operationId: updateTriplyDbService
+      tags: [Discovery]
+      summary: Sync a TriplyDB service to include every graph of its dataset
+      description: >-
+        Changes remote state. The caller supplies the TriplyDB instance and its
+        credentials, which are not validated (#142).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [config, serviceName]
+              properties:
+                config:
+                  $ref: '#/components/schemas/TriplyDbConfig'
+                serviceName:
+                  type: string
+                graphName:
+                  type: string
+                  description: Echoed back in the response when given.
+      responses:
+        '200':
+          description: The service was updated.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, graphCount]
+                properties:
+                  success:
+                    const: true
+                  message:
+                    type: string
+                  graphCount:
+                    type: integer
+                    minimum: 0
+                  graphName:
+                    type: string
+        '400':
+          description: >-
+            `config` or `serviceName` is missing, or `config` lacks `baseUrl`,
+            `account`, `dataset` or `apiToken`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        '500':
+          description: >-
+            The update failed (`TriplyDbError`), or the request body was not valid
+            JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/TriplyDbError'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+  /triplydb/list-graphs:
+    post:
+      operationId: listTriplyDbGraphs
+      tags: [Discovery]
+      summary: List the graph names of a TriplyDB dataset
+      description: The caller supplies the TriplyDB instance and its credentials, which are not validated (#142).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [config]
+              properties:
+                config:
+                  $ref: '#/components/schemas/TriplyDbConfig'
+      responses:
+        '200':
+          description: The dataset's graph names.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, graphs, count]
+                properties:
+                  success:
+                    const: true
+                  graphs:
+                    type: array
+                    items:
+                      type: string
+                  count:
+                    type: integer
+                    minimum: 0
+        '400':
+          description: '`config` is missing or lacks `baseUrl`, `account`, `dataset` or `apiToken`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        '500':
+          description: >-
+            Listing failed (`TriplyDbError`), or the request body was not valid
+            JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/TriplyDbError'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+  /triplydb/test-connection:
+    post:
+      operationId: testTriplyDbConnection
+      tags: [Discovery]
+      summary: Check that a TriplyDB dataset is reachable with the given settings
+      description: >-
+        Only the presence of `config` is checked; incomplete settings surface as a
+        failed connection (503). The target is not validated (#142).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [config]
+              properties:
+                config:
+                  type: object
+                  description: TriplyDB connection settings (`baseUrl`, `account`, `dataset`, `apiToken`).
+      responses:
+        '200':
+          description: The dataset answered.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, status]
+                properties:
+                  success:
+                    const: true
+                  message:
+                    type: string
+                    examples: [Connection successful]
+                  status:
+                    const: 200
+        '400':
+          description: '`config` is missing.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        '500':
+          description: >-
+            The check itself failed (`TriplyDbError`), or the request body was not
+            valid JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/TriplyDbError'
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: The dataset did not answer. This body uses `message`, not `error`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, status]
+                properties:
+                  success:
+                    const: false
+                  message:
+                    type: string
+                    examples: [Connection failed]
+                  status:
+                    const: 503
+  /triplydb/assets:
+    get:
+      operationId: listTriplyDbAssets
+      tags: [Discovery]
+      summary: List the assets of a dataset on the Open Regels TriplyDB instance
+      description: >-
+        Queries `https://api.open-regels.triply.cc`. A private dataset needs
+        `apiToken`, which this operation takes in the query string (#142).
+      parameters:
+        - name: account
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: dataset
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: apiToken
+          in: query
+          required: false
+          description: Bearer token for a private dataset.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The dataset's assets.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, assets, count]
+                properties:
+                  success:
+                    const: true
+                  assets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TriplyDbAsset'
+                  count:
+                    type: integer
+                    minimum: 0
+        '400':
+          description: '`account` or `dataset` is missing.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        '500':
+          description: TriplyDB could not be reached.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+        default:
+          description: TriplyDB rejected the request; its HTTP status is passed through (for example 403).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriplyDbError'
+  /triplydb/health:
+    get:
+      operationId: getTriplyDbProxyHealth
+      tags: [Health & monitoring]
+      summary: Liveness of the TriplyDB proxy
+      description: Always answers 200 and does not contact TriplyDB.
+      responses:
+        '200':
+          description: The proxy is running.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service, version, timestamp, uptime]
+                properties:
+                  status:
+                    const: ok
+                  service:
+                    const: triplydb-proxy
+                  version:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                    description: Process uptime in seconds.
 components:
   headers:
     ApiVersion:
@@ -732,3 +1065,85 @@ components:
         title:
           type: [string, 'null']
           description: Null for rulesets other than the primary one.
+    TriplyDbError:
+      type: object
+      description: >-
+        Error body of the TriplyDB proxy routes. Not `ErrorEnvelope`: `error` is a
+        plain message and `status` repeats the HTTP status (#131).
+      required: [success, error, status]
+      properties:
+        success:
+          const: false
+        error:
+          type: string
+        status:
+          type: integer
+    TriplyDbConfig:
+      type: object
+      description: TriplyDB connection settings supplied by the caller (#142).
+      required: [baseUrl, account, dataset, apiToken]
+      properties:
+        baseUrl:
+          type: string
+          examples: ['https://api.open-regels.triply.cc']
+        account:
+          type: string
+        dataset:
+          type: string
+        apiToken:
+          type: string
+    SparqlResults:
+      type: object
+      description: >-
+        SPARQL 1.1 Query Results JSON as returned by the endpoint, unchanged:
+        `head` and `results.bindings` for SELECT, `head` and `boolean` for ASK.
+      properties:
+        head:
+          type: object
+          properties:
+            vars:
+              type: array
+              items:
+                type: string
+        results:
+          type: object
+          properties:
+            bindings:
+              type: array
+              items:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/SparqlBinding'
+        boolean:
+          type: boolean
+    SparqlBinding:
+      type: object
+      required: [value]
+      properties:
+        type:
+          type: string
+          examples: [uri]
+        value:
+          type: string
+        datatype:
+          type: string
+        'xml:lang':
+          type: string
+    TriplyDbAsset:
+      type: object
+      required: [id, name, url, size, contentType]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+          description: Download URL of the first version, or a constructed page URL when the asset has no versions.
+        size:
+          type: number
+          minimum: 0
+          description: Size of the first version in bytes, or 0 when there is none.
+        contentType:
+          type: string
+          description: Always `image/png`; TriplyDB does not report the type.
