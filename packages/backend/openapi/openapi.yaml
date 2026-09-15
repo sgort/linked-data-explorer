@@ -30,7 +30,41 @@ servers:
 tags:
   - name: Discovery
     description: What the API and its data offer.
-paths: {}
+paths:
+  /openapi.json:
+    get:
+      operationId: getOpenApiDescription
+      tags: [Discovery]
+      summary: This OpenAPI description
+      description: >-
+        The published contract of this API (/core/publish-openapi). Served with
+        `Access-Control-Allow-Origin: *`, so any OpenAPI viewer can load it.
+      responses:
+        '200':
+          description: The OpenAPI 3.1 document.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+            Access-Control-Allow-Origin:
+              description: Always `*`.
+              schema:
+                type: string
+                const: '*'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [openapi, info, paths]
+                properties:
+                  openapi:
+                    type: string
+                    const: '3.1.0'
+        '500':
+          description: The document could not be read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   headers:
     ApiVersion:
