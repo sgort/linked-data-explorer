@@ -6,6 +6,8 @@ package-lock.json
 dist/
 build/
 *.tsbuildinfo
+# Written into the deploy artifact by the backend deploy workflows (#122)
+build-info.json
 
 # Environment variables
 .env

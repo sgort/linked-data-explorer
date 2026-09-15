@@ -94,6 +94,10 @@ jobs:
 
       - name: Prepare deployment package
         working-directory: packages/backend
+        env:
+          BUILD_SHA: ${{ github.sha }}
+          BUILD_RUN: ${{ github.run_number }}
+          BUILD_RUN_ID: ${{ github.run_id }}
         run: |
           mkdir -p deploy
           
@@ -102,7 +106,15 @@ jobs:
           
           # Copy package.json to deploy root (NOT inside dist)
           cp package.json deploy/
-          
+
+          # Record which build this artifact is, for /v1/health's `build` block.
+          # package.json's version names the release, not the build (#122). It is
+          # a file in the artifact rather than an App Service setting, because
+          # settings persist across deploys and can describe a different build.
+          jq -n --arg sha "$BUILD_SHA" --arg run "$BUILD_RUN" --arg runId "$BUILD_RUN_ID" \
+            '{sha: $sha, run: $run, runId: $runId}' > deploy/build-info.json
+          cat deploy/build-info.json
+
           # Copy SHACL shape files — read at runtime from <package-root>/shapes
           # (SHAPES_ROOT resolves to deploy/shapes via dist/services/../../shapes).
           # tsc does not emit these .ttl assets, so copy them explicitly.
@@ -168,6 +180,8 @@ jobs:
           exit 1
 
       - name: Verify v1 endpoints
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
         run: |
           echo "Checking v1 endpoints..."
           
@@ -180,20 +194,34 @@ jobs:
             echo "⚠️ /v1/health returned HTTP $v1_response"
           fi
           
-          # SHACL shape layers: fail unless every layer loaded in the running app.
-          # /v1/health reports it without degrading, so read the body at any HTTP code.
+          # Build and SHACL shape layers: fail unless the running app is the build this
+          # run deployed AND every shape layer loaded. /v1/health reports both without
+          # degrading, so read the body at any HTTP code.
           # Allow about three minutes: the previous build keeps answering while Azure
           # starts the new one, and "Health check" above passes against either. On
           # 14 September the new build started 14s after a 34s window had given up.
-          # A null value means a response without the block, i.e. the old build.
+          # build.sha tells the two builds apart directly (#122); without it, a deploy
+          # that left the previous artifact serving would pass. A null value means a
+          # response from a build that predates the block.
+          running_sha=""
           shacl_complete=""
           for attempt in $(seq 1 12); do
-            shacl_complete=$(curl -s -m 10 https://backend.linkeddata.open-regels.nl/v1/health | jq -r '.shacl.complete' 2>/dev/null || true)
-            [ "$shacl_complete" = "true" ] && break
-            echo "Attempt $attempt/12: shacl.complete is ${shacl_complete:-unreadable}"
+            body=$(curl -s -m 10 https://backend.linkeddata.open-regels.nl/v1/health || true)
+            running_sha=$(printf '%s' "$body" | jq -r '.build.sha' 2>/dev/null || true)
+            shacl_complete=$(printf '%s' "$body" | jq -r '.shacl.complete' 2>/dev/null || true)
+            [ "$running_sha" = "$EXPECTED_SHA" ] && [ "$shacl_complete" = "true" ] && break
+            echo "Attempt $attempt/12: build.sha is ${running_sha:-unreadable}, shacl.complete is ${shacl_complete:-unreadable}"
             [ "$attempt" -lt 12 ] && sleep 15
           done
-          
+
+          if [ "$running_sha" = "$EXPECTED_SHA" ]; then
+            echo "✅ Running build is $EXPECTED_SHA"
+          else
+            echo "❌ Running build is ${running_sha:-unreadable}, expected $EXPECTED_SHA: the deploy did not take effect"
+            curl -s https://backend.linkeddata.open-regels.nl/v1/health | jq '.build' || true
+            exit 1
+          fi
+
           if [ "$shacl_complete" = "true" ]; then
             echo "✅ SHACL shape layers all loaded"
           else

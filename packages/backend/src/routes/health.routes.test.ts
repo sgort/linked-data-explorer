@@ -15,9 +15,13 @@ jest.mock('../services/shacl-validation.service', () => ({
   __esModule: true,
   shaclValidationService: { getLayerStatus: jest.fn() },
 }));
+jest.mock('../utils/buildInfo', () => ({
+  getBuildInfo: jest.fn(),
+}));
 
 import { sparqlService } from '../services/sparql.service';
 import { shaclValidationService } from '../services/shacl-validation.service';
+import { getBuildInfo } from '../utils/buildInfo';
 import { logger } from '../utils/logger';
 import healthRoutes from './health.routes';
 import packageJson from '../../package.json';
@@ -26,6 +30,17 @@ const mockHealthCheck = sparqlService.healthCheck as jest.Mock;
 const mockAxiosGet = axios.get as jest.Mock;
 const mockWarn = logger.warn as jest.Mock;
 const mockGetLayerStatus = shaclValidationService.getLayerStatus as jest.Mock;
+const mockGetBuildInfo = getBuildInfo as jest.Mock;
+
+const TRACKED_BUILD = {
+  sha: '56c9605c68e9a1b2c3d4e5f60718293a4b5c6d7e',
+  shortSha: '56c9605',
+  run: '412',
+  isTracked: true,
+  label: 'build 56c9605 · #412',
+};
+
+const LOCAL_BUILD = { sha: '', shortSha: '', run: '', isTracked: false, label: 'local build' };
 
 const COMPLETE_SHAPES = {
   complete: true,
@@ -48,6 +63,8 @@ beforeEach(() => {
   mockWarn.mockReset();
   mockGetLayerStatus.mockReset();
   mockGetLayerStatus.mockResolvedValue(COMPLETE_SHAPES);
+  mockGetBuildInfo.mockReset();
+  mockGetBuildInfo.mockReturnValue(TRACKED_BUILD);
 });
 
 describe('GET /v1/health', () => {
@@ -216,6 +233,42 @@ describe('outer safety net', () => {
 
     expect(res.status).toBe(503);
     expect(res.body.error).toBe('Health check failed');
+  });
+});
+
+describe('build provenance', () => {
+  beforeEach(() => {
+    mockHealthCheck.mockResolvedValue({ status: 'up', latency: 42 });
+    mockAxiosGet.mockResolvedValue({ status: 200 });
+  });
+
+  test('reports the running build alongside an unchanged release version', async () => {
+    const res = await request(makeApp()).get('/v1/health');
+
+    expect(res.body.build).toEqual(TRACKED_BUILD);
+    expect(res.body.version).toBe(packageJson.version);
+    expect(res.headers['api-version']).toBe(packageJson.version);
+  });
+
+  // Local development and tests have no build-info.json. That must be visible
+  // in the payload, but it is not a health problem.
+  test('an untracked build is reported without changing the health status', async () => {
+    mockGetBuildInfo.mockReturnValue(LOCAL_BUILD);
+
+    const res = await request(makeApp()).get('/v1/health');
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('healthy');
+    expect(res.body.build).toEqual(LOCAL_BUILD);
+  });
+
+  test('the build is still reported when a dependency is down', async () => {
+    mockAxiosGet.mockRejectedValue(new Error('ECONNREFUSED'));
+
+    const res = await request(makeApp()).get('/v1/health');
+
+    expect(res.status).toBe(503);
+    expect(res.body.build).toEqual(TRACKED_BUILD);
   });
 });
 
