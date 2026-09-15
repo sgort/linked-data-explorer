@@ -37,16 +37,17 @@ two together.
 
 `zizmor 1.29.0` reports **0 findings** across all eight workflows.
 
-**Hand-pinned tools.** Two tools are pinned by an inline version argument rather
-than by a manifest entry, so Renovate's managers do not see them and they are
-bumped by hand. Neither appears in the table above, which lists actions only —
-`check-supply-chain` matches rows by action and digest.
+**Tools pinned outside `uses:`.** Three tools are pinned by a version argument or
+input rather than by a `uses:` digest. None appears in the table above, which
+lists actions only — `check-supply-chain` matches rows by action and digest. Two
+of them Renovate cannot see, so they are bumped by hand; zizmor it maintains,
+through the action's input (see §4).
 
-| Tool     | Pin                                                | Where         |
-| -------- | -------------------------------------------------- | ------------- |
-| zizmor   | `version: '1.29.0'` input to `zizmor-action`       | `zizmor.yml`  |
-| renovate | `npx --package renovate@44.50.3` for the validator | `zizmor.yml`  |
-| semgrep  | `pip install semgrep==1.176.1` into a venv         | `semgrep.yml` |
+| Tool     | Pin                                                | Where         | Maintained by                                |
+| -------- | -------------------------------------------------- | ------------- | -------------------------------------------- |
+| zizmor   | `version: '1.29.0'` input to `zizmor-action`       | `zizmor.yml`  | Renovate, as `ghcr.io/zizmorcore/zizmor`, §4 |
+| renovate | `npx --package renovate@44.50.3` for the validator | `zizmor.yml`  | by hand                                      |
+| semgrep  | `pip install semgrep==1.176.1` into a venv         | `semgrep.yml` | by hand                                      |
 
 `semgrep.yml` is the Semgrep Code and Supply Chain scan. Supply Chain covers the
 `package-lock.json` tree, which nothing above does: this page pins what the
@@ -106,9 +107,29 @@ and the Node distribution is not the threat model this policy was written for.
 ### 4. `zizmor-action`'s `version: '1.29.0'` input
 
 The action itself is hash-pinned, and this input pins the zizmor binary it
-fetches — so nothing floats. But Renovate's `github-actions` manager does not
-parse action _inputs_, only `uses:` lines, so this one number is maintained by
-hand. If the audit ever needs a newer zizmor, someone must edit it.
+fetches — so nothing floats. Renovate maintains the input too, although this
+section said otherwise until September 2026. Its `github-actions` manager maps
+`zizmor-action` to the Docker image `ghcr.io/zizmorcore/zizmor`
+(`known-actions.ts` in Renovate), and the Dependency Dashboard (#36) lists
+`ghcr.io/zizmorcore/zizmor 1.29.0` with an update to 1.30.1 pending.
+
+Two things follow:
+
+- **The action and the input move together.** `zizmor-action` runs only the
+  zizmor versions in its own digest table: 1.30.1 is in v0.6.4's table and not
+  in v0.6.3's. Here the two normally arrive in one pull request, because the
+  `github actions` group collects minor, patch and digest updates for every
+  `github-actions` dependency, the zizmor image included. Normally, not always:
+  each update clears the 14-day cooldown on its own clock, and zizmor is
+  published before the action release that adds it (1.30.1 six minutes before
+  v0.6.4). If the image update reaches the group branch first, the audit fails
+  at "Run zizmor" until the action update joins it. Do not merge the group in
+  that state. A major zizmor release is separate again: it waits for Dependency
+  Dashboard approval on its own, and then the `zizmor-action` bump has to merge
+  first.
+- **The zizmor rows on this page are updated by hand, on that pull request's
+  branch.** `check-supply-chain` verifies `uses:` pins only, so nothing fails
+  when the tool row or the `zizmor 1.29.0` line above goes stale.
 
 ### 5. `ropa-site` builds inside Azure
 
