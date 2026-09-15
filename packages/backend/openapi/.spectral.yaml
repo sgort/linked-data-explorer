@@ -45,3 +45,16 @@ overrides:
       - 'openapi.json#/paths/~1norms/get'
     rules:
       nlgov:query-keys-camel-case: 'off'
+
+  # These reads never answer 400. Their only inputs are an optional free-text
+  # SPARQL endpoint (not validated, #142), a `refresh` flag where any value is
+  # accepted, and a path identifier that resolves to 200 or 404.
+  - files:
+      - 'openapi.json#/paths/~1dmns/get'
+      - 'openapi.json#/paths/~1dmns~1semantic-equivalences/get'
+      - 'openapi.json#/paths/~1dmns~1enhanced-chain-links/get'
+      - 'openapi.json#/paths/~1dmns~1cycles/get'
+      - 'openapi.json#/paths/~1dmns~1%7Bidentifier%7D/get'
+      - 'openapi.json#/paths/~1dmns~1%7Bidentifier%7D~1xml/get'
+    rules:
+      nlgov:problem-invalid-input: 'off'

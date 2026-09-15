@@ -33,6 +33,8 @@ import { dmnValidationService } from '../services/dmn-validation.service';
 import { operatonService } from '../services/operaton.service';
 import { sparqlService } from '../services/sparql.service';
 import dmnRoutes from './dmn.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const operaton = operatonService as unknown as Record<string, jest.Mock>;
 const sparql = sparqlService as unknown as Record<string, jest.Mock>;
@@ -648,5 +650,162 @@ describe('POST /api/dmns/validate', () => {
       code: 'VALIDATION_ERROR',
       message: 'XSD schema missing',
     });
+  });
+});
+
+describe('/v1/dmns reads match their OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/dmns', dmnRoutes);
+    return app;
+  }
+
+  // Shaped like sparqlService's DmnModel (sparql.service.ts:273-320): optional
+  // fields are omitted, vendorCount is always set.
+  const DMN = {
+    id: 'https://regels.example/id/dmn/SVB_LeeftijdsInformatie',
+    identifier: 'SVB_LeeftijdsInformatie',
+    title: 'Leeftijdsinformatie',
+    description: 'Bepaalt de AOW-leeftijd',
+    deploymentId: 'dep-1',
+    deployedAt: '2026-09-01T08:00:00Z',
+    testStatus: 'passed',
+    organization: 'https://regels.example/id/org/svb',
+    organizationName: 'SVB',
+    inputs: [{ identifier: 'geboortedatum', title: 'Geboortedatum', type: 'Date' }],
+    outputs: [
+      { identifier: 'aowLeeftijd', title: 'AOW-leeftijd', type: 'Integer', testValue: 67 },
+      {
+        identifier: 'toelichting',
+        title: 'Toelichting',
+        type: 'String',
+        description: 'Vrije tekst',
+      },
+    ],
+    validationStatus: 'validated',
+    vendorCount: 2,
+  };
+
+  const get = (path: string) => request(makeDocumentedApp()).get(`/v1/dmns${path}`);
+
+  test('GET /dmns 200 and 500, as documented', async () => {
+    sparql.getAllDmns.mockResolvedValue([
+      DMN,
+      { ...DMN, identifier: 'Leeg', inputs: [], outputs: [], vendorCount: 0 },
+    ]);
+    const ok = await get('?refresh=true');
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'get', '/dmns');
+
+    sparql.getAllDmns.mockRejectedValue(new Error('SPARQL endpoint unreachable'));
+    const failed = await get('');
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'get', '/dmns');
+  });
+
+  test('a non-numeric Integer test value serialises as null, and still matches', async () => {
+    sparql.getAllDmns.mockResolvedValue([
+      { ...DMN, outputs: [{ identifier: 'x', title: 'X', type: 'Integer', testValue: NaN }] },
+    ]);
+
+    const res = await get('');
+
+    expect(res.body.data.dmns[0].outputs[0].testValue).toBeNull();
+    expectToMatchOperation(res, 'get', '/dmns');
+  });
+
+  test('GET /dmns/semantic-equivalences 200, as documented', async () => {
+    const concept = (n: number) => ({
+      uri: `https://regels.example/id/concept/${n}`,
+      label: `Begrip ${n}`,
+      variable: { uri: `https://regels.example/id/var/${n}`, identifier: `var${n}`, type: 'Date' },
+    });
+    sparql.findSemanticEquivalences.mockResolvedValue([
+      {
+        sharedConcept: 'https://begrippen.example/geboortedatum',
+        concept1: { ...concept(1), notation: 'GBD' },
+        concept2: concept(2),
+        dmn1: { uri: 'https://regels.example/id/dmn/A', title: 'A' },
+        dmn2: { uri: 'https://regels.example/id/dmn/B', title: 'B' },
+      },
+    ]);
+
+    const res = await get('/semantic-equivalences');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dmns/semantic-equivalences');
+  });
+
+  test('GET /dmns/enhanced-chain-links 200, as documented', async () => {
+    sparql.findEnhancedChainLinks.mockResolvedValue([
+      {
+        dmn1: { uri: 'https://regels.example/id/dmn/A', identifier: 'A', title: 'A' },
+        dmn2: { uri: 'https://regels.example/id/dmn/B', identifier: 'B', title: 'B' },
+        outputVariable: 'leeftijd',
+        inputVariable: 'leeftijd',
+        variableType: 'Integer',
+        matchType: 'exact',
+        sharedConcept: 'https://begrippen.example/leeftijd',
+      },
+    ]);
+
+    const res = await get('/enhanced-chain-links');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dmns/enhanced-chain-links');
+  });
+
+  test('GET /dmns/cycles 200, as documented', async () => {
+    sparql.detectChainCycles.mockResolvedValue([
+      {
+        path: [
+          { uri: 'https://regels.example/id/dmn/A', title: 'A' },
+          { uri: 'https://regels.example/id/dmn/B', title: 'B' },
+          { uri: 'https://regels.example/id/dmn/C', title: 'C' },
+        ],
+        type: 'three-hop',
+      },
+    ]);
+
+    const res = await get('/cycles');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dmns/cycles');
+  });
+
+  test('GET /dmns/{identifier} 200, 404 and 500, as documented', async () => {
+    sparql.getDmnByIdentifier.mockResolvedValue(DMN);
+    const ok = await get('/SVB_LeeftijdsInformatie');
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'get', '/dmns/{identifier}');
+
+    sparql.getDmnByIdentifier.mockResolvedValue(undefined);
+    const missing = await get('/Onbekend');
+    expect(missing.status).toBe(404);
+    expectToMatchOperation(missing, 'get', '/dmns/{identifier}');
+
+    sparql.getDmnByIdentifier.mockRejectedValue(new Error('SPARQL timeout'));
+    const failed = await get('/SVB_LeeftijdsInformatie');
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'get', '/dmns/{identifier}');
+  });
+
+  test('GET /dmns/{identifier}/xml 200, 404 and 500, as documented', async () => {
+    operaton.fetchDmnXml.mockResolvedValue('<definitions id="d1"/>');
+    const ok = await get('/SVB_LeeftijdsInformatie/xml');
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'get', '/dmns/{identifier}/xml');
+
+    operaton.fetchDmnXml.mockResolvedValue(null);
+    const missing = await get('/Onbekend/xml');
+    expect(missing.status).toBe(404);
+    expectToMatchOperation(missing, 'get', '/dmns/{identifier}/xml');
+
+    operaton.fetchDmnXml.mockRejectedValue(new Error('Operaton unreachable'));
+    const failed = await get('/SVB_LeeftijdsInformatie/xml');
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'get', '/dmns/{identifier}/xml');
   });
 });

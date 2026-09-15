@@ -685,6 +685,273 @@ paths:
                   uptime:
                     type: number
                     description: Process uptime in seconds.
+  /dmns:
+    get:
+      operationId: listDmns
+      tags: [Discovery]
+      summary: DMN decision models published in the knowledge graph
+      description: >-
+        Results are cached for five minutes per endpoint. The `endpoint` override
+        is not validated (#142).
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+        - name: refresh
+          in: query
+          required: false
+          description: '`true` or `1` bypasses the cache; any other value leaves it in use.'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The decision models.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [total, dmns, fromCache]
+                    properties:
+                      total:
+                        type: integer
+                        minimum: 0
+                      dmns:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DmnModel'
+                      fromCache:
+                        type: boolean
+                        description: True unless `refresh` was requested; not a cache-hit indicator.
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The knowledge graph could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/semantic-equivalences:
+    get:
+      operationId: listDmnSemanticEquivalences
+      tags: [Discovery]
+      summary: Variables of different DMNs linked to the same concept
+      description: The `endpoint` override is not validated (#142).
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The equivalences.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SemanticEquivalence'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The knowledge graph could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/enhanced-chain-links:
+    get:
+      operationId: listDmnChainLinks
+      tags: [Discovery]
+      summary: Output-to-input links between DMNs, by identifier or shared concept
+      description: The `endpoint` override is not validated (#142).
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The chain links.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EnhancedChainLink'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The knowledge graph could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/cycles:
+    get:
+      operationId: listDmnChainCycles
+      tags: [Discovery]
+      summary: Cycles in the DMN chain graph
+      description: The `endpoint` override is not validated (#142).
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The detected cycles.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChainCycle'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The knowledge graph could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/{identifier}:
+    get:
+      operationId: getDmn
+      tags: [Discovery]
+      summary: One DMN decision model
+      description: Served from the same five-minute cache as the list. The `endpoint` override is not validated (#142).
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          description: The DMN's identifier.
+          schema:
+            type: string
+        - name: endpoint
+          in: query
+          required: false
+          description: SPARQL endpoint URL to query instead of the configured one.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The decision model.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/DmnModel'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '404':
+          description: No DMN has this identifier (code NOT_FOUND).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The knowledge graph could not be queried (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dmns/{identifier}/xml:
+    get:
+      operationId: getDmnXml
+      tags: [Discovery]
+      summary: The deployed DMN XML, as a file download
+      description: Fetched from Operaton; `identifier` is used as the decision definition key.
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          description: The DMN's identifier, used as the Operaton decision definition key.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The DMN XML.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+            Content-Disposition:
+              description: '`attachment; filename="<identifier>.dmn"`.'
+              schema:
+                type: string
+          content:
+            application/xml:
+              schema:
+                type: string
+        '404':
+          description: Operaton has no decision definition with this key (code DMN_NOT_FOUND).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Operaton could not be reached or answered with an error (code DMN_FETCH_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   headers:
     ApiVersion:
@@ -1147,3 +1414,162 @@ components:
         contentType:
           type: string
           description: Always `image/png`; TriplyDB does not report the type.
+    DmnModel:
+      type: object
+      required: [id, identifier, title, inputs, outputs, vendorCount, xmlUrl]
+      properties:
+        id:
+          type: string
+          description: IRI of the DMN.
+        identifier:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        deploymentId:
+          type: string
+        deployedAt:
+          type: string
+          description: As published in the knowledge graph; not reformatted.
+        implementedBy:
+          type: string
+        lastTested:
+          type: string
+        testStatus:
+          type: string
+          description: Usually `passed`, `failed` or `pending`; read from the knowledge graph and not enforced.
+        service:
+          type: string
+        serviceTitle:
+          type: string
+        organization:
+          type: string
+        organizationName:
+          type: string
+        logoUrl:
+          type: string
+        xmlUrl:
+          type: string
+          description: Relative link to the DMN XML download.
+          examples: [/v1/dmns/SVB_LeeftijdsInformatie/xml]
+        inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DmnVariable'
+        outputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DmnVariable'
+        validationStatus:
+          type: string
+          description: Usually `validated`, `in-review` or `not-validated`; read from the knowledge graph and not enforced.
+        validatedBy:
+          type: string
+        validatedByName:
+          type: string
+        validatedAt:
+          type: string
+          description: As published in the knowledge graph; not reformatted.
+        validationNote:
+          type: string
+        vendorCount:
+          type: integer
+          minimum: 0
+    DmnVariable:
+      type: object
+      required: [identifier, title, type]
+      properties:
+        identifier:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          description: Usually `String`, `Integer`, `Boolean`, `Date` or `Double`; read from the knowledge graph and not enforced.
+        description:
+          type: string
+        testValue:
+          type: [string, number, boolean, 'null']
+          description: >-
+            Example value, converted according to `type`. A non-numeric value for
+            an Integer or Double variable serialises as null.
+    SemanticEquivalence:
+      type: object
+      required: [sharedConcept, concept1, concept2, dmn1, dmn2]
+      properties:
+        sharedConcept:
+          type: string
+          description: IRI of the concept both variables refer to.
+        concept1:
+          $ref: '#/components/schemas/SemanticConcept'
+        concept2:
+          $ref: '#/components/schemas/SemanticConcept'
+        dmn1:
+          $ref: '#/components/schemas/DmnReference'
+        dmn2:
+          $ref: '#/components/schemas/DmnReference'
+    SemanticConcept:
+      type: object
+      required: [uri, label, variable]
+      properties:
+        uri:
+          type: string
+        label:
+          type: string
+        notation:
+          type: string
+        variable:
+          type: object
+          required: [uri, identifier, type]
+          properties:
+            uri:
+              type: string
+            identifier:
+              type: string
+            type:
+              type: string
+              description: Read from the knowledge graph; not enforced.
+    DmnReference:
+      type: object
+      required: [uri, title]
+      properties:
+        uri:
+          type: string
+        identifier:
+          type: string
+        title:
+          type: string
+    EnhancedChainLink:
+      type: object
+      required: [dmn1, dmn2, outputVariable, inputVariable, variableType, matchType, sharedConcept]
+      properties:
+        dmn1:
+          $ref: '#/components/schemas/DmnReference'
+        dmn2:
+          $ref: '#/components/schemas/DmnReference'
+        outputVariable:
+          type: string
+        inputVariable:
+          type: string
+        variableType:
+          type: string
+        matchType:
+          type: string
+          enum: [exact, semantic]
+          description: A link that matches both ways is listed twice, once per match type.
+        sharedConcept:
+          type: string
+    ChainCycle:
+      type: object
+      required: [path, type]
+      properties:
+        path:
+          type: array
+          minItems: 3
+          items:
+            $ref: '#/components/schemas/DmnReference'
+        type:
+          type: string
+          enum: [three-hop, four-hop]
+          description: Only `three-hop` cycles are detected today.
