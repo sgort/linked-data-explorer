@@ -19,8 +19,11 @@ info:
     DMN discovery and chain execution, SHACL validation, asset storage and
     integrations for the Linked Data Explorer.
 
-    Error responses use the `{ success: false, error }` envelope described by
-    the ErrorEnvelope schema. The move to RFC 9457 problem details is tracked in
+    Most error responses use the `{ success: false, error }` envelope described
+    by the ErrorEnvelope schema. `/triplydb` uses TriplyDbError instead (and
+    `/triplydb/test-connection`'s 503 sends a bare `message`), and
+    `POST /dmns/evaluate/{decisionKey}` passes Operaton's own errors through, or
+    sends OperatonProxyError. The move to RFC 9457 problem details is tracked in
     https://github.com/sgort/linked-data-explorer/issues/131.
   contact:
     name: Steven Gort
@@ -336,6 +339,10 @@ paths:
               description: The unchanged entity tag.
               schema:
                 type: string
+            Last-Modified:
+              description: Present with `ETag` when the latest publication date is known.
+              schema:
+                type: string
             Cache-Control:
               description: '`public, max-age=3600`.'
               schema:
@@ -644,7 +651,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TriplyDbError'
         '500':
-          description: TriplyDB could not be reached.
+          description: TriplyDB could not be reached, or answered with its own 500.
           content:
             application/json:
               schema:
@@ -1144,7 +1151,7 @@ paths:
                   type: string
                 filename:
                   type: string
-                  description: Defaults to `<deploymentName>.dmn`.
+                  description: Defaults to `<deploymentName>.dmn` when missing or blank.
       responses:
         '200':
           description: The DMN was deployed.
@@ -1191,7 +1198,8 @@ paths:
         A proxy for Operaton's decision evaluation, kept byte-for-byte compatible
         with calling Operaton directly: the result has no `success`/`data`
         envelope, and Operaton's own error status and body are passed through.
-        Nothing is validated here; Operaton rejects invalid input itself.
+        Nothing is validated here; Operaton rejects invalid input itself, answering
+        400.
       parameters:
         - name: decisionKey
           in: path
@@ -1233,6 +1241,14 @@ paths:
                   - type: array
                     items:
                       $ref: '#/components/schemas/OperatonDecisionResult'
+        '400':
+          description: >-
+            Operaton rejected the input (for example a variable of the wrong
+            type), and its error body is passed through unchanged.
+          content:
+            application/json:
+              schema:
+                description: Operaton's error body, unchanged.
         '500':
           description: >-
             Operaton's own error body passed through (for example a
@@ -1244,14 +1260,12 @@ paths:
                 anyOf:
                   - $ref: '#/components/schemas/OperatonProxyError'
                   - $ref: '#/components/schemas/ErrorEnvelope'
-                  - type: object
-                    description: Operaton's error body, unchanged.
+                  - description: Operaton's error body, unchanged.
         default:
           description: Operaton's own error status and body, passed through unchanged.
           content:
             application/json:
-              schema:
-                type: object
+              schema: {}
   /dmns/validate:
     post:
       operationId: validateDmn

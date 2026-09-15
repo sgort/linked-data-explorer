@@ -847,6 +847,22 @@ describe('/v1/dmns deploy, evaluate and validate match their OpenAPI description
     expect(forwarded.status).toBe(500);
     expectToMatchOperation(forwarded, 'post', '/dmns/evaluate/{decisionKey}');
 
+    operaton.evaluateRaw.mockRejectedValue(
+      Object.assign(new Error('Request failed'), {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            type: 'InvalidRequestException',
+            message: 'Cannot convert value "abc" to type Integer',
+          },
+        },
+      })
+    );
+    const rejected = await post('/evaluate/zorgtoeslag').send({});
+    expect(rejected.status).toBe(400);
+    expectToMatchOperation(rejected, 'post', '/dmns/evaluate/{decisionKey}');
+
     operaton.evaluateRaw.mockRejectedValue(new Error('ECONNREFUSED'));
     const proxy = await post('/evaluate/zorgtoeslag').send({});
     expect(proxy.status).toBe(500);
@@ -917,21 +933,36 @@ describe('/v1/dmns deploy, evaluate and validate match their OpenAPI description
     expectToMatchOperation(failed, 'post', '/dmns/deploy');
   });
 
-  test('POST /dmns/drd/deploy 400, as documented', async () => {
-    const res = await post('/drd/deploy').send({ dmnIds: ['A'], deploymentName: 'Keten' });
+  test('POST /dmns/drd/deploy 400 and 500, as documented', async () => {
+    const bad = await post('/drd/deploy').send({ dmnIds: ['A'], deploymentName: 'Keten' });
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/dmns/drd/deploy');
 
-    expect(res.status).toBe(400);
-    expectToMatchOperation(res, 'post', '/dmns/drd/deploy');
+    operaton.assembleDrd.mockRejectedValue(new Error('Operaton unreachable'));
+    const failed = await post('/drd/deploy').send({
+      dmnIds: ['A', 'B'],
+      deploymentName: 'Keten',
+    });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/dmns/drd/deploy');
   });
 
-  test('POST /dmns/process/deploy 400, as documented', async () => {
-    const res = await post('/process/deploy').send({
+  test('POST /dmns/process/deploy 400 and 500, as documented', async () => {
+    const bad = await post('/process/deploy').send({
       bpmnXml: '<definitions/>',
       deploymentName: 'Proces',
     });
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/dmns/process/deploy');
 
-    expect(res.status).toBe(400);
-    expectToMatchOperation(res, 'post', '/dmns/process/deploy');
+    mockDeployProcess.mockRejectedValue(new Error('Operaton unreachable'));
+    const failed = await post('/process/deploy').send({
+      bpmnXml: '<bpmn:definitions/>',
+      deploymentName: 'Proces',
+      organization: 'flevoland',
+    });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/dmns/process/deploy');
   });
 
   test('POST /dmns/drd/deploy 200, as documented', async () => {
