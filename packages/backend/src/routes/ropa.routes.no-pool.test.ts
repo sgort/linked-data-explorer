@@ -20,6 +20,8 @@ jest.mock('../services/ropa.service', () => ({
 
 import * as ropaService from '../services/ropa.service';
 import ropaRoutes from './ropa.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 function makeApp() {
   const app = express();
@@ -57,5 +59,32 @@ describe('/v1/assets/ropa with no database configured', () => {
     expect(ropaService.getRopaByBpmnProcessId).not.toHaveBeenCalled();
     expect(ropaService.upsertRopa).not.toHaveBeenCalled();
     expect(ropaService.deleteRopa).not.toHaveBeenCalled();
+  });
+});
+
+describe('/v1/assets/ropa 503, as documented, with no database configured', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/assets/ropa', ropaRoutes);
+    return app;
+  }
+
+  test.each([
+    ['get', '/v1/assets/ropa', 'get', '/assets/ropa'],
+    ['post', '/v1/assets/ropa', 'post', '/assets/ropa'],
+    [
+      'get',
+      '/v1/assets/ropa/by-bpmn-id/ZorgtoeslagProcess',
+      'get',
+      '/assets/ropa/by-bpmn-id/{bpmnProcessId}',
+    ],
+    ['delete', '/v1/assets/ropa/r1', 'delete', '/assets/ropa/{id}'],
+  ] as const)('%s %s answers a documented 503', async (method, path, docMethod, docPath) => {
+    const res = await request(makeDocumentedApp())[method](path).send({});
+
+    expect(res.status).toBe(503);
+    expectToMatchOperation(res, docMethod, docPath);
   });
 });

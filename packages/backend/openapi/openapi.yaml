@@ -46,7 +46,9 @@ tags:
   - name: Execution
     description: Composing, running and inspecting DMN chains and BPMN processes.
   - name: Assets
-    description: Published processes and records of processing activities.
+    description: >-
+      Published processes and records of processing activities, and the BPMN,
+      form, document and RoPA storage behind them.
 paths:
   /health:
     get:
@@ -179,6 +181,1011 @@ paths:
                       $ref: '#/components/schemas/PublicBundle'
         '500':
           description: The bundles could not be read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/bpmn:
+    get:
+      operationId: listBpmn
+      tags: [Assets]
+      summary: List stored BPMN process definitions
+      description: >-
+        Every row the table holds, most recently updated first — no
+        pagination and no filtering.
+      responses:
+        '200':
+          description: The stored process definitions, most recently updated first.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Bpmn'
+        '500':
+          description: The read failed (code LIST_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/bpmn` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      operationId: upsertBpmn
+      tags: [Assets]
+      summary: Create or update a BPMN process definition
+      description: >-
+        Upserts by `id` (stored as `lde_id`): inserts a new row, or on a
+        conflict updates every column named below. `readonly` and
+        `schemaVersion` are never written by this operation and keep their
+        database defaults (`false` and `1`) on insert, and are left
+        unchanged on an update. Nothing in the body is validated: a value a
+        database CHECK constraint rejects (`processRole`, `status`), or a
+        required column left empty, answers 500, never 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >-
+                Passed straight to the database with no validation; the
+                fields below are what a successful upsert needs, not what
+                is enforced before that point.
+              required: [id, name, xml, linkedDmnTemplates, createdAt, updatedAt]
+              properties:
+                id:
+                  type: string
+                  description: Stored as `lde_id`.
+                bpmnProcessId:
+                  type: string
+                  default: unknown
+                  description: Defaults to the literal `"unknown"` when omitted.
+                name:
+                  type: string
+                description:
+                  type: string
+                xml:
+                  type: string
+                  description: The BPMN 2.0 XML. Not parsed or validated server-side.
+                processRole:
+                  type: string
+                  enum: [shell, subprocess, standalone]
+                  default: standalone
+                  description: Database CHECK constraint; an out-of-set value answers 500.
+                calledElement:
+                  type: string
+                shellId:
+                  type: string
+                linkedDmnTemplates:
+                  type: array
+                  items:
+                    type: string
+                  description: >-
+                    Not defaulted server-side: an omitted value is stored as
+                    NULL against a NOT NULL column and answers 500.
+                status:
+                  type: string
+                  enum: [example, wip, e2e]
+                  default: wip
+                  description: Database CHECK constraint; an out-of-set value answers 500.
+                language:
+                  type: string
+                  maxLength: 2
+                organization:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+                updatedAt:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: The process definition was created or updated. The response carries no data.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: >-
+            The write failed (code UPSERT_FAILED) — for example a database
+            CHECK or NOT NULL violation — or the request body was not valid
+            JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/bpmn` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/bpmn/by-bpmn-id/{bpmnProcessId}:
+    get:
+      operationId: getBpmnByBpmnProcessId
+      tags: [Assets]
+      summary: Resolve a BPMN process by its business process id
+      description: >-
+        Resolves a calledElement reference to its subprocess XML for bundle
+        assembly. Looks up by `bpmnProcessId` (the BPMN-internal business
+        key), not the storage id the other four operations use. Returns a
+        narrower shape than the list operation — only `id`, `bpmnProcessId`
+        and `xml` — not the full record.
+      parameters:
+        - name: bpmnProcessId
+          in: path
+          required: true
+          description: >-
+            The BPMN process id to resolve. Any string is accepted; a value
+            matching no row answers 404, never 400.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The process was found.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/BpmnLookupResult'
+        '404':
+          description: >-
+            No process has this bpmnProcessId (code NOT_FOUND). The message
+            quotes the requested id verbatim.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The lookup failed (code LOOKUP_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/bpmn` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/bpmn/{id}:
+    delete:
+      operationId: deleteBpmn
+      tags: [Assets]
+      summary: Delete a stored BPMN process definition
+      description: >-
+        Deletes by `id` (`lde_id`). The delete statement is unconditional —
+        an id matching no row still answers 200, never 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The storage id (`lde_id`) to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: >-
+            The delete ran. The response carries no data and does not say
+            whether a row was actually removed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: The delete failed (code DELETE_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/bpmn` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/bpmn/{id}/deploy:
+    patch:
+      operationId: markBpmnDeployed
+      tags: [Assets]
+      summary: Record a BPMN process deployment
+      description: >-
+        Marks a stored process as deployed to Operaton. `deployedAt` is
+        always set to the server clock; it is never read from the request.
+        This operation is unconditional — an id matching no stored process
+        still answers 200, never 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The storage id (`lde_id`) to mark as deployed.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >-
+                Nothing here is required for a 200: an empty body, or no
+                body at all, still succeeds, since every field is either
+                optional or defaulted.
+              properties:
+                deploymentId:
+                  type: string
+                  description: >-
+                    Stored as-is, not validated. Omitted, it is written as
+                    NULL — the column has no NOT NULL constraint, so this
+                    still succeeds.
+                operatonUrl:
+                  type: string
+                  description: Omitted, stored as NULL.
+                formIds:
+                  type: array
+                  items:
+                    type: string
+                  default: []
+                  description: Defaults to an empty array when omitted.
+                documentIds:
+                  type: array
+                  items:
+                    type: string
+                  default: []
+                  description: Defaults to an empty array when omitted.
+                boardOwner:
+                  type: string
+                  description: >-
+                    Omitted, the existing stored value is left untouched
+                    rather than overwritten to NULL — unlike every other
+                    field here, which always overwrites.
+      responses:
+        '200':
+          description: The deployment was recorded. The response carries no data.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: >-
+            The update failed (code DEPLOY_MARK_FAILED), or the request body
+            was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/bpmn` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/forms:
+    get:
+      operationId: listForms
+      tags: [Assets]
+      summary: List stored form schemas
+      description: >-
+        Every row the table holds, most recently updated first — no
+        pagination and no filtering.
+      responses:
+        '200':
+          description: The stored form schemas, most recently updated first.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Form'
+        '500':
+          description: The read failed (code LIST_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/forms` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      operationId: upsertForm
+      tags: [Assets]
+      summary: Create or update a form schema
+      description: >-
+        Upserts by `id`: inserts a new row, or on a conflict updates every
+        column named below. `readonly` is never written by this operation;
+        the response always reports it as `false`, hardcoded by the mapper,
+        not read from the database. A schema version is stored for a form, but
+        neither this operation nor `GET /assets/forms` writes or reads it, so
+        it never appears on the wire — unlike `Document.schemaVersion`, which
+        does. Nothing in the body is
+        validated: a required column left empty, or an over-length
+        `language`/`organization`, answers 500, never 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >-
+                Passed straight to the database with no validation; the
+                fields below are what a successful upsert needs, not what
+                is enforced before that point.
+              required: [id, name, schema, createdAt, updatedAt]
+              properties:
+                id:
+                  type: string
+                  description: Stored as the table's TEXT primary key — not a UUID.
+                name:
+                  type: string
+                description:
+                  type: string
+                schema:
+                  type: object
+                  description: >-
+                    Free-form JSON Schema-like form definition,
+                    `JSON.stringify`'d before storage; nothing checks its
+                    shape. A JSONB column — the driver returns it already
+                    parsed, not a JSON-encoded string.
+                status:
+                  type: string
+                  default: wip
+                  description: No database CHECK constraint; any string is accepted.
+                language:
+                  type: string
+                  maxLength: 2
+                organization:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+                updatedAt:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: The form schema was created or updated. The response carries no data.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: >-
+            The write failed (code UPSERT_FAILED) — for example a NOT NULL
+            violation — or the request body was not valid JSON or over
+            10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/forms` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/forms/{id}:
+    delete:
+      operationId: deleteForm
+      tags: [Assets]
+      summary: Delete a stored form schema
+      description: >-
+        Deletes by `id`. The delete statement is unconditional — an id
+        matching no row still answers 200, never 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The storage id to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: >-
+            The delete ran. The response carries no data and does not say
+            whether a row was actually removed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: The delete failed (code DELETE_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/forms` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/documents:
+    get:
+      operationId: listDocuments
+      tags: [Assets]
+      summary: List stored document templates
+      description: >-
+        Every row the table holds, most recently updated first — no
+        pagination and no filtering.
+      responses:
+        '200':
+          description: The stored document templates, most recently updated first.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+        '500':
+          description: The read failed (code LIST_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/documents` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      operationId: upsertDocument
+      tags: [Assets]
+      summary: Create or update a document template
+      description: >-
+        Upserts by `id`: inserts a new row, or on a conflict updates every
+        column named below. `readonly` is never written by this operation;
+        the response always reports it as `false`, hardcoded by the mapper,
+        not read from the database. `schemaVersion`, `bindings` and `assets`
+        each have a database default (`1` and `'[]'` respectively), but this
+        operation always supplies a value for all three explicitly, even
+        when the caller omits them from the body — an omitted value becomes
+        the JavaScript value `undefined`, which the Postgres driver sends as
+        SQL NULL, and NULL is rejected by each column's NOT NULL constraint.
+        The database default therefore never actually applies through this
+        route; omitting any of the three answers 500, not a defaulted value.
+        Nothing in the body is validated: a required column left empty, or
+        an over-length `language`/`organization`, answers 500, never 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >-
+                Passed straight to the database with no validation; the
+                fields below are what a successful upsert needs, not what
+                is enforced before that point.
+              required: [id, name, schemaVersion, zones, bindings, assets, createdAt, updatedAt]
+              properties:
+                id:
+                  type: string
+                  description: Stored as the table's TEXT primary key — not a UUID.
+                name:
+                  type: string
+                description:
+                  type: string
+                processKey:
+                  type: string
+                serviceId:
+                  type: string
+                schemaVersion:
+                  type: integer
+                  description: >-
+                    The database column defaults to `1`, but that default
+                    never applies through this route (see above) — omitting
+                    this answers 500.
+                zones:
+                  type: object
+                  description: >-
+                    Free-form JSON, `JSON.stringify`'d before storage;
+                    nothing checks its shape. A JSONB column with no
+                    database default — the driver returns it already
+                    parsed, not a JSON-encoded string.
+                bindings:
+                  description: >-
+                    Free-form JSON, arrays by convention but not enforced.
+                    The database column defaults to `[]`, but that default
+                    never applies through this route (see above) — omitting
+                    this answers 500.
+                assets:
+                  description: >-
+                    Free-form JSON, arrays by convention but not enforced.
+                    Same database-default caveat as `bindings`.
+                status:
+                  type: string
+                  default: wip
+                  description: No database CHECK constraint; any string is accepted.
+                language:
+                  type: string
+                  maxLength: 2
+                organization:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+                updatedAt:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: The document template was created or updated. The response carries no data.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: >-
+            The write failed (code UPSERT_FAILED) — for example a NOT NULL
+            violation — or the request body was not valid JSON or over
+            10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/documents` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/documents/{id}:
+    delete:
+      operationId: deleteDocument
+      tags: [Assets]
+      summary: Delete a stored document template
+      description: >-
+        Deletes by `id`. The delete statement is unconditional — an id
+        matching no row still answers 200, never 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The storage id to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: >-
+            The delete ran. The response carries no data and does not say
+            whether a row was actually removed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: The delete failed (code DELETE_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/documents` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/ropa:
+    get:
+      operationId: listRopa
+      tags: [Assets]
+      summary: List stored records of processing activities
+      description: >-
+        Every row the table holds, most recently updated first — draft and
+        archived records included, not only active ones (contrast
+        `GET /ropa/public`, which filters to `status = active`).
+      responses:
+        '200':
+          description: The stored RoPA records, most recently updated first.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RopaRecord'
+        '500':
+          description: The read failed (code LIST_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/ropa` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      operationId: upsertRopa
+      tags: [Assets]
+      summary: Create or update a record of processing activities
+      description: >-
+        Upserts by `bpmnProcessId`: inserts a new row, or on a conflict with
+        an existing `bpmnProcessId` updates every column named below and
+        replaces the full set of personal-data fields (deleted and
+        re-inserted inside the same transaction). `id`,
+        `createdAt` and `updatedAt` are never read from the body — the id
+        is database-generated and both timestamps are set by the database
+        clock on insert and update, unlike `/assets/forms` and
+        `/assets/documents`, where the caller supplies them. Several
+        columns have a database default (`thirdCountryTransfers` false,
+        `status` draft, `schemaVersion` 1, each personal-data field's
+        `specialCategory` false and `sortOrder` 0), but this operation
+        always supplies a value for each explicitly, even when the caller
+        omits it from the body — an omitted value becomes the JavaScript
+        value `undefined`, which the Postgres driver sends as SQL NULL,
+        and NULL is rejected by each column's NOT NULL constraint. The
+        database default therefore never actually applies through this
+        route. Nothing in the body is validated: a value a database CHECK
+        constraint rejects (`processLevel`, `status`), a required column
+        left empty, or an omitted `personalDataFields` array (iterated
+        directly, so a missing array throws before any database call),
+        answers 500, never 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >-
+                Passed straight to the database with no validation; the
+                fields below are what a successful upsert needs, not what
+                is enforced before that point.
+              required:
+                - bpmnProcessId
+                - processLevel
+                - title
+                - controllerName
+                - controllerContact
+                - purpose
+                - legalBasisUri
+                - legalBasisLabel
+                - gdprArticle
+                - dataSubjects
+                - recipients
+                - thirdCountryTransfers
+                - retentionPeriod
+                - securityMeasures
+                - status
+                - schemaVersion
+                - personalDataFields
+              properties:
+                bpmnProcessId:
+                  type: string
+                processLevel:
+                  type: string
+                  enum: [shell, subprocess]
+                  description: Database CHECK constraint; an out-of-set value answers 500.
+                title:
+                  type: string
+                controllerName:
+                  type: string
+                controllerContact:
+                  type: string
+                dpoContact:
+                  type: string
+                purpose:
+                  type: string
+                legalBasisUri:
+                  type: string
+                legalBasisLabel:
+                  type: string
+                gdprArticle:
+                  type: string
+                dataSubjects:
+                  type: string
+                recipients:
+                  type: string
+                thirdCountryTransfers:
+                  type: boolean
+                thirdCountryDetails:
+                  type: string
+                retentionPeriod:
+                  type: string
+                securityMeasures:
+                  type: string
+                status:
+                  type: string
+                  enum: [draft, active, archived]
+                  description: Database CHECK constraint; an out-of-set value answers 500.
+                schemaVersion:
+                  type: integer
+                personalDataFields:
+                  type: array
+                  description: >-
+                    Replaces the record's full set of personal-data fields.
+                    An empty array is valid and deletes any fields the
+                    record already had.
+                  items:
+                    type: object
+                    description: >-
+                      Distinct from the response's RopaPersonalDataField:
+                      no `id` or `ropaRecordId` here — both are
+                      database-generated on insert.
+                    required:
+                      [formId, fieldKey, fieldLabel, dataCategory, specialCategory, sortOrder]
+                    properties:
+                      formId:
+                        type: string
+                      fieldKey:
+                        type: string
+                      fieldLabel:
+                        type: string
+                      dataCategory:
+                        type: string
+                        description: No database CHECK constraint; any string is accepted.
+                      specialCategory:
+                        type: boolean
+                      sortOrder:
+                        type: integer
+      responses:
+        '200':
+          description: >-
+            The record was created or updated. The response carries only
+            the record's id, not the full record.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    additionalProperties: false
+                    required: [id]
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+        '500':
+          description: >-
+            The write failed (code UPSERT_FAILED) — for example a database
+            CHECK or NOT NULL violation, or a missing `personalDataFields`
+            array — or the request body was not valid JSON or over 10 MB
+            (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/ropa` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/ropa/by-bpmn-id/{bpmnProcessId}:
+    get:
+      operationId: getRopaByBpmnProcessId
+      tags: [Assets]
+      summary: Resolve a RoPA record by its BPMN process id
+      description: >-
+        Looks up the most recently updated record for that BPMN process id.
+      parameters:
+        - name: bpmnProcessId
+          in: path
+          required: true
+          description: >-
+            The BPMN process id to resolve. Any string is accepted; a value
+            matching no row answers 404, never 400.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The record was found.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/RopaRecord'
+        '404':
+          description: >-
+            No RoPA record has this bpmnProcessId (code NOT_FOUND). The
+            message quotes the requested id verbatim.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The lookup failed (code LOOKUP_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/ropa` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/ropa/{id}:
+    delete:
+      operationId: deleteRopa
+      tags: [Assets]
+      summary: Delete a stored RoPA record
+      description: >-
+        Deletes by `id`, cascading to its personal-data fields. The delete
+        statement is unconditional — an id matching no row still answers
+        200, never 404. `id` is a database UUID column: a non-UUID-shaped
+        value fails Postgres's implicit cast and answers 500, not 400 or
+        404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The record id to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: >-
+            The delete ran. The response carries no data and does not say
+            whether a row was actually removed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: >-
+            The delete failed (code DELETE_FAILED) — including a
+            non-UUID-shaped id, which fails the column's implicit cast.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/ropa` operation can answer this.
           content:
             application/json:
               schema:
@@ -2258,6 +3265,288 @@ components:
           type: string
         name:
           type: string
+    Bpmn:
+      type: object
+      description: >-
+        A stored BPMN process definition, as returned by
+        `GET /assets/bpmn`. `GET /assets/bpmn/by-bpmn-id/{bpmnProcessId}`
+        returns a narrower shape instead — see BpmnLookupResult.
+      additionalProperties: false
+      required:
+        - id
+        - bpmnProcessId
+        - name
+        - xml
+        - processRole
+        - linkedDmnTemplates
+        - status
+        - readonly
+        - schemaVersion
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: The storage id (`lde_id`).
+        bpmnProcessId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          description: Omitted when the stored value is null.
+        xml:
+          type: string
+          description: The BPMN 2.0 XML. Not parsed or validated server-side.
+        processRole:
+          type: string
+          enum: [shell, subprocess, standalone]
+          description: Enforced by a database CHECK constraint.
+        calledElement:
+          type: string
+          description: Omitted when the stored value is null.
+        shellId:
+          type: string
+          description: Omitted when the stored value is null.
+        linkedDmnTemplates:
+          type: array
+          items:
+            type: string
+          description: Always present; an empty array when nothing is linked.
+        status:
+          type: string
+          enum: [example, wip, e2e]
+          description: Enforced by a database CHECK constraint.
+        readonly:
+          type: boolean
+        schemaVersion:
+          type: integer
+        language:
+          type: string
+          maxLength: 2
+          description: Omitted when the stored value is null. Not a validated ISO-639-1 code.
+        organization:
+          type: string
+          description: Omitted when the stored value is null.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    BpmnLookupResult:
+      type: object
+      description: >-
+        The narrow shape `GET /assets/bpmn/by-bpmn-id/{bpmnProcessId}`
+        returns — not the full Bpmn record the list operation returns.
+      additionalProperties: false
+      required: [id, bpmnProcessId, xml]
+      properties:
+        id:
+          type: string
+          description: The storage id (`lde_id`).
+        bpmnProcessId:
+          type: string
+        xml:
+          type: string
+    Form:
+      type: object
+      description: >-
+        A stored form schema, as returned by `GET /assets/forms`. Unlike
+        `Document.schemaVersion`, a form's schema version is never returned
+        on the wire, even though one is stored.
+      additionalProperties: false
+      required: [id, name, schema, status, createdAt, updatedAt, readonly]
+      properties:
+        id:
+          type: string
+          description: The storage id, a free-form TEXT primary key — not a UUID.
+        name:
+          type: string
+        description:
+          type: string
+          description: Omitted when the stored value is null.
+        schema:
+          type: object
+          description: >-
+            Free-form JSON Schema-like form definition. A JSONB column —
+            the driver returns it already parsed, not a JSON-encoded
+            string. Not validated against any shape server-side.
+        status:
+          type: string
+          description: >-
+            No database CHECK constraint on this column and no fixed set
+            of values in code — whatever was last written. Defaults to
+            `wip` when a POST omits it.
+        language:
+          type: string
+          maxLength: 2
+          description: Omitted when the stored value is null. Not a validated ISO-639-1 code.
+        organization:
+          type: string
+          description: Omitted when the stored value is null.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        readonly:
+          const: false
+          description: Hardcoded by the mapper; never read from the database.
+    Document:
+      type: object
+      description: A stored document template, as returned by `GET /assets/documents`.
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - schemaVersion
+        - zones
+        - bindings
+        - assets
+        - status
+        - createdAt
+        - updatedAt
+        - readonly
+      properties:
+        id:
+          type: string
+          description: The storage id, a free-form TEXT primary key — not a UUID.
+        name:
+          type: string
+        description:
+          type: string
+          description: Omitted when the stored value is null.
+        processKey:
+          type: string
+          description: Omitted when the stored value is null.
+        serviceId:
+          type: string
+          description: Omitted when the stored value is null.
+        schemaVersion:
+          type: integer
+        zones:
+          type: object
+          description: >-
+            Free-form JSON. A JSONB column — the driver returns it already
+            parsed, not a JSON-encoded string.
+        bindings:
+          description: >-
+            Free-form JSON, arrays by convention but not enforced. Same
+            JSONB/parsing note as `zones`.
+        assets:
+          description: >-
+            Free-form JSON, arrays by convention but not enforced. Same
+            JSONB/parsing note as `zones`.
+        status:
+          type: string
+          description: >-
+            No database CHECK constraint on this column and no fixed set
+            of values in code — whatever was last written. Defaults to
+            `wip` when a POST omits it.
+        language:
+          type: string
+          maxLength: 2
+          description: Omitted when the stored value is null. Not a validated ISO-639-1 code.
+        organization:
+          type: string
+          description: Omitted when the stored value is null.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        readonly:
+          const: false
+          description: Hardcoded by the mapper; never read from the database.
+    RopaRecord:
+      type: object
+      description: >-
+        A stored RoPA record, as returned by `GET /assets/ropa` and
+        `GET /assets/ropa/by-bpmn-id/{bpmnProcessId}`. A superset of
+        PublicRopaRecord: adds the required controllerContact and
+        schemaVersion and the optional dpoContact, none of which the public
+        read exposes, and status is the open three-value set rather than
+        the public read's `const: active` (a query filter on the public
+        read, not a difference in what the database can hold).
+      additionalProperties: false
+      required:
+        - id
+        - bpmnProcessId
+        - processLevel
+        - title
+        - controllerName
+        - controllerContact
+        - purpose
+        - legalBasisUri
+        - legalBasisLabel
+        - gdprArticle
+        - dataSubjects
+        - recipients
+        - thirdCountryTransfers
+        - retentionPeriod
+        - securityMeasures
+        - status
+        - schemaVersion
+        - personalDataFields
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        bpmnProcessId:
+          type: string
+        processLevel:
+          type: string
+          enum: [shell, subprocess]
+        title:
+          type: string
+        controllerName:
+          type: string
+        controllerContact:
+          type: string
+        dpoContact:
+          type: string
+          description: Omitted when the stored value is null.
+        purpose:
+          type: string
+        legalBasisUri:
+          type: string
+        legalBasisLabel:
+          type: string
+        gdprArticle:
+          type: string
+        dataSubjects:
+          type: string
+        recipients:
+          type: string
+        thirdCountryTransfers:
+          type: boolean
+        thirdCountryDetails:
+          type: string
+          description: Omitted when there are no third-country transfer details.
+        retentionPeriod:
+          type: string
+        securityMeasures:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, archived]
+        schemaVersion:
+          type: integer
+        personalDataFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/RopaPersonalDataField'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     CacheStats:
       type: object
       description: >-
