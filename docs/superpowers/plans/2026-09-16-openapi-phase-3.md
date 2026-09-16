@@ -30,7 +30,7 @@ Inventory: `inventory-shacl-process.md`.
 
 - `ShaclValidationResult` is the shared 200 payload of both SHACL operations: `valid`, `complete`, `parseError` (string or null), and `layers`, which is a **closed** three-key object (`cprmv`, `cpsv-ap`, `ronl-custom`), not a map. It is a different shape from the `/health` SHACL block, which is a map, so no reuse.
 - `ShaclIssue`'s `code`, `message` and `location` come from the shape files and the parser: plain strings, never enums.
-- `GET /process/{key}/variable-hints` answers `{ success, variables }` with **no `timestamp`**, and its 500 is `{ success: false, error }` with `error` a plain string — neither is the `ErrorEnvelope` used elsewhere. `variables` may be empty.
+- `GET /process/{key}/variable-hints` answers `{ success, variables }` with **no `timestamp`**, and its 500 is `{ success: false, error: { code, message } }` with both values fixed in the handler — neither is the `ErrorEnvelope` used elsewhere, which also carries a `timestamp`. `variables` may be empty.
 - Both test files build a bare app today. Add a `makeDocumentedApp()` with `versionMiddleware` in each, as the `/cache` and `/triplydb` blocks do.
 - Cover per mount: both SHACL operations' 200 and 400, one 500, and the malformed-body 500 (#143); the process operation's 200 (including an empty `variables`) and 500.
 
@@ -40,8 +40,8 @@ Inventory: `inventory-chains-templates.md`.
 
 - One `ChainTemplate` schema serves the list and the by-id read. `defaultInputs` is free-form.
 - `type`, `category` and `complexity` are TypeScript unions fixed in the template definitions, not values from data, so they may be enums. Today's three templates exercise only part of each union; the schema follows the union, not the sample.
-- The list operation's filters (`category`, `complexity`, `tags`, `search`) are optional strings and never answer 400. The by-id read answers 404 with an `ErrorEnvelope` whose message contains the id.
-- `categories/list` and `tags/list` answer `{ items, total }`-shaped payloads of plain strings. They take nothing.
+- The list operation reads three optional query strings, `category`, `tag` and `endpoint`, and never answers 400. There is no `complexity` or `search` filter: `complexity` is a template property only. The by-id read answers 404 with an `ErrorEnvelope` whose message contains the id.
+- `categories/list` and `tags/list` answer `{ categories, total }` and `{ tags, total }`, arrays of plain strings with their count. They take nothing.
 - Cover: 200 for all four, the 404, and at least one 500 (`QUERY_ERROR`).
 
 ### Task 3 — `/chains` (2 operations, ceiling 33)
@@ -50,7 +50,7 @@ Inventory: `inventory-chains-templates.md`.
 
 - `GET /chains` returns chains grouped by their `from` model. That grouping exists only inside the handler, so it needs a fresh schema; the DMN schemas from phase 2 do not fit. Every value comes from SPARQL: plain strings.
 - `POST /chains/execute` is the hard one. **Its 500 has two shapes**: the orchestrator resolving with `success: false` gives `{ success: false, data: { …, error: <string> } }`, while the orchestrator throwing gives the `ErrorEnvelope` with code `EXECUTION_ERROR`. A malformed body adds the `INTERNAL_ERROR` envelope (#143). The 500 needs all three as alternatives.
-- The 200 payload carries `chainId`, `executionTime`, free-form `finalOutputs`, and `steps` only when the caller asks for them. A step has `outputs` when it succeeded and `error` when it threw. `OperatonDecisionResult` from phase 2 is the wrong shape here: these values are already unwrapped.
+- The 200 payload carries `chainId`, `executionTime`, free-form `finalOutputs`, and `steps` only when the caller asks for them. A step that throws is never added to `steps`, so every step in a delivered response has its outputs and timings set, and the type's `error` field is unreachable. `OperatonDecisionResult` from phase 2 is the wrong shape here: these values are already unwrapped.
 - Cover: 200 with and without steps, both 400 messages, both 500 shapes, and the malformed-body 500.
 
 ### Task 4 — record the exceptions in the spec (no ceiling change)

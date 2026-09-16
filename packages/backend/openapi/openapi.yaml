@@ -1610,7 +1610,8 @@ paths:
                   type: string
                   description: >-
                     Optional TriplyDB endpoint override for looking up the
-                    chain's DMNs. Unvalidated.
+                    chain's DMNs. Unvalidated, and ignored when `isDrd` is true,
+                    because that path does not look the DMNs up.
                 isDrd:
                   type: boolean
                   description: >-
