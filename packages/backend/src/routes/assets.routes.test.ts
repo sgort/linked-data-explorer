@@ -311,8 +311,35 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
     xml: '<bpmn:definitions/>',
   };
 
+  // Every field mapBpmn's `?? undefined` can drop (description, calledElement,
+  // shellId, language, organization) is missing, so a wrongly-required
+  // optional field would fail this instead of passing unnoticed against a
+  // maximal fixture.
+  const MINIMAL_BPMN = {
+    id: 'p2',
+    bpmnProcessId: 'MinimalProcess',
+    name: 'Minimal process',
+    xml: '<bpmn:definitions/>',
+    processRole: 'standalone',
+    linkedDmnTemplates: [],
+    status: 'wip',
+    readonly: false,
+    schemaVersion: 1,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+  };
+
   test('GET /assets/bpmn 200, as documented', async () => {
     svc.listBpmn.mockResolvedValue([FULL_BPMN]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/bpmn');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/assets/bpmn');
+  });
+
+  test('GET /assets/bpmn 200 with a minimal record, as documented', async () => {
+    svc.listBpmn.mockResolvedValue([MINIMAL_BPMN]);
 
     const res = await request(makeDocumentedApp()).get('/v1/assets/bpmn');
 
@@ -402,6 +429,15 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
   });
 
+  test('PATCH /assets/bpmn/{id}/deploy 200 with no body at all, as documented', async () => {
+    svc.markDeployed.mockResolvedValue(undefined);
+
+    const res = await request(makeDocumentedApp()).patch('/v1/assets/bpmn/p1/deploy');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
+  });
+
   test('PATCH /assets/bpmn/{id}/deploy 500, as documented', async () => {
     svc.markDeployed.mockRejectedValue(new Error('no such process'));
 
@@ -482,8 +518,30 @@ describe('/v1/assets/forms matches its OpenAPI description', () => {
     readonly: false,
   };
 
+  // Every field mapForm's `?? undefined` can drop (description, language,
+  // organization) is missing, so a wrongly-required optional field would
+  // fail this instead of passing unnoticed against a maximal fixture.
+  const MINIMAL_FORM = {
+    id: 'f2',
+    name: 'Minimal form',
+    schema: {},
+    status: 'wip',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+    readonly: false,
+  };
+
   test('GET /assets/forms 200, as documented', async () => {
     svc.listForms.mockResolvedValue([FULL_FORM]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/forms');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/assets/forms');
+  });
+
+  test('GET /assets/forms 200 with a minimal record, as documented', async () => {
+    svc.listForms.mockResolvedValue([MINIMAL_FORM]);
 
     const res = await request(makeDocumentedApp()).get('/v1/assets/forms');
 
@@ -560,10 +618,12 @@ describe('/v1/assets/documents matches its OpenAPI description', () => {
     return app;
   }
 
-  // Every optional field populated, and `zones`/`bindings`/`assets` each
-  // given more than one key with mixed value types (string, array, boolean,
-  // number, null), so the Document schema's three free-form JSONB fields
-  // are actually exercised.
+  // Every optional field populated. `zones` is given more than one key with
+  // mixed value types (string, array, boolean, number, null) to exercise the
+  // Document schema's free-form JSONB field; `bindings` and `assets` are the
+  // real shapes (VariableBinding[] and string[] — see
+  // packages/frontend/src/types/document.types.ts), taken from a shipped
+  // template (packages/frontend/src/components/DocumentComposer/defaultTemplates.ts).
   const FULL_DOCUMENT = {
     id: 'd1',
     name: 'Beschikkingsbrief',
@@ -577,8 +637,26 @@ describe('/v1/assets/documents matches its OpenAPI description', () => {
       includeLogo: true,
       margin: 20,
     },
-    bindings: { header: 'organization', motivation: ['paragraphs', 'body'] },
-    assets: { logo: 'logo.png', watermark: null },
+    bindings: [
+      {
+        id: 'b1',
+        placeholder: '{{dossierReference}}',
+        variableKey: 'dossierReference',
+        source: 'process',
+        label: 'Dossiernummer',
+      },
+      {
+        id: 'b2',
+        placeholder: '{{permitDecision}}',
+        variableKey: 'permitDecision',
+        source: 'dmn_output',
+        label: 'Vergunningsbesluit',
+      },
+    ],
+    assets: [
+      'https://triplydb.example/assets/logo.png',
+      'https://triplydb.example/assets/watermark.png',
+    ],
     status: 'wip',
     language: 'nl',
     organization: 'Gemeente Utrecht',
@@ -587,8 +665,34 @@ describe('/v1/assets/documents matches its OpenAPI description', () => {
     readonly: false,
   };
 
+  // Every field mapDocument's `?? undefined` can drop (description,
+  // processKey, serviceId, language, organization) is missing, so a
+  // wrongly-required optional field would fail this instead of passing
+  // unnoticed against a maximal fixture.
+  const MINIMAL_DOCUMENT = {
+    id: 'd2',
+    name: 'Minimal document',
+    schemaVersion: 1,
+    zones: {},
+    bindings: [],
+    assets: [],
+    status: 'wip',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+    readonly: false,
+  };
+
   test('GET /assets/documents 200, as documented', async () => {
     svc.listDocuments.mockResolvedValue([FULL_DOCUMENT]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/documents');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/assets/documents');
+  });
+
+  test('GET /assets/documents 200 with a minimal record, as documented', async () => {
+    svc.listDocuments.mockResolvedValue([MINIMAL_DOCUMENT]);
 
     const res = await request(makeDocumentedApp()).get('/v1/assets/documents');
 

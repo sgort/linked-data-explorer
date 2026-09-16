@@ -46,7 +46,9 @@ tags:
   - name: Execution
     description: Composing, running and inspecting DMN chains and BPMN processes.
   - name: Assets
-    description: Published processes and records of processing activities.
+    description: >-
+      Published processes and records of processing activities, and the BPMN,
+      form, document and RoPA storage behind them.
 paths:
   /health:
     get:
@@ -330,12 +332,11 @@ paths:
       tags: [Assets]
       summary: Resolve a BPMN process by its business process id
       description: >-
-        Used by BpmnCanvas bundle assembly to resolve a calledElement
-        reference to its subprocess XML. Looks up by `bpmn_process_id` (the
-        BPMN-internal business key), not the storage id the other four
-        operations use. Returns a narrower shape than the list operation —
-        only `id`, `bpmnProcessId` and `xml` — built by hand from a 3-column
-        SELECT, not the full record.
+        Resolves a calledElement reference to its subprocess XML for bundle
+        assembly. Looks up by `bpmnProcessId` (the BPMN-internal business
+        key), not the storage id the other four operations use. Returns a
+        narrower shape than the list operation — only `id`, `bpmnProcessId`
+        and `xml` — not the full record.
       parameters:
         - name: bpmnProcessId
           in: path
@@ -434,10 +435,10 @@ paths:
       tags: [Assets]
       summary: Record a BPMN process deployment
       description: >-
-        Marks a stored process as deployed to Operaton. `deployed_at` is
-        always set to the server clock (NOW()); it is never read from the
-        request. The update statement is unconditional — an id matching no
-        row still answers 200, never 404.
+        Marks a stored process as deployed to Operaton. `deployedAt` is
+        always set to the server clock; it is never read from the request.
+        This operation is unconditional — an id matching no stored process
+        still answers 200, never 404.
       parameters:
         - name: id
           in: path
@@ -446,14 +447,15 @@ paths:
           schema:
             type: string
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
               description: >-
-                Nothing here is required for a 200: an empty body still
-                succeeds, since every field is either optional or defaulted.
+                Nothing here is required for a 200: an empty body, or no
+                body at all, still succeeds, since every field is either
+                optional or defaulted.
               properties:
                 deploymentId:
                   type: string
@@ -480,8 +482,8 @@ paths:
                   type: string
                   description: >-
                     Omitted, the existing stored value is left untouched
-                    (`COALESCE`) rather than overwritten to NULL — unlike
-                    every other field here, which always overwrites.
+                    rather than overwritten to NULL — unlike every other
+                    field here, which always overwrites.
       responses:
         '200':
           description: The deployment was recorded. The response carries no data.
@@ -560,10 +562,10 @@ paths:
         Upserts by `id`: inserts a new row, or on a conflict updates every
         column named below. `readonly` is never written by this operation;
         the response always reports it as `false`, hardcoded by the mapper,
-        not read from the database. The table also holds a `schema_version`
-        column, but neither this operation nor `GET /assets/forms` writes or
-        reads it — it never appears on the wire (contrast
-        `Document.schemaVersion`, which does). Nothing in the body is
+        not read from the database. A schema version is stored for a form, but
+        neither this operation nor `GET /assets/forms` writes or reads it, so
+        it never appears on the wire — unlike `Document.schemaVersion`, which
+        does. Nothing in the body is
         validated: a required column left empty, or an over-length
         `language`/`organization`, answers 500, never 400.
       requestBody:
@@ -762,10 +764,8 @@ paths:
                   type: string
                 processKey:
                   type: string
-                  description: Stored as `process_key`.
                 serviceId:
                   type: string
-                  description: Stored as `service_id`.
                 schemaVersion:
                   type: integer
                   description: >-
@@ -780,14 +780,12 @@ paths:
                     database default — the driver returns it already
                     parsed, not a JSON-encoded string.
                 bindings:
-                  type: object
                   description: >-
                     Free-form JSON, arrays by convention but not enforced.
                     The database column defaults to `[]`, but that default
                     never applies through this route (see above) — omitting
                     this answers 500.
                 assets:
-                  type: object
                   description: >-
                     Free-form JSON, arrays by convention but not enforced.
                     Same database-default caveat as `bindings`.
@@ -928,10 +926,10 @@ paths:
       tags: [Assets]
       summary: Create or update a record of processing activities
       description: >-
-        Upserts by `bpmnProcessId` (`ON CONFLICT (bpmn_process_id) DO
-        UPDATE`): inserts a new row, or on a conflict updates every column
-        named below and replaces the full set of personal-data fields
-        (deleted and re-inserted inside the same transaction). `id`,
+        Upserts by `bpmnProcessId`: inserts a new row, or on a conflict with
+        an existing `bpmnProcessId` updates every column named below and
+        replaces the full set of personal-data fields (deleted and
+        re-inserted inside the same transaction). `id`,
         `createdAt` and `updatedAt` are never read from the body — the id
         is database-generated and both timestamps are set by the database
         clock on insert and update, unlike `/assets/forms` and
@@ -3303,7 +3301,7 @@ components:
         processRole:
           type: string
           enum: [shell, subprocess, standalone]
-          description: Database CHECK constraint (process_definitions.process_role).
+          description: Enforced by a database CHECK constraint.
         calledElement:
           type: string
           description: Omitted when the stored value is null.
@@ -3318,7 +3316,7 @@ components:
         status:
           type: string
           enum: [example, wip, e2e]
-          description: Database CHECK constraint (process_definitions.status).
+          description: Enforced by a database CHECK constraint.
         readonly:
           type: boolean
         schemaVersion:
@@ -3340,8 +3338,7 @@ components:
       type: object
       description: >-
         The narrow shape `GET /assets/bpmn/by-bpmn-id/{bpmnProcessId}`
-        returns — built by hand from a 3-column SELECT, not the full Bpmn
-        record the list operation returns.
+        returns — not the full Bpmn record the list operation returns.
       additionalProperties: false
       required: [id, bpmnProcessId, xml]
       properties:
@@ -3355,10 +3352,9 @@ components:
     Form:
       type: object
       description: >-
-        A stored form schema, as returned by `GET /assets/forms`. The table
-        holds a `schema_version` column, but `listForms`'s SELECT never
-        reads it and `mapForm` never sets it — the field never appears on
-        the wire, unlike `Document.schemaVersion`.
+        A stored form schema, as returned by `GET /assets/forms`. Unlike
+        `Document.schemaVersion`, a form's schema version is never returned
+        on the wire, even though one is stored.
       additionalProperties: false
       required: [id, name, schema, status, createdAt, updatedAt, readonly]
       properties:
@@ -3375,8 +3371,7 @@ components:
           description: >-
             Free-form JSON Schema-like form definition. A JSONB column —
             the driver returns it already parsed, not a JSON-encoded
-            string, whatever the `FormRow` type comment claims. Not
-            validated against any shape server-side.
+            string. Not validated against any shape server-side.
         status:
           type: string
           description: >-
@@ -3425,25 +3420,22 @@ components:
           description: Omitted when the stored value is null.
         processKey:
           type: string
-          description: Stored as `process_key`. Omitted when the stored value is null.
+          description: Omitted when the stored value is null.
         serviceId:
           type: string
-          description: Stored as `service_id`. Omitted when the stored value is null.
+          description: Omitted when the stored value is null.
         schemaVersion:
           type: integer
         zones:
           type: object
           description: >-
             Free-form JSON. A JSONB column — the driver returns it already
-            parsed, not a JSON-encoded string, whatever the `DocumentRow`
-            type comment claims.
+            parsed, not a JSON-encoded string.
         bindings:
-          type: object
           description: >-
             Free-form JSON, arrays by convention but not enforced. Same
             JSONB/parsing note as `zones`.
         assets:
-          type: object
           description: >-
             Free-form JSON, arrays by convention but not enforced. Same
             JSONB/parsing note as `zones`.

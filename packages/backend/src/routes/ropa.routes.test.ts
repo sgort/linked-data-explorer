@@ -252,8 +252,44 @@ describe('/v1/assets/ropa matches its OpenAPI description', () => {
     ],
   };
 
+  // Every field mapRopaRecord's `?? undefined` can drop (dpoContact,
+  // thirdCountryDetails) is missing, and personalDataFields is empty, so a
+  // wrongly-required optional field would fail this instead of passing
+  // unnoticed against a maximal fixture.
+  const MINIMAL_RECORD = {
+    id: '44444444-4444-4444-8444-444444444444',
+    bpmnProcessId: 'MinimalProcess',
+    processLevel: 'subprocess',
+    title: 'Minimal record',
+    controllerName: 'Gemeente Utrecht',
+    controllerContact: 'privacy@utrecht.nl',
+    purpose: 'Minimal purpose',
+    legalBasisUri: 'https://wetten.overheid.nl/BWBR0008659',
+    legalBasisLabel: 'Algemene wet inkomensafhankelijke regelingen',
+    gdprArticle: '6(1)(c)',
+    dataSubjects: 'Applicants',
+    recipients: 'None',
+    thirdCountryTransfers: false,
+    retentionPeriod: '7 years after case closure',
+    securityMeasures: 'Encryption at rest and in transit',
+    status: 'draft',
+    schemaVersion: 2,
+    personalDataFields: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+  };
+
   test('GET /assets/ropa 200, as documented', async () => {
     mockList.mockResolvedValue([FULL_RECORD]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/ropa');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/assets/ropa');
+  });
+
+  test('GET /assets/ropa 200 with a minimal record, as documented', async () => {
+    mockList.mockResolvedValue([MINIMAL_RECORD]);
 
     const res = await request(makeDocumentedApp()).get('/v1/assets/ropa');
 
