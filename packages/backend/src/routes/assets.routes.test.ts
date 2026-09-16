@@ -23,6 +23,9 @@ jest.mock('../services/assets.service', () => ({
 
 import * as assetsService from '../services/assets.service';
 import assetsRoutes from './assets.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { errorHandler } from '../middleware/error.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const svc = assetsService as unknown as Record<string, jest.Mock>;
 // Object.values would also yield the __esModule flag, which is not a mock.
@@ -263,5 +266,192 @@ describe('documents', () => {
 
     expect(res.status).toBe(500);
     expect(res.body.error).toEqual({ code, message: 'boom' });
+  });
+});
+
+describe('/v1/assets/bpmn matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/assets', assetsRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+    return app;
+  }
+
+  // Every optional field and the linkedDmnTemplates array populated, so the
+  // Bpmn schema is actually exercised rather than only nominally referenced
+  // (description, calledElement, shellId, language, organization all set;
+  // linkedDmnTemplates has two entries).
+  const FULL_BPMN = {
+    id: 'p1',
+    bpmnProcessId: 'ZorgtoeslagProcess',
+    name: 'Zorgtoeslag aanvragen',
+    description: 'Process for requesting housing benefit',
+    xml: '<bpmn:definitions/>',
+    processRole: 'shell',
+    calledElement: 'ZorgtoeslagSubProcess',
+    shellId: 'shell-1',
+    linkedDmnTemplates: ['dmn-1', 'dmn-2'],
+    status: 'wip',
+    readonly: false,
+    schemaVersion: 1,
+    language: 'nl',
+    organization: 'Gemeente Utrecht',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+  };
+
+  // bpmnProcessId included, unlike the bare-bones fixtures used above — the
+  // existing {id, xml}-only fixture would silently pass a schema that
+  // doesn't actually require it.
+  const LOOKUP_RESULT = {
+    id: 'p1',
+    bpmnProcessId: 'ZorgtoeslagProcess',
+    xml: '<bpmn:definitions/>',
+  };
+
+  test('GET /assets/bpmn 200, as documented', async () => {
+    svc.listBpmn.mockResolvedValue([FULL_BPMN]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/bpmn');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/assets/bpmn');
+  });
+
+  test('GET /assets/bpmn 500, as documented', async () => {
+    svc.listBpmn.mockRejectedValue(new Error('db unavailable'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/bpmn');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/assets/bpmn');
+  });
+
+  test('POST /assets/bpmn 200, as documented', async () => {
+    svc.upsertBpmn.mockResolvedValue(undefined);
+
+    const res = await request(makeDocumentedApp()).post('/v1/assets/bpmn').send(FULL_BPMN);
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/assets/bpmn');
+  });
+
+  test('POST /assets/bpmn 500, as documented', async () => {
+    svc.upsertBpmn.mockRejectedValue(new Error('readonly record'));
+
+    const res = await request(makeDocumentedApp()).post('/v1/assets/bpmn').send({ id: 'p1' });
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'post', '/assets/bpmn');
+  });
+
+  test('POST /assets/bpmn malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/assets/bpmn')
+      .set('Content-Type', 'application/json')
+      .send('{"id":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/assets/bpmn');
+  });
+
+  test('DELETE /assets/bpmn/{id} 200, as documented', async () => {
+    svc.deleteBpmn.mockResolvedValue(undefined);
+
+    const res = await request(makeDocumentedApp()).delete('/v1/assets/bpmn/p1');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'delete', '/assets/bpmn/{id}');
+  });
+
+  test('DELETE /assets/bpmn/{id} 500, as documented', async () => {
+    svc.deleteBpmn.mockRejectedValue(new Error('still referenced'));
+
+    const res = await request(makeDocumentedApp()).delete('/v1/assets/bpmn/p1');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'delete', '/assets/bpmn/{id}');
+  });
+
+  test('PATCH /assets/bpmn/{id}/deploy 200 with a full body, as documented', async () => {
+    svc.markDeployed.mockResolvedValue(undefined);
+
+    const res = await request(makeDocumentedApp())
+      .patch('/v1/assets/bpmn/p1/deploy')
+      .send({
+        deploymentId: 'dep-1',
+        operatonUrl: 'http://localhost:8081/engine-rest',
+        formIds: ['f1'],
+        documentIds: ['d1'],
+        boardOwner: 'flevoland',
+      });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
+  });
+
+  test('PATCH /assets/bpmn/{id}/deploy 200 with an empty body, as documented', async () => {
+    svc.markDeployed.mockResolvedValue(undefined);
+
+    const res = await request(makeDocumentedApp()).patch('/v1/assets/bpmn/p1/deploy').send({});
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
+  });
+
+  test('PATCH /assets/bpmn/{id}/deploy 500, as documented', async () => {
+    svc.markDeployed.mockRejectedValue(new Error('no such process'));
+
+    const res = await request(makeDocumentedApp())
+      .patch('/v1/assets/bpmn/p1/deploy')
+      .send({ deploymentId: 'dep-1' });
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
+  });
+
+  test('PATCH /assets/bpmn/{id}/deploy malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .patch('/v1/assets/bpmn/p1/deploy')
+      .set('Content-Type', 'application/json')
+      .send('{"deploymentId":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
+  });
+
+  test('GET /assets/bpmn/by-bpmn-id/{bpmnProcessId} 200, as documented', async () => {
+    svc.getBpmnByBpmnProcessId.mockResolvedValue(LOOKUP_RESULT);
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/assets/bpmn/by-bpmn-id/ZorgtoeslagProcess'
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/assets/bpmn/by-bpmn-id/{bpmnProcessId}');
+  });
+
+  test('GET /assets/bpmn/by-bpmn-id/{bpmnProcessId} 404, as documented', async () => {
+    svc.getBpmnByBpmnProcessId.mockResolvedValue(null);
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/bpmn/by-bpmn-id/MissingSub');
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/assets/bpmn/by-bpmn-id/{bpmnProcessId}');
+  });
+
+  test('GET /assets/bpmn/by-bpmn-id/{bpmnProcessId} 500, as documented', async () => {
+    svc.getBpmnByBpmnProcessId.mockRejectedValue(new Error('query failed'));
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/assets/bpmn/by-bpmn-id/ZorgtoeslagProcess'
+    );
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/assets/bpmn/by-bpmn-id/{bpmnProcessId}');
   });
 });

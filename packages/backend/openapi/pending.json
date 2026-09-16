@@ -1,9 +1,4 @@
 [
-  "GET /assets/bpmn",
-  "POST /assets/bpmn",
-  "GET /assets/bpmn/by-bpmn-id/{bpmnProcessId}",
-  "DELETE /assets/bpmn/{id}",
-  "PATCH /assets/bpmn/{id}/deploy",
   "GET /assets/documents",
   "POST /assets/documents",
   "DELETE /assets/documents/{id}",

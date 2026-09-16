@@ -183,6 +183,335 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/bpmn:
+    get:
+      operationId: listBpmn
+      tags: [Assets]
+      summary: List stored BPMN process definitions
+      description: >-
+        Every row the table holds, most recently updated first — no
+        pagination and no filtering.
+      responses:
+        '200':
+          description: The stored process definitions, most recently updated first.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Bpmn'
+        '500':
+          description: The read failed (code LIST_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/bpmn` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      operationId: upsertBpmn
+      tags: [Assets]
+      summary: Create or update a BPMN process definition
+      description: >-
+        Upserts by `id` (stored as `lde_id`): inserts a new row, or on a
+        conflict updates every column named below. `readonly` and
+        `schemaVersion` are never written by this operation and keep their
+        database defaults (`false` and `1`) on insert, and are left
+        unchanged on an update. Nothing in the body is validated: a value a
+        database CHECK constraint rejects (`processRole`, `status`), or a
+        required column left empty, answers 500, never 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >-
+                Passed straight to the database with no validation; the
+                fields below are what a successful upsert needs, not what
+                is enforced before that point.
+              required: [id, name, xml, linkedDmnTemplates, createdAt, updatedAt]
+              properties:
+                id:
+                  type: string
+                  description: Stored as `lde_id`.
+                bpmnProcessId:
+                  type: string
+                  default: unknown
+                  description: Defaults to the literal `"unknown"` when omitted.
+                name:
+                  type: string
+                description:
+                  type: string
+                xml:
+                  type: string
+                  description: The BPMN 2.0 XML. Not parsed or validated server-side.
+                processRole:
+                  type: string
+                  enum: [shell, subprocess, standalone]
+                  default: standalone
+                  description: Database CHECK constraint; an out-of-set value answers 500.
+                calledElement:
+                  type: string
+                shellId:
+                  type: string
+                linkedDmnTemplates:
+                  type: array
+                  items:
+                    type: string
+                  description: >-
+                    Not defaulted server-side: an omitted value is stored as
+                    NULL against a NOT NULL column and answers 500.
+                status:
+                  type: string
+                  enum: [example, wip, e2e]
+                  default: wip
+                  description: Database CHECK constraint; an out-of-set value answers 500.
+                language:
+                  type: string
+                  maxLength: 2
+                organization:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+                updatedAt:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: The process definition was created or updated. The response carries no data.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: >-
+            The write failed (code UPSERT_FAILED) — for example a database
+            CHECK or NOT NULL violation — or the request body was not valid
+            JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/bpmn` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/bpmn/by-bpmn-id/{bpmnProcessId}:
+    get:
+      operationId: getBpmnByBpmnProcessId
+      tags: [Assets]
+      summary: Resolve a BPMN process by its business process id
+      description: >-
+        Used by BpmnCanvas bundle assembly to resolve a calledElement
+        reference to its subprocess XML. Looks up by `bpmn_process_id` (the
+        BPMN-internal business key), not the storage id the other four
+        operations use. Returns a narrower shape than the list operation —
+        only `id`, `bpmnProcessId` and `xml` — built by hand from a 3-column
+        SELECT, not the full record.
+      parameters:
+        - name: bpmnProcessId
+          in: path
+          required: true
+          description: >-
+            The BPMN process id to resolve. Any string is accepted; a value
+            matching no row answers 404, never 400.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The process was found.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/BpmnLookupResult'
+        '404':
+          description: >-
+            No process has this bpmnProcessId (code NOT_FOUND). The message
+            quotes the requested id verbatim.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The lookup failed (code LOOKUP_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/bpmn` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/bpmn/{id}:
+    delete:
+      operationId: deleteBpmn
+      tags: [Assets]
+      summary: Delete a stored BPMN process definition
+      description: >-
+        Deletes by `id` (`lde_id`). The delete statement is unconditional —
+        an id matching no row still answers 200, never 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The storage id (`lde_id`) to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: >-
+            The delete ran. The response carries no data and does not say
+            whether a row was actually removed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: The delete failed (code DELETE_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/bpmn` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/bpmn/{id}/deploy:
+    patch:
+      operationId: markBpmnDeployed
+      tags: [Assets]
+      summary: Record a BPMN process deployment
+      description: >-
+        Marks a stored process as deployed to Operaton. `deployed_at` is
+        always set to the server clock (NOW()); it is never read from the
+        request. The update statement is unconditional — an id matching no
+        row still answers 200, never 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The storage id (`lde_id`) to mark as deployed.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >-
+                Nothing here is required for a 200: an empty body still
+                succeeds, since every field is either optional or defaulted.
+              properties:
+                deploymentId:
+                  type: string
+                  description: >-
+                    Stored as-is, not validated. Omitted, it is written as
+                    NULL — the column has no NOT NULL constraint, so this
+                    still succeeds.
+                operatonUrl:
+                  type: string
+                  description: Omitted, stored as NULL.
+                formIds:
+                  type: array
+                  items:
+                    type: string
+                  default: []
+                  description: Defaults to an empty array when omitted.
+                documentIds:
+                  type: array
+                  items:
+                    type: string
+                  default: []
+                  description: Defaults to an empty array when omitted.
+                boardOwner:
+                  type: string
+                  description: >-
+                    Omitted, the existing stored value is left untouched
+                    (`COALESCE`) rather than overwritten to NULL — unlike
+                    every other field here, which always overwrites.
+      responses:
+        '200':
+          description: The deployment was recorded. The response carries no data.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: >-
+            The update failed (code DEPLOY_MARK_FAILED), or the request body
+            was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/bpmn` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /cache/stats:
     get:
       operationId: getCacheStats
@@ -2257,6 +2586,91 @@ components:
         id:
           type: string
         name:
+          type: string
+    Bpmn:
+      type: object
+      description: >-
+        A stored BPMN process definition, as returned by
+        `GET /assets/bpmn`. `GET /assets/bpmn/by-bpmn-id/{bpmnProcessId}`
+        returns a narrower shape instead — see BpmnLookupResult.
+      additionalProperties: false
+      required:
+        - id
+        - bpmnProcessId
+        - name
+        - xml
+        - processRole
+        - linkedDmnTemplates
+        - status
+        - readonly
+        - schemaVersion
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: The storage id (`lde_id`).
+        bpmnProcessId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          description: Omitted when the stored value is null.
+        xml:
+          type: string
+          description: The BPMN 2.0 XML. Not parsed or validated server-side.
+        processRole:
+          type: string
+          enum: [shell, subprocess, standalone]
+          description: Database CHECK constraint (process_definitions.process_role).
+        calledElement:
+          type: string
+          description: Omitted when the stored value is null.
+        shellId:
+          type: string
+          description: Omitted when the stored value is null.
+        linkedDmnTemplates:
+          type: array
+          items:
+            type: string
+          description: Always present; an empty array when nothing is linked.
+        status:
+          type: string
+          enum: [example, wip, e2e]
+          description: Database CHECK constraint (process_definitions.status).
+        readonly:
+          type: boolean
+        schemaVersion:
+          type: integer
+        language:
+          type: string
+          maxLength: 2
+          description: Omitted when the stored value is null. Not a validated ISO-639-1 code.
+        organization:
+          type: string
+          description: Omitted when the stored value is null.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    BpmnLookupResult:
+      type: object
+      description: >-
+        The narrow shape `GET /assets/bpmn/by-bpmn-id/{bpmnProcessId}`
+        returns — built by hand from a 3-column SELECT, not the full Bpmn
+        record the list operation returns.
+      additionalProperties: false
+      required: [id, bpmnProcessId, xml]
+      properties:
+        id:
+          type: string
+          description: The storage id (`lde_id`).
+        bpmnProcessId:
+          type: string
+        xml:
           type: string
     CacheStats:
       type: object
