@@ -1509,6 +1509,225 @@ paths:
                         const: VARIABLE_HINTS_FAILED
                       message:
                         const: Failed to retrieve variable hints
+  /chains:
+    get:
+      operationId: discoverChains
+      tags: [Execution]
+      summary: Pairwise DMN chain links, grouped by source DMN
+      description: >-
+        Discovers, via SPARQL, every DMN whose declared output variable
+        matches another DMN's declared input variable, then groups those
+        pairwise links by the source (`from`) DMN. Takes no parameters —
+        `req.query` is never read — so there is nothing for the handler to
+        reject with a 400. `chains` is `[]`, still with a 200, when no links
+        are found.
+      responses:
+        '200':
+          description: The chain links, grouped by source DMN. Empty when none exist.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [total, chains]
+                    properties:
+                      total:
+                        type: integer
+                        minimum: 0
+                        description: '`chains.length`.'
+                      chains:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ChainMapEntry'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The SPARQL lookup failed (code DISCOVERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /chains/execute:
+    post:
+      operationId: executeChain
+      tags: [Execution]
+      summary: Execute a chain of DMNs sequentially, or a pre-assembled DRD in one call
+      description: >-
+        Threads each DMN's outputs into the next DMN's inputs, evaluating each
+        one in Operaton in turn (`orchestrationService.executeChain`). When
+        `isDrd` and `drdEntryPointId` are both given, that sequential
+        execution is skipped entirely and all `inputs` are sent to Operaton's
+        evaluation of the pre-assembled DRD in a single call instead. A step
+        is only ever added to `steps` once it has completed successfully —
+        `orchestration.service.ts` pushes it after its try/catch, and a step
+        whose evaluation throws re-throws before that push is reached, so it
+        is never added; the chain-level `error` carries that failure instead.
+        Every populated `steps` entry therefore always has `outputs`, never
+        `error`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dmnIds, inputs]
+              properties:
+                dmnIds:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                  description: >-
+                    DMN identifiers to execute in order (or, for the DRD path,
+                    the identifiers the DRD was assembled from). Required and
+                    must not be empty.
+                inputs:
+                  type: object
+                  minProperties: 1
+                  description: >-
+                    Free-form initial input variables. Required and must not
+                    be an empty object.
+                options:
+                  type: object
+                  description: >-
+                    Only `includeIntermediateSteps` is read; `timeout` is
+                    declared in the request type but never read anywhere and
+                    has no effect.
+                  properties:
+                    includeIntermediateSteps:
+                      type: boolean
+                      description: When true, the response's `data` carries `steps`.
+                endpoint:
+                  type: string
+                  description: >-
+                    Optional TriplyDB endpoint override for looking up the
+                    chain's DMNs. Unvalidated.
+                isDrd:
+                  type: boolean
+                  description: >-
+                    When true together with `drdEntryPointId`, executes the
+                    pre-assembled DRD instead of the sequential chain.
+                drdEntryPointId:
+                  type: string
+                  description: >-
+                    The DRD's entry-point decision key, used only when `isDrd`
+                    is also true.
+      responses:
+        '200':
+          description: The chain (or DRD) completed successfully.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [success, chainId, executionTime, finalOutputs]
+                    properties:
+                      success:
+                        const: true
+                      chainId:
+                        type: string
+                        description: >-
+                          The executed DMN identifiers joined with `->`, or,
+                          for the DRD path, `DRD:<drdEntryPointId>`.
+                      executionTime:
+                        type: number
+                        description: Milliseconds.
+                      finalOutputs:
+                        type: object
+                        description: >-
+                          Free-form: the accumulated chain variables once
+                          every step has run, already unwrapped from
+                          Operaton's `{value, type}` form.
+                      steps:
+                        type: array
+                        description: Present only when the caller set `options.includeIntermediateSteps`.
+                        items:
+                          $ref: '#/components/schemas/ExecutionStep'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: >-
+            `dmnIds` is missing or empty (message "dmnIds array is required
+            and must not be empty"), or `inputs` is missing or an empty
+            object (message "inputs object is required"). Both are code
+            INVALID_REQUEST.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            Three unrelated causes share this status; see each alternative
+            below.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    description: >-
+                      The orchestrator resolved with `success: false` (a DMN
+                      in the chain threw, or the DRD evaluation threw). The
+                      failure is nested under `data.error` as a plain string,
+                      not the top-level `error` object of ErrorEnvelope.
+                    required: [success, data, timestamp]
+                    properties:
+                      success:
+                        const: false
+                      data:
+                        type: object
+                        required: [success, chainId, executionTime, finalOutputs, error]
+                        properties:
+                          success:
+                            const: false
+                          chainId:
+                            type: string
+                          executionTime:
+                            type: number
+                            description: Milliseconds.
+                          finalOutputs:
+                            type: object
+                            description: >-
+                              Free-form: whatever chain variables had
+                              accumulated before the failure. `{}` for a
+                              failed DRD run.
+                          steps:
+                            type: array
+                            description: Present only when the caller set `options.includeIntermediateSteps`. `[]` for a failed DRD run.
+                            items:
+                              $ref: '#/components/schemas/ExecutionStep'
+                          error:
+                            type: string
+                            description: Always present on this shape.
+                      timestamp:
+                        type: string
+                        format: date-time
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+                    description: >-
+                      The orchestrator call itself threw and the route's own
+                      try/catch caught it (code EXECUTION_ERROR).
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+                    description: >-
+                      The request body was not valid JSON, or over 10 MB
+                      (code INTERNAL_ERROR; #143). Never reaches this route's
+                      own handler; answered by the global error handler.
   /chains/templates:
     get:
       operationId: listChainTemplates
@@ -2587,3 +2806,69 @@ components:
           type: string
         isPublic:
           type: boolean
+    ChainMapEntry:
+      type: object
+      description: >-
+        One source DMN and every downstream DMN it can feed, built by
+        grouping the pairwise SPARQL chain links by their `from` DMN
+        (chain.routes.ts, the handler's own local `ChainMapEntry`
+        interface). Distinct from the DMN-record schemas of phase 2
+        (DmnModel, DmnReference, EnhancedChainLink, ChainCycle).
+      required: [from, connections]
+      properties:
+        from:
+          type: string
+          description: Source DMN identifier, from a SPARQL binding.
+        connections:
+          type: array
+          items:
+            type: object
+            required: [to, variable, variableType]
+            properties:
+              to:
+                type: string
+                description: Downstream DMN identifier, from a SPARQL binding.
+              variable:
+                type: string
+                description: The variable identifier that connects the two DMNs.
+              variableType:
+                type: string
+                description: >-
+                  The variable's declared type, from a SPARQL binding — a
+                  plain string, never an enum.
+    ExecutionStep:
+      type: object
+      description: >-
+        One DMN evaluated within a chain execution. orchestration.service.ts
+        only pushes a step onto `steps` after it has completed successfully;
+        a step whose evaluation throws sets its own `error` field but is then
+        discarded, re-thrown to the caller before that push runs, so it is
+        never added to `steps`. Every step this API actually returns
+        therefore always carries `outputs`, and `error` never appears here —
+        unlike the `ExecutionStep` TypeScript type, which marks `outputs` and
+        `error` as mutually-exclusive optionals.
+      required: [dmnId, dmnTitle, startTime, endTime, duration, inputs, outputs]
+      properties:
+        dmnId:
+          type: string
+        dmnTitle:
+          type: string
+        startTime:
+          type: number
+          description: Epoch milliseconds.
+        endTime:
+          type: number
+          description: Epoch milliseconds.
+        duration:
+          type: number
+          description: Milliseconds; `endTime` minus `startTime`.
+        inputs:
+          type: object
+          description: >-
+            Free-form snapshot of the accumulated chain variables immediately
+            before this step ran.
+        outputs:
+          type: object
+          description: >-
+            Free-form: this step's outputs, already unwrapped from Operaton's
+            `{value, type}` form.
