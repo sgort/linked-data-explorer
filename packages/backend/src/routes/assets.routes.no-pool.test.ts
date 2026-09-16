@@ -80,7 +80,7 @@ describe('/v1/assets with no database configured', () => {
   });
 });
 
-describe('/v1/assets/bpmn 503, as documented, with no database configured', () => {
+describe('/v1/assets 503, as documented, with no database configured', () => {
   function makeDocumentedApp() {
     const app = express();
     app.use(express.json());
@@ -100,6 +100,12 @@ describe('/v1/assets/bpmn 503, as documented, with no database configured', () =
     ],
     ['delete', '/v1/assets/bpmn/p1', 'delete', '/assets/bpmn/{id}'],
     ['patch', '/v1/assets/bpmn/p1/deploy', 'patch', '/assets/bpmn/{id}/deploy'],
+    ['get', '/v1/assets/forms', 'get', '/assets/forms'],
+    ['post', '/v1/assets/forms', 'post', '/assets/forms'],
+    ['delete', '/v1/assets/forms/f1', 'delete', '/assets/forms/{id}'],
+    ['get', '/v1/assets/documents', 'get', '/assets/documents'],
+    ['post', '/v1/assets/documents', 'post', '/assets/documents'],
+    ['delete', '/v1/assets/documents/d1', 'delete', '/assets/documents/{id}'],
   ] as const)('%s %s answers a documented 503', async (method, path, docMethod, docPath) => {
     const res = await request(makeDocumentedApp())[method](path).send({});
 

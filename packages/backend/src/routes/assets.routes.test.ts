@@ -455,3 +455,202 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'get', '/assets/bpmn/by-bpmn-id/{bpmnProcessId}');
   });
 });
+
+describe('/v1/assets/forms matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/assets', assetsRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+    return app;
+  }
+
+  // Every optional field populated, and `schema` given more than one key
+  // with mixed value types (string, array, boolean, number), so the Form
+  // schema's free-form JSONB field is actually exercised.
+  const FULL_FORM = {
+    id: 'f1',
+    name: 'Aanvraagformulier zorgtoeslag',
+    description: 'Intake form for the housing benefit application',
+    schema: { title: 'Zorgtoeslag', fields: ['naam', 'inkomen'], required: true, maxAmount: 500 },
+    status: 'wip',
+    language: 'nl',
+    organization: 'Gemeente Utrecht',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+    readonly: false,
+  };
+
+  test('GET /assets/forms 200, as documented', async () => {
+    svc.listForms.mockResolvedValue([FULL_FORM]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/forms');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/assets/forms');
+  });
+
+  test('GET /assets/forms 500, as documented', async () => {
+    svc.listForms.mockRejectedValue(new Error('db unavailable'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/forms');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/assets/forms');
+  });
+
+  test('POST /assets/forms 200, as documented', async () => {
+    svc.upsertForm.mockResolvedValue(undefined);
+
+    const res = await request(makeDocumentedApp()).post('/v1/assets/forms').send(FULL_FORM);
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/assets/forms');
+  });
+
+  test('POST /assets/forms 500, as documented', async () => {
+    svc.upsertForm.mockRejectedValue(
+      new Error('null value in column "name" violates not-null constraint')
+    );
+
+    const res = await request(makeDocumentedApp()).post('/v1/assets/forms').send({ id: 'f1' });
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'post', '/assets/forms');
+  });
+
+  test('POST /assets/forms malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/assets/forms')
+      .set('Content-Type', 'application/json')
+      .send('{"id":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/assets/forms');
+  });
+
+  test('DELETE /assets/forms/{id} 200, as documented', async () => {
+    svc.deleteForm.mockResolvedValue(undefined);
+
+    const res = await request(makeDocumentedApp()).delete('/v1/assets/forms/f1');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'delete', '/assets/forms/{id}');
+  });
+
+  test('DELETE /assets/forms/{id} 500, as documented', async () => {
+    svc.deleteForm.mockRejectedValue(new Error('still referenced'));
+
+    const res = await request(makeDocumentedApp()).delete('/v1/assets/forms/f1');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'delete', '/assets/forms/{id}');
+  });
+});
+
+describe('/v1/assets/documents matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/assets', assetsRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+    return app;
+  }
+
+  // Every optional field populated, and `zones`/`bindings`/`assets` each
+  // given more than one key with mixed value types (string, array, boolean,
+  // number, null), so the Document schema's three free-form JSONB fields
+  // are actually exercised.
+  const FULL_DOCUMENT = {
+    id: 'd1',
+    name: 'Beschikkingsbrief',
+    description: 'Decision letter template',
+    processKey: 'ZorgtoeslagProcess',
+    serviceId: 'svc-1',
+    schemaVersion: 2,
+    zones: {
+      header: 'Gemeente Utrecht',
+      paragraphs: ['intro', 'besluit'],
+      includeLogo: true,
+      margin: 20,
+    },
+    bindings: { header: 'organization', motivation: ['paragraphs', 'body'] },
+    assets: { logo: 'logo.png', watermark: null },
+    status: 'wip',
+    language: 'nl',
+    organization: 'Gemeente Utrecht',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+    readonly: false,
+  };
+
+  test('GET /assets/documents 200, as documented', async () => {
+    svc.listDocuments.mockResolvedValue([FULL_DOCUMENT]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/documents');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/assets/documents');
+  });
+
+  test('GET /assets/documents 500, as documented', async () => {
+    svc.listDocuments.mockRejectedValue(new Error('db unavailable'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/documents');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/assets/documents');
+  });
+
+  test('POST /assets/documents 200, as documented', async () => {
+    svc.upsertDocument.mockResolvedValue(undefined);
+
+    const res = await request(makeDocumentedApp()).post('/v1/assets/documents').send(FULL_DOCUMENT);
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/assets/documents');
+  });
+
+  test('POST /assets/documents 500, as documented', async () => {
+    svc.upsertDocument.mockRejectedValue(
+      new Error('null value in column "zones" violates not-null constraint')
+    );
+
+    const res = await request(makeDocumentedApp()).post('/v1/assets/documents').send({ id: 'd1' });
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'post', '/assets/documents');
+  });
+
+  test('POST /assets/documents malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/assets/documents')
+      .set('Content-Type', 'application/json')
+      .send('{"id":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/assets/documents');
+  });
+
+  test('DELETE /assets/documents/{id} 200, as documented', async () => {
+    svc.deleteDocument.mockResolvedValue(undefined);
+
+    const res = await request(makeDocumentedApp()).delete('/v1/assets/documents/d1');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'delete', '/assets/documents/{id}');
+  });
+
+  test('DELETE /assets/documents/{id} 500, as documented', async () => {
+    svc.deleteDocument.mockRejectedValue(new Error('still referenced'));
+
+    const res = await request(makeDocumentedApp()).delete('/v1/assets/documents/d1');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'delete', '/assets/documents/{id}');
+  });
+});

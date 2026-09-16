@@ -512,6 +512,376 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/forms:
+    get:
+      operationId: listForms
+      tags: [Assets]
+      summary: List stored form schemas
+      description: >-
+        Every row the table holds, most recently updated first — no
+        pagination and no filtering.
+      responses:
+        '200':
+          description: The stored form schemas, most recently updated first.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Form'
+        '500':
+          description: The read failed (code LIST_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/forms` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      operationId: upsertForm
+      tags: [Assets]
+      summary: Create or update a form schema
+      description: >-
+        Upserts by `id`: inserts a new row, or on a conflict updates every
+        column named below. `readonly` is never written by this operation;
+        the response always reports it as `false`, hardcoded by the mapper,
+        not read from the database. The table also holds a `schema_version`
+        column, but neither this operation nor `GET /assets/forms` writes or
+        reads it — it never appears on the wire (contrast
+        `Document.schemaVersion`, which does). Nothing in the body is
+        validated: a required column left empty, or an over-length
+        `language`/`organization`, answers 500, never 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >-
+                Passed straight to the database with no validation; the
+                fields below are what a successful upsert needs, not what
+                is enforced before that point.
+              required: [id, name, schema, createdAt, updatedAt]
+              properties:
+                id:
+                  type: string
+                  description: Stored as the table's TEXT primary key — not a UUID.
+                name:
+                  type: string
+                description:
+                  type: string
+                schema:
+                  type: object
+                  description: >-
+                    Free-form JSON Schema-like form definition,
+                    `JSON.stringify`'d before storage; nothing checks its
+                    shape. A JSONB column — the driver returns it already
+                    parsed, not a JSON-encoded string.
+                status:
+                  type: string
+                  default: wip
+                  description: No database CHECK constraint; any string is accepted.
+                language:
+                  type: string
+                  maxLength: 2
+                organization:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+                updatedAt:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: The form schema was created or updated. The response carries no data.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: >-
+            The write failed (code UPSERT_FAILED) — for example a NOT NULL
+            violation — or the request body was not valid JSON or over
+            10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/forms` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/forms/{id}:
+    delete:
+      operationId: deleteForm
+      tags: [Assets]
+      summary: Delete a stored form schema
+      description: >-
+        Deletes by `id`. The delete statement is unconditional — an id
+        matching no row still answers 200, never 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The storage id to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: >-
+            The delete ran. The response carries no data and does not say
+            whether a row was actually removed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: The delete failed (code DELETE_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/forms` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/documents:
+    get:
+      operationId: listDocuments
+      tags: [Assets]
+      summary: List stored document templates
+      description: >-
+        Every row the table holds, most recently updated first — no
+        pagination and no filtering.
+      responses:
+        '200':
+          description: The stored document templates, most recently updated first.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+        '500':
+          description: The read failed (code LIST_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/documents` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      operationId: upsertDocument
+      tags: [Assets]
+      summary: Create or update a document template
+      description: >-
+        Upserts by `id`: inserts a new row, or on a conflict updates every
+        column named below. `readonly` is never written by this operation;
+        the response always reports it as `false`, hardcoded by the mapper,
+        not read from the database. `schemaVersion`, `bindings` and `assets`
+        each have a database default (`1` and `'[]'` respectively), but this
+        operation always supplies a value for all three explicitly, even
+        when the caller omits them from the body — an omitted value becomes
+        the JavaScript value `undefined`, which the Postgres driver sends as
+        SQL NULL, and NULL is rejected by each column's NOT NULL constraint.
+        The database default therefore never actually applies through this
+        route; omitting any of the three answers 500, not a defaulted value.
+        Nothing in the body is validated: a required column left empty, or
+        an over-length `language`/`organization`, answers 500, never 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >-
+                Passed straight to the database with no validation; the
+                fields below are what a successful upsert needs, not what
+                is enforced before that point.
+              required: [id, name, schemaVersion, zones, bindings, assets, createdAt, updatedAt]
+              properties:
+                id:
+                  type: string
+                  description: Stored as the table's TEXT primary key — not a UUID.
+                name:
+                  type: string
+                description:
+                  type: string
+                processKey:
+                  type: string
+                  description: Stored as `process_key`.
+                serviceId:
+                  type: string
+                  description: Stored as `service_id`.
+                schemaVersion:
+                  type: integer
+                  description: >-
+                    The database column defaults to `1`, but that default
+                    never applies through this route (see above) — omitting
+                    this answers 500.
+                zones:
+                  type: object
+                  description: >-
+                    Free-form JSON, `JSON.stringify`'d before storage;
+                    nothing checks its shape. A JSONB column with no
+                    database default — the driver returns it already
+                    parsed, not a JSON-encoded string.
+                bindings:
+                  type: object
+                  description: >-
+                    Free-form JSON, arrays by convention but not enforced.
+                    The database column defaults to `[]`, but that default
+                    never applies through this route (see above) — omitting
+                    this answers 500.
+                assets:
+                  type: object
+                  description: >-
+                    Free-form JSON, arrays by convention but not enforced.
+                    Same database-default caveat as `bindings`.
+                status:
+                  type: string
+                  default: wip
+                  description: No database CHECK constraint; any string is accepted.
+                language:
+                  type: string
+                  maxLength: 2
+                organization:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+                updatedAt:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: The document template was created or updated. The response carries no data.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: >-
+            The write failed (code UPSERT_FAILED) — for example a NOT NULL
+            violation — or the request body was not valid JSON or over
+            10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/documents` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /assets/documents/{id}:
+    delete:
+      operationId: deleteDocument
+      tags: [Assets]
+      summary: Delete a stored document template
+      description: >-
+        Deletes by `id`. The delete statement is unconditional — an id
+        matching no row still answers 200, never 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The storage id to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: >-
+            The delete ran. The response carries no data and does not say
+            whether a row was actually removed.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    const: true
+        '500':
+          description: The delete failed (code DELETE_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: >-
+            The database pool is not configured (code DB_NOT_CONFIGURED).
+            Every `/assets/documents` operation can answer this.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /cache/stats:
     get:
       operationId: getCacheStats
@@ -2672,6 +3042,123 @@ components:
           type: string
         xml:
           type: string
+    Form:
+      type: object
+      description: >-
+        A stored form schema, as returned by `GET /assets/forms`. The table
+        holds a `schema_version` column, but `listForms`'s SELECT never
+        reads it and `mapForm` never sets it — the field never appears on
+        the wire, unlike `Document.schemaVersion`.
+      additionalProperties: false
+      required: [id, name, schema, status, createdAt, updatedAt, readonly]
+      properties:
+        id:
+          type: string
+          description: The storage id, a free-form TEXT primary key — not a UUID.
+        name:
+          type: string
+        description:
+          type: string
+          description: Omitted when the stored value is null.
+        schema:
+          type: object
+          description: >-
+            Free-form JSON Schema-like form definition. A JSONB column —
+            the driver returns it already parsed, not a JSON-encoded
+            string, whatever the `FormRow` type comment claims. Not
+            validated against any shape server-side.
+        status:
+          type: string
+          description: >-
+            No database CHECK constraint on this column and no fixed set
+            of values in code — whatever was last written. Defaults to
+            `wip` when a POST omits it.
+        language:
+          type: string
+          maxLength: 2
+          description: Omitted when the stored value is null. Not a validated ISO-639-1 code.
+        organization:
+          type: string
+          description: Omitted when the stored value is null.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        readonly:
+          const: false
+          description: Hardcoded by the mapper; never read from the database.
+    Document:
+      type: object
+      description: A stored document template, as returned by `GET /assets/documents`.
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - schemaVersion
+        - zones
+        - bindings
+        - assets
+        - status
+        - createdAt
+        - updatedAt
+        - readonly
+      properties:
+        id:
+          type: string
+          description: The storage id, a free-form TEXT primary key — not a UUID.
+        name:
+          type: string
+        description:
+          type: string
+          description: Omitted when the stored value is null.
+        processKey:
+          type: string
+          description: Stored as `process_key`. Omitted when the stored value is null.
+        serviceId:
+          type: string
+          description: Stored as `service_id`. Omitted when the stored value is null.
+        schemaVersion:
+          type: integer
+        zones:
+          type: object
+          description: >-
+            Free-form JSON. A JSONB column — the driver returns it already
+            parsed, not a JSON-encoded string, whatever the `DocumentRow`
+            type comment claims.
+        bindings:
+          type: object
+          description: >-
+            Free-form JSON, arrays by convention but not enforced. Same
+            JSONB/parsing note as `zones`.
+        assets:
+          type: object
+          description: >-
+            Free-form JSON, arrays by convention but not enforced. Same
+            JSONB/parsing note as `zones`.
+        status:
+          type: string
+          description: >-
+            No database CHECK constraint on this column and no fixed set
+            of values in code — whatever was last written. Defaults to
+            `wip` when a POST omits it.
+        language:
+          type: string
+          maxLength: 2
+          description: Omitted when the stored value is null. Not a validated ISO-639-1 code.
+        organization:
+          type: string
+          description: Omitted when the stored value is null.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        readonly:
+          const: false
+          description: Hardcoded by the mapper; never read from the database.
     CacheStats:
       type: object
       description: >-
