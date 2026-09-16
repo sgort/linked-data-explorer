@@ -25,6 +25,9 @@ jest.mock('../services/dso.service', () => ({
 import * as dsoService from '../services/dso.service';
 import dsoRoutes from './dso.routes';
 import packageJson from '../../package.json';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { errorHandler } from '../middleware/error.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const svc = dsoService as unknown as Record<string, jest.Mock>;
 
@@ -514,5 +517,371 @@ describe('GET /v1/dso/toepasbare-regels/:id/form-scaffold', () => {
 
     expect(res.status).toBe(502);
     expect(res.body.error).toBe('Form scaffold extraction failed');
+  });
+});
+
+describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match their OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/dso', dsoRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+    return app;
+  }
+
+  // Realistic HAL-shaped fixtures (embedded arrays, _links, paging), not the
+  // bare-bones placeholders used by the handler tests above, so the loosely
+  // typed `data` object is actually exercised with more than one key and more
+  // than one nesting level.
+  const ACTIVITEITEN_LIST = {
+    _embedded: {
+      activiteiten: [
+        {
+          urn: 'urn:nl:imow:activiteit:1',
+          omschrijving: 'Kappen van bomen',
+          bestuursorgaan: { oin: '00000001005024249000', naam: 'Gemeente Lelystad' },
+        },
+        {
+          urn: 'urn:nl:imow:activiteit:2',
+          omschrijving: 'Bouwen van een schuur',
+          bestuursorgaan: { oin: '00000001006203243000', naam: 'Provincie Flevoland' },
+        },
+      ],
+    },
+    _links: {
+      self: { href: '/activiteiten?datum=01-01-2026&page=1&pageSize=20' },
+      next: { href: '/activiteiten?datum=01-01-2026&page=2&pageSize=20' },
+    },
+    page: 1,
+    pageSize: 20,
+    totalItems: 42,
+  };
+
+  const ACTIVITEIT_DETAIL = {
+    urn: 'urn:nl:imow:activiteit:1',
+    omschrijving: 'Kappen van bomen',
+    bestuursorgaan: { oin: '00000001005024249000', naam: 'Gemeente Lelystad' },
+    regelBeheerObjecten: [
+      { type: 'Conclusie', functioneleStructuurRef: 'https://identifier.overheid.nl/concept/1' },
+      {
+        type: 'Indieningsvereisten',
+        functioneleStructuurRef: 'https://identifier.overheid.nl/concept/2',
+      },
+    ],
+    _links: {
+      self: { href: '/activiteiten/urn:nl:imow:activiteit:1' },
+      onderliggendeActiviteiten: [
+        { href: '/activiteiten/urn:nl:imow:activiteit:1a' },
+        { href: '/activiteiten/urn:nl:imow:activiteit:1b' },
+      ],
+    },
+  };
+
+  const BEGRIPPEN_LIST = {
+    _embedded: {
+      begrippen: [
+        {
+          identifier: 'https://identifier.overheid.nl/begrip/1',
+          naam: 'Kappen',
+          omschrijving: 'Het vellen van een houtopstand',
+        },
+        {
+          identifier: 'https://identifier.overheid.nl/begrip/2',
+          naam: 'Bouwen',
+          omschrijving: 'Het oprichten van een bouwwerk',
+        },
+      ],
+    },
+    _links: { self: { href: '/begrippen?zoekTerm=kappen&page=1&pageSize=20' } },
+    page: 1,
+    pageSize: 20,
+    totalItems: 2,
+  };
+
+  const WERKZAAMHEDEN_LIST = {
+    _embedded: {
+      werkzaamheden: [
+        { urn: 'urn:nl:imow:werkzaamheid:1', omschrijving: 'Boom kappen' },
+        { urn: 'urn:nl:imow:werkzaamheid:2', omschrijving: 'Steiger plaatsen' },
+      ],
+    },
+    _links: { self: { href: '/werkzaamheden/_zoek?page=1&pageSize=20' } },
+    page: 1,
+    pageSize: 20,
+    totalItems: 2,
+  };
+
+  const WERKZAAMHEID_DETAIL = {
+    urn: 'urn:nl:imow:werkzaamheid:1',
+    _embedded: {
+      werkzaamheidversies: [
+        {
+          versie: 1,
+          omschrijving: 'Boom kappen',
+          trefwoorden: ['boom', 'kappen', 'vellen'],
+          logischeRelaties: [{ type: 'vervangt', urn: 'urn:nl:imow:werkzaamheid:0' }],
+        },
+      ],
+    },
+    _links: { self: { href: '/werkzaamheden/urn:nl:imow:werkzaamheid:1' } },
+  };
+
+  test('GET /activiteiten 200, as documented', async () => {
+    svc.getActiviteiten.mockResolvedValue(ACTIVITEITEN_LIST);
+
+    const res = await request(makeDocumentedApp())
+      .get('/v1/dso/activiteiten')
+      .query({ datum: '01-01-2026', page: '1', pageSize: '20' });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten');
+  });
+
+  test('GET /activiteiten 502, as documented', async () => {
+    svc.getActiviteiten.mockRejectedValue(new Error('RTR unavailable'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/activiteiten');
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten');
+  });
+
+  test('POST /activiteiten/oin 200, as documented', async () => {
+    svc.getActiviteitenByOin.mockResolvedValue(ACTIVITEITEN_LIST);
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/activiteiten/oin')
+      .send({ oin: '00000001002220647000', datum: '01-01-2026' });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dso/activiteiten/oin');
+  });
+
+  test('POST /activiteiten/oin 400, as documented', async () => {
+    const res = await request(makeDocumentedApp()).post('/v1/dso/activiteiten/oin').send({});
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/dso/activiteiten/oin');
+  });
+
+  test('POST /activiteiten/oin 502, as documented', async () => {
+    svc.getActiviteitenByOin.mockRejectedValue(new Error('DSO returned 500'));
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/activiteiten/oin')
+      .send({ oin: '00000001002220647000' });
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'post', '/dso/activiteiten/oin');
+  });
+
+  test('POST /activiteiten/oin 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/activiteiten/oin')
+      .set('Content-Type', 'application/json')
+      .send('{"oin":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/dso/activiteiten/oin');
+  });
+
+  test('POST /activiteiten/zoek 200, as documented', async () => {
+    svc.zoekActiviteiten.mockResolvedValue(ACTIVITEITEN_LIST);
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/activiteiten/zoek')
+      .send({ datum: '01-01-2026', lat: 52.5, lon: 5.5, page: 2, pageSize: 20 });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dso/activiteiten/zoek');
+  });
+
+  test('POST /activiteiten/zoek 200 with an empty body, as documented', async () => {
+    svc.zoekActiviteiten.mockResolvedValue(ACTIVITEITEN_LIST);
+
+    const res = await request(makeDocumentedApp()).post('/v1/dso/activiteiten/zoek').send({});
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dso/activiteiten/zoek');
+  });
+
+  test('POST /activiteiten/zoek 502, as documented', async () => {
+    svc.zoekActiviteiten.mockRejectedValue(new Error('bad geometry'));
+
+    const res = await request(makeDocumentedApp()).post('/v1/dso/activiteiten/zoek').send({});
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'post', '/dso/activiteiten/zoek');
+  });
+
+  test('POST /activiteiten/zoek 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/activiteiten/zoek')
+      .set('Content-Type', 'application/json')
+      .send('{"datum":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/dso/activiteiten/zoek');
+  });
+
+  test('GET /activiteiten/:urn 200, as documented', async () => {
+    svc.getActiviteit.mockResolvedValue(ACTIVITEIT_DETAIL);
+
+    const res = await request(makeDocumentedApp()).get(
+      `/v1/dso/activiteiten/${encodeURIComponent('urn:nl:imow:activiteit:1')}`
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}');
+  });
+
+  test('GET /activiteiten/:urn 404, as documented', async () => {
+    svc.getActiviteit.mockRejectedValue(new Error('DSO responded 404 Not Found'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/activiteiten/urn-a');
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}');
+  });
+
+  test('GET /activiteiten/:urn 502, as documented', async () => {
+    svc.getActiviteit.mockRejectedValue(new Error('DSO responded 500'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/activiteiten/urn-a');
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}');
+  });
+
+  test('GET /begrippen 200, as documented', async () => {
+    svc.getBegrippen.mockResolvedValue(BEGRIPPEN_LIST);
+
+    const res = await request(makeDocumentedApp())
+      .get('/v1/dso/begrippen')
+      .query({ zoekTerm: 'kappen', geldigOp: '2026-01-01', page: '1', pageSize: '20' });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/begrippen');
+  });
+
+  test('GET /begrippen 502, as documented', async () => {
+    svc.getBegrippen.mockRejectedValue(new Error('catalogus unavailable'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/begrippen');
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'get', '/dso/begrippen');
+  });
+
+  test('POST /werkzaamheden/suggereer 200, as documented', async () => {
+    svc.suggereerWerkzaamheden.mockResolvedValue(['kappen', 'kapvergunning']);
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/werkzaamheden/suggereer')
+      .send({ zoekterm: 'kap' });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dso/werkzaamheden/suggereer');
+  });
+
+  test('POST /werkzaamheden/suggereer 400, as documented', async () => {
+    const res = await request(makeDocumentedApp()).post('/v1/dso/werkzaamheden/suggereer').send({});
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/dso/werkzaamheden/suggereer');
+  });
+
+  test('POST /werkzaamheden/suggereer 502, as documented', async () => {
+    svc.suggereerWerkzaamheden.mockRejectedValue(new Error('suggest endpoint down'));
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/werkzaamheden/suggereer')
+      .send({ zoekterm: 'kap' });
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'post', '/dso/werkzaamheden/suggereer');
+  });
+
+  test('POST /werkzaamheden/suggereer 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/werkzaamheden/suggereer')
+      .set('Content-Type', 'application/json')
+      .send('{"zoekterm":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/dso/werkzaamheden/suggereer');
+  });
+
+  test('POST /werkzaamheden/zoek 200, as documented', async () => {
+    svc.zoekWerkzaamheden.mockResolvedValue(WERKZAAMHEDEN_LIST);
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/werkzaamheden/zoek')
+      .send({ zoekterm: 'kappen', page: 1, pageSize: 20 });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dso/werkzaamheden/zoek');
+  });
+
+  test('POST /werkzaamheden/zoek 200 with an empty body, as documented', async () => {
+    svc.zoekWerkzaamheden.mockResolvedValue(WERKZAAMHEDEN_LIST);
+
+    const res = await request(makeDocumentedApp()).post('/v1/dso/werkzaamheden/zoek').send({});
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dso/werkzaamheden/zoek');
+  });
+
+  test('POST /werkzaamheden/zoek 502, as documented', async () => {
+    svc.zoekWerkzaamheden.mockRejectedValue(new Error('zoekinterface down'));
+
+    const res = await request(makeDocumentedApp()).post('/v1/dso/werkzaamheden/zoek').send({});
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'post', '/dso/werkzaamheden/zoek');
+  });
+
+  test('POST /werkzaamheden/zoek 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/werkzaamheden/zoek')
+      .set('Content-Type', 'application/json')
+      .send('{"zoekterm":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/dso/werkzaamheden/zoek');
+  });
+
+  test('GET /werkzaamheden/:urn 200, as documented', async () => {
+    svc.getWerkzaamheidDetail.mockResolvedValue(WERKZAAMHEID_DETAIL);
+
+    const res = await request(makeDocumentedApp()).get(
+      `/v1/dso/werkzaamheden/${encodeURIComponent('urn:nl:imow:werkzaamheid:1')}`
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/werkzaamheden/{urn}');
+  });
+
+  test('GET /werkzaamheden/:urn 404, as documented', async () => {
+    svc.getWerkzaamheidDetail.mockRejectedValue(new Error('404 not found'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/werkzaamheden/urn-w');
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/werkzaamheden/{urn}');
+  });
+
+  test('GET /werkzaamheden/:urn 502, as documented', async () => {
+    svc.getWerkzaamheidDetail.mockRejectedValue(new Error('gateway timeout'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/werkzaamheden/urn-w');
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'get', '/dso/werkzaamheden/{urn}');
   });
 });

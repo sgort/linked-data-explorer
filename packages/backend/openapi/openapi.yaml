@@ -49,6 +49,11 @@ tags:
     description: >-
       Published processes and records of processing activities, and the BPMN,
       form, document and RoPA storage behind them.
+  - name: Integrations
+    description: >-
+      Bridges to external systems: DSO activity, concept and rule search, the
+      OpenText eDOCS document management bridge, and vendor implementation
+      discovery.
 paths:
   /health:
     get:
@@ -2955,6 +2960,620 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /dso/activiteiten:
+    get:
+      operationId: listDsoActiviteiten
+      tags: [Integrations]
+      summary: RTR activities valid on a given date
+      description: >-
+        Proxies the DSO RTR Gegevens API. `datum` defaults to today when
+        omitted. `page` and `pageSize` are forwarded to the upstream API
+        unvalidated; `pageSize` defaults to 20.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: datum
+          in: query
+          required: false
+          description: Date as dd-MM-yyyy. Defaults to today when omitted.
+          schema:
+            type: string
+            format: dd-MM-yyyy
+            examples: ['01-01-2026']
+        - name: page
+          in: query
+          required: false
+          description: Page number; not validated.
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          description: Items per page; not validated.
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: The activities valid on the given date.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/activiteiten/oin:
+    post:
+      operationId: listDsoActiviteitenByOin
+      tags: [Integrations]
+      summary: RTR activities registered by one authority (OIN)
+      description: >-
+        Proxies the DSO RTR Gegevens API's search, fetching the whole result
+        set in one page (the upstream caps the page size to the actual
+        count, so this never over-fetches), so a caller can filter
+        client-side.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oin]
+              properties:
+                oin:
+                  type: string
+                  description: The authority's OIN (organisatie-identificatienummer).
+                  examples: ['00000001002220647000']
+                datum:
+                  type: string
+                  format: dd-MM-yyyy
+                  description: Date as dd-MM-yyyy. Defaults to today when omitted.
+                  examples: ['01-01-2026']
+      responses:
+        '200':
+          description: The authority's activities.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '400':
+          description: '`oin` is missing.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+              examples:
+                missingOin:
+                  value: { success: false, error: 'oin is required' }
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '500':
+          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dso/activiteiten/zoek:
+    post:
+      operationId: searchDsoActiviteiten
+      tags: [Integrations]
+      summary: Search RTR activities by date and, optionally, a point
+      description: >-
+        Proxies the DSO RTR Gegevens API's search. Every field is optional;
+        an empty body is valid and the upstream call applies its own
+        defaults. `lat` and `lon` are combined into a WGS84 point filter
+        only when both are present — one without the other is dropped
+        rather than rejected.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Every field is optional; an empty body is valid.
+              properties:
+                datum:
+                  type: string
+                  format: dd-MM-yyyy
+                  description: Date as dd-MM-yyyy. Defaults to today when omitted.
+                  examples: ['01-01-2026']
+                lat:
+                  type: number
+                  description: WGS84 latitude. Only applied together with `lon`.
+                lon:
+                  type: number
+                  description: WGS84 longitude. Only applied together with `lat`.
+                page:
+                  type: integer
+                  description: Page number; not validated. Defaults to 1.
+                pageSize:
+                  type: integer
+                  description: Items per page; not validated. Defaults to 20.
+      responses:
+        '200':
+          description: The matching activities.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '500':
+          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dso/activiteiten/{urn}:
+    get:
+      operationId: getDsoActiviteit
+      tags: [Integrations]
+      summary: One RTR activity by URN
+      description: >-
+        Proxies the DSO RTR Gegevens API's single-activity read. The result
+        carries a list of associated rule objects (see
+        `GET /dso/toepasbare-regels`) and hrefs of any child activities, but
+        neither is enforced here — `data` is the upstream response,
+        unchanged.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: urn
+          in: path
+          required: true
+          description: The activity's URN, percent-encoded.
+          schema:
+            type: string
+        - name: datum
+          in: query
+          required: false
+          description: Date as dd-MM-yyyy. Defaults to today when omitted.
+          schema:
+            type: string
+            format: dd-MM-yyyy
+            examples: ['01-01-2026']
+      responses:
+        '200':
+          description: The activity.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '404':
+          description: No activity exists for this URN.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found". Also covers a malformed URN
+            that cannot be percent-decoded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/begrippen:
+    get:
+      operationId: listDsoBegrippen
+      tags: [Integrations]
+      summary: Search or list Stelselcatalogus concepts
+      description: >-
+        Proxies the DSO Stelselcatalogus API. `data` is the upstream
+        response, unchanged; results conventionally live under an
+        `_embedded` key, but that is not enforced here. `pageSize` defaults
+        to 20.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: zoekTerm
+          in: query
+          required: false
+          description: Free-text search.
+          schema:
+            type: string
+        - name: geldigOp
+          in: query
+          required: false
+          description: >-
+            Validity date as YYYY-MM-dd. Left out of the upstream call when
+            omitted, rather than defaulting to today.
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: Page number; not validated.
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          description: Items per page; not validated.
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: The matching concepts.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/werkzaamheden/suggereer:
+    post:
+      operationId: suggestDsoWerkzaamheden
+      tags: [Integrations]
+      summary: Autocomplete suggestions for a werkzaamheden search term
+      description: >-
+        Proxies the DSO Zoekinterface API's suggest endpoint. `data` is the
+        upstream response, unchanged and of unconfirmed shape — treat it as
+        any JSON value, not necessarily an object.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [zoekterm]
+              properties:
+                zoekterm:
+                  type: string
+                  description: The search term to suggest completions for.
+                  examples: ['kap']
+      responses:
+        '200':
+          description: The suggestions.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data: {}
+        '400':
+          description: '`zoekterm` is missing.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+              examples:
+                missingZoekterm:
+                  value: { success: false, error: 'zoekterm is required' }
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '500':
+          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dso/werkzaamheden/zoek:
+    post:
+      operationId: searchDsoWerkzaamheden
+      tags: [Integrations]
+      summary: Search werkzaamheden via the Zoekinterface
+      description: >-
+        Proxies the DSO Zoekinterface API's search. Every field is
+        optional; an empty body is valid, with `page` and `pageSize` sent
+        upstream as query parameters rather than as part of the body.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Every field is optional; an empty body is valid.
+              properties:
+                zoekterm:
+                  type: string
+                  description: Free-text search. Omitted entirely upstream when falsy.
+                page:
+                  type: integer
+                  description: Page number; not validated. Defaults to 1.
+                pageSize:
+                  type: integer
+                  description: Items per page; not validated. Defaults to 20.
+      responses:
+        '200':
+          description: The matching werkzaamheden.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '500':
+          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dso/werkzaamheden/{urn}:
+    get:
+      operationId: getDsoWerkzaamheid
+      tags: [Integrations]
+      summary: Versioned detail for one werkzaamheid
+      description: >-
+        Proxies the DSO Opvragen Werkzaamheden API, always requesting up to
+        100 items per page upstream. `data` is the upstream response,
+        unchanged; the real payload nests a list of versions with keywords
+        and related items, but none of that is enforced here.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: urn
+          in: path
+          required: true
+          description: The werkzaamheid's URN, percent-encoded.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The werkzaamheid.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '404':
+          description: No werkzaamheid exists for this URN.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found". Also covers a malformed URN
+            that cannot be percent-decoded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
 components:
   headers:
     ApiVersion:
@@ -2988,6 +3607,18 @@ components:
         timestamp:
           type: string
           format: date-time
+    SimpleErrorEnvelope:
+      type: object
+      description: >-
+        A plainer sibling of ErrorEnvelope, returned by the DSO and
+        vendor-discovery proxy routes: `error` is a message string, not the
+        `{code, message}` object, and there is no `timestamp`.
+      required: [success, error]
+      properties:
+        success:
+          const: false
+        error:
+          type: string
     Health:
       type: object
       required:
