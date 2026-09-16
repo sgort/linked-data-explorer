@@ -63,6 +63,21 @@ const RESULT_WITH_ISSUES = {
   },
 };
 
+// A parse failure short-circuits before any layer runs, so every layer stays
+// unloaded with no issues (shacl-validation.service.ts's emptyLayers()), and
+// `complete` is false along with `valid`.
+const RESULT_PARSE_ERROR = {
+  valid: false,
+  complete: false,
+  parseError: 'Unexpected "]" on line 3',
+  layers: {
+    cprmv: { label: 'CPRMV', loaded: false, issues: [] },
+    'cpsv-ap': { label: 'CPSV-AP', loaded: false, issues: [] },
+    'ronl-custom': { label: 'RONL Custom', loaded: false, issues: [] },
+  },
+  summary: { errors: 0, warnings: 0, infos: 0 },
+};
+
 const TURTLE = '@prefix cpsv: <http://purl.org/vocab/cpsv#> . <#s> a cpsv:PublicService .';
 
 beforeEach(() => {
@@ -200,6 +215,16 @@ describe('/v1/shacl matches its OpenAPI description', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.layers['cpsv-ap'].issues).toHaveLength(2);
+    expectToMatchOperation(res, 'post', '/shacl/validate');
+  });
+
+  test('POST /validate 200 with a parse error, as documented', async () => {
+    mockValidateFile.mockResolvedValue(RESULT_PARSE_ERROR);
+
+    const res = await post('/validate').send({ content: 'garbage' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.parseError).toBe('Unexpected "]" on line 3');
     expectToMatchOperation(res, 'post', '/shacl/validate');
   });
 

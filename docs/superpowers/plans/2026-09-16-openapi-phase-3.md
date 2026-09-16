@@ -30,7 +30,7 @@ Inventory: `inventory-shacl-process.md`.
 
 - `ShaclValidationResult` is the shared 200 payload of both SHACL operations: `valid`, `complete`, `parseError` (string or null), and `layers`, which is a **closed** three-key object (`cprmv`, `cpsv-ap`, `ronl-custom`), not a map. It is a different shape from the `/health` SHACL block, which is a map, so no reuse.
 - `ShaclIssue`'s `code`, `message` and `location` come from the shape files and the parser: plain strings, never enums.
-- `GET /process/{key}/variable-hints` answers `{ success, variables }` with **no `timestamp`**, and its 500 is `{ success: false, error: { code, message } }` with both values fixed in the handler — neither is the `ErrorEnvelope` used elsewhere, which also carries a `timestamp`. `variables` may be empty.
+- `GET /process/{key}/variable-hints` answers `{ success, variables }` with **no `timestamp`**, so it is not the envelope every other 200 uses. Its 500 is `{ success: false, error: { code, message } }` with both values fixed in the handler; that body would satisfy the shared `ErrorEnvelope`, but its own schema pins the two fixed values with `const`, which the shared one cannot. `variables` may be empty.
 - Both test files build a bare app today. Add a `makeDocumentedApp()` with `versionMiddleware` in each, as the `/cache` and `/triplydb` blocks do.
 - Cover per mount: both SHACL operations' 200 and 400, one 500, and the malformed-body 500 (#143); the process operation's 200 (including an empty `variables`) and 500.
 

@@ -21,9 +21,11 @@ info:
 
     Most error responses use the `{ success: false, error }` envelope described
     by the ErrorEnvelope schema. `/triplydb` uses TriplyDbError instead (and
-    `/triplydb/test-connection`'s 503 sends a bare `message`), and
+    `/triplydb/test-connection`'s 503 sends a bare `message`),
     `POST /dmns/evaluate/{decisionKey}` passes Operaton's own errors through, or
-    sends OperatonProxyError. The move to RFC 9457 problem details is tracked in
+    sends OperatonProxyError, and `POST /chains/execute`'s nested-failure body
+    has no top-level `error` at all — the message is a plain string at
+    `data.error`. The move to RFC 9457 problem details is tracked in
     https://github.com/sgort/linked-data-explorer/issues/131.
   contact:
     name: Steven Gort
@@ -42,7 +44,7 @@ tags:
   - name: Validation
     description: Checking uploaded data against shape or schema constraints before publish.
   - name: Execution
-    description: Running DMN chains and BPMN processes.
+    description: Composing, running and inspecting DMN chains and BPMN processes.
   - name: Assets
     description: Published processes and records of processing activities.
 paths:
@@ -1609,9 +1611,10 @@ paths:
                 endpoint:
                   type: string
                   description: >-
-                    Optional TriplyDB endpoint override for looking up the
-                    chain's DMNs. Unvalidated, and ignored when `isDrd` is true,
-                    because that path does not look the DMNs up.
+                    SPARQL endpoint URL to query instead of the configured
+                    one, used to look up the chain's DMNs. Unvalidated, and
+                    ignored when `isDrd` is true, because that path does not
+                    look the DMNs up.
                 isDrd:
                   type: boolean
                   description: >-
@@ -1676,8 +1679,14 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '500':
           description: >-
-            Three unrelated causes share this status; see each alternative
-            below.
+            Two unrelated causes share this status; see the schemas below.
+            The nested-failure payload is the orchestrator resolving with
+            `success: false`. `ErrorEnvelope` covers both the orchestrator
+            call itself throwing and the route's own try/catch catching it
+            (code EXECUTION_ERROR), and the request body not being valid
+            JSON, or over 10 MB (code INTERNAL_ERROR; #143) — the latter
+            never reaches this route's own handler; it is answered by the
+            global error handler.
           content:
             application/json:
               schema:
@@ -1721,14 +1730,6 @@ paths:
                         type: string
                         format: date-time
                   - $ref: '#/components/schemas/ErrorEnvelope'
-                    description: >-
-                      The orchestrator call itself threw and the route's own
-                      try/catch caught it (code EXECUTION_ERROR).
-                  - $ref: '#/components/schemas/ErrorEnvelope'
-                    description: >-
-                      The request body was not valid JSON, or over 10 MB
-                      (code INTERNAL_ERROR; #143). Never reaches this route's
-                      own handler; answered by the global error handler.
   /chains/templates:
     get:
       operationId: listChainTemplates
@@ -1762,7 +1763,9 @@ paths:
         - name: endpoint
           in: query
           required: false
-          description: Accepted but has no effect on predefined templates today.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Accepted but has no effect on predefined templates today.
           schema:
             type: string
       responses:
@@ -1824,7 +1827,9 @@ paths:
         - name: endpoint
           in: query
           required: false
-          description: Accepted but has no effect on predefined templates today.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Accepted but has no effect on predefined templates today.
           schema:
             type: string
       responses:
@@ -2784,7 +2789,7 @@ components:
           enum: [simple, medium, complex]
           description: Fixed at the template's definition site.
         estimatedTime:
-          type: integer
+          type: number
           minimum: 0
           description: Milliseconds.
         usageCount:

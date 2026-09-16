@@ -23,11 +23,12 @@ const router = Router();
  *   /v1/dmns/validate:
  *   {
  *     "valid": boolean,
+ *     "complete": boolean,
  *     "parseError": string | null,
  *     "layers": {
- *       "cpsv-ap-core":  { "label": "CPSV-AP Core",         "issues": Issue[] },
- *       "cpsv-ap-vocab": { "label": "CPSV-AP Vocabularies",  "issues": Issue[] },
- *       "ronl-custom":   { "label": "RONL Custom",           "issues": Issue[] }
+ *       "cprmv":    { "label": "CPRMV 0.4.1",   "loaded": boolean, "issues": Issue[] },
+ *       "cpsv-ap":  { "label": "CPSV-AP 3.2.0", "loaded": boolean, "issues": Issue[] },
+ *       "ronl-custom": { "label": "RONL Custom", "loaded": boolean, "issues": Issue[] }
  *     },
  *     "summary": { "errors": number, "warnings": number, "infos": number }
  *   }
