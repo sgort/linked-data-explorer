@@ -79,3 +79,25 @@ overrides:
       - 'openapi.json#/paths/~1chains~1templates~1%7Bid%7D/get'
     rules:
       nlgov:problem-invalid-input: 'off'
+
+  # The Assets operations validate nothing. A body goes straight into an upsert
+  # and a path id straight into a query, so a missing field, an unknown status
+  # or a malformed id surfaces as a 500 from the database rather than a 400 --
+  # see https://github.com/sgort/linked-data-explorer/issues/150, which also
+  # covers the deletes that answer 200 for a row that does not exist. Remove
+  # this whole override when #150 lands and these operations answer 400.
+  # The four plain list reads take no parameter, so the rule never fires there.
+  - files:
+      - 'openapi.json#/paths/~1assets~1bpmn/post'
+      - 'openapi.json#/paths/~1assets~1bpmn~1by-bpmn-id~1%7BbpmnProcessId%7D/get'
+      - 'openapi.json#/paths/~1assets~1bpmn~1%7Bid%7D/delete'
+      - 'openapi.json#/paths/~1assets~1bpmn~1%7Bid%7D~1deploy/patch'
+      - 'openapi.json#/paths/~1assets~1forms/post'
+      - 'openapi.json#/paths/~1assets~1forms~1%7Bid%7D/delete'
+      - 'openapi.json#/paths/~1assets~1documents/post'
+      - 'openapi.json#/paths/~1assets~1documents~1%7Bid%7D/delete'
+      - 'openapi.json#/paths/~1assets~1ropa/post'
+      - 'openapi.json#/paths/~1assets~1ropa~1by-bpmn-id~1%7BbpmnProcessId%7D/get'
+      - 'openapi.json#/paths/~1assets~1ropa~1%7Bid%7D/delete'
+    rules:
+      nlgov:problem-invalid-input: 'off'
