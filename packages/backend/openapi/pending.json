@@ -14,12 +14,6 @@
   "POST /assets/ropa",
   "GET /assets/ropa/by-bpmn-id/{bpmnProcessId}",
   "DELETE /assets/ropa/{id}",
-  "GET /chains",
-  "POST /chains/execute",
-  "GET /chains/templates",
-  "GET /chains/templates/categories/list",
-  "GET /chains/templates/tags/list",
-  "GET /chains/templates/{id}",
   "GET /dso/activiteiten",
   "POST /dso/activiteiten/oin",
   "POST /dso/activiteiten/zoek",
@@ -36,9 +30,6 @@
   "GET /edocs/status",
   "POST /edocs/workspaces/ensure",
   "GET /edocs/workspaces/{workspaceId}/documents",
-  "GET /process/{key}/variable-hints",
-  "POST /shacl/validate",
-  "POST /shacl/validate-merged",
   "GET /vendors",
   "GET /vendors/dmn/{identifier}"
 ]

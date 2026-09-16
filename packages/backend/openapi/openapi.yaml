@@ -21,9 +21,11 @@ info:
 
     Most error responses use the `{ success: false, error }` envelope described
     by the ErrorEnvelope schema. `/triplydb` uses TriplyDbError instead (and
-    `/triplydb/test-connection`'s 503 sends a bare `message`), and
+    `/triplydb/test-connection`'s 503 sends a bare `message`),
     `POST /dmns/evaluate/{decisionKey}` passes Operaton's own errors through, or
-    sends OperatonProxyError. The move to RFC 9457 problem details is tracked in
+    sends OperatonProxyError, and `POST /chains/execute`'s nested-failure body
+    has no top-level `error` at all — the message is a plain string at
+    `data.error`. The move to RFC 9457 problem details is tracked in
     https://github.com/sgort/linked-data-explorer/issues/131.
   contact:
     name: Steven Gort
@@ -39,6 +41,10 @@ tags:
     description: Whether this instance, its build and its dependencies are working.
   - name: Discovery
     description: What the API and its data offer.
+  - name: Validation
+    description: Checking uploaded data against shape or schema constraints before publish.
+  - name: Execution
+    description: Composing, running and inspecting DMN chains and BPMN processes.
   - name: Assets
     description: Published processes and records of processing activities.
 paths:
@@ -1318,6 +1324,630 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /shacl/validate:
+    post:
+      operationId: validateShacl
+      tags: [Validation]
+      summary: Validate Turtle against the vendored SHACL shape set
+      description: >-
+        Runs entirely file-local, against the vendored CPSV-AP, CPRMV and RONL
+        Custom shape layers; no network calls. A Turtle parse failure is
+        reported as a 200 with `data.parseError` set and `data.valid: false`,
+        not a 400 or 500.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: The Turtle to validate.
+      responses:
+        '200':
+          description: The validation result, valid or not.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/ShaclValidationResult'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            The validator failed unexpectedly (code VALIDATION_ERROR), or the
+            request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /shacl/validate-merged:
+    post:
+      operationId: validateShaclMerged
+      tags: [Validation]
+      summary: Validate Turtle unioned with the already-published graph for its subjects
+      description: >-
+        Fetches the triples already published for the uploaded content's named
+        subjects from a SPARQL endpoint, unions them with the upload, and
+        validates the merged graph — the only mode that catches fan-out
+        against live data. If the upload has no named subjects (only blank
+        nodes), the merge is skipped and the file is validated locally
+        instead, exactly as `/shacl/validate`. A parse failure of the
+        uploaded content is likewise a 200 with `data.parseError` set; a
+        failure fetching or parsing the remote graph is a 500, since that is
+        not the caller's fault.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: The Turtle to validate.
+                endpoint:
+                  type: string
+                  description: >-
+                    SPARQL endpoint to fetch the already-published graph from.
+                    Defaults to the configured TriplyDB endpoint when omitted.
+      responses:
+        '200':
+          description: The validation result, valid or not.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/ShaclValidationResult'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            The validator failed unexpectedly (code VALIDATION_ERROR) — no
+            endpoint configured, or the remote graph could not be
+            fetched/parsed — or the request body was not valid JSON or over
+            10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /process/{key}/variable-hints:
+    get:
+      operationId: getProcessVariableHints
+      tags: [Execution]
+      summary: Deduplicated variable names and types seen in Operaton history for a process definition key
+      description: >-
+        Used by the Document Composer's BindingPanel for variable discovery.
+        `key` is passed to Operaton unchecked: any non-empty value either
+        succeeds (possibly with an empty `variables` array) or fails with a
+        500 — there is no 400. Deduplicated by variable name, keeping the
+        last-seen type; sorted by name.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Process definition key, passed to Operaton unchecked.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The deduplicated variables, sorted by name. Empty when none were seen.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, variables]
+                properties:
+                  success:
+                    const: true
+                  variables:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, type]
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                          description: >-
+                            Operaton's own variable type (e.g. String, Integer,
+                            Boolean, Double, Date, Json, Object, Null); not
+                            validated or restricted by this API.
+        '500':
+          description: >-
+            Fetching from Operaton failed (code VARIABLE_HINTS_FAILED). Unlike
+            other operations' 500s, the message is a fixed string, not the
+            underlying error, and the body has no `timestamp`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, error]
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    required: [code, message]
+                    properties:
+                      code:
+                        const: VARIABLE_HINTS_FAILED
+                      message:
+                        const: Failed to retrieve variable hints
+  /chains:
+    get:
+      operationId: discoverChains
+      tags: [Execution]
+      summary: Pairwise DMN chain links, grouped by source DMN
+      description: >-
+        Discovers, via SPARQL, every DMN whose declared output variable
+        matches another DMN's declared input variable, then groups those
+        pairwise links by the source (`from`) DMN. Takes no parameters —
+        `req.query` is never read — so there is nothing for the handler to
+        reject with a 400. `chains` is `[]`, still with a 200, when no links
+        are found.
+      responses:
+        '200':
+          description: The chain links, grouped by source DMN. Empty when none exist.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [total, chains]
+                    properties:
+                      total:
+                        type: integer
+                        minimum: 0
+                        description: '`chains.length`.'
+                      chains:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ChainMapEntry'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The SPARQL lookup failed (code DISCOVERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /chains/execute:
+    post:
+      operationId: executeChain
+      tags: [Execution]
+      summary: Execute a chain of DMNs sequentially, or a pre-assembled DRD in one call
+      description: >-
+        Threads each DMN's outputs into the next DMN's inputs, evaluating each
+        one in Operaton in turn (`orchestrationService.executeChain`). When
+        `isDrd` and `drdEntryPointId` are both given, that sequential
+        execution is skipped entirely and all `inputs` are sent to Operaton's
+        evaluation of the pre-assembled DRD in a single call instead. A step
+        is only ever added to `steps` once it has completed successfully —
+        `orchestration.service.ts` pushes it after its try/catch, and a step
+        whose evaluation throws re-throws before that push is reached, so it
+        is never added; the chain-level `error` carries that failure instead.
+        Every populated `steps` entry therefore always has `outputs`, never
+        `error`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dmnIds, inputs]
+              properties:
+                dmnIds:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                  description: >-
+                    DMN identifiers to execute in order (or, for the DRD path,
+                    the identifiers the DRD was assembled from). Required and
+                    must not be empty.
+                inputs:
+                  type: object
+                  minProperties: 1
+                  description: >-
+                    Free-form initial input variables. Required and must not
+                    be an empty object.
+                options:
+                  type: object
+                  description: >-
+                    Only `includeIntermediateSteps` is read; `timeout` is
+                    declared in the request type but never read anywhere and
+                    has no effect.
+                  properties:
+                    includeIntermediateSteps:
+                      type: boolean
+                      description: When true, the response's `data` carries `steps`.
+                endpoint:
+                  type: string
+                  description: >-
+                    SPARQL endpoint URL to query instead of the configured
+                    one, used to look up the chain's DMNs. Unvalidated, and
+                    ignored when `isDrd` is true, because that path does not
+                    look the DMNs up.
+                isDrd:
+                  type: boolean
+                  description: >-
+                    When true together with `drdEntryPointId`, executes the
+                    pre-assembled DRD instead of the sequential chain.
+                drdEntryPointId:
+                  type: string
+                  description: >-
+                    The DRD's entry-point decision key, used only when `isDrd`
+                    is also true.
+      responses:
+        '200':
+          description: The chain (or DRD) completed successfully.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [success, chainId, executionTime, finalOutputs]
+                    properties:
+                      success:
+                        const: true
+                      chainId:
+                        type: string
+                        description: >-
+                          The executed DMN identifiers joined with `->`, or,
+                          for the DRD path, `DRD:<drdEntryPointId>`.
+                      executionTime:
+                        type: number
+                        description: Milliseconds.
+                      finalOutputs:
+                        type: object
+                        description: >-
+                          Free-form: the accumulated chain variables once
+                          every step has run, already unwrapped from
+                          Operaton's `{value, type}` form.
+                      steps:
+                        type: array
+                        description: Present only when the caller set `options.includeIntermediateSteps`.
+                        items:
+                          $ref: '#/components/schemas/ExecutionStep'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: >-
+            `dmnIds` is missing or empty (message "dmnIds array is required
+            and must not be empty"), or `inputs` is missing or an empty
+            object (message "inputs object is required"). Both are code
+            INVALID_REQUEST.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            Two unrelated causes share this status; see the schemas below.
+            The nested-failure payload is the orchestrator resolving with
+            `success: false`. `ErrorEnvelope` covers both the orchestrator
+            call itself throwing and the route's own try/catch catching it
+            (code EXECUTION_ERROR), and the request body not being valid
+            JSON, or over 10 MB (code INTERNAL_ERROR; #143) — the latter
+            never reaches this route's own handler; it is answered by the
+            global error handler.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    description: >-
+                      The orchestrator resolved with `success: false` (a DMN
+                      in the chain threw, or the DRD evaluation threw). The
+                      failure is nested under `data.error` as a plain string,
+                      not the top-level `error` object of ErrorEnvelope.
+                    required: [success, data, timestamp]
+                    properties:
+                      success:
+                        const: false
+                      data:
+                        type: object
+                        required: [success, chainId, executionTime, finalOutputs, error]
+                        properties:
+                          success:
+                            const: false
+                          chainId:
+                            type: string
+                          executionTime:
+                            type: number
+                            description: Milliseconds.
+                          finalOutputs:
+                            type: object
+                            description: >-
+                              Free-form: whatever chain variables had
+                              accumulated before the failure. `{}` for a
+                              failed DRD run.
+                          steps:
+                            type: array
+                            description: Present only when the caller set `options.includeIntermediateSteps`. `[]` for a failed DRD run.
+                            items:
+                              $ref: '#/components/schemas/ExecutionStep'
+                          error:
+                            type: string
+                            description: Always present on this shape.
+                      timestamp:
+                        type: string
+                        format: date-time
+                  - $ref: '#/components/schemas/ErrorEnvelope'
+  /chains/templates:
+    get:
+      operationId: listChainTemplates
+      tags: [Execution]
+      summary: Predefined chain templates
+      description: >-
+        Templates are a fixed, in-memory list (three today), not sourced from
+        the knowledge graph or a database; `endpoint` is accepted but has no
+        effect on the result (reserved for future database-backed templates).
+        `category` filters when given as a single string value; `tag` is only
+        consulted when `category` is absent or not a single string. A
+        repeated query parameter, or a category/tag that matches nothing,
+        never answers 400 — it is ignored or yields an empty `templates`
+        array. `categories` here is derived from the templates already
+        returned, so it narrows along with a `category`/`tag` filter, unlike
+        `GET /chains/templates/categories/list`, which always lists every
+        category.
+      parameters:
+        - name: category
+          in: query
+          required: false
+          description: Exact category match. Wins over `tag` when both are given.
+          schema:
+            type: string
+        - name: tag
+          in: query
+          required: false
+          description: Exact tag match. Only consulted when `category` is absent.
+          schema:
+            type: string
+        - name: endpoint
+          in: query
+          required: false
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Accepted but has no effect on predefined templates today.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The templates, optionally filtered.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [total, templates, categories]
+                    properties:
+                      total:
+                        type: integer
+                        minimum: 0
+                      templates:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ChainTemplate'
+                      categories:
+                        type: array
+                        items:
+                          type: string
+                        description: Deduplicated and sorted, derived from `templates` above.
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The template lookup failed (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /chains/templates/{id}:
+    get:
+      operationId: getChainTemplate
+      tags: [Execution]
+      summary: One chain template by id
+      description: >-
+        `endpoint` is accepted but has no effect on the lookup today (same
+        reservation as the list operation). On a hit, the handler also awaits
+        an in-memory usage-count increment that is a documented no-op, so
+        `usageCount` in the response never actually changes.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The template's id.
+          schema:
+            type: string
+        - name: endpoint
+          in: query
+          required: false
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Accepted but has no effect on predefined templates today.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The template.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/ChainTemplate'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '404':
+          description: No template has this id (code NOT_FOUND). The message names the requested id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The template lookup failed (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /chains/templates/categories/list:
+    get:
+      operationId: listChainTemplateCategories
+      tags: [Execution]
+      summary: Every category used by a chain template
+      description: >-
+        Unfiltered: always every category across all predefined templates,
+        unlike the `categories` field on `GET /chains/templates`, which
+        narrows along with that operation's own filter.
+      responses:
+        '200':
+          description: The categories, deduplicated and sorted.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [categories, total]
+                    properties:
+                      categories:
+                        type: array
+                        items:
+                          type: string
+                      total:
+                        type: integer
+                        minimum: 0
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The template lookup failed (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /chains/templates/tags/list:
+    get:
+      operationId: listChainTemplateTags
+      tags: [Execution]
+      summary: Every tag used by a chain template
+      description: >-
+        Unfiltered: always every tag across all predefined templates. Mirrors
+        `GET /chains/templates/categories/list`.
+      responses:
+        '200':
+          description: The tags, deduplicated and sorted.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [tags, total]
+                    properties:
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                      total:
+                        type: integer
+                        minimum: 0
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The template lookup failed (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   headers:
     ApiVersion:
@@ -2023,3 +2653,228 @@ components:
           type: integer
         column:
           type: integer
+    ShaclValidationResult:
+      type: object
+      description: >-
+        `layers` is a closed set of exactly three shape layers — not a map,
+        unlike the similarly-named ShaclLayerStatus block in /health.
+      required: [valid, complete, parseError, layers, summary]
+      properties:
+        valid:
+          type: boolean
+          description: >-
+            True only when the content parsed, every layer loaded, and no
+            layer reported an error.
+        complete:
+          type: boolean
+          description: True when every shape layer loaded. False on a parse error.
+        parseError:
+          type: [string, 'null']
+        layers:
+          type: object
+          required: [cprmv, cpsv-ap, ronl-custom]
+          properties:
+            cprmv:
+              $ref: '#/components/schemas/ShaclLayerResult'
+            cpsv-ap:
+              $ref: '#/components/schemas/ShaclLayerResult'
+            ronl-custom:
+              $ref: '#/components/schemas/ShaclLayerResult'
+        summary:
+          type: object
+          required: [errors, warnings, infos]
+          properties:
+            errors:
+              type: integer
+              minimum: 0
+            warnings:
+              type: integer
+              minimum: 0
+            infos:
+              type: integer
+              minimum: 0
+    ShaclLayerResult:
+      type: object
+      required: [label, loaded, issues]
+      properties:
+        label:
+          type: string
+        loaded:
+          type: boolean
+          description: False when no shape files were present for this layer.
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShaclIssue'
+    ShaclIssue:
+      type: object
+      required: [severity, code, message]
+      properties:
+        severity:
+          type: string
+          enum: [error, warning, info]
+        code:
+          type: string
+          description: Derived at runtime from the SHACL constraint component IRI.
+          examples: [SHACL-MAXCOUNT]
+        message:
+          type: string
+        location:
+          type: string
+          description: Present only when the violation has a focus node or a path.
+    ChainTemplate:
+      type: object
+      description: >-
+        A predefined chain template, defined in code (TemplateService), not
+        sourced from the knowledge graph. Serves both `GET /chains/templates`
+        and `GET /chains/templates/{id}`.
+      required:
+        - id
+        - name
+        - description
+        - type
+        - category
+        - dmnIds
+        - tags
+        - complexity
+        - estimatedTime
+        - createdAt
+        - updatedAt
+        - isPublic
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [sequential, drd]
+          description: >-
+            Fixed at the template's definition site; `drd` is reachable but
+            unused by today's three predefined templates (all `sequential`).
+        category:
+          type: string
+          enum: [social, financial, legal, custom]
+          description: >-
+            Fixed at the template's definition site; `legal` and `custom` are
+            reachable but unused by today's three predefined templates.
+        dmnIds:
+          type: array
+          items:
+            type: string
+        drdId:
+          type: string
+          description: >-
+            Entry-point identifier for a `drd`-type template. Never set on
+            today's templates (all `sequential`).
+        drdDeploymentId:
+          type: string
+          description: >-
+            Operaton deployment id for a `drd`-type template. Never set on
+            today's templates (all `sequential`).
+        defaultInputs:
+          type: object
+          description: >-
+            Free-form: arbitrary keys, arbitrary JSON values. Today's
+            templates spread saved test inputs from testData.json, plus a
+            computed `dagVanAanvraag` date.
+        tags:
+          type: array
+          items:
+            type: string
+        complexity:
+          type: string
+          enum: [simple, medium, complex]
+          description: Fixed at the template's definition site.
+        estimatedTime:
+          type: number
+          minimum: 0
+          description: Milliseconds.
+        usageCount:
+          type: integer
+          minimum: 0
+          description: >-
+            Hardcoded per template today. A successful `GET
+            /chains/templates/{id}` awaits an increment that is a documented
+            no-op, so this value never actually changes.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          description: >-
+            Computed once, at process start (module load), not per request —
+            effectively constant for the process's lifetime.
+        author:
+          type: string
+        isPublic:
+          type: boolean
+    ChainMapEntry:
+      type: object
+      description: >-
+        One source DMN and every downstream DMN it can feed, built by
+        grouping the pairwise SPARQL chain links by their `from` DMN
+        (chain.routes.ts, the handler's own local `ChainMapEntry`
+        interface). Distinct from the DMN-record schemas of phase 2
+        (DmnModel, DmnReference, EnhancedChainLink, ChainCycle).
+      required: [from, connections]
+      properties:
+        from:
+          type: string
+          description: Source DMN identifier, from a SPARQL binding.
+        connections:
+          type: array
+          items:
+            type: object
+            required: [to, variable, variableType]
+            properties:
+              to:
+                type: string
+                description: Downstream DMN identifier, from a SPARQL binding.
+              variable:
+                type: string
+                description: The variable identifier that connects the two DMNs.
+              variableType:
+                type: string
+                description: >-
+                  The variable's declared type, from a SPARQL binding — a
+                  plain string, never an enum.
+    ExecutionStep:
+      type: object
+      description: >-
+        One DMN evaluated within a chain execution. orchestration.service.ts
+        only pushes a step onto `steps` after it has completed successfully;
+        a step whose evaluation throws sets its own `error` field but is then
+        discarded, re-thrown to the caller before that push runs, so it is
+        never added to `steps`. Every step this API actually returns
+        therefore always carries `outputs`, and `error` never appears here —
+        unlike the `ExecutionStep` TypeScript type, which marks `outputs` and
+        `error` as mutually-exclusive optionals.
+      required: [dmnId, dmnTitle, startTime, endTime, duration, inputs, outputs]
+      properties:
+        dmnId:
+          type: string
+        dmnTitle:
+          type: string
+        startTime:
+          type: number
+          description: Epoch milliseconds.
+        endTime:
+          type: number
+          description: Epoch milliseconds.
+        duration:
+          type: number
+          description: Milliseconds; `endTime` minus `startTime`.
+        inputs:
+          type: object
+          description: >-
+            Free-form snapshot of the accumulated chain variables immediately
+            before this step ran.
+        outputs:
+          type: object
+          description: >-
+            Free-form: this step's outputs, already unwrapped from Operaton's
+            `{value, type}` form.

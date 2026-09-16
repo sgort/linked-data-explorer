@@ -60,3 +60,22 @@ overrides:
       - 'openapi.json#/paths/~1dmns~1%7Bidentifier%7D~1xml/get'
     rules:
       nlgov:problem-invalid-input: 'off'
+
+  # GET /process/{key}/variable-hints takes one path parameter, the process
+  # definition key. An empty key does not match the route at all (404, not
+  # this operation); any non-empty value is passed straight through to
+  # Operaton unchecked, so the handler never answers 400 itself.
+  - files:
+      - 'openapi.json#/paths/~1process~1%7Bkey%7D~1variable-hints/get'
+    rules:
+      nlgov:problem-invalid-input: 'off'
+
+  # GET /chains/templates and GET /chains/templates/{id} take only free-text
+  # query parameters (category, tag, endpoint) and, on the by-id read, a path
+  # id. No value of any of them is invalid: an unmatched category/tag/id
+  # falls through to an empty list (list) or a 404 (by-id), never a 400.
+  - files:
+      - 'openapi.json#/paths/~1chains~1templates/get'
+      - 'openapi.json#/paths/~1chains~1templates~1%7Bid%7D/get'
+    rules:
+      nlgov:problem-invalid-input: 'off'
