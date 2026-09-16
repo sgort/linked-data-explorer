@@ -1,8 +1,4 @@
 [
-  "GET /assets/ropa",
-  "POST /assets/ropa",
-  "GET /assets/ropa/by-bpmn-id/{bpmnProcessId}",
-  "DELETE /assets/ropa/{id}",
   "GET /dso/activiteiten",
   "POST /dso/activiteiten/oin",
   "POST /dso/activiteiten/zoek",

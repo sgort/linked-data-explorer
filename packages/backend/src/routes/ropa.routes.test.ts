@@ -17,6 +17,9 @@ jest.mock('../services/ropa.service', () => ({
 
 import { deleteRopa, getRopaByBpmnProcessId, listRopa, upsertRopa } from '../services/ropa.service';
 import ropaRoutes from './ropa.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { errorHandler } from '../middleware/error.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const mockList = listRopa as jest.Mock;
 const mockGetByBpmnId = getRopaByBpmnProcessId as jest.Mock;
@@ -143,5 +146,205 @@ describe('DELETE /v1/assets/ropa/:id', () => {
       success: false,
       error: { code: 'DELETE_FAILED', message: 'row is referenced' },
     });
+  });
+});
+
+describe('/v1/assets/ropa matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/assets/ropa', ropaRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+    return app;
+  }
+
+  // Every optional field populated (dpoContact, thirdCountryDetails) and
+  // personalDataFields given two entries — one with specialCategory true —
+  // so the RopaRecord schema and the reused RopaPersonalDataField schema are
+  // both actually exercised, not only nominally referenced.
+  const FULL_RECORD = {
+    id: '11111111-1111-4111-8111-111111111111',
+    bpmnProcessId: 'ZorgtoeslagProcess',
+    processLevel: 'shell',
+    title: 'Zorgtoeslag verwerking',
+    controllerName: 'Gemeente Utrecht',
+    controllerContact: 'privacy@utrecht.nl',
+    dpoContact: 'dpo@utrecht.nl',
+    purpose: 'Assessing eligibility for housing benefit',
+    legalBasisUri: 'https://wetten.overheid.nl/BWBR0008659',
+    legalBasisLabel: 'Algemene wet inkomensafhankelijke regelingen',
+    gdprArticle: '6(1)(c)',
+    dataSubjects: 'Applicants for housing benefit',
+    recipients: 'Belastingdienst Toeslagen',
+    thirdCountryTransfers: true,
+    thirdCountryDetails: 'Backup storage in a certified US data center under an adequacy decision',
+    retentionPeriod: '7 years after case closure',
+    securityMeasures: 'Encryption at rest and in transit; role-based access control',
+    status: 'active',
+    schemaVersion: 2,
+    personalDataFields: [
+      {
+        id: '22222222-2222-4222-8222-222222222222',
+        ropaRecordId: '11111111-1111-4111-8111-111111111111',
+        formId: 'form-1',
+        fieldKey: 'income',
+        fieldLabel: 'Household income',
+        dataCategory: 'financial',
+        specialCategory: false,
+        sortOrder: 0,
+      },
+      {
+        id: '33333333-3333-4333-8333-333333333333',
+        ropaRecordId: '11111111-1111-4111-8111-111111111111',
+        formId: 'form-1',
+        fieldKey: 'healthCondition',
+        fieldLabel: 'Health condition',
+        dataCategory: 'health',
+        specialCategory: true,
+        sortOrder: 1,
+      },
+    ],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+  };
+
+  // Request-body shape: distinct from FULL_RECORD — no id/createdAt/updatedAt,
+  // and each personal-data field lacks id/ropaRecordId (both are
+  // database-generated). Every optional field and both array entries
+  // populated, same as FULL_RECORD.
+  const FULL_POST_BODY = {
+    bpmnProcessId: 'ZorgtoeslagProcess',
+    processLevel: 'shell',
+    title: 'Zorgtoeslag verwerking',
+    controllerName: 'Gemeente Utrecht',
+    controllerContact: 'privacy@utrecht.nl',
+    dpoContact: 'dpo@utrecht.nl',
+    purpose: 'Assessing eligibility for housing benefit',
+    legalBasisUri: 'https://wetten.overheid.nl/BWBR0008659',
+    legalBasisLabel: 'Algemene wet inkomensafhankelijke regelingen',
+    gdprArticle: '6(1)(c)',
+    dataSubjects: 'Applicants for housing benefit',
+    recipients: 'Belastingdienst Toeslagen',
+    thirdCountryTransfers: true,
+    thirdCountryDetails: 'Backup storage in a certified US data center under an adequacy decision',
+    retentionPeriod: '7 years after case closure',
+    securityMeasures: 'Encryption at rest and in transit; role-based access control',
+    status: 'active',
+    schemaVersion: 2,
+    personalDataFields: [
+      {
+        formId: 'form-1',
+        fieldKey: 'income',
+        fieldLabel: 'Household income',
+        dataCategory: 'financial',
+        specialCategory: false,
+        sortOrder: 0,
+      },
+      {
+        formId: 'form-1',
+        fieldKey: 'healthCondition',
+        fieldLabel: 'Health condition',
+        dataCategory: 'health',
+        specialCategory: true,
+        sortOrder: 1,
+      },
+    ],
+  };
+
+  test('GET /assets/ropa 200, as documented', async () => {
+    mockList.mockResolvedValue([FULL_RECORD]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/ropa');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/assets/ropa');
+  });
+
+  test('GET /assets/ropa 500, as documented', async () => {
+    mockList.mockRejectedValue(new Error('db unavailable'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/ropa');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/assets/ropa');
+  });
+
+  test('GET /assets/ropa/by-bpmn-id/{bpmnProcessId} 200, as documented', async () => {
+    mockGetByBpmnId.mockResolvedValue(FULL_RECORD);
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/assets/ropa/by-bpmn-id/ZorgtoeslagProcess'
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/assets/ropa/by-bpmn-id/{bpmnProcessId}');
+  });
+
+  test('GET /assets/ropa/by-bpmn-id/{bpmnProcessId} 404, as documented', async () => {
+    mockGetByBpmnId.mockResolvedValue(null);
+
+    const res = await request(makeDocumentedApp()).get('/v1/assets/ropa/by-bpmn-id/UnknownProcess');
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/assets/ropa/by-bpmn-id/{bpmnProcessId}');
+  });
+
+  test('GET /assets/ropa/by-bpmn-id/{bpmnProcessId} 500, as documented', async () => {
+    mockGetByBpmnId.mockRejectedValue(new Error('query failed'));
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/assets/ropa/by-bpmn-id/ZorgtoeslagProcess'
+    );
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/assets/ropa/by-bpmn-id/{bpmnProcessId}');
+  });
+
+  test('POST /assets/ropa 200, as documented', async () => {
+    mockUpsert.mockResolvedValue('11111111-1111-4111-8111-111111111111');
+
+    const res = await request(makeDocumentedApp()).post('/v1/assets/ropa').send(FULL_POST_BODY);
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/assets/ropa');
+  });
+
+  test('POST /assets/ropa 500, as documented', async () => {
+    mockUpsert.mockRejectedValue(new Error('constraint violation'));
+
+    const res = await request(makeDocumentedApp()).post('/v1/assets/ropa').send(FULL_POST_BODY);
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'post', '/assets/ropa');
+  });
+
+  test('POST /assets/ropa malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/assets/ropa')
+      .set('Content-Type', 'application/json')
+      .send('{"bpmnProcessId":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/assets/ropa');
+  });
+
+  test('DELETE /assets/ropa/{id} 200, as documented', async () => {
+    mockDelete.mockResolvedValue(undefined);
+
+    const res = await request(makeDocumentedApp()).delete('/v1/assets/ropa/r1');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'delete', '/assets/ropa/{id}');
+  });
+
+  test('DELETE /assets/ropa/{id} 500, as documented', async () => {
+    mockDelete.mockRejectedValue(new Error('row is referenced'));
+
+    const res = await request(makeDocumentedApp()).delete('/v1/assets/ropa/r1');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'delete', '/assets/ropa/{id}');
   });
 });
