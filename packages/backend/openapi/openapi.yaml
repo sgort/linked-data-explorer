@@ -39,6 +39,10 @@ tags:
     description: Whether this instance, its build and its dependencies are working.
   - name: Discovery
     description: What the API and its data offer.
+  - name: Validation
+    description: Checking uploaded data against shape or schema constraints before publish.
+  - name: Execution
+    description: Running DMN chains and BPMN processes.
   - name: Assets
     description: Published processes and records of processing activities.
 paths:
@@ -1318,6 +1322,193 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /shacl/validate:
+    post:
+      operationId: validateShacl
+      tags: [Validation]
+      summary: Validate Turtle against the vendored SHACL shape set
+      description: >-
+        Runs entirely file-local, against the vendored CPSV-AP, CPRMV and RONL
+        Custom shape layers; no network calls. A Turtle parse failure is
+        reported as a 200 with `data.parseError` set and `data.valid: false`,
+        not a 400 or 500.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: The Turtle to validate.
+      responses:
+        '200':
+          description: The validation result, valid or not.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/ShaclValidationResult'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            The validator failed unexpectedly (code VALIDATION_ERROR), or the
+            request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /shacl/validate-merged:
+    post:
+      operationId: validateShaclMerged
+      tags: [Validation]
+      summary: Validate Turtle unioned with the already-published graph for its subjects
+      description: >-
+        Fetches the triples already published for the uploaded content's named
+        subjects from a SPARQL endpoint, unions them with the upload, and
+        validates the merged graph — the only mode that catches fan-out
+        against live data. If the upload has no named subjects (only blank
+        nodes), the merge is skipped and the file is validated locally
+        instead, exactly as `/shacl/validate`. A parse failure of the
+        uploaded content is likewise a 200 with `data.parseError` set; a
+        failure fetching or parsing the remote graph is a 500, since that is
+        not the caller's fault.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: The Turtle to validate.
+                endpoint:
+                  type: string
+                  description: >-
+                    SPARQL endpoint to fetch the already-published graph from.
+                    Defaults to the configured TriplyDB endpoint when omitted.
+      responses:
+        '200':
+          description: The validation result, valid or not.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/ShaclValidationResult'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: >-
+            The validator failed unexpectedly (code VALIDATION_ERROR) — no
+            endpoint configured, or the remote graph could not be
+            fetched/parsed — or the request body was not valid JSON or over
+            10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /process/{key}/variable-hints:
+    get:
+      operationId: getProcessVariableHints
+      tags: [Execution]
+      summary: Deduplicated variable names and types seen in Operaton history for a process definition key
+      description: >-
+        Used by the Document Composer's BindingPanel for variable discovery.
+        `key` is passed to Operaton unchecked: any non-empty value either
+        succeeds (possibly with an empty `variables` array) or fails with a
+        500 — there is no 400. Deduplicated by variable name, keeping the
+        last-seen type; sorted by name.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Process definition key, passed to Operaton unchecked.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The deduplicated variables, sorted by name. Empty when none were seen.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, variables]
+                properties:
+                  success:
+                    const: true
+                  variables:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, type]
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                          description: >-
+                            Operaton's own variable type (e.g. String, Integer,
+                            Boolean, Double, Date, Json, Object, Null); not
+                            validated or restricted by this API.
+        '500':
+          description: >-
+            Fetching from Operaton failed (code VARIABLE_HINTS_FAILED). Unlike
+            other operations' 500s, the message is a fixed string, not the
+            underlying error, and the body has no `timestamp`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, error]
+                properties:
+                  success:
+                    const: false
+                  error:
+                    type: object
+                    required: [code, message]
+                    properties:
+                      code:
+                        const: VARIABLE_HINTS_FAILED
+                      message:
+                        const: Failed to retrieve variable hints
 components:
   headers:
     ApiVersion:
@@ -2023,3 +2214,72 @@ components:
           type: integer
         column:
           type: integer
+    ShaclValidationResult:
+      type: object
+      description: >-
+        `layers` is a closed set of exactly three shape layers — not a map,
+        unlike the similarly-named ShaclLayerStatus block in /health.
+      required: [valid, complete, parseError, layers, summary]
+      properties:
+        valid:
+          type: boolean
+          description: >-
+            True only when the content parsed, every layer loaded, and no
+            layer reported an error.
+        complete:
+          type: boolean
+          description: True when every shape layer loaded. False on a parse error.
+        parseError:
+          type: [string, 'null']
+        layers:
+          type: object
+          required: [cprmv, cpsv-ap, ronl-custom]
+          properties:
+            cprmv:
+              $ref: '#/components/schemas/ShaclLayerResult'
+            cpsv-ap:
+              $ref: '#/components/schemas/ShaclLayerResult'
+            ronl-custom:
+              $ref: '#/components/schemas/ShaclLayerResult'
+        summary:
+          type: object
+          required: [errors, warnings, infos]
+          properties:
+            errors:
+              type: integer
+              minimum: 0
+            warnings:
+              type: integer
+              minimum: 0
+            infos:
+              type: integer
+              minimum: 0
+    ShaclLayerResult:
+      type: object
+      required: [label, loaded, issues]
+      properties:
+        label:
+          type: string
+        loaded:
+          type: boolean
+          description: False when no shape files were present for this layer.
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShaclIssue'
+    ShaclIssue:
+      type: object
+      required: [severity, code, message]
+      properties:
+        severity:
+          type: string
+          enum: [error, warning, info]
+        code:
+          type: string
+          description: Derived at runtime from the SHACL constraint component IRI.
+          examples: [SHACL-MAXCOUNT]
+        message:
+          type: string
+        location:
+          type: string
+          description: Present only when the violation has a focus node or a path.

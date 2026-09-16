@@ -36,9 +36,6 @@
   "GET /edocs/status",
   "POST /edocs/workspaces/ensure",
   "GET /edocs/workspaces/{workspaceId}/documents",
-  "GET /process/{key}/variable-hints",
-  "POST /shacl/validate",
-  "POST /shacl/validate-merged",
   "GET /vendors",
   "GET /vendors/dmn/{identifier}"
 ]

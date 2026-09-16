@@ -11,6 +11,8 @@ jest.mock('../services/operaton.service', () => ({
 
 import { operatonService } from '../services/operaton.service';
 import processRoutes from './process.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const mockGetVariableHints = operatonService.getVariableHints as jest.Mock;
 
@@ -48,5 +50,48 @@ describe('GET /v1/process/:key/variable-hints', () => {
       success: false,
       error: { code: 'VARIABLE_HINTS_FAILED', message: 'Failed to retrieve variable hints' },
     });
+  });
+});
+
+describe('/v1/process matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/process', processRoutes);
+    return app;
+  }
+
+  test('GET /{key}/variable-hints 200, as documented', async () => {
+    mockGetVariableHints.mockResolvedValue([{ name: 'leeftijd', type: 'Integer' }]);
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/process/ZorgtoeslagProcess/variable-hints'
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/process/{key}/variable-hints');
+  });
+
+  test('GET /{key}/variable-hints 200 with no variables seen, as documented', async () => {
+    mockGetVariableHints.mockResolvedValue([]);
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/process/ZorgtoeslagProcess/variable-hints'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.variables).toEqual([]);
+    expectToMatchOperation(res, 'get', '/process/{key}/variable-hints');
+  });
+
+  test('GET /{key}/variable-hints 500, as documented', async () => {
+    mockGetVariableHints.mockRejectedValue(new Error('Operaton unreachable'));
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/process/ZorgtoeslagProcess/variable-hints'
+    );
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/process/{key}/variable-hints');
   });
 });
