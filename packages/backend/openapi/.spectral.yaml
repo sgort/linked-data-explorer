@@ -69,3 +69,13 @@ overrides:
       - 'openapi.json#/paths/~1process~1%7Bkey%7D~1variable-hints/get'
     rules:
       nlgov:problem-invalid-input: 'off'
+
+  # GET /chains/templates and GET /chains/templates/{id} take only free-text
+  # query parameters (category, tag, endpoint) and, on the by-id read, a path
+  # id. No value of any of them is invalid: an unmatched category/tag/id
+  # falls through to an empty list (list) or a 404 (by-id), never a 400.
+  - files:
+      - 'openapi.json#/paths/~1chains~1templates/get'
+      - 'openapi.json#/paths/~1chains~1templates~1%7Bid%7D/get'
+    rules:
+      nlgov:problem-invalid-input: 'off'

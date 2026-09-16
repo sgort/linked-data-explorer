@@ -1509,6 +1509,220 @@ paths:
                         const: VARIABLE_HINTS_FAILED
                       message:
                         const: Failed to retrieve variable hints
+  /chains/templates:
+    get:
+      operationId: listChainTemplates
+      tags: [Execution]
+      summary: Predefined chain templates
+      description: >-
+        Templates are a fixed, in-memory list (three today), not sourced from
+        the knowledge graph or a database; `endpoint` is accepted but has no
+        effect on the result (reserved for future database-backed templates).
+        `category` filters when given as a single string value; `tag` is only
+        consulted when `category` is absent or not a single string. A
+        repeated query parameter, or a category/tag that matches nothing,
+        never answers 400 — it is ignored or yields an empty `templates`
+        array. `categories` here is derived from the templates already
+        returned, so it narrows along with a `category`/`tag` filter, unlike
+        `GET /chains/templates/categories/list`, which always lists every
+        category.
+      parameters:
+        - name: category
+          in: query
+          required: false
+          description: Exact category match. Wins over `tag` when both are given.
+          schema:
+            type: string
+        - name: tag
+          in: query
+          required: false
+          description: Exact tag match. Only consulted when `category` is absent.
+          schema:
+            type: string
+        - name: endpoint
+          in: query
+          required: false
+          description: Accepted but has no effect on predefined templates today.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The templates, optionally filtered.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [total, templates, categories]
+                    properties:
+                      total:
+                        type: integer
+                        minimum: 0
+                      templates:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ChainTemplate'
+                      categories:
+                        type: array
+                        items:
+                          type: string
+                        description: Deduplicated and sorted, derived from `templates` above.
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The template lookup failed (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /chains/templates/{id}:
+    get:
+      operationId: getChainTemplate
+      tags: [Execution]
+      summary: One chain template by id
+      description: >-
+        `endpoint` is accepted but has no effect on the lookup today (same
+        reservation as the list operation). On a hit, the handler also awaits
+        an in-memory usage-count increment that is a documented no-op, so
+        `usageCount` in the response never actually changes.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The template's id.
+          schema:
+            type: string
+        - name: endpoint
+          in: query
+          required: false
+          description: Accepted but has no effect on predefined templates today.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The template.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: '#/components/schemas/ChainTemplate'
+                  timestamp:
+                    type: string
+                    format: date-time
+        '404':
+          description: No template has this id (code NOT_FOUND). The message names the requested id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: The template lookup failed (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /chains/templates/categories/list:
+    get:
+      operationId: listChainTemplateCategories
+      tags: [Execution]
+      summary: Every category used by a chain template
+      description: >-
+        Unfiltered: always every category across all predefined templates,
+        unlike the `categories` field on `GET /chains/templates`, which
+        narrows along with that operation's own filter.
+      responses:
+        '200':
+          description: The categories, deduplicated and sorted.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [categories, total]
+                    properties:
+                      categories:
+                        type: array
+                        items:
+                          type: string
+                      total:
+                        type: integer
+                        minimum: 0
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The template lookup failed (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /chains/templates/tags/list:
+    get:
+      operationId: listChainTemplateTags
+      tags: [Execution]
+      summary: Every tag used by a chain template
+      description: >-
+        Unfiltered: always every tag across all predefined templates. Mirrors
+        `GET /chains/templates/categories/list`.
+      responses:
+        '200':
+          description: The tags, deduplicated and sorted.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [tags, total]
+                    properties:
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                      total:
+                        type: integer
+                        minimum: 0
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: The template lookup failed (code QUERY_ERROR).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   headers:
     ApiVersion:
@@ -2283,3 +2497,93 @@ components:
         location:
           type: string
           description: Present only when the violation has a focus node or a path.
+    ChainTemplate:
+      type: object
+      description: >-
+        A predefined chain template, defined in code (TemplateService), not
+        sourced from the knowledge graph. Serves both `GET /chains/templates`
+        and `GET /chains/templates/{id}`.
+      required:
+        - id
+        - name
+        - description
+        - type
+        - category
+        - dmnIds
+        - tags
+        - complexity
+        - estimatedTime
+        - createdAt
+        - updatedAt
+        - isPublic
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [sequential, drd]
+          description: >-
+            Fixed at the template's definition site; `drd` is reachable but
+            unused by today's three predefined templates (all `sequential`).
+        category:
+          type: string
+          enum: [social, financial, legal, custom]
+          description: >-
+            Fixed at the template's definition site; `legal` and `custom` are
+            reachable but unused by today's three predefined templates.
+        dmnIds:
+          type: array
+          items:
+            type: string
+        drdId:
+          type: string
+          description: >-
+            Entry-point identifier for a `drd`-type template. Never set on
+            today's templates (all `sequential`).
+        drdDeploymentId:
+          type: string
+          description: >-
+            Operaton deployment id for a `drd`-type template. Never set on
+            today's templates (all `sequential`).
+        defaultInputs:
+          type: object
+          description: >-
+            Free-form: arbitrary keys, arbitrary JSON values. Today's
+            templates spread saved test inputs from testData.json, plus a
+            computed `dagVanAanvraag` date.
+        tags:
+          type: array
+          items:
+            type: string
+        complexity:
+          type: string
+          enum: [simple, medium, complex]
+          description: Fixed at the template's definition site.
+        estimatedTime:
+          type: integer
+          minimum: 0
+          description: Milliseconds.
+        usageCount:
+          type: integer
+          minimum: 0
+          description: >-
+            Hardcoded per template today. A successful `GET
+            /chains/templates/{id}` awaits an increment that is a documented
+            no-op, so this value never actually changes.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          description: >-
+            Computed once, at process start (module load), not per request —
+            effectively constant for the process's lifetime.
+        author:
+          type: string
+        isPublic:
+          type: boolean
