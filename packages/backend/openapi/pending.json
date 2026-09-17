@@ -1,8 +1,1 @@
-[
-  "POST /edocs/documents",
-  "GET /edocs/status",
-  "POST /edocs/workspaces/ensure",
-  "GET /edocs/workspaces/{workspaceId}/documents",
-  "GET /vendors",
-  "GET /vendors/dmn/{identifier}"
-]
+[]

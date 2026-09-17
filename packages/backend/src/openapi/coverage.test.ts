@@ -27,7 +27,7 @@ const PENDING_PATH = path.resolve(__dirname, '../../openapi/pending.json');
 // The pending list may only shrink (#129). Lower this in the same change that
 // documents operations (#134–#137). A route added without documentation pushes
 // the list past it and fails the test below.
-const PENDING_CEILING = 6;
+const PENDING_CEILING = 0;
 
 const pending: string[] = JSON.parse(fs.readFileSync(PENDING_PATH, 'utf8'));
 const served = listServedOperations(routeRegistry);

@@ -24,6 +24,9 @@ jest.mock('../utils/config', () => ({
 
 import { edocsService } from '../services/edocs.service';
 import edocsRoutes from './edocs.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { errorHandler } from '../middleware/error.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const svc = edocsService as unknown as Record<string, jest.Mock>;
 
@@ -270,5 +273,215 @@ describe('GET /v1/edocs/workspaces/:workspaceId/documents', () => {
       code: 'EDOCS_DOCUMENTS_FAILED',
       message: 'no such workspace',
     });
+  });
+});
+
+describe('/v1/edocs operations match their OpenAPI description', () => {
+  // The route test app above has no version middleware and no error handler
+  // (see edocs.routes.test.ts's own makeApp()), so a documented app needs
+  // both added, matching how dso.routes.test.ts builds its own.
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/edocs', edocsRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+    return app;
+  }
+
+  test('GET /status 200, as documented — up, with latencyMs', async () => {
+    svc.healthCheck.mockResolvedValue({ status: 'up', latency: 42 });
+
+    const res = await request(makeDocumentedApp()).get('/v1/edocs/status');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ status: 'up', stubMode: true, latencyMs: 42 });
+    expectToMatchOperation(res, 'get', '/edocs/status');
+  });
+
+  test('GET /status 200, as documented — down, with an error, is not a failure response', async () => {
+    svc.healthCheck.mockResolvedValue({ status: 'down', error: 'connect ECONNREFUSED' });
+
+    const res = await request(makeDocumentedApp()).get('/v1/edocs/status');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({
+      status: 'down',
+      stubMode: true,
+      error: 'connect ECONNREFUSED',
+    });
+    expectToMatchOperation(res, 'get', '/edocs/status');
+  });
+
+  test('GET /status 200, as documented — stub, omitting every optional field', async () => {
+    svc.healthCheck.mockResolvedValue({ status: 'stub' });
+
+    const res = await request(makeDocumentedApp()).get('/v1/edocs/status');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ status: 'stub', stubMode: true });
+    expectToMatchOperation(res, 'get', '/edocs/status');
+  });
+
+  test('GET /status 500, as documented', async () => {
+    svc.healthCheck.mockRejectedValue(new Error('eDOCS unreachable'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/edocs/status');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/edocs/status');
+  });
+
+  test('POST /workspaces/ensure 200, as documented', async () => {
+    svc.ensureWorkspace.mockResolvedValue({
+      workspaceId: 'ws-123',
+      workspaceName: 'FL-INF-2025-042 — Kapvergunning',
+      created: true,
+    });
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/edocs/workspaces/ensure')
+      .send({ projectNumber: 'FL-INF-2025-042', projectName: 'Kapvergunning' });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/edocs/workspaces/ensure');
+  });
+
+  test('POST /workspaces/ensure 400, as documented', async () => {
+    const res = await request(makeDocumentedApp()).post('/v1/edocs/workspaces/ensure').send({});
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/edocs/workspaces/ensure');
+  });
+
+  test('POST /workspaces/ensure 500, as documented', async () => {
+    svc.ensureWorkspace.mockRejectedValue(new Error('library full'));
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/edocs/workspaces/ensure')
+      .send({ projectNumber: 'FL-INF-2025-042', projectName: 'Kapvergunning' });
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'post', '/edocs/workspaces/ensure');
+  });
+
+  test('POST /workspaces/ensure 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/edocs/workspaces/ensure')
+      .set('Content-Type', 'application/json')
+      .send('{"projectNumber":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/edocs/workspaces/ensure');
+  });
+
+  test('POST /documents 200, as documented — every optional metadata field filled', async () => {
+    svc.uploadDocument.mockResolvedValue({
+      documentId: 'doc-1',
+      documentNumber: 'FL-2025-001234',
+      workspaceId: 'ws-123',
+    });
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/edocs/documents')
+      .send({
+        workspaceId: 'ws-123',
+        filename: 'beschikking.pdf',
+        contentBase64: 'JVBERi0xLjQKJeLjz9M=',
+        metadata: {
+          docName: 'Beschikking',
+          appId: 'ACROBAT',
+          formName: 'F1',
+          extra: { zaak: 'Z-1' },
+        },
+      });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/edocs/documents');
+  });
+
+  test('POST /documents 200, as documented — every optional metadata field omitted', async () => {
+    svc.uploadDocument.mockResolvedValue({
+      documentId: 'doc-2',
+      documentNumber: 'FL-2025-001235',
+      workspaceId: 'ws-123',
+    });
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/edocs/documents')
+      .send({
+        workspaceId: 'ws-123',
+        filename: 'beschikking.pdf',
+        contentBase64: 'JVBERi0xLjQKJeLjz9M=',
+        metadata: { docName: 'Beschikking' },
+      });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/edocs/documents');
+  });
+
+  test('POST /documents 400, as documented', async () => {
+    const res = await request(makeDocumentedApp()).post('/v1/edocs/documents').send({});
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/edocs/documents');
+  });
+
+  test('POST /documents 500, as documented', async () => {
+    svc.uploadDocument.mockRejectedValue(new Error('quota exceeded'));
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/edocs/documents')
+      .send({
+        workspaceId: 'ws-123',
+        filename: 'beschikking.pdf',
+        contentBase64: 'JVBERi0xLjQKJeLjz9M=',
+        metadata: { docName: 'Beschikking' },
+      });
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'post', '/edocs/documents');
+  });
+
+  test('POST /documents 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/edocs/documents')
+      .set('Content-Type', 'application/json')
+      .send('{"workspaceId":');
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expectToMatchOperation(res, 'post', '/edocs/documents');
+  });
+
+  test('GET /workspaces/:workspaceId/documents 200, as documented — populated', async () => {
+    svc.getWorkspaceDocuments.mockResolvedValue([
+      { id: 'doc-1', name: 'Aanvraag.pdf', documentNumber: 'FL-2025-001234' },
+    ]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/edocs/workspaces/ws-123/documents');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/edocs/workspaces/{workspaceId}/documents');
+  });
+
+  test('GET /workspaces/:workspaceId/documents 200, as documented — an unknown workspace answers an empty list, not 404', async () => {
+    svc.getWorkspaceDocuments.mockResolvedValue([]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/edocs/workspaces/ws-unknown/documents');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ documents: [], count: 0 });
+    expectToMatchOperation(res, 'get', '/edocs/workspaces/{workspaceId}/documents');
+  });
+
+  test('GET /workspaces/:workspaceId/documents 500, as documented', async () => {
+    svc.getWorkspaceDocuments.mockRejectedValue(new Error('no such workspace'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/edocs/workspaces/ws-123/documents');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/edocs/workspaces/{workspaceId}/documents');
   });
 });
