@@ -627,6 +627,127 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     _links: { self: { href: '/werkzaamheden/urn:nl:imow:werkzaamheid:1' } },
   };
 
+  // Ids and names taken from the two real STTR fixtures under
+  // examples/organizations/flevoland/STTR/, so this list plausibly links to
+  // the two XML fixtures below via `identifier`.
+  const TOEPASBARE_REGELS_LIST = {
+    _embedded: {
+      toepasbareRegels: [
+        { identifier: '105946', type: 'Conclusie', naam: 'Boom kappen of houtopstand vellen' },
+        {
+          identifier: '105947',
+          type: 'Indieningsvereisten',
+          naam: 'Indieningsvereisten Vergunning Boom kappen of houtopstand vellen',
+        },
+      ],
+    },
+    _links: {
+      self: {
+        href: '/toepasbareRegels?functioneleStructuurRef=https://identifier.overheid.nl/concept/1',
+      },
+    },
+  };
+
+  // A trimmed but well-formed excerpt of the real conclusie STTR
+  // (sttr-105946.xml): same namespaces, id, name and one real question, so a
+  // media-type or schema mistake on this operation has something genuinely
+  // XML-shaped to fail against, not a one-line placeholder.
+  const STTR_XML_FIXTURE = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dmn:definitions xmlns:dmn="http://www.omg.org/spec/DMN/20180521/MODEL/" xmlns:uitv="http://toepasbare-regels.omgevingswet.overheid.nl/v1.0/Uitvoeringsregel" name="Boom kappen of houtopstand vellen" id="_246fefaa_671a_47bf_9b35_5b6ebcf101a7">
+  <dmn:extensionElements>
+    <uitv:uitvoeringsregels>
+      <uitv:uitvoeringsregel id="uitv__4483fe58-57b7-4e71-bf19-15783f0f9d92">
+        <uitv:vraag>
+          <uitv:gegevensType>boolean</uitv:gegevensType>
+          <uitv:vraagTekst>Wilt u een boom of beplanting weghalen?</uitv:vraagTekst>
+        </uitv:vraag>
+      </uitv:uitvoeringsregel>
+    </uitv:uitvoeringsregels>
+  </dmn:extensionElements>
+  <dmn:decision id="_dec1" name="Boom kappen of houtopstand vellen">
+    <dmn:variable name="uitkomst" typeRef="string"/>
+  </dmn:decision>
+</dmn:definitions>`;
+
+  // What extractDmnFromSttr would derive from the fixture above: DMN 1.3
+  // namespace, an injected input id, a FEEL-safe variable name and a stamped
+  // history time-to-live — the five real normalizations, not invented ones.
+  const DMN_XML_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
+<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:camunda="http://camunda.org/schema/1.0/dmn" name="Boom kappen of houtopstand vellen" id="_246fefaa_671a_47bf_9b35_5b6ebcf101a7">
+  <dmn:decision id="_dec1" name="Boom kappen of houtopstand vellen" camunda:historyTimeToLive="180">
+    <dmn:variable name="uitkomst" typeRef="string"/>
+    <dmn:decisionTable>
+      <dmn:input id="dsoInput_1">
+        <dmn:inputExpression id="dsoInputExpr_1" typeRef="boolean">
+          <dmn:text>uitv__4483fe58_57b7_4e71_bf19_15783f0f9d92</dmn:text>
+        </dmn:inputExpression>
+      </dmn:input>
+      <dmn:output id="o1" typeRef="string"/>
+    </dmn:decisionTable>
+  </dmn:decision>
+</dmn:definitions>`;
+
+  // Mirrors the real indieningsvereisten STTR (sttr-105947.xml): a `list`
+  // question with two options (-> select + values), a `string` +
+  // inter:inputType=textarea question (-> textarea), a `string` question
+  // with no textarea hint (-> textfield), a `number` question, a `boolean`
+  // question (-> checkbox) and a uitv:bijlage requirement (-> textfield
+  // placeholder) — every one of the five field types the extraction logic
+  // can produce, and the one optional `values` array, all from real content.
+  const FORM_SCAFFOLD = {
+    schemaVersion: 17,
+    id: '105947',
+    type: 'default',
+    components: [
+      {
+        id: 'uitv__5acd1773-b81c-436f-a91e-d37546ad5e24',
+        type: 'select',
+        label: 'Wat wilt u gaan doen?',
+        key: '5acd1773_b81c_436f_a91e_d37546ad5e24',
+        values: [
+          { label: 'Kappen', value: 'Kappen' },
+          { label: 'Anders', value: 'Anders' },
+        ],
+        validate: { required: false },
+      },
+      {
+        id: 'uitv__625483ff-2dfd-4e63-8c52-2773cf169211',
+        type: 'textarea',
+        label: 'Beschrijf wat u wilt gaan doen.',
+        key: '625483ff_2dfd_4e63_8c52_2773cf169211',
+        validate: { required: false },
+      },
+      {
+        id: 'uitv__06480753-bdb0-4d23-8fd7-8941fad930f2',
+        type: 'textfield',
+        label: 'Waarom wilt u de houtopstand onderhouden of weghalen?',
+        key: '06480753_bdb0_4d23_8fd7_8941fad930f2',
+        validate: { required: false },
+      },
+      {
+        id: 'uitv__c1720883-89cf-47e5-97f0-36ef4d5fab05',
+        type: 'number',
+        label: 'Om hoeveel bomen gaat het?',
+        key: 'c1720883_89cf_47e5_97f0_36ef4d5fab05',
+        validate: { required: false },
+      },
+      {
+        id: 'uitv__94af6398-3d9e-450b-bb64-12b1728fee00',
+        type: 'checkbox',
+        label: 'Bent u de eigenaar van de boom of houtopstand?',
+        key: '94af6398_3d9e_450b_bb64_12b1728fee00',
+        validate: { required: false },
+      },
+      {
+        id: 'uitv__9d5e992e-4e3f-429b-930c-0e9d69e997de',
+        type: 'textfield',
+        label: '[Bijlage] Toestemming van de eigenaar',
+        key: '9d5e992e_4e3f_429b_930c_0e9d69e997de',
+        validate: { required: false },
+      },
+    ],
+  };
+
   test('GET /activiteiten 200, as documented', async () => {
     svc.getActiviteiten.mockResolvedValue(ACTIVITEITEN_LIST);
 
@@ -883,5 +1004,148 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
 
     expect(res.status).toBe(502);
     expectToMatchOperation(res, 'get', '/dso/werkzaamheden/{urn}');
+  });
+
+  test('GET /toepasbare-regels 200, as documented', async () => {
+    svc.getToepasbareRegels.mockResolvedValue(TOEPASBARE_REGELS_LIST);
+
+    const res = await request(makeDocumentedApp())
+      .get('/v1/dso/toepasbare-regels')
+      .query({ functioneleStructuurRef: 'https://identifier.overheid.nl/concept/1' });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels');
+  });
+
+  test('GET /toepasbare-regels 400, as documented', async () => {
+    const res = await request(makeDocumentedApp()).get('/v1/dso/toepasbare-regels');
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels');
+  });
+
+  test('GET /toepasbare-regels 404, as documented', async () => {
+    svc.getToepasbareRegels.mockRejectedValue(new Error('404 unknown concept'));
+
+    const res = await request(makeDocumentedApp())
+      .get('/v1/dso/toepasbare-regels')
+      .query({ functioneleStructuurRef: 'x' });
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels');
+  });
+
+  test('GET /toepasbare-regels 502, as documented', async () => {
+    svc.getToepasbareRegels.mockRejectedValue(new Error('upstream error'));
+
+    const res = await request(makeDocumentedApp())
+      .get('/v1/dso/toepasbare-regels')
+      .query({ functioneleStructuurRef: 'x' });
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels');
+  });
+
+  test('GET /toepasbare-regels/:id/sttr 200, as documented', async () => {
+    svc.getSttrBestand.mockResolvedValue(STTR_XML_FIXTURE);
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/toepasbare-regels/105946/sttr');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/xml/);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/sttr');
+  });
+
+  test('GET /toepasbare-regels/:id/sttr 404, as documented', async () => {
+    svc.getSttrBestand.mockRejectedValue(new Error('404 no such regel'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/toepasbare-regels/tr-1/sttr');
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/sttr');
+  });
+
+  test('GET /toepasbare-regels/:id/sttr 502, as documented', async () => {
+    svc.getSttrBestand.mockRejectedValue(new Error('upstream error'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/toepasbare-regels/tr-1/sttr');
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/sttr');
+  });
+
+  test('GET /toepasbare-regels/:id/dmn 200, as documented', async () => {
+    svc.getSttrBestand.mockResolvedValue(STTR_XML_FIXTURE);
+    svc.extractDmnFromSttr.mockReturnValue(DMN_XML_FIXTURE);
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/toepasbare-regels/105946/dmn');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/xml/);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/dmn');
+  });
+
+  test('GET /toepasbare-regels/:id/dmn 404, as documented', async () => {
+    svc.getSttrBestand.mockRejectedValue(new Error('404 no such regel'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/toepasbare-regels/tr-1/dmn');
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/dmn');
+  });
+
+  test('GET /toepasbare-regels/:id/dmn 422, as documented', async () => {
+    svc.getSttrBestand.mockResolvedValue('<dmn:definitions/>');
+    svc.extractDmnFromSttr.mockImplementation(() => {
+      throw new Error('No DMN <definitions> element found in STTR XML');
+    });
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/toepasbare-regels/tr-1/dmn');
+
+    expect(res.status).toBe(422);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/dmn');
+  });
+
+  test('GET /toepasbare-regels/:id/dmn 502, as documented', async () => {
+    svc.getSttrBestand.mockRejectedValue(new Error('upstream error'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/toepasbare-regels/tr-1/dmn');
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/dmn');
+  });
+
+  test('GET /toepasbare-regels/:id/form-scaffold 200, as documented', async () => {
+    svc.getSttrBestand.mockResolvedValue(STTR_XML_FIXTURE);
+    svc.extractFormScaffoldFromSttr.mockReturnValue(FORM_SCAFFOLD);
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/dso/toepasbare-regels/105947/form-scaffold'
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/form-scaffold');
+  });
+
+  test('GET /toepasbare-regels/:id/form-scaffold 404, as documented', async () => {
+    svc.getSttrBestand.mockRejectedValue(new Error('404 no such regel'));
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/dso/toepasbare-regels/tr-1/form-scaffold'
+    );
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/form-scaffold');
+  });
+
+  test('GET /toepasbare-regels/:id/form-scaffold 502, as documented', async () => {
+    svc.getSttrBestand.mockRejectedValue(new Error('upstream error'));
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/dso/toepasbare-regels/tr-1/form-scaffold'
+    );
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/form-scaffold');
   });
 });

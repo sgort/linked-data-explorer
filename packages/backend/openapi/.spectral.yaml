@@ -102,14 +102,17 @@ overrides:
     rules:
       nlgov:problem-invalid-input: 'off'
 
-  # These six DSO operations never answer 400. The four list/search operations
+  # These nine DSO operations never answer 400. The four list/search operations
   # (activiteiten, activiteiten/zoek, begrippen, werkzaamheden/zoek) accept
   # every parameter unvalidated and forward it to the upstream API as given.
   # The two URN reads (activiteiten/{urn}, werkzaamheden/{urn}) fall through a
   # malformed path segment to the same 502 as any other upstream failure,
-  # rather than answering 400. Only POST /dso/activiteiten/oin and
-  # POST /dso/werkzaamheden/suggereer validate their own input, and both
-  # already document a 400.
+  # rather than answering 400. The three toepasbare-regels per-id reads
+  # (sttr, dmn, form-scaffold) take an opaque `id` path parameter that is
+  # never validated either — any value is forwarded to the upstream API
+  # as given, and a miss maps to 404, not 400. Only POST /dso/activiteiten/oin,
+  # POST /dso/werkzaamheden/suggereer and GET /dso/toepasbare-regels validate
+  # their own input, and all three already document a 400.
   - files:
       - 'openapi.json#/paths/~1dso~1activiteiten/get'
       - 'openapi.json#/paths/~1dso~1activiteiten~1zoek/post'
@@ -117,5 +120,8 @@ overrides:
       - 'openapi.json#/paths/~1dso~1begrippen/get'
       - 'openapi.json#/paths/~1dso~1werkzaamheden~1zoek/post'
       - 'openapi.json#/paths/~1dso~1werkzaamheden~1%7Burn%7D/get'
+      - 'openapi.json#/paths/~1dso~1toepasbare-regels~1%7Bid%7D~1sttr/get'
+      - 'openapi.json#/paths/~1dso~1toepasbare-regels~1%7Bid%7D~1dmn/get'
+      - 'openapi.json#/paths/~1dso~1toepasbare-regels~1%7Bid%7D~1form-scaffold/get'
     rules:
       nlgov:problem-invalid-input: 'off'

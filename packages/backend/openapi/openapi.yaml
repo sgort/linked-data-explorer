@@ -3574,6 +3574,364 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/toepasbare-regels:
+    get:
+      operationId: listDsoToepasbareRegels
+      tags: [Integrations]
+      summary: Toepasbare-regels metadata for a concept
+      description: >-
+        Proxies the DSO Uitvoeren Gegevens API. Each returned item exposes
+        an `identifier`, used by the three per-regel reads below (`/sttr`,
+        `/dmn`, `/form-scaffold`).
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: functioneleStructuurRef
+          in: query
+          required: true
+          description: >-
+            The concept's identifier URI. Repeating this parameter is
+            rejected with a 400, the same as omitting it — only a single
+            string value is accepted.
+          schema:
+            type: string
+            examples: ['https://identifier.overheid.nl/concept/1']
+      responses:
+        '200':
+          description: The regel metadata for the concept.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '400':
+          description: >-
+            `functioneleStructuurRef` is missing, or repeated (which arrives
+            as an array; only a single string value is accepted).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+              examples:
+                missingRef:
+                  value: { success: false, error: 'functioneleStructuurRef is required' }
+        '404':
+          description: No toepasbare regels exist for this `functioneleStructuurRef`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/toepasbare-regels/{id}/sttr:
+    get:
+      operationId: downloadDsoToepasbareRegelSttr
+      tags: [Integrations]
+      summary: Raw STTR XML file for a toepasbare regel
+      description: >-
+        Proxies the DSO Uitvoeren Gegevens API's STTR download unmodified,
+        served as an XML attachment rather than the JSON envelope used
+        elsewhere in this API.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: >-
+            The regel's `identifier`, as returned by
+            `GET /dso/toepasbare-regels`. Not validated; any value is
+            forwarded to the upstream API as given.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The raw STTR XML.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+            Content-Disposition:
+              description: Marks the response as a downloadable attachment.
+              schema:
+                type: string
+                examples: ['attachment; filename="sttr-tr-1.xml"']
+          content:
+            application/xml:
+              schema:
+                type: string
+                description: The upstream API's STTR XML, unmodified.
+        '404':
+          description: No toepasbare regel exists for this id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/toepasbare-regels/{id}/dmn:
+    get:
+      operationId: getDsoToepasbareRegelDmn
+      tags: [Integrations]
+      summary: DMN decision extracted from a toepasbare regel, ready for Operaton
+      description: >-
+        Extracts the embedded DMN `<definitions>` element from the regel's
+        STTR and normalizes it (namespace version, missing element ids,
+        FEEL-safe variable names, output types, and a Camunda history
+        time-to-live) so it both deploys and evaluates on Operaton. Served
+        as an XML attachment rather than the JSON envelope used elsewhere
+        in this API.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: >-
+            The regel's `identifier`, as returned by
+            `GET /dso/toepasbare-regels`. Not validated; any value is
+            forwarded to the upstream API as given.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The extracted, Operaton-ready DMN XML.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+            Content-Disposition:
+              description: Marks the response as a downloadable attachment.
+              schema:
+                type: string
+                examples: ['attachment; filename="decision-tr-1.dmn"']
+          content:
+            application/xml:
+              schema:
+                type: string
+                description: The normalized DMN XML, ready to deploy.
+        '404':
+          description: No toepasbare regel exists for this id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '422':
+          description: The regel's STTR has no embedded DMN `<definitions>` element to extract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+              examples:
+                noDefinitions:
+                  value:
+                    {
+                      success: false,
+                      error: 'No DMN <definitions> element found in STTR XML',
+                    }
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found". Does not cover an STTR with no
+            embedded DMN element (422).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/toepasbare-regels/{id}/form-scaffold:
+    get:
+      operationId: getDsoToepasbareRegelFormScaffold
+      tags: [Integrations]
+      summary: Best-effort form-js field scaffold from a toepasbare regel
+      description: >-
+        Parses the questionnaire embedded in an indieningsvereisten STTR
+        into a form-js field scaffold. Unlike the STTR and DMN reads, this
+        responds with the JSON envelope used elsewhere in this API, not a
+        file download.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: >-
+            The regel's `identifier`, as returned by
+            `GET /dso/toepasbare-regels`. Not validated; any value is
+            forwarded to the upstream API as given.
+          schema:
+            type: string
+        - name: formId
+          in: query
+          required: false
+          description: >-
+            The generated scaffold's `id`. Defaults to the path `id` when
+            omitted.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The generated form-js field scaffold.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [schemaVersion, id, type, components]
+                    properties:
+                      schemaVersion:
+                        const: 17
+                      id:
+                        type: string
+                        description: >-
+                          The effective form id: the `formId` query
+                          parameter, or the path `id` when omitted.
+                      type:
+                        const: 'default'
+                      components:
+                        type: array
+                        items:
+                          type: object
+                          required: [id, type, label, key, validate]
+                          properties:
+                            id:
+                              type: string
+                            type:
+                              type: string
+                              description: >-
+                                The form-js field widget the extraction
+                                logic chose for this question.
+                              enum: [checkbox, select, number, textarea, textfield]
+                            label:
+                              type: string
+                            key:
+                              type: string
+                            values:
+                              type: array
+                              description: >-
+                                Present only for a `select` field built from
+                                a list question that declares options.
+                              items:
+                                type: object
+                                required: [label, value]
+                                properties:
+                                  label:
+                                    type: string
+                                  value:
+                                    type: string
+                            validate:
+                              type: object
+                              required: [required]
+                              properties:
+                                required:
+                                  const: false
+                                  description: >-
+                                    Always `false` in the current extraction
+                                    logic.
+        '404':
+          description: No toepasbare regel exists for this id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
 components:
   headers:
     ApiVersion:

@@ -1,8 +1,4 @@
 [
-  "GET /dso/toepasbare-regels",
-  "GET /dso/toepasbare-regels/{id}/dmn",
-  "GET /dso/toepasbare-regels/{id}/form-scaffold",
-  "GET /dso/toepasbare-regels/{id}/sttr",
   "POST /edocs/documents",
   "GET /edocs/status",
   "POST /edocs/workspaces/ensure",
