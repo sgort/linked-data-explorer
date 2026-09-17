@@ -5,9 +5,10 @@
 # openapi.json from this file and sets info.version from package.json, so this
 # file must not set info.version.
 #
-# Operations not described yet are listed in pending.json;
-# src/openapi/coverage.test.ts keeps both in step with the Express routes, and
-# route tests check real responses against this file (expectToMatchOperation).
+# Every /v1 route must appear here: src/openapi/coverage.test.ts fails when a
+# served operation is missing from this file, or when this file describes an
+# operation no route serves. Route tests check real responses against it
+# (expectToMatchOperation).
 #
 # During `npm run dev` the document is built once (predev), the route caches it,
 # and nodemon does not watch this file: after editing it, run
@@ -25,7 +26,9 @@ info:
     `POST /dmns/evaluate/{decisionKey}` passes Operaton's own errors through, or
     sends OperatonProxyError, and `POST /chains/execute`'s nested-failure body
     has no top-level `error` at all — the message is a plain string at
-    `data.error`. The move to RFC 9457 problem details is tracked in
+    `data.error`. `/dso` and `/vendors` answer SimpleErrorEnvelope, whose
+    `error` is a bare string rather than a code and a message. The move to
+    RFC 9457 problem details is tracked in
     https://github.com/sgort/linked-data-explorer/issues/131.
   contact:
     name: Steven Gort
@@ -49,6 +52,11 @@ tags:
     description: >-
       Published processes and records of processing activities, and the BPMN,
       form, document and RoPA storage behind them.
+  - name: Integrations
+    description: >-
+      Bridges to external systems: DSO activity, concept and rule search, the
+      OpenText eDOCS document management bridge, and vendor implementation
+      discovery.
 paths:
   /health:
     get:
@@ -2955,6 +2963,1465 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /dso/activiteiten:
+    get:
+      operationId: listDsoActiviteiten
+      tags: [Integrations]
+      summary: RTR activities valid on a given date
+      description: >-
+        Proxies the DSO RTR Gegevens API. `datum` defaults to today when
+        omitted. `page` and `pageSize` are forwarded to the upstream API
+        unvalidated; `pageSize` defaults to 20.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: datum
+          in: query
+          required: false
+          description: Date as dd-MM-yyyy. Defaults to today when omitted.
+          schema:
+            type: string
+            format: dd-MM-yyyy
+            examples: ['01-01-2026']
+        - name: page
+          in: query
+          required: false
+          description: Page number; not validated.
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          description: Items per page; not validated.
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: The activities valid on the given date.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/activiteiten/oin:
+    post:
+      operationId: listDsoActiviteitenByOin
+      tags: [Integrations]
+      summary: RTR activities registered by one authority (OIN)
+      description: >-
+        Proxies the DSO RTR Gegevens API's search, fetching the whole result
+        set in one page (the upstream caps the page size to the actual
+        count, so this never over-fetches), so a caller can filter
+        client-side.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oin]
+              properties:
+                oin:
+                  type: string
+                  description: The authority's OIN (organisatie-identificatienummer).
+                  examples: ['00000001002220647000']
+                datum:
+                  type: string
+                  format: dd-MM-yyyy
+                  description: Date as dd-MM-yyyy. Defaults to today when omitted.
+                  examples: ['01-01-2026']
+      responses:
+        '200':
+          description: The authority's activities.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '400':
+          description: '`oin` is missing.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+              examples:
+                missingOin:
+                  value: { success: false, error: 'oin is required' }
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '500':
+          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dso/activiteiten/zoek:
+    post:
+      operationId: searchDsoActiviteiten
+      tags: [Integrations]
+      summary: Search RTR activities by date and, optionally, a point
+      description: >-
+        Proxies the DSO RTR Gegevens API's search. Every field is optional;
+        an empty body is valid and the upstream call applies its own
+        defaults. `lat` and `lon` are combined into a WGS84 point filter
+        only when both are present — one without the other is dropped
+        rather than rejected.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Every field is optional; an empty body is valid.
+              properties:
+                datum:
+                  type: string
+                  format: dd-MM-yyyy
+                  description: Date as dd-MM-yyyy. Defaults to today when omitted.
+                  examples: ['01-01-2026']
+                lat:
+                  type: number
+                  description: WGS84 latitude. Only applied together with `lon`.
+                lon:
+                  type: number
+                  description: WGS84 longitude. Only applied together with `lat`.
+                page:
+                  type: integer
+                  description: Page number; not validated. Defaults to 1.
+                pageSize:
+                  type: integer
+                  description: Items per page; not validated. Defaults to 20.
+      responses:
+        '200':
+          description: The matching activities.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '500':
+          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dso/activiteiten/{urn}:
+    get:
+      operationId: getDsoActiviteit
+      tags: [Integrations]
+      summary: One RTR activity by URN
+      description: >-
+        Proxies the DSO RTR Gegevens API's single-activity read. The result
+        carries a list of associated rule objects (see
+        `GET /dso/toepasbare-regels`) and hrefs of any child activities, but
+        neither is enforced here — `data` is the upstream response,
+        unchanged.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: urn
+          in: path
+          required: true
+          description: The activity's URN, percent-encoded.
+          schema:
+            type: string
+        - name: datum
+          in: query
+          required: false
+          description: Date as dd-MM-yyyy. Defaults to today when omitted.
+          schema:
+            type: string
+            format: dd-MM-yyyy
+            examples: ['01-01-2026']
+      responses:
+        '200':
+          description: The activity.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '404':
+          description: No activity exists for this URN.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found". Also covers a malformed URN
+            that cannot be percent-decoded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/begrippen:
+    get:
+      operationId: listDsoBegrippen
+      tags: [Integrations]
+      summary: Search or list Stelselcatalogus concepts
+      description: >-
+        Proxies the DSO Stelselcatalogus API. `data` is the upstream
+        response, unchanged; results conventionally live under an
+        `_embedded` key, but that is not enforced here. `pageSize` defaults
+        to 20.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: zoekTerm
+          in: query
+          required: false
+          description: Free-text search.
+          schema:
+            type: string
+        - name: geldigOp
+          in: query
+          required: false
+          description: >-
+            Validity date as YYYY-MM-dd. Left out of the upstream call when
+            omitted, rather than defaulting to today.
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: Page number; not validated.
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          description: Items per page; not validated.
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: The matching concepts.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/werkzaamheden/suggereer:
+    post:
+      operationId: suggestDsoWerkzaamheden
+      tags: [Integrations]
+      summary: Autocomplete suggestions for a werkzaamheden search term
+      description: >-
+        Proxies the DSO Zoekinterface API's suggest endpoint. `data` is the
+        upstream response, unchanged and of unconfirmed shape — treat it as
+        any JSON value, not necessarily an object.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [zoekterm]
+              properties:
+                zoekterm:
+                  type: string
+                  description: The search term to suggest completions for.
+                  examples: ['kap']
+      responses:
+        '200':
+          description: The suggestions.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data: {}
+        '400':
+          description: '`zoekterm` is missing.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+              examples:
+                missingZoekterm:
+                  value: { success: false, error: 'zoekterm is required' }
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '500':
+          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dso/werkzaamheden/zoek:
+    post:
+      operationId: searchDsoWerkzaamheden
+      tags: [Integrations]
+      summary: Search werkzaamheden via the Zoekinterface
+      description: >-
+        Proxies the DSO Zoekinterface API's search. Every field is
+        optional; an empty body is valid, with `page` and `pageSize` sent
+        upstream as query parameters rather than as part of the body.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Every field is optional; an empty body is valid.
+              properties:
+                zoekterm:
+                  type: string
+                  description: Free-text search. Omitted entirely upstream when falsy.
+                page:
+                  type: integer
+                  description: Page number; not validated. Defaults to 1.
+                pageSize:
+                  type: integer
+                  description: Items per page; not validated. Defaults to 20.
+      responses:
+        '200':
+          description: The matching werkzaamheden.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '500':
+          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /dso/werkzaamheden/{urn}:
+    get:
+      operationId: getDsoWerkzaamheid
+      tags: [Integrations]
+      summary: Versioned detail for one werkzaamheid
+      description: >-
+        Proxies the DSO Opvragen Werkzaamheden API, always requesting up to
+        100 items per page upstream. `data` is the upstream response,
+        unchanged; the real payload nests a list of versions with keywords
+        and related items, but none of that is enforced here.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: urn
+          in: path
+          required: true
+          description: The werkzaamheid's URN, percent-encoded.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The werkzaamheid.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '404':
+          description: No werkzaamheid exists for this URN.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found". Also covers a malformed URN
+            that cannot be percent-decoded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/toepasbare-regels:
+    get:
+      operationId: listDsoToepasbareRegels
+      tags: [Integrations]
+      summary: Toepasbare-regels metadata for a concept
+      description: >-
+        Proxies the DSO Uitvoeren Gegevens API. Each returned item exposes
+        an `identifier`, used by the three per-regel reads below (`/sttr`,
+        `/dmn`, `/form-scaffold`).
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: functioneleStructuurRef
+          in: query
+          required: true
+          description: >-
+            The concept's identifier URI. Repeating this parameter is
+            rejected with a 400, the same as omitting it — only a single
+            string value is accepted.
+          schema:
+            type: string
+            examples: ['https://identifier.overheid.nl/concept/1']
+      responses:
+        '200':
+          description: The regel metadata for the concept.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '400':
+          description: >-
+            `functioneleStructuurRef` is missing, or repeated (which arrives
+            as an array; only a single string value is accepted).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+              examples:
+                missingRef:
+                  value: { success: false, error: 'functioneleStructuurRef is required' }
+        '404':
+          description: No toepasbare regels exist for this `functioneleStructuurRef`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/toepasbare-regels/{id}/sttr:
+    get:
+      operationId: downloadDsoToepasbareRegelSttr
+      tags: [Integrations]
+      summary: Raw STTR XML file for a toepasbare regel
+      description: >-
+        Proxies the DSO Uitvoeren Gegevens API's STTR download unmodified,
+        served as an XML attachment rather than the JSON envelope used
+        elsewhere in this API.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: >-
+            The regel's `identifier`, as returned by
+            `GET /dso/toepasbare-regels`. Not validated; any value is
+            forwarded to the upstream API as given.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The raw STTR XML.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+            Content-Disposition:
+              description: Marks the response as a downloadable attachment.
+              schema:
+                type: string
+                examples: ['attachment; filename="sttr-tr-1.xml"']
+          content:
+            application/xml:
+              schema:
+                type: string
+                description: The upstream API's STTR XML, unmodified.
+        '404':
+          description: No toepasbare regel exists for this id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/toepasbare-regels/{id}/dmn:
+    get:
+      operationId: getDsoToepasbareRegelDmn
+      tags: [Integrations]
+      summary: DMN decision extracted from a toepasbare regel, ready for Operaton
+      description: >-
+        Extracts the embedded DMN `<definitions>` element from the regel's
+        STTR and normalizes it (namespace version, missing element ids,
+        FEEL-safe variable names, output types, and a Camunda history
+        time-to-live) so it both deploys and evaluates on Operaton. Served
+        as an XML attachment rather than the JSON envelope used elsewhere
+        in this API.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: >-
+            The regel's `identifier`, as returned by
+            `GET /dso/toepasbare-regels`. Not validated; any value is
+            forwarded to the upstream API as given.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The extracted, Operaton-ready DMN XML.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+            Content-Disposition:
+              description: Marks the response as a downloadable attachment.
+              schema:
+                type: string
+                examples: ['attachment; filename="decision-tr-1.dmn"']
+          content:
+            application/xml:
+              schema:
+                type: string
+                description: The normalized DMN XML, ready to deploy.
+        '404':
+          description: No toepasbare regel exists for this id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '422':
+          description: The regel's STTR has no embedded DMN `<definitions>` element to extract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+              examples:
+                noDefinitions:
+                  value:
+                    {
+                      success: false,
+                      error: 'No DMN <definitions> element found in STTR XML',
+                    }
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found". Does not cover an STTR with no
+            embedded DMN element (422).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /dso/toepasbare-regels/{id}/form-scaffold:
+    get:
+      operationId: getDsoToepasbareRegelFormScaffold
+      tags: [Integrations]
+      summary: Best-effort form-js field scaffold from a toepasbare regel
+      description: >-
+        Parses the questionnaire embedded in an indieningsvereisten STTR
+        into a form-js field scaffold. Unlike the STTR and DMN reads, this
+        responds with the JSON envelope used elsewhere in this API, not a
+        file download.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: >-
+            The regel's `identifier`, as returned by
+            `GET /dso/toepasbare-regels`. Not validated; any value is
+            forwarded to the upstream API as given.
+          schema:
+            type: string
+        - name: formId
+          in: query
+          required: false
+          description: >-
+            The generated scaffold's `id`. Defaults to the path `id` when
+            omitted.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The generated form-js field scaffold.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [schemaVersion, id, type, components]
+                    properties:
+                      schemaVersion:
+                        const: 17
+                      id:
+                        type: string
+                        description: >-
+                          The effective form id: the `formId` query
+                          parameter, or the path `id` when omitted.
+                      type:
+                        const: 'default'
+                      components:
+                        type: array
+                        items:
+                          type: object
+                          required: [id, type, label, key, validate]
+                          properties:
+                            id:
+                              type: string
+                            type:
+                              type: string
+                              description: >-
+                                The form-js field widget the extraction
+                                logic chose for this question.
+                              enum: [checkbox, select, number, textarea, textfield]
+                            label:
+                              type: string
+                            key:
+                              type: string
+                            values:
+                              type: array
+                              description: >-
+                                Present only for a `select` field built from
+                                a list question that declares options.
+                              items:
+                                type: object
+                                required: [label, value]
+                                properties:
+                                  label:
+                                    type: string
+                                  value:
+                                    type: string
+                            validate:
+                              type: object
+                              required: [required]
+                              properties:
+                                required:
+                                  const: false
+                                  description: >-
+                                    Always `false` in the current extraction
+                                    logic.
+        '404':
+          description: No toepasbare regel exists for this id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+  /edocs/status:
+    get:
+      operationId: getEdocsStatus
+      tags: [Integrations]
+      summary: eDOCS connectivity status
+      description: >-
+        Reports whether the OpenText eDOCS document management bridge is
+        reachable, and whether the API is currently running against it in
+        stub mode. The health check never rejects: an unreachable eDOCS
+        server still answers here with **200** and `status: "down"` in the
+        body, not a failure status — see the 200 response below.
+      responses:
+        '200':
+          description: >-
+            The connectivity status. An upstream outage is reported inside
+            this 200 body as `status: "down"` with an `error` message, not as
+            a 5xx — there is no scenario in which an eDOCS outage produces a
+            non-2xx response from this operation.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [status, stubMode]
+                    properties:
+                      status:
+                        type: string
+                        description: >-
+                          In practice `up`, `down` or `stub`, but read
+                          straight from the health check with nothing
+                          enforcing those three values — a free string, not
+                          an enum.
+                        examples: ['up', 'down', 'stub']
+                      stubMode:
+                        type: boolean
+                        description: >-
+                          Whether the API is currently configured to run
+                          against a stub instead of a real eDOCS server.
+                          Independent of `status`: a stub-mode health check
+                          always reports `status: "stub"`.
+                      latencyMs:
+                        type: number
+                        description: >-
+                          Round trip of the connectivity check, in
+                          milliseconds. Present only when the check measured
+                          one; a genuine `0` is kept, not treated as absent.
+                      error:
+                        type: string
+                        description: >-
+                          Present only when the connectivity check failed.
+                          `status` is `"down"` whenever this is present, and
+                          the response is still 200.
+              examples:
+                up:
+                  value: { success: true, data: { status: 'up', stubMode: false, latencyMs: 42 } }
+                down:
+                  value:
+                    {
+                      success: true,
+                      data:
+                        {
+                          status: 'down',
+                          stubMode: false,
+                          error: 'connect ECONNREFUSED',
+                        },
+                    }
+                stub:
+                  value: { success: true, data: { status: 'stub', stubMode: true } }
+        '500':
+          description: >-
+            The status route's own handler failed unexpectedly (code
+            EDOCS_STATUS_FAILED). Distinct from an eDOCS outage, which is
+            reported as a 200 above.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /edocs/workspaces/ensure:
+    post:
+      operationId: ensureEdocsWorkspace
+      tags: [Integrations]
+      summary: Find or create an eDOCS workspace for a project
+      description: >-
+        Searches for an existing workspace whose name starts with
+        `projectNumber`; returns it if found, otherwise creates a new one.
+        Re-posting the same `projectNumber` is idempotent for this reason —
+        it does not create a duplicate workspace.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectNumber, projectName]
+              properties:
+                projectNumber:
+                  type: string
+                  description: >-
+                    Used as the search key for an existing workspace.
+                    Required; rejected with 400 when missing or blank after
+                    trimming.
+                  examples: ['FL-INF-2025-042']
+                projectName:
+                  type: string
+                  description: >-
+                    Required; rejected with 400 when missing or blank after
+                    trimming.
+                  examples: ['Kapvergunning']
+      responses:
+        '200':
+          description: The existing or newly created workspace.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [workspaceId, workspaceName, created]
+                    properties:
+                      workspaceId:
+                        type: string
+                      workspaceName:
+                        type: string
+                        description: >-
+                          Reconstructed as `"<projectNumber> — <projectName>"`
+                          when a workspace is created; the existing name as
+                          eDOCS itself stores it when one was found instead.
+                      created:
+                        type: boolean
+                        description: >-
+                          `true` only when a new workspace was created;
+                          `false` when an existing one was found.
+              examples:
+                created:
+                  value:
+                    {
+                      success: true,
+                      data:
+                        {
+                          workspaceId: 'ws-123',
+                          workspaceName: 'FL-INF-2025-042 — Kapvergunning',
+                          created: true,
+                        },
+                    }
+        '400':
+          description: '`projectNumber` or `projectName` is missing or blank.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                missingFields:
+                  value:
+                    {
+                      success: false,
+                      error:
+                        {
+                          code: 'INVALID_INPUT',
+                          message: 'projectNumber and projectName are required',
+                        },
+                    }
+        '500':
+          description: >-
+            The workspace lookup or creation failed (code
+            EDOCS_WORKSPACE_FAILED), or the request body was not valid JSON
+            or over 10 MB (code INTERNAL_ERROR; #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /edocs/documents:
+    post:
+      operationId: uploadEdocsDocument
+      tags: [Integrations]
+      summary: Upload a document into an eDOCS workspace
+      description: >-
+        The file content travels as base64 text inside the JSON body rather
+        than a multipart upload, so it is bound by the same global JSON body
+        limit as every other request (10 MB) — there is no dedicated
+        upload-size check.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workspaceId, filename, contentBase64, metadata]
+              properties:
+                workspaceId:
+                  type: string
+                  description: Required; rejected with 400 when missing or blank after trimming.
+                filename:
+                  type: string
+                  description: Required; rejected with 400 when missing or blank after trimming.
+                  examples: ['beschikking.pdf']
+                contentBase64:
+                  type: string
+                  format: byte
+                  description: >-
+                    Base64-encoded file content. Required and must be
+                    non-empty after trimming, but is otherwise never decoded
+                    or format-checked — a non-empty string that is not valid
+                    base64 is still accepted and forwarded unchanged.
+                metadata:
+                  type: object
+                  required: [docName]
+                  properties:
+                    docName:
+                      type: string
+                      description: Required; rejected with 400 when missing or blank after trimming.
+                      examples: ['Beschikking']
+                    appId:
+                      type: string
+                      description: 'Optional; defaults to `''INFRA''` when omitted.'
+                    formName:
+                      type: string
+                      description: Optional.
+                    extra:
+                      type: object
+                      description: >-
+                        Optional, arbitrary key/value pairs passed through
+                        unchanged as additional profile fields.
+                      additionalProperties:
+                        type: string
+      responses:
+        '200':
+          description: The uploaded document.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [documentId, documentNumber, workspaceId]
+                    properties:
+                      documentId:
+                        type: string
+                      documentNumber:
+                        type: string
+                        description: Falls back to `documentId` when the upstream response omits it.
+                      workspaceId:
+                        type: string
+                        description: Echoed from the request; not read from the upstream response.
+        '400':
+          description: >-
+            `workspaceId`, `filename`, `contentBase64` or
+            `metadata.docName` is missing or blank.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                missingFields:
+                  value:
+                    {
+                      success: false,
+                      error:
+                        {
+                          code: 'INVALID_INPUT',
+                          message: 'workspaceId, filename, contentBase64, and metadata.docName are required',
+                        },
+                    }
+        '500':
+          description: >-
+            The upload failed (code EDOCS_UPLOAD_FAILED), or the request
+            body was not valid JSON or over 10 MB (code INTERNAL_ERROR;
+            #143).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /edocs/workspaces/{workspaceId}/documents:
+    get:
+      operationId: listEdocsWorkspaceDocuments
+      tags: [Integrations]
+      summary: Documents stored in an eDOCS workspace
+      description: >-
+        `workspaceId` is not validated against known workspaces — any value
+        is forwarded to eDOCS as given. A workspace with no documents and a
+        `workspaceId` unknown to eDOCS both answer 200 with an empty list;
+        this operation never answers 404.
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: >-
+            The workspace's documents. Empty for a workspace with none, and
+            equally empty — never a 404 — for a `workspaceId` unknown to
+            eDOCS.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [documents, count]
+                    properties:
+                      documents:
+                        type: array
+                        items:
+                          type: object
+                          required: [id, name, documentNumber]
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            documentNumber:
+                              type: string
+                      count:
+                        type: integer
+                        description: '`documents.length`, computed locally.'
+              examples:
+                populated:
+                  value:
+                    {
+                      success: true,
+                      data:
+                        {
+                          documents:
+                            [
+                              { id: 'doc-1', name: 'Aanvraag.pdf', documentNumber: 'FL-2025-001234' },
+                            ],
+                          count: 1,
+                        },
+                    }
+                empty:
+                  value: { success: true, data: { documents: [], count: 0 } }
+        '500':
+          description: The listing failed (code EDOCS_DOCUMENTS_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /vendors:
+    get:
+      operationId: listVendorServices
+      tags: [Integrations]
+      summary: Vendor services implementing reference DMNs
+      description: >-
+        Reads vendor implementation services from the knowledge graph via
+        SPARQL. Every field beyond `id`, `basedOn` and `provider` comes
+        straight from the graph with nothing enforcing its shape or values.
+      parameters:
+        - name: endpoint
+          in: query
+          required: false
+          description: >-
+            SPARQL endpoint URL. Not validated; forwarded as given. Omitted,
+            the query runs against this API's configured default endpoint.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The vendor services.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [vendorServices, count]
+                    properties:
+                      vendorServices:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VendorService'
+                      count:
+                        type: integer
+                        description: '`vendorServices.length`, computed locally.'
+        '500':
+          description: The knowledge graph query failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+              examples:
+                queryFailed:
+                  value: { success: false, error: 'SPARQL endpoint timed out' }
+  /vendors/dmn/{identifier}:
+    get:
+      operationId: getVendorServicesForDmn
+      tags: [Integrations]
+      summary: Vendor services implementing one reference DMN
+      description: >-
+        Filters the same vendor services as `GET /vendors` in memory —
+        this is not a separate SPARQL query — matching `identifier` against
+        a vendor's `basedOnIdentifier`, its `basedOn` URI, or a `basedOn`
+        URI ending in `/{identifier}/dmn`. An `identifier` matching nothing
+        answers 200 with an empty list, never 404.
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          description: >-
+            A reference DMN identifier or URI. Not validated against known
+            DMNs; a value matching none answers 200 with an empty list.
+          schema:
+            type: string
+            examples: ['SVB_LeeftijdsInformatie']
+        - name: endpoint
+          in: query
+          required: false
+          description: >-
+            SPARQL endpoint URL. Not validated; forwarded as given. Omitted,
+            the query runs against this API's configured default endpoint.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The vendor services implementing this reference DMN, possibly empty.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [vendorServices, count, dmnIdentifier]
+                    properties:
+                      vendorServices:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VendorService'
+                      count:
+                        type: integer
+                        description: '`vendorServices.length`, computed locally.'
+                      dmnIdentifier:
+                        type: string
+                        description: >-
+                          The `identifier` path parameter, echoed back
+                          verbatim (URL-decoded, not otherwise validated).
+        '500':
+          description: The knowledge graph query failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorEnvelope'
+              examples:
+                queryFailed:
+                  value: { success: false, error: 'SPARQL endpoint timed out' }
 components:
   headers:
     ApiVersion:
@@ -2988,6 +4455,18 @@ components:
         timestamp:
           type: string
           format: date-time
+    SimpleErrorEnvelope:
+      type: object
+      description: >-
+        A plainer sibling of ErrorEnvelope, returned by the DSO and
+        vendor-discovery proxy routes: `error` is a message string, not the
+        `{code, message}` object, and there is no `timestamp`.
+      required: [success, error]
+      properties:
+        success:
+          const: false
+        error:
+          type: string
     Health:
       type: object
       required:
@@ -4167,3 +5646,73 @@ components:
           description: >-
             Free-form: this step's outputs, already unwrapped from Operaton's
             `{value, type}` form.
+    VendorService:
+      type: object
+      description: >-
+        A vendor's implementation of a reference DMN, read from the
+        knowledge graph. Every property beyond `id`, `basedOn` and
+        `provider` is published data with nothing in code constraining its
+        shape or values — plain strings, never enums.
+      required: [id, basedOn, provider]
+      properties:
+        id:
+          type: string
+          description: IRI of the vendor service.
+        basedOn:
+          type: string
+          description: IRI of the reference DMN this service implements.
+        basedOnIdentifier:
+          type: string
+          description: The reference DMN's short identifier, when the graph publishes one.
+          examples: ['SVB_LeeftijdsInformatie']
+        implementedBy:
+          type: string
+          description: IRI of the implementation platform, when the graph publishes one.
+        implementedByName:
+          type: string
+          description: The implementation platform's name, preferring Dutch when both are published.
+          examples: ['Blueriq']
+        provider:
+          $ref: '#/components/schemas/VendorOrganization'
+        serviceUrl:
+          type: string
+          description: URL to access the vendor service, when the graph publishes one.
+        license:
+          type: string
+          examples: ['Commercial', 'Open Source']
+        accessType:
+          type: string
+          examples: ['iam-required', 'public', 'api-key']
+        description:
+          type: string
+    VendorOrganization:
+      type: object
+      description: The vendor providing a VendorService.
+      required: [name, contactPoint]
+      properties:
+        name:
+          type: string
+          description: Defaults to `'Unknown Vendor'` when the graph publishes no name.
+        logoUrl:
+          type: string
+          description: >-
+            Resolved from the graph's stored logo path to a downloadable
+            URL. Absent whenever that resolution fails, for any reason —
+            resolution failures never turn the request into an error.
+        homepage:
+          type: string
+        contactPoint:
+          $ref: '#/components/schemas/VendorContact'
+    VendorContact:
+      type: object
+      description: >-
+        Always present as an object on `provider`, even when the graph
+        publishes none of its own properties — in that case every property
+        below is simply absent, not the object itself.
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        telephone:
+          type: string

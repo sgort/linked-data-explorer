@@ -101,3 +101,44 @@ overrides:
       - 'openapi.json#/paths/~1assets~1ropa~1%7Bid%7D/delete'
     rules:
       nlgov:problem-invalid-input: 'off'
+
+  # Phase 5's (#137) shared list of operations that never answer 400, one
+  # block for the whole phase rather than one per task.
+  #
+  # Nine DSO operations. The four list/search operations (activiteiten,
+  # activiteiten/zoek, begrippen, werkzaamheden/zoek) accept every parameter
+  # unvalidated and forward it to the upstream API as given. The two URN
+  # reads (activiteiten/{urn}, werkzaamheden/{urn}) fall through a malformed
+  # path segment to the same 502 as any other upstream failure, rather than
+  # answering 400. The three toepasbare-regels per-id reads (sttr, dmn,
+  # form-scaffold) take an opaque `id` path parameter that is never
+  # validated either — any value is forwarded to the upstream API as given,
+  # and a miss maps to 404, not 400. Only POST /dso/activiteiten/oin,
+  # POST /dso/werkzaamheden/suggereer and GET /dso/toepasbare-regels validate
+  # their own input, and all three already document a 400.
+  #
+  # Three eDOCS/vendor operations. GET /edocs/workspaces/{workspaceId}/documents
+  # takes an opaque `workspaceId` path parameter that is never validated —
+  # an unknown workspace maps to an empty list (200), not 400. GET /vendors
+  # and GET /vendors/dmn/{identifier} take only an optional free-text
+  # `endpoint` query parameter, never validated and forwarded as given (and,
+  # on the second, an `identifier` path parameter that likewise matches
+  # nothing without error, answering an empty list rather than 400). The
+  # other three eDOCS operations need no entry: `GET /edocs/status` takes no
+  # parameter at all, so the rule never applies to it, and the two POSTs
+  # validate their own input and document the 400 they answer.
+  - files:
+      - 'openapi.json#/paths/~1dso~1activiteiten/get'
+      - 'openapi.json#/paths/~1dso~1activiteiten~1zoek/post'
+      - 'openapi.json#/paths/~1dso~1activiteiten~1%7Burn%7D/get'
+      - 'openapi.json#/paths/~1dso~1begrippen/get'
+      - 'openapi.json#/paths/~1dso~1werkzaamheden~1zoek/post'
+      - 'openapi.json#/paths/~1dso~1werkzaamheden~1%7Burn%7D/get'
+      - 'openapi.json#/paths/~1dso~1toepasbare-regels~1%7Bid%7D~1sttr/get'
+      - 'openapi.json#/paths/~1dso~1toepasbare-regels~1%7Bid%7D~1dmn/get'
+      - 'openapi.json#/paths/~1dso~1toepasbare-regels~1%7Bid%7D~1form-scaffold/get'
+      - 'openapi.json#/paths/~1edocs~1workspaces~1%7BworkspaceId%7D~1documents/get'
+      - 'openapi.json#/paths/~1vendors/get'
+      - 'openapi.json#/paths/~1vendors~1dmn~1%7Bidentifier%7D/get'
+    rules:
+      nlgov:problem-invalid-input: 'off'

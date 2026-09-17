@@ -82,13 +82,8 @@ Each was put to the product owner as a choice. The rejected options are recorded
 **Coverage test.**
 
 - It derives the served operations from `routeRegistry`: for each mount, it walks the router's Express stack and collects method + path, with the mount prefix stripped of `/v1` and `:param` rewritten to `{param}`. The result is compared with the document's operations.
-- Operations not yet described are listed in `openapi/pending.json`.
-- The test fails when:
-  - a served operation is neither documented nor pending;
-  - a pending entry is already documented;
-  - a pending entry no longer matches any served operation;
-  - a documented operation is not served.
-- The list can only shrink: a ceiling on its length, lowered by each phase, fails the test if an entry is added. The remaining work is always visible.
+- The test fails when a served operation is not documented, or a documented operation is not served.
+- **While the description was being written**, operations not yet described were listed in `openapi/pending.json`, and a ceiling on that list's length, lowered by each phase, failed the test if an entry was added. The remaining work stayed visible, and the list could only shrink. Phase 5 (#137) emptied it, and the same change deleted the file, the ceiling and the four checks that existed only to police them. What is left is the rule those checks were building towards: a route cannot be served undocumented, and the document cannot describe a route that is not served.
 
 **Response conformance.** A test helper, `expectToMatchOperation(res, method, path)`:
 
@@ -125,6 +120,8 @@ Phase 3 (#135) added three more exceptions, each to a read whose inputs cannot b
 
 Phase 4 (#136) needed one exception covering eleven operations, and took it as a single grouped override rather than eleven repetitions of the same sentence, because they share one cause: the Assets operations validate nothing. A request body goes straight into an upsert and a path id straight into a query, so a missing field, an unknown status or a malformed id comes back as a 500 from the database instead of a 400. That is a defect in the API, not a property worth preserving, and #150 records it along with the deletes that answer 200 for a row that does not exist. When #150 lands, the whole override goes with it. The four plain list reads take no parameter and need no exception. That grouping was approved on 16 September 2026.
 
+Phase 5 (#137) added one grouped override for twelve Integrations operations, following phase 4's shape. Nine are DSO: four list and search operations that forward every parameter to the upstream API unvalidated, two URN reads where even a malformed path segment ends in the same 502 as any other upstream failure, and three per-rule reads whose opaque id is passed on as given, so a miss is a 404. Three are eDOCS and vendor reads whose only inputs are an unvalidated path id or a free-text endpoint, and which answer an empty list rather than a 400. The rest of the phase needs no exception: three DSO operations and the two eDOCS `POST`s validate their own input and document the 400 they answer, and `GET /edocs/status` takes no parameter at all. Approved on 17 September 2026. Unlike phase 4's override, this one records how these proxies are built rather than a defect: an exception here disappears only if the API starts validating what it forwards.
+
 **CI.** A `lint:openapi` script builds the document and runs Spectral against the built `openapi/openapi.json` with that config. It lints the JSON rather than the YAML because the YAML deliberately has no `info.version`.
 
 - Both backend workflows run it directly after _Run linter_, so on `acc` it gates pull requests.
@@ -155,7 +152,7 @@ One of them, `@scarf/scarf` 1.4.0 (required by five `@stoplight/spectral-*` pack
 | #136      | Assets: `assets`, `assets/ropa`                                                           | 15         |
 | #137      | Integrations: `edocs`, `dso`, `vendors`; empties `pending.json`                           | 18         |
 
-**66 operations**: the 65 existing handlers plus the new `/openapi.json`. #129 closes when all five are done and `pending.json` is empty.
+**66 operations**: the 65 existing handlers plus the new `/openapi.json`. All five phases landed, and #137 emptied the pending list and then removed it, so the coverage test now simply requires every served operation to be documented.
 
 **Related, deliberately not sub-issues:**
 
