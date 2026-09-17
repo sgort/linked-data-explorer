@@ -1,0 +1,11 @@
+/*
+ * Tailwind's entry stylesheet. Imported from main.tsx, so the build generates
+ * the CSS this app actually uses instead of the Play CDN generating it in the
+ * browser on every page load (#96).
+ *
+ * Base comes first: it carries Preflight, which the CDN also applied, so the
+ * reset the layout was built against stays the same.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
