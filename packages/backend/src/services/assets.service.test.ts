@@ -17,6 +17,7 @@ import {
   listForms,
   listPublicBundles,
   markDeployed,
+  recordDeployedBundle,
   upsertBpmn,
   upsertDocument,
   upsertForm,
@@ -162,7 +163,7 @@ describe('BPMN', () => {
   });
 
   test('markDeployed passes boardOwner through COALESCE (falls back to existing when omitted)', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] });
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 });
     await markDeployed('p1', 'dep-1', 'https://operaton.example.com', ['f1'], ['d1']);
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('UPDATE process_definitions'), [
       'p1',
@@ -175,7 +176,7 @@ describe('BPMN', () => {
   });
 
   test('markDeployed passes null when operatonUrl is omitted', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] });
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 });
     await markDeployed('p1', 'dep-1', undefined, ['f1'], ['d1']);
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('UPDATE process_definitions'), [
       'p1',
@@ -185,6 +186,81 @@ describe('BPMN', () => {
       ['d1'],
       null,
     ]);
+  });
+
+  test('markDeployed resolves true when a row was actually updated', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+    expect(await markDeployed('p1', 'dep-1', undefined, [], [])).toBe(true);
+  });
+
+  test('markDeployed resolves false for a zero-row update (no matching lde_id) rather than reporting success', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    expect(await markDeployed('missing-id', 'dep-1', undefined, [], [])).toBe(false);
+  });
+
+  describe('recordDeployedBundle', () => {
+    const input = {
+      bpmnProcessId: 'ZorgtoeslagProcess',
+      bpmnXml: '<bpmn:definitions/>',
+      organization: 'flevoland',
+      deploymentId: 'dep-1',
+      operatonUrl: 'https://operaton.example.com',
+      formIds: ['f1'],
+      documentIds: ['d1'],
+      boardOwner: 'flevoland',
+    };
+
+    test('stamps the existing row deployed by its own lde_id, without creating one', async () => {
+      mockQuery
+        // getBpmnByBpmnProcessId lookup
+        .mockResolvedValueOnce({
+          rows: [{ lde_id: 'p1', bpmn_process_id: 'ZorgtoeslagProcess', xml: '<bpmn/>' }],
+        })
+        // markDeployed UPDATE
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+      expect(await recordDeployedBundle(input)).toBe(true);
+      expect(mockQuery).toHaveBeenCalledTimes(2);
+      const [updateSql, updateParams] = mockQuery.mock.calls[1];
+      expect(updateSql).toEqual(expect.stringContaining('UPDATE process_definitions'));
+      expect(updateParams[0]).toBe('p1');
+    });
+
+    test('creates a minimal row keyed by the process id when none exists yet, then stamps it deployed', async () => {
+      mockQuery
+        // getBpmnByBpmnProcessId lookup — nothing found
+        .mockResolvedValueOnce({ rows: [] })
+        // upsertBpmn INSERT
+        .mockResolvedValueOnce({ rows: [] })
+        // markDeployed UPDATE
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+      expect(await recordDeployedBundle(input)).toBe(true);
+      expect(mockQuery).toHaveBeenCalledTimes(3);
+
+      const [insertSql, insertParams] = mockQuery.mock.calls[1];
+      expect(insertSql).toEqual(expect.stringContaining('INSERT INTO process_definitions'));
+      // id, bpmn_process_id, name, description, xml, ...
+      expect(insertParams[0]).toBe('ZorgtoeslagProcess'); // lde_id defaults to the process id
+      expect(insertParams[1]).toBe('ZorgtoeslagProcess'); // bpmn_process_id
+      expect(insertParams[2]).toBe('ZorgtoeslagProcess'); // name defaults to the process id
+      expect(insertParams[4]).toBe('<bpmn:definitions/>'); // xml
+      expect(insertParams[11]).toBe('flevoland'); // organization
+
+      const [updateSql, updateParams] = mockQuery.mock.calls[2];
+      expect(updateSql).toEqual(expect.stringContaining('UPDATE process_definitions'));
+      expect(updateParams[0]).toBe('ZorgtoeslagProcess');
+    });
+
+    test('reports false, rather than throwing, when the stamp lands on zero rows', async () => {
+      mockQuery
+        .mockResolvedValueOnce({
+          rows: [{ lde_id: 'p1', bpmn_process_id: 'ZorgtoeslagProcess', xml: '<bpmn/>' }],
+        })
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+
+      expect(await recordDeployedBundle(input)).toBe(false);
+    });
   });
 
   test('listPublicBundles maps subprocesses/forms/documents from the aggregated query', async () => {

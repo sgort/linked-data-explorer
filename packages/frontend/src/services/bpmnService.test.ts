@@ -75,9 +75,43 @@ describe('BpmnService.saveProcess', () => {
         return HttpResponse.json({ success: true });
       })
     );
-    BpmnService.saveProcess(process({ readonly: true }));
-    await new Promise((r) => setTimeout(r, 10));
+    const saved = await BpmnService.saveProcess(process({ readonly: true }));
     expect(posted).toBe(false);
+    expect(saved).toBe(true);
+  });
+
+  test('resolves true when the background POST succeeds', async () => {
+    server.use(http.post('*/v1/assets/bpmn', () => HttpResponse.json({ success: true })));
+    expect(await BpmnService.saveProcess(process())).toBe(true);
+  });
+
+  // The defect this covers (#155): the write was previously an unawaited,
+  // swallowed fetch — a caller had no way to learn it failed, so a process
+  // could report "saved" while nothing was actually stored.
+  test('resolves false, rather than throwing, when the background POST fails', async () => {
+    server.use(
+      http.post(
+        '*/v1/assets/bpmn',
+        () => new HttpResponse(JSON.stringify({ success: false }), { status: 500 })
+      )
+    );
+    expect(await BpmnService.saveProcess(process())).toBe(false);
+  });
+
+  test('resolves false when the request itself throws (network failure)', async () => {
+    server.use(http.post('*/v1/assets/bpmn', () => HttpResponse.error()));
+    expect(await BpmnService.saveProcess(process())).toBe(false);
+  });
+
+  test('still writes to localStorage even when the background POST fails', async () => {
+    server.use(
+      http.post(
+        '*/v1/assets/bpmn',
+        () => new HttpResponse(JSON.stringify({ success: false }), { status: 500 })
+      )
+    );
+    await BpmnService.saveProcess(process());
+    expect(BpmnService.getProcesses()).toEqual([process()]);
   });
 });
 

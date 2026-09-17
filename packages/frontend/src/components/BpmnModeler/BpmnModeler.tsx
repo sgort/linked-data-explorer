@@ -427,10 +427,10 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     }
   };
 
-  const handleSaveProcess = (xml: string) => {
-    if (!activeProcessId) return;
+  const handleSaveProcess = async (xml: string): Promise<boolean> => {
+    if (!activeProcessId) return false;
     const process = BpmnService.getProcess(activeProcessId);
-    if (!process) return;
+    if (!process) return false;
 
     // Apply pending footer edits to the XML.
     let mergedXml = xml;
@@ -449,7 +449,11 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       updatedAt: new Date().toISOString(),
     };
 
-    BpmnService.saveProcess(merged);
+    // The primary save's own outcome is what's reported back to the canvas
+    // (BpmnCanvas.handleSave shows a banner on false, see #155); the shell →
+    // subprocess propagation below is a best-effort side effect and doesn't
+    // change that signal — a cascade failure is only logged.
+    const saved = await BpmnService.saveProcess(merged);
 
     // ─── Shell → subprocess propagation ─────────────────────────────────────
     // When saving a shell, push the shell's CURRENT language and organization down
@@ -492,7 +496,10 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           organization: merged.organization,
           updatedAt: nowIso,
         };
-        BpmnService.saveProcess(subMerged);
+        const subSaved = await BpmnService.saveProcess(subMerged);
+        if (!subSaved) {
+          console.warn(`[BpmnModeler] Propagating language/organization to ${sub.id} failed`);
+        }
       }
     }
     // ────────────────────────────────────────────────────────────────────────
@@ -500,6 +507,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     setProcesses(BpmnService.getProcesses());
     setCurrentXml(mergedXml);
     resetEditState();
+    return saved;
   };
 
   const handleDeleteProcess = (processId: string) => {

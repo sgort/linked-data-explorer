@@ -445,8 +445,9 @@ paths:
       description: >-
         Marks a stored process as deployed to Operaton. `deployedAt` is
         always set to the server clock; it is never read from the request.
-        This operation is unconditional — an id matching no stored process
-        still answers 200, never 404.
+        An id matching no stored process answers 404 rather than a silent
+        200 (#155) — the underlying `UPDATE` can match zero rows, and a 200
+        for that case used to be indistinguishable from an actual write.
       parameters:
         - name: id
           in: path
@@ -506,6 +507,14 @@ paths:
                 properties:
                   success:
                     const: true
+        '404':
+          description: >-
+            No process has this id (code NOT_FOUND) — the `UPDATE` matched
+            zero rows. The message quotes the requested id verbatim (#155).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '500':
           description: >-
             The update failed (code DEPLOY_MARK_FAILED), or the request body
@@ -2057,6 +2066,15 @@ paths:
         one Operaton deployment, tagged with `organization` as the tenant. When
         `operatonUrl` is given, that Operaton instance is used instead (not
         validated, #142). Operaton's own error status is not passed through.
+
+
+        After the Operaton deploy succeeds, the backend also records the
+        bundle in its own storage — finding the stored process by the BPMN's
+        own process id, or creating a minimal one when none exists yet — so
+        the dashboard and public site can list it without a second,
+        browser-initiated write. That storage step can never fail this
+        response: `bundleRecorded` says whether it worked, and
+        `bundleRecordingError` says why when it didn't (#155).
       requestBody:
         required: true
         content:
@@ -2127,13 +2145,24 @@ paths:
                     const: true
                   data:
                     type: object
-                    required: [deploymentId, resourceCount]
+                    required: [deploymentId, resourceCount, bundleRecorded]
                     properties:
                       deploymentId:
                         type: string
                       resourceCount:
                         type: integer
                         minimum: 1
+                      bundleRecorded:
+                        type: boolean
+                        description: >-
+                          Whether the deployed bundle was also recorded in
+                          storage. Always true or false; the Operaton deploy
+                          above already happened either way, so a storage
+                          failure here never turns this response into an
+                          error.
+                      bundleRecordingError:
+                        type: string
+                        description: Present only when `bundleRecorded` is false.
                   timestamp:
                     type: string
                     format: date-time

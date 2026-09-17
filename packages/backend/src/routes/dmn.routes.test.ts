@@ -28,17 +28,23 @@ jest.mock('../services/sparql.service', () => ({
 jest.mock('../services/dmn-validation.service', () => ({
   dmnValidationService: { validateDmnContent: jest.fn() },
 }));
+jest.mock('../services/assets.service', () => ({
+  recordDeployedBundle: jest.fn(),
+}));
 
 import { dmnValidationService } from '../services/dmn-validation.service';
 import { operatonService } from '../services/operaton.service';
 import { sparqlService } from '../services/sparql.service';
+import * as assetsService from '../services/assets.service';
 import dmnRoutes from './dmn.routes';
 import { versionMiddleware } from '../middleware/version.middleware';
 import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const operaton = operatonService as unknown as Record<string, jest.Mock>;
 const sparql = sparqlService as unknown as Record<string, jest.Mock>;
+const assets = assetsService as unknown as Record<string, jest.Mock>;
 const mockDeployProcess = operaton.deployProcess;
+const mockRecordDeployedBundle = assets.recordDeployedBundle;
 const mockValidate = dmnValidationService.validateDmnContent as jest.Mock;
 
 function makeApp() {
@@ -49,9 +55,17 @@ function makeApp() {
 }
 
 beforeEach(() => {
-  for (const fn of [...Object.values(operaton), ...Object.values(sparql), mockValidate]) {
+  for (const fn of [
+    ...Object.values(operaton),
+    ...Object.values(sparql),
+    ...Object.values(assets),
+    mockValidate,
+  ]) {
     if (typeof fn === 'function') fn.mockReset();
   }
+  // Defaults every /process/deploy test to the "bundle recorded" happy path;
+  // tests exercising the storage-failure branch override this explicitly.
+  mockRecordDeployedBundle.mockResolvedValue(true);
 });
 
 describe('GET /api/dmns', () => {
@@ -281,7 +295,11 @@ describe('POST /api/dmns/process/deploy', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(res.body.data).toEqual({ deploymentId: 'dep-1', resourceCount: 3 });
+    expect(res.body.data).toEqual({
+      deploymentId: 'dep-1',
+      resourceCount: 3,
+      bundleRecorded: true,
+    });
     expect(mockDeployProcess).toHaveBeenCalledWith(
       '<bpmn:definitions/>',
       'RipR21Process',
@@ -350,6 +368,69 @@ describe('POST /api/dmns/process/deploy', () => {
       'flevoland',
       'flevoland'
     );
+    // bpmnXml here has no <process> element to extract an id from, so the
+    // storage lookup/create key falls back to deploymentName.
+    expect(mockRecordDeployedBundle).toHaveBeenCalledWith({
+      bpmnProcessId: 'RipR21Process',
+      bpmnXml: '<bpmn:definitions/>',
+      organization: 'flevoland',
+      deploymentId: 'dep-1',
+      operatonUrl: 'http://localhost:8081/engine-rest',
+      formIds: ['f1'],
+      documentIds: ['d1'],
+      boardOwner: 'flevoland',
+    });
+  });
+
+  test('extracts the bpmn:process id from the XML for the storage lookup key, not deploymentName', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+
+    await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="RealProcessId"/></bpmn:definitions>',
+      deploymentName: 'SomeOtherDeploymentName',
+      organization: 'flevoland',
+    });
+
+    expect(mockRecordDeployedBundle).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'RealProcessId' })
+    );
+  });
+
+  test('reports the deploy as successful but the bundle as unrecorded when storage throws', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    mockRecordDeployedBundle.mockRejectedValue(new Error('connection terminated'));
+
+    const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      success: true,
+      data: {
+        deploymentId: 'dep-1',
+        bundleRecorded: false,
+        bundleRecordingError: 'connection terminated',
+      },
+    });
+  });
+
+  test('reports the bundle as unrecorded (without an exception) when recordDeployedBundle resolves false', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    mockRecordDeployedBundle.mockResolvedValue(false);
+
+    const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.bundleRecorded).toBe(false);
+    expect(res.body.data.bundleRecordingError).toEqual(expect.stringContaining('P'));
   });
 
   test('returns 500 with a PROCESS_DEPLOY_FAILED code when the deploy throws', async () => {
@@ -998,6 +1079,21 @@ describe('/v1/dmns deploy, evaluate and validate match their OpenAPI description
     });
 
     expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dmns/process/deploy');
+  });
+
+  test('POST /dmns/process/deploy 200 with an unrecorded bundle, as documented', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    mockRecordDeployedBundle.mockRejectedValue(new Error('connection terminated'));
+
+    const res = await post('/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.bundleRecorded).toBe(false);
     expectToMatchOperation(res, 'post', '/dmns/process/deploy');
   });
 

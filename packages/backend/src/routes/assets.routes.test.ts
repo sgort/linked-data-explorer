@@ -105,7 +105,7 @@ describe('BPMN collection', () => {
 
 describe('PATCH /bpmn/:id/deploy', () => {
   test('records the deployment with the supplied artefact ids', async () => {
-    svc.markDeployed.mockResolvedValue(undefined);
+    svc.markDeployed.mockResolvedValue(true);
 
     const res = await request(makeApp())
       .patch('/v1/assets/bpmn/p1/deploy')
@@ -129,11 +129,25 @@ describe('PATCH /bpmn/:id/deploy', () => {
   });
 
   test('defaults the artefact id lists to empty when omitted', async () => {
-    svc.markDeployed.mockResolvedValue(undefined);
+    svc.markDeployed.mockResolvedValue(true);
 
     await request(makeApp()).patch('/v1/assets/bpmn/p1/deploy').send({ deploymentId: 'dep-1' });
 
     expect(svc.markDeployed).toHaveBeenCalledWith('p1', 'dep-1', undefined, [], [], undefined);
+  });
+
+  test('returns 404 with a NOT_FOUND code when nothing matches the given id (zero-row update)', async () => {
+    svc.markDeployed.mockResolvedValue(false);
+
+    const res = await request(makeApp())
+      .patch('/v1/assets/bpmn/missing-id/deploy')
+      .send({ deploymentId: 'dep-1' });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'No process found for id: missing-id' },
+    });
   });
 
   test('returns 500 with a DEPLOY_MARK_FAILED code when the update throws', async () => {
@@ -404,7 +418,7 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
   });
 
   test('PATCH /assets/bpmn/{id}/deploy 200 with a full body, as documented', async () => {
-    svc.markDeployed.mockResolvedValue(undefined);
+    svc.markDeployed.mockResolvedValue(true);
 
     const res = await request(makeDocumentedApp())
       .patch('/v1/assets/bpmn/p1/deploy')
@@ -421,7 +435,7 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
   });
 
   test('PATCH /assets/bpmn/{id}/deploy 200 with an empty body, as documented', async () => {
-    svc.markDeployed.mockResolvedValue(undefined);
+    svc.markDeployed.mockResolvedValue(true);
 
     const res = await request(makeDocumentedApp()).patch('/v1/assets/bpmn/p1/deploy').send({});
 
@@ -430,11 +444,22 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
   });
 
   test('PATCH /assets/bpmn/{id}/deploy 200 with no body at all, as documented', async () => {
-    svc.markDeployed.mockResolvedValue(undefined);
+    svc.markDeployed.mockResolvedValue(true);
 
     const res = await request(makeDocumentedApp()).patch('/v1/assets/bpmn/p1/deploy');
 
     expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
+  });
+
+  test('PATCH /assets/bpmn/{id}/deploy 404 when nothing matches the id, as documented', async () => {
+    svc.markDeployed.mockResolvedValue(false);
+
+    const res = await request(makeDocumentedApp())
+      .patch('/v1/assets/bpmn/missing-id/deploy')
+      .send({ deploymentId: 'dep-1' });
+
+    expect(res.status).toBe(404);
     expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
   });
 
