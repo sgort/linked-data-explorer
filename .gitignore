@@ -32,6 +32,12 @@ coverage
 # Hand-authored Jest config (not generated output) — keep tracked
 !packages/backend/jest.config.js
 
+# Hand-authored build configs (not generated output) — keep tracked. Without
+# these the frontend builds locally and ships unstyled from CI, since the
+# *.js rule above would leave both files behind (#96).
+!packages/frontend/tailwind.config.js
+!packages/frontend/postcss.config.js
+
 # But keep the source JSON
 !testData.json
 
