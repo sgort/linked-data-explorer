@@ -24,6 +24,15 @@ const served = listServedOperations(routeRegistry);
 const documented = listDocumentedOperations(readOpenApiDocument());
 
 describe('OpenAPI coverage of the /v1 routes', () => {
+  // The two rules below cross-check each other, but both pass if each side is
+  // empty — a document that failed to parse and a registry that failed to load
+  // agree with each other perfectly. The pending list's ceiling used to be the
+  // only assertion about a count; this is what replaces it.
+  test('both sides were actually loaded', () => {
+    expect(served.length).toBeGreaterThan(0);
+    expect(documented.length).toBeGreaterThan(0);
+  });
+
   test('every served operation is documented', () => {
     expect(served.filter((op) => !documented.includes(op))).toEqual([]);
   });

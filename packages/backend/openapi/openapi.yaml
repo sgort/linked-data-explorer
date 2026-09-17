@@ -5,9 +5,10 @@
 # openapi.json from this file and sets info.version from package.json, so this
 # file must not set info.version.
 #
-# Operations not described yet are listed in pending.json;
-# src/openapi/coverage.test.ts keeps both in step with the Express routes, and
-# route tests check real responses against this file (expectToMatchOperation).
+# Every /v1 route must appear here: src/openapi/coverage.test.ts fails when a
+# served operation is missing from this file, or when this file describes an
+# operation no route serves. Route tests check real responses against it
+# (expectToMatchOperation).
 #
 # During `npm run dev` the document is built once (predev), the route caches it,
 # and nodemon does not watch this file: after editing it, run
@@ -25,7 +26,9 @@ info:
     `POST /dmns/evaluate/{decisionKey}` passes Operaton's own errors through, or
     sends OperatonProxyError, and `POST /chains/execute`'s nested-failure body
     has no top-level `error` at all — the message is a plain string at
-    `data.error`. The move to RFC 9457 problem details is tracked in
+    `data.error`. `/dso` and `/vendors` answer SimpleErrorEnvelope, whose
+    `error` is a bare string rather than a code and a message. The move to
+    RFC 9457 problem details is tracked in
     https://github.com/sgort/linked-data-explorer/issues/131.
   contact:
     name: Steven Gort
@@ -4418,7 +4421,7 @@ paths:
                 $ref: '#/components/schemas/SimpleErrorEnvelope'
               examples:
                 queryFailed:
-                  value: { success: false, error: 'unknown DMN' }
+                  value: { success: false, error: 'SPARQL endpoint timed out' }
 components:
   headers:
     ApiVersion:
