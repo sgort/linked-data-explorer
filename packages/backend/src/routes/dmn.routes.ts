@@ -8,8 +8,24 @@ import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails, isAxiosError } from '../utils/errors';
 import { operatonService } from '../services/operaton.service';
 import { dmnValidationService } from '../services/dmn-validation.service';
+import { recordDeployedBundle } from '../services/assets.service';
 
 const router = Router();
+
+/**
+ * Pulls the `<process id="...">` out of raw BPMN XML, prefix-agnostic (so
+ * `<bpmn:process>` and an unprefixed `<process>` both match) — the same
+ * extraction BpmnModeler.tsx's own `extractBpmnProcessId` does client-side,
+ * kept here as a plain regex rather than a DOM parser dependency. Used only
+ * to find/create the storage row for a just-deployed bundle by its natural
+ * key; falls back to `deploymentName` (validated non-blank by the caller)
+ * when the XML has no `process` element to match.
+ */
+function extractBpmnProcessId(bpmnXml: string): string | null {
+  const match = bpmnXml.match(/<(?:[\w-]+:)?process\b[^>]*\bid="([^"]*)"/);
+  const id = match?.[1]?.trim();
+  return id ? id : null;
+}
 
 /**
  * GET /api/dmns
@@ -290,11 +306,39 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       organization
     );
 
+    // The Operaton deploy above already happened and can't be undone, so a
+    // problem recording it in Postgres must never fail this response — it is
+    // reported alongside the (still successful) deploy instead. See #155.
+    let bundleRecorded = false;
+    let bundleRecordingError: string | undefined;
+    try {
+      const bpmnProcessId = extractBpmnProcessId(bpmnXml) ?? deploymentName;
+      bundleRecorded = await recordDeployedBundle({
+        bpmnProcessId,
+        bpmnXml,
+        organization,
+        deploymentId: result.deploymentId,
+        operatonUrl,
+        formIds: forms.map((f) => f.id),
+        documentIds: documents.map((d) => d.id),
+        boardOwner,
+      });
+      if (!bundleRecorded) {
+        bundleRecordingError = `No stored process matched process id "${bpmnProcessId}", and creating one failed.`;
+      }
+    } catch (error: unknown) {
+      bundleRecorded = false;
+      bundleRecordingError = getErrorMessage(error);
+      logger.error('Bundle storage after deploy failed', getErrorDetails(error));
+    }
+
     res.json({
       success: true,
       data: {
         deploymentId: result.deploymentId,
         resourceCount: result.resourceCount,
+        bundleRecorded,
+        ...(bundleRecordingError !== undefined ? { bundleRecordingError } : {}),
       },
       timestamp: new Date().toISOString(),
     });

@@ -12,6 +12,7 @@ import {
   listForms,
   listPublicBundles,
   markDeployed,
+  recordDeployedBundle,
   upsertBpmn,
   upsertDocument,
   upsertForm,
@@ -38,7 +39,16 @@ describe('assets.service with no database configured', () => {
       })
     ).resolves.toBeUndefined();
     await expect(deleteBpmn('x')).resolves.toBeUndefined();
-    await expect(markDeployed('x', 'dep-1', undefined, [], [])).resolves.toBeUndefined();
+    await expect(markDeployed('x', 'dep-1', undefined, [], [])).resolves.toBe(false);
+    await expect(
+      recordDeployedBundle({
+        bpmnProcessId: 'x',
+        bpmnXml: '<bpmn/>',
+        deploymentId: 'dep-1',
+        formIds: [],
+        documentIds: [],
+      })
+    ).resolves.toBe(false);
     await expect(
       upsertForm({
         id: 'x',

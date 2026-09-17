@@ -86,7 +86,20 @@ router.patch('/bpmn/:id/deploy', async (req: Request, res: Response) => {
       documentIds?: string[];
       boardOwner?: string;
     };
-    await markDeployed(req.params.id, deploymentId, operatonUrl, formIds, documentIds, boardOwner);
+    const updated = await markDeployed(
+      req.params.id,
+      deploymentId,
+      operatonUrl,
+      formIds,
+      documentIds,
+      boardOwner
+    );
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: `No process found for id: ${req.params.id}` },
+      });
+    }
     res.json({ success: true });
   } catch (err) {
     logger.error('[assets] markDeployed failed', { error: getErrorMessage(err) });

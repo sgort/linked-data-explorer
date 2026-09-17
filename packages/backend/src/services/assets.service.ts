@@ -88,6 +88,13 @@ export async function getBpmnByBpmnProcessId(bpmnProcessId: string): Promise<unk
   return { id: rows[0].lde_id, bpmnProcessId: rows[0].bpmn_process_id, xml: rows[0].xml };
 }
 
+/**
+ * Stamps a stored process as deployed. Returns whether a row actually
+ * matched `ldeId` — a bare `UPDATE ... WHERE lde_id = $1` succeeds (and
+ * previously reported success) even when nothing matched, which left a
+ * missing/mismatched id as a silent no-op. Callers must treat `false` as
+ * "not recorded", not as an error to swallow.
+ */
 export async function markDeployed(
   ldeId: string,
   deploymentId: string,
@@ -95,9 +102,9 @@ export async function markDeployed(
   formIds: string[],
   documentIds: string[],
   boardOwner?: string
-): Promise<void> {
-  if (!pool) return;
-  await pool.query(
+): Promise<boolean> {
+  if (!pool) return false;
+  const result = await pool.query(
     `UPDATE process_definitions SET
        deployed_at            = NOW(),
        operaton_deployment_id = $2,
@@ -107,6 +114,70 @@ export async function markDeployed(
        board_owner            = COALESCE($6, board_owner)
      WHERE lde_id = $1`,
     [ldeId, deploymentId, operatonUrl ?? null, formIds, documentIds, boardOwner ?? null]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+export interface DeployedBundleInput {
+  /** The BPMN's own `<process id>` — the natural key `upsertBpmn`/`saveProcess`
+   *  already write on every canvas Save (see `getBpmnByBpmnProcessId`). */
+  bpmnProcessId: string;
+  /** Only used to seed a minimal row when no stored process matches yet. */
+  bpmnXml: string;
+  organization?: string;
+  deploymentId: string;
+  operatonUrl?: string;
+  formIds: string[];
+  documentIds: string[];
+  boardOwner?: string;
+}
+
+/**
+ * Records a just-deployed bundle server-side, in the same request/response
+ * cycle as the Operaton deploy, so the write no longer depends on a second,
+ * browser-initiated, unawaited request.
+ *
+ * Finds the row by `bpmnProcessId`; if none exists yet (the process was
+ * deployed without ever being Saved first), creates a minimal one — `name`
+ * defaults to the process id itself, `lde_id` is the process id too, since
+ * that is already the natural key this lookup uses and keeps the row
+ * debuggable. Every other column takes `upsertBpmn`'s own default (see its
+ * `ON CONFLICT` insert): `process_role` 'standalone', `status` 'wip',
+ * `linked_dmn_templates` '{}'. Either way, stamps the row deployed via
+ * `markDeployed`.
+ *
+ * Never throws for a "nothing to record" outcome — returns `false` instead,
+ * same as `markDeployed`. A thrown exception here (e.g. the database is
+ * briefly unreachable) is left for the caller to catch; it must not be
+ * allowed to fail the deploy itself, which already happened in Operaton.
+ */
+export async function recordDeployedBundle(input: DeployedBundleInput): Promise<boolean> {
+  if (!pool) return false;
+
+  const existing = (await getBpmnByBpmnProcessId(input.bpmnProcessId)) as { id: string } | null;
+  const ldeId = existing?.id ?? input.bpmnProcessId;
+
+  if (!existing) {
+    const now = new Date().toISOString();
+    await upsertBpmn({
+      id: ldeId,
+      bpmnProcessId: input.bpmnProcessId,
+      name: input.bpmnProcessId,
+      xml: input.bpmnXml,
+      linkedDmnTemplates: [],
+      organization: input.organization,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  return markDeployed(
+    ldeId,
+    input.deploymentId,
+    input.operatonUrl,
+    input.formIds,
+    input.documentIds,
+    input.boardOwner
   );
 }
 
