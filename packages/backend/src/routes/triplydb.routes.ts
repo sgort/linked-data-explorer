@@ -5,6 +5,7 @@ import { Router, Request, Response } from 'express';
 import * as triplydbService from '../services/triplydb.service';
 import { logger } from '../utils/logger';
 import { sendProblem } from '../utils/problem';
+import { refuseTarget, checkSparqlEndpoint } from '../utils/outboundUrl';
 
 const router = Router();
 
@@ -60,6 +61,8 @@ router.post('/query', async (req: Request, res: Response) => {
       });
       return;
     }
+
+    if (refuseTarget(res, req, checkSparqlEndpoint(endpoint, 'endpoint'))) return;
 
     logger.info('[TriplyDB Routes] SPARQL query request received', {
       endpoint: endpoint,

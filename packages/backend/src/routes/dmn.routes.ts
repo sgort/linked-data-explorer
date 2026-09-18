@@ -10,6 +10,7 @@ import { operatonService } from '../services/operaton.service';
 import { dmnValidationService } from '../services/dmn-validation.service';
 import { recordDeployedBundle } from '../services/assets.service';
 import { sendProblem } from '../utils/problem';
+import { refuseOptionalEndpoint } from '../utils/outboundUrl';
 
 const router = Router();
 
@@ -44,6 +45,7 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     // NEW: Extract optional endpoint parameter
     const requestedEndpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
     // NEW: Extract optional refresh parameter
     const refresh = req.query.refresh === 'true' || req.query.refresh === '1';
 
@@ -95,6 +97,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/semantic-equivalences', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
     const equivalences = await sparqlService.findSemanticEquivalences(endpoint);
 
     res.json({
@@ -116,6 +119,7 @@ router.get('/semantic-equivalences', async (req: Request, res: Response) => {
 router.get('/enhanced-chain-links', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
     const links = await sparqlService.findEnhancedChainLinks(endpoint);
 
     // Standardize response format to match other endpoints
@@ -138,6 +142,7 @@ router.get('/enhanced-chain-links', async (req: Request, res: Response) => {
 router.get('/cycles', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
     const cycles = await sparqlService.detectChainCycles(endpoint);
 
     res.json({
@@ -488,6 +493,7 @@ router.get('/:identifier', async (req: Request, res: Response) => {
   try {
     const { identifier } = req.params;
     const requestedEndpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
 
     logger.info('DMN details request', {
       identifier,

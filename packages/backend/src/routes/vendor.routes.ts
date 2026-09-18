@@ -3,6 +3,7 @@ import { vendorService } from '../services/vendor.service';
 import logger from '../utils/logger';
 import { getErrorMessage } from '../utils/errors';
 import { sendProblem } from '../utils/problem';
+import { refuseOptionalEndpoint } from '../utils/outboundUrl';
 import packageJson from '../../package.json';
 
 const router = express.Router();
@@ -20,6 +21,7 @@ router.get('/', async (req: Request, res: Response) => {
 
   try {
     const endpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
 
     logger.info('[Vendor Routes] Get all vendor services requested', {
       ...(endpoint && { endpoint }),
@@ -64,6 +66,7 @@ router.get('/dmn/:identifier', async (req: Request, res: Response) => {
   try {
     const { identifier } = req.params;
     const endpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
 
     logger.info('[Vendor Routes] Get vendor services for DMN', {
       identifier,

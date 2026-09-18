@@ -778,6 +778,46 @@ describe('POST /api/dmns/validate', () => {
   });
 });
 
+describe('#142 endpoint check', () => {
+  test.each([
+    ['/v1/dmns', 'getAllDmns'],
+    ['/v1/dmns/semantic-equivalences', 'findSemanticEquivalences'],
+    ['/v1/dmns/enhanced-chain-links', 'findEnhancedChainLinks'],
+    ['/v1/dmns/cycles', 'detectChainCycles'],
+    ['/v1/dmns/some-id', 'getDmnByIdentifier'],
+  ])('%s refuses an internal endpoint without querying it', async (path, method) => {
+    const app = express();
+    app.use('/v1/dmns', dmnRoutes);
+
+    const res = await request(app).get(`${path}?endpoint=https://169.254.169.254/latest`);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(sparql[method]).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['/v1/dmns', '/dmns'],
+    ['/v1/dmns/semantic-equivalences', '/dmns/semantic-equivalences'],
+    ['/v1/dmns/enhanced-chain-links', '/dmns/enhanced-chain-links'],
+    ['/v1/dmns/cycles', '/dmns/cycles'],
+    ['/v1/dmns/some-id', '/dmns/{identifier}'],
+  ])('%s refuses an internal endpoint, as documented', async (path, documented) => {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/dmns', dmnRoutes);
+
+    const res = await request(app).get(`${path}?endpoint=https://169.254.169.254/latest`);
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'get', documented);
+  });
+});
+
 describe('/v1/dmns reads match their OpenAPI description', () => {
   function makeDocumentedApp() {
     const app = express();

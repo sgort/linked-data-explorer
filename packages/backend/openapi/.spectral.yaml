@@ -39,17 +39,13 @@ overrides:
     rules:
       nlgov:query-keys-camel-case: 'off'
 
-  # These reads never answer 400. At most they take an optional free-text
-  # SPARQL endpoint (not validated, #142; every read except /dmns/{identifier}/xml),
-  # a `refresh` flag where any value is accepted (GET /dmns only), and a path
-  # identifier that resolves to 200 or 404 (GET /dmns/{identifier} and
-  # GET /dmns/{identifier}/xml).
+  # GET /dmns/{identifier}/xml never answers 400: its only parameter is the
+  # `identifier` path segment, passed straight to Operaton unchecked, and it
+  # resolves to 200 or 404, never a validation failure. Every other read in
+  # this file used to share this exemption for its optional `endpoint`
+  # parameter, but #142 now checks that parameter before use and each
+  # documents its own 400 (see the operations themselves).
   - files:
-      - 'openapi.json#/paths/~1dmns/get'
-      - 'openapi.json#/paths/~1dmns~1semantic-equivalences/get'
-      - 'openapi.json#/paths/~1dmns~1enhanced-chain-links/get'
-      - 'openapi.json#/paths/~1dmns~1cycles/get'
-      - 'openapi.json#/paths/~1dmns~1%7Bidentifier%7D/get'
       - 'openapi.json#/paths/~1dmns~1%7Bidentifier%7D~1xml/get'
     rules:
       nlgov:problem-invalid-input: 'off'
@@ -112,16 +108,15 @@ overrides:
   # one anyway, for the malformed-body case every body-taking operation
   # shares.
   #
-  # Three eDOCS/vendor operations. GET /edocs/workspaces/{workspaceId}/documents
-  # takes an opaque `workspaceId` path parameter that is never validated —
-  # an unknown workspace maps to an empty list (200), not 400. GET /vendors
-  # and GET /vendors/dmn/{identifier} take only an optional free-text
-  # `endpoint` query parameter, never validated and forwarded as given (and,
-  # on the second, an `identifier` path parameter that likewise matches
-  # nothing without error, answering an empty list rather than 400). The
-  # other three eDOCS operations need no entry: `GET /edocs/status` takes no
-  # parameter at all, so the rule never applies to it, and the two POSTs
-  # validate their own input and document the 400 they answer.
+  # One eDOCS operation. GET /edocs/workspaces/{workspaceId}/documents takes
+  # an opaque `workspaceId` path parameter that is never validated — an
+  # unknown workspace maps to an empty list (200), not 400. The other three
+  # eDOCS operations need no entry: `GET /edocs/status` takes no parameter at
+  # all, so the rule never applies to it, and the two POSTs validate their
+  # own input and document the 400 they answer. GET /vendors and
+  # GET /vendors/dmn/{identifier} used to share this exemption for their
+  # optional `endpoint` parameter, but #142 now checks it before use and
+  # both document their own 400.
   - files:
       - 'openapi.json#/paths/~1dso~1activiteiten/get'
       - 'openapi.json#/paths/~1dso~1activiteiten~1%7Burn%7D/get'
@@ -131,8 +126,6 @@ overrides:
       - 'openapi.json#/paths/~1dso~1toepasbare-regels~1%7Bid%7D~1dmn/get'
       - 'openapi.json#/paths/~1dso~1toepasbare-regels~1%7Bid%7D~1form-scaffold/get'
       - 'openapi.json#/paths/~1edocs~1workspaces~1%7BworkspaceId%7D~1documents/get'
-      - 'openapi.json#/paths/~1vendors/get'
-      - 'openapi.json#/paths/~1vendors~1dmn~1%7Bidentifier%7D/get'
     rules:
       nlgov:problem-invalid-input: 'off'
 

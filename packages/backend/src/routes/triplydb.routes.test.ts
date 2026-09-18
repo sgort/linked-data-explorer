@@ -77,7 +77,7 @@ describe('POST /v1/triplydb/query', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/query')
-      .send({ endpoint: 'e', query: 'q' });
+      .send({ endpoint: 'https://triplydb.example/sparql', query: 'q' });
 
     expect(res.headers['api-version']).toBe(packageJson.version);
     expect(res.headers['content-type']).toMatch(/application\/json/);
@@ -88,7 +88,7 @@ describe('POST /v1/triplydb/query', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/query')
-      .send({ endpoint: 'e', query: 'ASK {?s ?p ?o}' });
+      .send({ endpoint: 'https://triplydb.example/sparql', query: 'ASK {?s ?p ?o}' });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, boolean: true });
@@ -115,7 +115,7 @@ describe('POST /v1/triplydb/query', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/query')
-      .send({ endpoint: 'e', query: 'q' });
+      .send({ endpoint: 'https://triplydb.example/sparql', query: 'q' });
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
@@ -130,7 +130,7 @@ describe('POST /v1/triplydb/query', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/query')
-      .send({ endpoint: 'e', query: 'q' });
+      .send({ endpoint: 'https://triplydb.example/sparql', query: 'q' });
 
     expect(res.body.detail).toBe('Query execution failed');
   });
@@ -506,6 +506,49 @@ describe('GET /v1/triplydb/health', () => {
 
     expect(svc.testConnection).not.toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('#142 endpoint check', () => {
+  test('POST /v1/triplydb/query refuses an internal endpoint without querying it', async () => {
+    const res = await request(makeApp())
+      .post('/v1/triplydb/query')
+      .send({ endpoint: 'https://169.254.169.254/latest', query: 'SELECT * WHERE {?s ?p ?o}' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(svc.executeQuery).not.toHaveBeenCalled();
+  });
+
+  test('POST /v1/triplydb/query refuses a non-https endpoint without querying it', async () => {
+    const res = await request(makeApp())
+      .post('/v1/triplydb/query')
+      .send({ endpoint: 'http://example.org/sparql', query: 'SELECT * WHERE {?s ?p ?o}' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` must use https',
+    });
+    expect(svc.executeQuery).not.toHaveBeenCalled();
+  });
+
+  test('POST /v1/triplydb/query refuses an internal endpoint, as documented', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/triplydb', triplydbRoutes);
+    app.use(errorHandler); // app-wide in index.ts
+
+    const res = await request(app)
+      .post('/v1/triplydb/query')
+      .send({ endpoint: 'https://169.254.169.254/latest', query: 'SELECT * WHERE {?s ?p ?o}' });
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/triplydb/query');
   });
 });
 

@@ -12,6 +12,7 @@ import {
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { sendProblem } from '../utils/problem';
+import { refuseOptionalEndpoint } from '../utils/outboundUrl';
 import { computeNormsEtag, computeLastModified } from '../utils/etag';
 import logger from '../utils/logger';
 import packageJson from '../../package.json';
@@ -83,6 +84,7 @@ router.get('/', async (req: Request, res: Response) => {
   res.set('API-Version', packageJson.version);
 
   const requestedEndpoint = req.query.endpoint as string | undefined;
+  if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
   const rulesetid = req.query.rulesetid as string | undefined;
   const applicableDate = req.query.applicable_date as string | undefined;
   const requestedCprmvVersion = req.query.cprmv_version as string | undefined;

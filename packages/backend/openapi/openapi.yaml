@@ -1440,7 +1440,7 @@ paths:
         every ruleset in the result has dataset metadata, the response carries
         `ETag` and `Cache-Control: public, max-age=3600`, and a matching
         conditional request is answered 304; otherwise `Cache-Control: no-cache`.
-        The `endpoint` override is not validated (#142).
+        The `endpoint` override is checked before use (#142).
       parameters:
         - name: rulesetid
           in: query
@@ -1467,7 +1467,11 @@ paths:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
       responses:
@@ -1519,7 +1523,12 @@ paths:
               schema:
                 type: string
         '400':
-          description: A query parameter is invalid (code INVALID_PARAM).
+          description: >-
+            A query parameter is invalid (code INVALID_PARAM). The `endpoint`
+            was refused (code INVALID_INPUT; #142): not a string, not a valid
+            URL, not `https:`, containing credentials, or pointing to an
+            internal address. `detail` gives the reason. No request is made
+            to it.
           content:
             application/problem+json:
               schema:
@@ -1537,8 +1546,8 @@ paths:
       summary: Run a SPARQL query against a caller-supplied endpoint
       description: >-
         Forwards `query` to `endpoint` and returns the endpoint's SPARQL JSON
-        results beside `success`, without a `data` wrapper. The endpoint is not
-        validated (#142).
+        results beside `success`, without a `data` wrapper. The endpoint is
+        checked before use (#142).
       requestBody:
         required: true
         content:
@@ -1549,7 +1558,10 @@ paths:
               properties:
                 endpoint:
                   type: string
-                  description: SPARQL endpoint URL.
+                  description: >-
+                    SPARQL endpoint URL. Checked before use (#142): must be a
+                    string, a valid URL, `https:`, without credentials, and
+                    not point to an internal address.
                 query:
                   type: string
                   description: SPARQL query text.
@@ -1571,8 +1583,11 @@ paths:
                         const: true
         '400':
           description: >-
-            `endpoint` or `query` is missing, or the request body was not
-            valid JSON (code MALFORMED_BODY; #143).
+            `endpoint` or `query` is missing, the `endpoint` was refused (code
+            INVALID_INPUT; #142): not a string, not a valid URL, not
+            `https:`, containing credentials, or pointing to an internal
+            address (`detail` gives the reason; no request is made to it), or
+            the request body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -1885,12 +1900,16 @@ paths:
       summary: DMN decision models published in the knowledge graph
       description: >-
         Results are cached for five minutes per endpoint. The `endpoint` override
-        is not validated (#142).
+        is checked before use (#142).
       parameters:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
         - name: refresh
@@ -1930,6 +1949,16 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
@@ -1941,12 +1970,16 @@ paths:
       operationId: listDmnSemanticEquivalences
       tags: [Discovery]
       summary: Variables of different DMNs linked to the same concept
-      description: The `endpoint` override is not validated (#142).
+      description: The `endpoint` override is checked before use (#142).
       parameters:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
       responses:
@@ -1970,6 +2003,16 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
@@ -1981,12 +2024,16 @@ paths:
       operationId: listDmnChainLinks
       tags: [Discovery]
       summary: Output-to-input links between DMNs, by identifier or shared concept
-      description: The `endpoint` override is not validated (#142).
+      description: The `endpoint` override is checked before use (#142).
       parameters:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
       responses:
@@ -2010,6 +2057,16 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
@@ -2021,12 +2078,16 @@ paths:
       operationId: listDmnChainCycles
       tags: [Discovery]
       summary: Cycles in the DMN chain graph
-      description: The `endpoint` override is not validated (#142).
+      description: The `endpoint` override is checked before use (#142).
       parameters:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
       responses:
@@ -2050,6 +2111,16 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
@@ -2061,7 +2132,7 @@ paths:
       operationId: getDmn
       tags: [Discovery]
       summary: One DMN decision model
-      description: Served from the same five-minute cache as the list. The `endpoint` override is not validated (#142).
+      description: Served from the same five-minute cache as the list. The `endpoint` override is checked before use (#142).
       parameters:
         - name: identifier
           in: path
@@ -2072,7 +2143,11 @@ paths:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
       responses:
@@ -2094,6 +2169,16 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           description: No DMN has this identifier (code NOT_FOUND).
           content:
@@ -2671,7 +2756,10 @@ paths:
                   type: string
                   description: >-
                     SPARQL endpoint to fetch the already-published graph from.
-                    Defaults to the configured TriplyDB endpoint when omitted.
+                    Checked before use (#142): must be a string, a valid URL,
+                    `https:`, without credentials, and not point to an
+                    internal address. Defaults to the configured TriplyDB
+                    endpoint when omitted.
       responses:
         '200':
           description: The validation result, valid or not.
@@ -2694,8 +2782,11 @@ paths:
         '400':
           description: >-
             `content` is missing, empty or not a string (code
-            INVALID_REQUEST), or the request body was not valid JSON (code
-            MALFORMED_BODY; #143).
+            INVALID_REQUEST), the `endpoint` was refused (code INVALID_INPUT;
+            #142): not a string, not a valid URL, not `https:`, containing
+            credentials, or pointing to an internal address (`detail` gives
+            the reason; no request is made to it), or the request body was
+            not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -2880,8 +2971,10 @@ paths:
                   type: string
                   description: >-
                     SPARQL endpoint URL to query instead of the configured
-                    one, used to look up the chain's DMNs. Unvalidated, and
-                    ignored when `isDrd` is true, because that path does not
+                    one, used to look up the chain's DMNs. Checked before use
+                    (#142): must be a string, a valid URL, `https:`, without
+                    credentials, and not point to an internal address.
+                    Ignored when `isDrd` is true, because that path does not
                     look the DMNs up.
                 isDrd:
                   type: boolean
@@ -2940,8 +3033,12 @@ paths:
             `dmnIds` is missing or empty (message "dmnIds array is required
             and must not be empty"), or `inputs` is missing or an empty
             object (message "inputs object is required"), both code
-            INVALID_REQUEST -- or the request body was not valid JSON (code
-            MALFORMED_BODY; #143).
+            INVALID_REQUEST -- or the `endpoint` was refused (code
+            INVALID_INPUT; #142): not a string, not a valid URL, not
+            `https:`, containing credentials, or pointing to an internal
+            address (`detail` gives the reason; no request is made to it) --
+            or the request body was not valid JSON (code MALFORMED_BODY;
+            #143).
           content:
             application/problem+json:
               schema:
@@ -4634,8 +4731,10 @@ paths:
           in: query
           required: false
           description: >-
-            SPARQL endpoint URL. Not validated; forwarded as given. Omitted,
-            the query runs against this API's configured default endpoint.
+            SPARQL endpoint URL. Checked before use (#142): must be a string,
+            a valid URL, `https:`, without credentials, and not point to an
+            internal address. Omitted, the query runs against this API's
+            configured default endpoint.
           schema:
             type: string
       responses:
@@ -4663,6 +4762,16 @@ paths:
                       count:
                         type: integer
                         description: '`vendorServices.length`, computed locally.'
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph query failed.
           content:
@@ -4704,8 +4813,10 @@ paths:
           in: query
           required: false
           description: >-
-            SPARQL endpoint URL. Not validated; forwarded as given. Omitted,
-            the query runs against this API's configured default endpoint.
+            SPARQL endpoint URL. Checked before use (#142): must be a string,
+            a valid URL, `https:`, without credentials, and not point to an
+            internal address. Omitted, the query runs against this API's
+            configured default endpoint.
           schema:
             type: string
       responses:
@@ -4738,6 +4849,16 @@ paths:
                         description: >-
                           The `identifier` path parameter, echoed back
                           verbatim (URL-decoded, not otherwise validated).
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph query failed.
           content:

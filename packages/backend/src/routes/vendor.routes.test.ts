@@ -143,6 +143,38 @@ describe('GET /v1/vendors/dmn/:identifier', () => {
   });
 });
 
+describe('#142 endpoint check', () => {
+  test.each([
+    ['/v1/vendors', 'getAllVendorServices'],
+    ['/v1/vendors/dmn/SVB_LeeftijdsInformatie', 'getVendorServicesForDmn'],
+  ])('%s refuses an internal endpoint without querying it', async (path, method) => {
+    const res = await request(makeApp()).get(`${path}?endpoint=https://169.254.169.254/latest`);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(method === 'getAllVendorServices' ? mockGetAll : mockGetForDmn).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['/v1/vendors', '/vendors'],
+    ['/v1/vendors/dmn/SVB_LeeftijdsInformatie', '/vendors/dmn/{identifier}'],
+  ])('%s refuses an internal endpoint, as documented', async (path, documented) => {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/vendors', vendorRoutes);
+    app.use(errorHandler); // app-wide in index.ts
+
+    const res = await request(app).get(`${path}?endpoint=https://169.254.169.254/latest`);
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'get', documented);
+  });
+});
+
 describe('/v1/vendors operations match their OpenAPI description', () => {
   // vendor.routes.ts sets API-Version itself (unlike edocs.routes.ts), but the
   // route test app above still has no global middleware stack, so a
