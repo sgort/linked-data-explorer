@@ -1,9 +1,12 @@
 // packages/backend/src/services/triplydb.service.ts
 // Service for proxying TriplyDB API calls to avoid CORS issues
-// Uses native fetch (Node.js 18+) with proper TypeScript typing
+// Uses the guarded outbound HTTP client (#142), since every call here goes to
+// a host (and dataset/account) the caller chose, not one this service picks.
 // FIXED: Uses correct sync API from TriplyDB documentation
 
 import { logger } from '../utils/logger';
+import { config } from '../utils/config';
+import { createOutboundClient } from '../utils/outboundHttp';
 
 interface TriplyDBConfig {
   baseUrl: string;
@@ -30,6 +33,31 @@ interface SparqlQueryResult {
   };
 }
 
+// Every call here goes to a host the caller chose, so all of them use the
+// guarded client (#142). Status handling stays with the callers below.
+const client = createOutboundClient({ timeout: config.triplydb.timeout });
+
+async function send(
+  url: string,
+  init: { method: 'GET' | 'POST'; headers: Record<string, string>; body?: string }
+): Promise<{ ok: boolean; status: number; statusText: string; text: string }> {
+  const response = await client.request<string>({
+    url,
+    method: init.method,
+    headers: init.headers,
+    data: init.body,
+    responseType: 'text',
+    transformResponse: [(data) => data],
+    validateStatus: () => true,
+  });
+  return {
+    ok: response.status >= 200 && response.status < 300,
+    status: response.status,
+    statusText: response.statusText,
+    text: typeof response.data === 'string' ? response.data : '',
+  };
+}
+
 /**
  * Execute a SPARQL query against any TriplyDB endpoint
  * Used by the /v1/triplydb/query endpoint to enable dynamic endpoint selection
@@ -41,7 +69,7 @@ export async function executeQuery(endpoint: string, query: string): Promise<Spa
   });
 
   try {
-    const response = await fetch(endpoint, {
+    const response = await send(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/sparql-query',
@@ -51,7 +79,7 @@ export async function executeQuery(endpoint: string, query: string): Promise<Spa
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = response.text;
       logger.error('[TriplyDB Service] Query execution failed', {
         status: response.status,
         statusText: response.statusText,
@@ -60,7 +88,7 @@ export async function executeQuery(endpoint: string, query: string): Promise<Spa
       throw new Error(`Query failed: ${response.status} ${errorText}`);
     }
 
-    const data = (await response.json()) as SparqlQueryResult;
+    const data = JSON.parse(response.text) as SparqlQueryResult;
 
     logger.info('[TriplyDB Service] Query executed successfully', {
       resultCount: data.results?.bindings?.length || 0,
@@ -94,7 +122,7 @@ export async function constructGraph(endpoint: string, query: string): Promise<s
   });
 
   try {
-    const response = await fetch(endpoint, {
+    const response = await send(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/sparql-query',
@@ -104,7 +132,7 @@ export async function constructGraph(endpoint: string, query: string): Promise<s
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = response.text;
       logger.error('[TriplyDB Service] CONSTRUCT execution failed', {
         status: response.status,
         statusText: response.statusText,
@@ -113,7 +141,7 @@ export async function constructGraph(endpoint: string, query: string): Promise<s
       throw new Error(`CONSTRUCT failed: ${response.status} ${errorText}`);
     }
 
-    const turtle = await response.text();
+    const turtle = response.text;
 
     logger.info('[TriplyDB Service] CONSTRUCT executed successfully', {
       bytes: turtle.length,
@@ -142,7 +170,7 @@ export async function listGraphs(config: TriplyDBConfig): Promise<string[]> {
   });
 
   try {
-    const response = await fetch(graphsUrl, {
+    const response = await send(graphsUrl, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${config.apiToken}`,
@@ -151,7 +179,7 @@ export async function listGraphs(config: TriplyDBConfig): Promise<string[]> {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = response.text;
       logger.error('[TriplyDB Service] Failed to fetch graphs', {
         status: response.status,
         statusText: response.statusText,
@@ -160,7 +188,7 @@ export async function listGraphs(config: TriplyDBConfig): Promise<string[]> {
       throw new Error(`Failed to fetch graphs: ${response.status} ${errorText}`);
     }
 
-    const data = (await response.json()) as { graphs?: Graph[] } | Graph[];
+    const data = JSON.parse(response.text) as { graphs?: Graph[] } | Graph[];
 
     // Extract graph names
     const graphs = Array.isArray(data) ? data : data.graphs || [];
@@ -230,7 +258,7 @@ export async function updateService(
     // TriplyDB's service synchronisation API requires the literal string "true" (not the
     // boolean true) as the value for the "sync" key. This matches the documented request
     // body exactly — using a boolean would be silently ignored by the API.
-    const syncResponse = await fetch(serviceUrl, {
+    const syncResponse = await send(serviceUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${config.apiToken}`,
@@ -245,7 +273,7 @@ export async function updateService(
     });
 
     // Get response text (may be empty for success)
-    const responseText = await syncResponse.text();
+    const responseText = syncResponse.text;
 
     let responseData: { message?: string; error?: string } = {};
     if (responseText) {
@@ -305,7 +333,7 @@ export async function testConnection(config: TriplyDBConfig): Promise<boolean> {
   });
 
   try {
-    const response = await fetch(testUrl, {
+    const response = await send(testUrl, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${config.apiToken}`,

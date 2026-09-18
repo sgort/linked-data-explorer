@@ -10,6 +10,7 @@ jest.mock('axios', () => {
   const client = { post: jest.fn() };
   return { __esModule: true, default: { create: jest.fn(() => client), get: jest.fn() } };
 });
+jest.mock('../utils/outboundHttp', () => ({ createOutboundClient: jest.fn() }));
 
 const configMock = {
   triplydb: {
@@ -23,11 +24,13 @@ jest.mock('../utils/config', () => ({
   default: configMock,
 }));
 
+import { createOutboundClient } from '../utils/outboundHttp';
 import { SparqlService, sparqlService } from './sparql.service';
 
 const mockCreate = axios.create as jest.Mock;
 const mockPost = (mockCreate.mock.results[0].value as { post: jest.Mock }).post;
 const mockGet = axios.get as jest.Mock;
+const mockCreateOutboundClient = createOutboundClient as jest.Mock;
 
 const DEFAULT_ENDPOINT = configMock.triplydb.endpoint;
 
@@ -75,6 +78,12 @@ beforeEach(() => {
   mockPost.mockReset();
   mockGet.mockReset();
   mockCreate.mockClear();
+  // The custom-endpoint branch now builds its client via createOutboundClient
+  // (#142) instead of axios.create directly. Route it to the same post spy so
+  // every existing fixture (respondWith, mockPost.mockResolvedValue, ...) keeps
+  // driving both the default and the per-call guarded client.
+  mockCreateOutboundClient.mockReset();
+  mockCreateOutboundClient.mockImplementation(() => ({ post: mockPost }));
 });
 
 describe('construction', () => {
@@ -105,14 +114,16 @@ describe('executeSparqlQuery', () => {
     mockPost.mockResolvedValue(bindings([]));
     const svc = service();
     mockCreate.mockClear();
+    mockCreateOutboundClient.mockClear();
 
     await svc.executeSparqlQuery('https://other.example/sparql', 'SELECT *');
 
-    expect(mockCreate).toHaveBeenCalledWith({
+    expect(mockCreateOutboundClient).toHaveBeenCalledWith({
       baseURL: 'https://other.example/sparql',
       timeout: 30000,
       headers: { Accept: 'application/sparql-results+json' },
     });
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   test('wraps a query failure with the endpoint-agnostic prefix', async () => {
@@ -121,6 +132,16 @@ describe('executeSparqlQuery', () => {
     await expect(service().executeSparqlQuery('e', 'SELECT *')).rejects.toThrow(
       'SPARQL query failed: 502 Bad Gateway'
     );
+  });
+
+  test('reuses the default client without calling createOutboundClient when no endpoint is given', async () => {
+    mockPost.mockResolvedValue(bindings([]));
+    const svc = service();
+    mockCreateOutboundClient.mockClear();
+
+    await svc.findChainLinks();
+
+    expect(mockCreateOutboundClient).not.toHaveBeenCalled();
   });
 });
 
@@ -760,11 +781,11 @@ describe('healthCheck', () => {
   test('honours an endpoint override', async () => {
     mockPost.mockResolvedValue(bindings([]));
     const svc = service();
-    mockCreate.mockClear();
+    mockCreateOutboundClient.mockClear();
 
     await svc.healthCheck('https://other.example/sparql');
 
-    expect(mockCreate).toHaveBeenCalledWith(
+    expect(mockCreateOutboundClient).toHaveBeenCalledWith(
       expect.objectContaining({ baseURL: 'https://other.example/sparql' })
     );
   });
