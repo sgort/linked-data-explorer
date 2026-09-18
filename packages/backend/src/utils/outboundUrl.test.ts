@@ -34,6 +34,8 @@ describe('isInternalAddress', () => {
     'fc00::1',
     'fd12:3456::1',
     'fe80::1',
+    'fec0::1',
+    '2001:0:4136:e378:8000:63bf:3fff:fdd2', // Teredo
     'ff02::1',
     '::ffff:127.0.0.1',
     '::ffff:7f00:1',
@@ -56,6 +58,7 @@ describe('isInternalAddress', () => {
     '::ffff:8.8.8.8',
     '64:ff9b::808:808',
     '2002:808:808::1',
+    '2001:4860:4860::8888', // Google public DNS, in the 2001:4860::/32 range
   ])('%s is public', (ip) => expect(isInternalAddress(ip)).toBe(false));
 });
 

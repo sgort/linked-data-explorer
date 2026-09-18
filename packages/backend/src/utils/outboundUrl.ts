@@ -43,7 +43,9 @@ for (const [net, prefix] of [
   ['64:ff9b::', 96],
   ['fc00::', 7],
   ['fe80::', 10],
+  ['fec0::', 10],
   ['ff00::', 8],
+  ['2001::', 32],
 ] as const) {
   internalV6.addSubnet(net, prefix, 'ipv6');
 }

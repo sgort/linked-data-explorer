@@ -118,4 +118,69 @@ describe('createOutboundClient', () => {
     const res = await createOutboundClient().get(`http://127.0.0.1:${port}/`);
     expect(res.data).toBe('ok');
   });
+
+  test('an environment HTTPS_PROXY does not let requests bypass the guard', async () => {
+    const originalProxy = process.env.HTTPS_PROXY;
+    process.env.HTTPS_PROXY = 'http://127.0.0.1:9';
+    try {
+      config.outbound.allowLocalEndpoints = false;
+      stubDns([{ address: '127.0.0.1', family: 4 }]);
+      // https: so a proxy-honouring client would tunnel through HTTPS_PROXY
+      // instead of running guardedLookup on rebind.example directly.
+      await expect(createOutboundClient().get(`https://rebind.example:${port}/`)).rejects.toThrow(
+        'rebind.example resolves to an internal address'
+      );
+    } finally {
+      if (originalProxy === undefined) delete process.env.HTTPS_PROXY;
+      else process.env.HTTPS_PROXY = originalProxy;
+    }
+  });
+
+  test('a per-request socketPath override does not bypass the guard', async () => {
+    await expect(
+      createOutboundClient().get(`http://127.0.0.1:${port}/`, {
+        socketPath: '/tmp/does-not-exist.sock',
+      })
+    ).rejects.toThrow(OutboundRefusedError);
+  });
+
+  test('a per-request lookup override does not bypass the guard', async () => {
+    const customLookup = jest.fn(
+      (
+        _host: string,
+        _opts: object,
+        cb: (err: Error | null, address: string, family?: 4 | 6) => void
+      ) => cb(null, '93.184.216.34', 4)
+    );
+    await expect(
+      createOutboundClient().get(`http://127.0.0.1:${port}/`, {
+        lookup: customLookup,
+      })
+    ).rejects.toThrow(OutboundRefusedError);
+    expect(customLookup).not.toHaveBeenCalled();
+  });
+
+  test('refuses an https internal literal', async () => {
+    await expect(createOutboundClient().get(`https://127.0.0.1:${port}/`)).rejects.toThrow(
+      OutboundRefusedError
+    );
+  });
+
+  test.each(['https://[::1]/', 'https://[::ffff:127.0.0.1]/'])(
+    'refuses a bracketed/mapped literal %s',
+    async (url) => {
+      await expect(createOutboundClient().get(url)).rejects.toThrow(OutboundRefusedError);
+    }
+  );
+
+  test('the configured beforeRedirect refuses a redirect to an internal host, e.g. cloud metadata', () => {
+    const client = createOutboundClient();
+    expect(() =>
+      client.defaults.beforeRedirect?.(
+        { protocol: 'http:', hostname: '169.254.169.254' },
+        { headers: {}, statusCode: 302 },
+        { headers: {}, url: 'https://example.org/', method: 'GET' }
+      )
+    ).toThrow(OutboundRefusedError);
+  });
 });

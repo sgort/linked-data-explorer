@@ -160,20 +160,20 @@ export async function constructGraph(endpoint: string, query: string): Promise<s
 /**
  * List all graphs in a TriplyDB dataset
  */
-export async function listGraphs(config: TriplyDBConfig): Promise<string[]> {
-  const graphsUrl = `${config.baseUrl}/datasets/${config.account}/${config.dataset}/graphs`;
+export async function listGraphs(dbConfig: TriplyDBConfig): Promise<string[]> {
+  const graphsUrl = `${dbConfig.baseUrl}/datasets/${dbConfig.account}/${dbConfig.dataset}/graphs`;
 
   logger.info('[TriplyDB Service] Fetching graphs', {
     url: graphsUrl,
-    account: config.account,
-    dataset: config.dataset,
+    account: dbConfig.account,
+    dataset: dbConfig.dataset,
   });
 
   try {
     const response = await send(graphsUrl, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${config.apiToken}`,
+        Authorization: `Bearer ${dbConfig.apiToken}`,
         Accept: 'application/json',
       },
     });
@@ -215,13 +215,13 @@ export async function listGraphs(config: TriplyDBConfig): Promise<string[]> {
  * POST /datasets/{account}/{dataset}/services/{serviceName}
  * Body: {"sync": "true"}
  *
- * @param config       - TriplyDB configuration
+ * @param dbConfig     - TriplyDB configuration
  * @param serviceName  - Name of the service to sync
  * @param graphNames   - Optional pre-fetched graph list (used only for the response count)
  * @param graphName    - Optional graph IRI that triggered this sync (for traceability)
  */
 export async function updateService(
-  config: TriplyDBConfig,
+  dbConfig: TriplyDBConfig,
   serviceName: string,
   graphNames?: string[],
   graphName?: string
@@ -233,21 +233,21 @@ export async function updateService(
 }> {
   logger.info('[TriplyDB Service] Synchronizing service', {
     serviceName: serviceName,
-    account: config.account,
-    dataset: config.dataset,
+    account: dbConfig.account,
+    dataset: dbConfig.dataset,
     triggeredByGraph: graphName || '(not specified)',
   });
 
   // Fetch all graphs to get count (for response message)
   if (!graphNames || graphNames.length === 0) {
     logger.debug('[TriplyDB Service] Fetching all graphs for count');
-    graphNames = await listGraphs(config);
+    graphNames = await listGraphs(dbConfig);
   }
 
   // Correct endpoint from documentation:
   // POST /datasets/{account}/{dataset}/services/{serviceName}
   // Body: {"sync": "true"}
-  const serviceUrl = `${config.baseUrl}/datasets/${config.account}/${config.dataset}/services/${serviceName}`;
+  const serviceUrl = `${dbConfig.baseUrl}/datasets/${dbConfig.account}/${dbConfig.dataset}/services/${serviceName}`;
 
   logger.debug('[TriplyDB Service] Triggering service synchronization', {
     serviceUrl: serviceUrl,
@@ -261,7 +261,7 @@ export async function updateService(
     const syncResponse = await send(serviceUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${config.apiToken}`,
+        Authorization: `Bearer ${dbConfig.apiToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ sync: 'true' }),
@@ -323,20 +323,20 @@ export async function updateService(
 /**
  * Test TriplyDB connection
  */
-export async function testConnection(config: TriplyDBConfig): Promise<boolean> {
-  const testUrl = `${config.baseUrl}/datasets/${config.account}/${config.dataset}`;
+export async function testConnection(dbConfig: TriplyDBConfig): Promise<boolean> {
+  const testUrl = `${dbConfig.baseUrl}/datasets/${dbConfig.account}/${dbConfig.dataset}`;
 
   logger.info('[TriplyDB Service] Testing connection', {
     url: testUrl,
-    account: config.account,
-    dataset: config.dataset,
+    account: dbConfig.account,
+    dataset: dbConfig.dataset,
   });
 
   try {
     const response = await send(testUrl, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${config.apiToken}`,
+        Authorization: `Bearer ${dbConfig.apiToken}`,
         Accept: 'application/json',
       },
     });

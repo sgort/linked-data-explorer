@@ -4,7 +4,7 @@
 
 Several backend routes send requests to a URL the caller supplies, some with a credential the caller supplies. None validates the URL, and the backend authenticates no caller, so anyone who can reach it can make it request any host — internal addresses and cloud metadata included — and read back the response or its error text. Two of those routes change remote state: `update-service` triggers a TriplyDB sync with a caller-supplied token, and `process/deploy` deploys to a caller-supplied Operaton.
 
-#142 lists seven operations. The survey for this design found more: the chain, template, vendor and SHACL routes also take an `endpoint`.
+#142 lists seven operations. The survey for this design found more: the chain, vendor and SHACL routes also take an `endpoint`. The template routes and `DELETE /cache/clear` also take an `endpoint`, but never request it — the template service ignores it, and the cache uses it only as a key — so it is not validated and each keeps its existing lint exception.
 
 ## Decisions
 
@@ -23,17 +23,17 @@ Operaton's built-in REST authentication is HTTP Basic. If that is what gets swit
 
 ## Rules per kind of target
 
-| Target                | Where                                                                                                                                                                                              | Rule                                              |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| SPARQL endpoint       | `GET /norms`, `GET /dmns`, `/dmns/semantic-equivalences`, `/dmns/enhanced-chain-links`, `/dmns/cycles`, `/dmns/{identifier}`; the chain, template, vendor and SHACL routes; `POST /triplydb/query` | `https:`, any host, resolving to a public address |
-| TriplyDB with a token | `POST /triplydb/update-service`, `/list-graphs`, `/test-connection`                                                                                                                                | `https:`, host in `TRIPLYDB_ALLOWED_HOSTS`        |
-| Operaton deploy       | `POST /dmns/process/deploy`                                                                                                                                                                        | no caller URL; the configured Operaton            |
+| Target                | Where                                                                                                                                                                                    | Rule                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| SPARQL endpoint       | `GET /norms`, `GET /dmns`, `/dmns/semantic-equivalences`, `/dmns/enhanced-chain-links`, `/dmns/cycles`, `/dmns/{identifier}`; the chain, vendor and SHACL routes; `POST /triplydb/query` | `https:`, any host, resolving to a public address |
+| TriplyDB with a token | `POST /triplydb/update-service`, `/list-graphs`, `/test-connection`                                                                                                                      | `https:`, host in `TRIPLYDB_ALLOWED_HOSTS`        |
+| Operaton deploy       | `POST /dmns/process/deploy`                                                                                                                                                              | no caller URL; the configured Operaton            |
 
 Rejected targets answer **400** `INVALID_INPUT` in problem details, with a `detail` naming the field and why — "`endpoint` must use https", "`config.baseUrl` host example.org is not an allowed TriplyDB host", "`endpoint` resolves to a private address" — before any outbound request is made.
 
 **`ALLOW_LOCAL_ENDPOINTS=true`** additionally admits `http:` and loopback and private targets, for a local Jena and a local Operaton. It is set in the local `.env` only and is off on ACC and PROD. It does not widen `TRIPLYDB_ALLOWED_HOSTS`.
 
-"Internal" means: loopback (`127.0.0.0/8`, `::1`), private (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`), link-local and cloud metadata (`169.254/16`, `fe80::/10`), unspecified (`0.0.0.0`, `::`), carrier-grade NAT (`100.64/10`), and IPv4-mapped IPv6 forms of all of these.
+"Internal" means: loopback (`127.0.0.0/8`, `::1`), private (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`), link-local and cloud metadata (`169.254/16`, `fe80::/10`), unspecified (`0.0.0.0`, `::`), carrier-grade NAT (`100.64/10`), deprecated site-local (`fec0::/10`) and Teredo (`2001::/32`), and IPv4-mapped IPv6 forms of all of these, plus IPv4-compatible and 6to4 forms decoded by their embedded IPv4.
 
 ## Architecture
 
@@ -43,9 +43,13 @@ Two checks, because one is not enough.
 
 **At connect — `src/utils/guardedAgent.ts`.** An `http.Agent` and `https.Agent` whose `lookup` resolves the name and refuses an internal address. This closes what the route check cannot see: a public name that resolves to an internal address, a name whose DNS answer changes between check and request, and a redirect to an internal host. A refusal here surfaces as a failed upstream call, which the routes already answer as an error.
 
-Every client that goes to a caller-supplied host uses the guarded agent: the per-endpoint axios clients in `sparql.service.ts` and `norms.service.ts`, whatever client the chain, template, vendor and SHACL routes reach their endpoint through (the plan traces each), and the TriplyDB service. The three `fetch` calls in `triplydb.service.ts` move to axios so there is one mechanism to guard. The clients for configured hosts (Operaton, DSO) are left alone.
+Every client that goes to a caller-supplied host uses the guarded agent: the per-endpoint axios clients in `sparql.service.ts` and `norms.service.ts`, whatever client the chain, vendor and SHACL routes reach their endpoint through (the plan traces each), and the TriplyDB service. The five `fetch` calls in `triplydb.service.ts` move to axios so there is one mechanism to guard. The clients for configured hosts (Operaton, DSO) are left alone.
 
 With `ALLOW_LOCAL_ENDPOINTS` on, the agent admits internal addresses as well, so local development keeps working end to end.
+
+`GET /norms` and SHACL merged validation reach even the configured `TRIPLYDB_ENDPOINT` through the guarded client, so an `http:` or local `TRIPLYDB_ENDPOINT` needs `ALLOW_LOCAL_ENDPOINTS=true`.
+
+The guarded client pins `proxy: false`, because an environment proxy would otherwise resolve the target itself and bypass the connect-time check.
 
 ## Behaviour changes
 
@@ -89,7 +93,7 @@ Both go into `.env.example` with a comment. Because App Service settings are set
 ## Documentation
 
 - `openapi.yaml`: the new 400s on every affected operation; `process/deploy`'s deprecated fields; `/triplydb/assets`' header and the removed query parameter.
-- `.spectral.yaml`: the `nlgov:problem-invalid-input` exceptions for `GET /dmns*` and `GET /norms` come out, since `endpoint` is now validated.
+- `.spectral.yaml`: `GET /norms` never had a `nlgov:problem-invalid-input` exception — its `endpoint` parameter was never exempted. The exceptions for the five `GET /dmns*` reads (`/dmns`, `/dmns/semantic-equivalences`, `/dmns/enhanced-chain-links`, `/dmns/cycles`, `/dmns/{identifier}`) and the two vendor reads come out, since `endpoint` is now validated. `GET /dmns/{identifier}/xml` keeps its own exception, for a different reason: it takes no `endpoint` at all and never answers 400.
 - #142: a comment recording the inbound-authorisation split, linking the new issue.
 
 ## Testing

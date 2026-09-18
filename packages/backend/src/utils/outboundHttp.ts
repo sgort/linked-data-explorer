@@ -75,8 +75,26 @@ export function createOutboundClient(defaults: CreateAxiosDefaults = {}): AxiosI
     httpsAgent,
     maxRedirects: 5,
     beforeRedirect: (options) => guardRedirect(options as { protocol?: string; hostname?: string }),
+    // axios otherwise reads HTTP(S)_PROXY from the environment and, for https
+    // targets, replaces httpsAgent with its own tunnelling agent -- so
+    // guardedLookup never runs. `false` after `...defaults` so a passed-in
+    // default cannot turn proxying back on.
+    proxy: false,
+    // Forces the Node `http`/`https` adapter (which honours httpAgent/httpsAgent
+    // and `lookup`) rather than a fetch-based adapter that could sidestep the
+    // guarded agents.
+    httpVersion: 1,
   });
   client.interceptors.request.use((request) => {
+    // A per-request config field can otherwise swap the transport or lookup
+    // and bypass the guard entirely: undo that regardless of what defaults or
+    // the caller set, before the URL check runs.
+    delete request.transport;
+    delete request.socketPath;
+    delete request.lookup;
+    request.proxy = false;
+    request.httpAgent = httpAgent;
+    request.httpsAgent = httpsAgent;
     assertOutboundUrl(client.getUri(request));
     return request;
   });
