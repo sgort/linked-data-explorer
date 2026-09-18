@@ -5,7 +5,7 @@ import { Router, Request, Response } from 'express';
 import * as triplydbService from '../services/triplydb.service';
 import { logger } from '../utils/logger';
 import { sendProblem } from '../utils/problem';
-import { refuseTarget, checkSparqlEndpoint } from '../utils/outboundUrl';
+import { refuseTarget, checkSparqlEndpoint, checkTriplyDbBaseUrl } from '../utils/outboundUrl';
 
 const router = Router();
 
@@ -169,6 +169,8 @@ router.post('/update-service', async (req: Request, res: Response) => {
       return;
     }
 
+    if (refuseTarget(res, req, checkTriplyDbBaseUrl(config.baseUrl, 'config.baseUrl'))) return;
+
     logger.info('[TriplyDB Routes] Service update request received', {
       account: config.account,
       dataset: config.dataset,
@@ -252,6 +254,8 @@ router.post('/list-graphs', async (req: Request, res: Response) => {
       return;
     }
 
+    if (refuseTarget(res, req, checkTriplyDbBaseUrl(config.baseUrl, 'config.baseUrl'))) return;
+
     logger.info('[TriplyDB Routes] List graphs request received', {
       account: config.account,
       dataset: config.dataset,
@@ -331,6 +335,23 @@ router.post('/test-connection', async (req: Request, res: Response) => {
       return;
     }
 
+    if (!config.baseUrl || !config.account || !config.dataset) {
+      logger.warn('[TriplyDB Routes] Invalid test-connection config: missing required fields', {
+        hasBaseUrl: !!config.baseUrl,
+        hasAccount: !!config.account,
+        hasDataset: !!config.dataset,
+      });
+
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_INPUT',
+        detail: 'Invalid config: missing baseUrl, account or dataset',
+      });
+      return;
+    }
+
+    if (refuseTarget(res, req, checkTriplyDbBaseUrl(config.baseUrl, 'config.baseUrl'))) return;
+
     logger.info('[TriplyDB Routes] Connection test requested');
 
     const startTime = Date.now();
@@ -387,7 +408,9 @@ router.post('/test-connection', async (req: Request, res: Response) => {
  * Query params:
  * - account: TriplyDB account name
  * - dataset: TriplyDB dataset name
- * - apiToken: TriplyDB API token (optional, for private datasets)
+ *
+ * A private dataset's token is forwarded from the caller's own
+ * `Authorization: Bearer` header, not taken from the query string (#142).
  *
  * Response:
  * {
@@ -409,7 +432,7 @@ router.get('/assets', async (req: Request, res: Response) => {
   res.set('Content-Type', 'application/json');
 
   try {
-    const { account, dataset, apiToken } = req.query;
+    const { account, dataset } = req.query;
 
     if (!account || !dataset) {
       logger.warn('[TriplyDB Routes] Invalid assets request: missing account or dataset');
@@ -427,14 +450,15 @@ router.get('/assets', async (req: Request, res: Response) => {
     });
 
     const baseUrl = 'https://api.open-regels.triply.cc';
-    const url = `${baseUrl}/datasets/${account}/${dataset}/assets`;
+    const url = `${baseUrl}/datasets/${encodeURIComponent(String(account))}/${encodeURIComponent(String(dataset))}/assets`;
 
     const headers: Record<string, string> = {
       Accept: 'application/json',
     };
 
-    if (apiToken) {
-      headers.Authorization = `Bearer ${apiToken}`;
+    const authorization = req.get('authorization');
+    if (authorization?.startsWith('Bearer ')) {
+      headers.Authorization = authorization;
     }
 
     const startTime = Date.now();

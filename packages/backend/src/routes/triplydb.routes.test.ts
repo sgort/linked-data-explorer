@@ -415,12 +415,13 @@ describe('GET /v1/triplydb/assets', () => {
     );
   });
 
-  test('sends a bearer token when one is supplied for a private dataset', async () => {
+  test('sends a bearer token from the Authorization header for a private dataset', async () => {
     mockFetch.mockResolvedValue(assetResponse([]));
 
     await request(makeApp())
       .get('/v1/triplydb/assets')
-      .query({ account: 'stevengort', dataset: 'facts', apiToken: 'tok-1' });
+      .query({ account: 'stevengort', dataset: 'facts' })
+      .set('Authorization', 'Bearer tok-1');
 
     expect(mockFetch).toHaveBeenCalledWith(expect.any(String), {
       headers: { Accept: 'application/json', Authorization: 'Bearer tok-1' },
@@ -483,6 +484,54 @@ describe('GET /v1/triplydb/assets', () => {
       .query({ account: 'stevengort', dataset: 'facts' });
 
     expect(res.body.detail).toBe('Failed to list assets');
+  });
+});
+
+describe('#142 TriplyDB host allowlist', () => {
+  test.each(['/update-service', '/list-graphs', '/test-connection'])(
+    '%s refuses a host that is not allowed, without calling TriplyDB',
+    async (path) => {
+      const res = await request(makeApp())
+        .post(`/v1/triplydb${path}`)
+        .send({ config: { ...CONFIG, baseUrl: 'https://example.org' }, serviceName: 'svc' });
+      expect(res.status).toBe(400);
+      expect(res.body.detail).toBe(
+        '`config.baseUrl` host example.org is not an allowed TriplyDB host'
+      );
+      for (const fn of Object.values(svc)) {
+        if (typeof fn === 'function') expect(fn).not.toHaveBeenCalled();
+      }
+    }
+  );
+
+  test('test-connection refuses a config with missing fields', async () => {
+    const res = await request(makeApp()).post('/v1/triplydb/test-connection').send({ config: {} });
+    expect(res.status).toBe(400);
+    expect(svc.testConnection).not.toHaveBeenCalled();
+  });
+});
+
+describe('#142 GET /v1/triplydb/assets token', () => {
+  test('forwards a bearer token from the Authorization header', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    await request(makeApp())
+      .get('/v1/triplydb/assets?account=a&dataset=b')
+      .set('Authorization', 'Bearer tok-9');
+    expect(mockFetch.mock.calls[0][1].headers.Authorization).toBe('Bearer tok-9');
+  });
+
+  test('ignores an apiToken query parameter', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    await request(makeApp()).get('/v1/triplydb/assets?account=a&dataset=b&apiToken=leak');
+    expect(mockFetch.mock.calls[0][1].headers.Authorization).toBeUndefined();
+  });
+
+  test('encodes account and dataset into the upstream path', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    await request(makeApp()).get('/v1/triplydb/assets?account=a%2F..&dataset=b%3Fx%3D1');
+    expect(mockFetch.mock.calls[0][0]).toBe(
+      'https://api.open-regels.triply.cc/datasets/a%2F../b%3Fx%3D1/assets'
+    );
   });
 });
 

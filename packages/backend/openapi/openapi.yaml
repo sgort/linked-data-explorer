@@ -1653,8 +1653,10 @@ paths:
         '400':
           description: >-
             `config` or `serviceName` is missing, `config` lacks `baseUrl`,
-            `account`, `dataset` or `apiToken`, or the request body was not
-            valid JSON (code MALFORMED_BODY; #143).
+            `account`, `dataset` or `apiToken`, `config.baseUrl` not `https:`
+            or its host not in `TRIPLYDB_ALLOWED_HOSTS` (code INVALID_INPUT;
+            #142), or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -1713,8 +1715,9 @@ paths:
         '400':
           description: >-
             `config` is missing or lacks `baseUrl`, `account`, `dataset` or
-            `apiToken`, or the request body was not valid JSON (code
-            MALFORMED_BODY; #143).
+            `apiToken`, `config.baseUrl` not `https:` or its host not in
+            `TRIPLYDB_ALLOWED_HOSTS` (code INVALID_INPUT; #142), or the
+            request body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -1739,8 +1742,11 @@ paths:
       tags: [Discovery]
       summary: Check that a TriplyDB dataset is reachable with the given settings
       description: >-
-        Only the presence of `config` is checked; incomplete settings surface as a
-        failed connection (503). The target is not validated (#142).
+        `config` must be present and have `baseUrl`, `account` and `dataset`;
+        an `apiToken` that turns out to be wrong surfaces as a failed
+        connection (503) rather than a 400. `config.baseUrl` is checked
+        against the TriplyDB host allowlist before any connection is made
+        (#142).
       requestBody:
         required: true
         content:
@@ -1773,8 +1779,10 @@ paths:
                     const: 200
         '400':
           description: >-
-            `config` is missing, or the request body was not valid JSON
-            (code MALFORMED_BODY; #143).
+            `config` is missing or lacks `baseUrl`, `account` or `dataset`
+            (code INVALID_INPUT), `config.baseUrl` not `https:` or its host
+            not in `TRIPLYDB_ALLOWED_HOSTS` (code INVALID_INPUT; #142), or
+            the request body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -1806,7 +1814,11 @@ paths:
       summary: List the assets of a dataset on the Open Regels TriplyDB instance
       description: >-
         Queries `https://api.open-regels.triply.cc`. A private dataset needs
-        `apiToken`, which this operation takes in the query string (#142).
+        a token, sent by the caller as an `Authorization: Bearer <token>`
+        request header (not a query parameter, and not documented as an
+        OpenAPI parameter object -- OpenAPI 3 parameters named `Authorization`
+        are ignored). A token given any other way, such as an `apiToken`
+        query parameter, is not forwarded (#142).
       parameters:
         - name: account
           in: query
@@ -1816,12 +1828,6 @@ paths:
         - name: dataset
           in: query
           required: true
-          schema:
-            type: string
-        - name: apiToken
-          in: query
-          required: false
-          description: Bearer token for a private dataset.
           schema:
             type: string
       responses:

@@ -51,7 +51,8 @@ describe('resolveLogo', () => {
 
     expect(result).toBe('https://resolved.example.com/logo.png');
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/v1/triplydb/assets?account=stevengort&dataset=facts')
+      expect.stringContaining('/v1/triplydb/assets?account=stevengort&dataset=facts'),
+      expect.anything()
     );
   });
 
@@ -98,10 +99,12 @@ describe('resolveLogo', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test('passes an apiToken through to the assets request when provided', async () => {
+  test('sends an apiToken as an Authorization header on the assets request', async () => {
     mockFetchAssets([]);
     await resolveLogo('./assets/logo.png', ENDPOINT, 'secret-token');
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('apiToken=secret-token'));
+    expect(global.fetch).toHaveBeenCalledWith(expect.any(String), {
+      headers: { Authorization: 'Bearer secret-token' },
+    });
   });
 });
 
