@@ -21,6 +21,7 @@
     "check-format": "npm run check-format --workspaces --if-present",
     "check-supply-chain": "node scripts/check-supply-chain.mjs",
     "check-mirror": "bash scripts/check-mirror.sh",
+    "authorities:generate": "node scripts/generate-dso-authorities.mjs",
     "prepare": "husky || true",
     "postinstall": "node scripts/write-deps-marker.mjs"
   },
