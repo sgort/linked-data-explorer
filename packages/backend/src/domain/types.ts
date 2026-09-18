@@ -13,8 +13,8 @@ export type Bpmn = {
   schemaVersion: number;
   language?: string;
   organization?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Form = {
@@ -25,8 +25,8 @@ export type Form = {
   status: string;
   language?: string;
   organization?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   readonly: boolean;
 };
 
@@ -43,7 +43,7 @@ export type Document = {
   status: string;
   language?: string;
   organization?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   readonly: boolean;
 };

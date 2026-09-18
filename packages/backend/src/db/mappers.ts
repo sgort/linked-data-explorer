@@ -18,8 +18,8 @@ export function mapBpmn(row: BpmnRow): Bpmn {
     schemaVersion: row.schema_version,
     language: row.language ?? undefined,
     organization: row.organization ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
   };
 }
 
@@ -32,8 +32,8 @@ export function mapForm(r: FormRow): Form {
     status: r.status,
     language: r.language ?? undefined,
     organization: r.organization ?? undefined,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
+    createdAt: r.created_at.toISOString(),
+    updatedAt: r.updated_at.toISOString(),
     readonly: false,
   };
 }
@@ -52,8 +52,8 @@ export function mapDocument(r: DocumentRow): Document {
     status: r.status,
     language: r.language ?? undefined,
     organization: r.organization ?? undefined,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
+    createdAt: r.created_at.toISOString(),
+    updatedAt: r.updated_at.toISOString(),
     readonly: false,
   };
 }
