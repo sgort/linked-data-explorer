@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { edocsService } from '../services/edocs.service';
 import logger from '../utils/logger';
 import { getErrorMessage } from '../utils/errors';
+import { sendProblem } from '../utils/problem';
 import { config } from '../utils/config';
 
 const router = Router();
@@ -11,7 +12,7 @@ const router = Router();
  * Returns eDOCS connectivity status and whether stub mode is active.
  * Useful for the LDE UI to show integration health.
  */
-router.get('/status', async (_req: Request, res: Response) => {
+router.get('/status', async (req: Request, res: Response) => {
   try {
     const health = await edocsService.healthCheck();
     res.json({
@@ -25,9 +26,10 @@ router.get('/status', async (_req: Request, res: Response) => {
     });
   } catch (err) {
     logger.error('[edocs.routes] Status check failed', { error: getErrorMessage(err) });
-    res.status(500).json({
-      success: false,
-      error: { code: 'EDOCS_STATUS_FAILED', message: getErrorMessage(err) },
+    sendProblem(res, req, {
+      status: 500,
+      code: 'EDOCS_STATUS_FAILED',
+      detail: getErrorMessage(err),
     });
   }
 });
@@ -49,13 +51,12 @@ router.post('/workspaces/ensure', async (req: Request, res: Response) => {
   };
 
   if (!projectNumber?.trim() || !projectName?.trim()) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_INPUT',
-        message: 'projectNumber and projectName are required',
-      },
+    sendProblem(res, req, {
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail: 'projectNumber and projectName are required',
     });
+    return;
   }
 
   try {
@@ -67,9 +68,10 @@ router.post('/workspaces/ensure', async (req: Request, res: Response) => {
       projectNumber,
       error: getErrorMessage(err),
     });
-    res.status(500).json({
-      success: false,
-      error: { code: 'EDOCS_WORKSPACE_FAILED', message: getErrorMessage(err) },
+    sendProblem(res, req, {
+      status: 500,
+      code: 'EDOCS_WORKSPACE_FAILED',
+      detail: getErrorMessage(err),
     });
   }
 });
@@ -109,13 +111,12 @@ router.post('/documents', async (req: Request, res: Response) => {
     !contentBase64?.trim() ||
     !metadata?.docName?.trim()
   ) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_INPUT',
-        message: 'workspaceId, filename, contentBase64, and metadata.docName are required',
-      },
+    sendProblem(res, req, {
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail: 'workspaceId, filename, contentBase64, and metadata.docName are required',
     });
+    return;
   }
 
   try {
@@ -141,9 +142,10 @@ router.post('/documents', async (req: Request, res: Response) => {
       workspaceId,
       error: getErrorMessage(err),
     });
-    res.status(500).json({
-      success: false,
-      error: { code: 'EDOCS_UPLOAD_FAILED', message: getErrorMessage(err) },
+    sendProblem(res, req, {
+      status: 500,
+      code: 'EDOCS_UPLOAD_FAILED',
+      detail: getErrorMessage(err),
     });
   }
 });
@@ -164,9 +166,10 @@ router.get('/workspaces/:workspaceId/documents', async (req: Request, res: Respo
       workspaceId,
       error: getErrorMessage(err),
     });
-    res.status(500).json({
-      success: false,
-      error: { code: 'EDOCS_DOCUMENTS_FAILED', message: getErrorMessage(err) },
+    sendProblem(res, req, {
+      status: 500,
+      code: 'EDOCS_DOCUMENTS_FAILED',
+      detail: getErrorMessage(err),
     });
   }
 });

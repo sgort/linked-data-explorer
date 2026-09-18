@@ -397,8 +397,23 @@ describe('ChainBuilder — execution', () => {
   });
 
   test('a failed execution alerts with the server error message', async () => {
+    // The real backend answers a failed-but-completed execution with a
+    // problem response: `detail` carries the message, and the partial chain
+    // result -- which steps ran, the outputs so far -- lives at the `data`
+    // extension member (never at `error.message`, which this shape has never
+    // had). Before #131, the frontend read `data.error?.message` here, which
+    // this failure body never had either (the message was nested at
+    // `data.data.error`, a plain string) -- so a failed execution always
+    // showed "Unknown error" (see the fallback test below). This is the
+    // shape a real 500 actually carries; it must be read correctly.
     global.fetch = fetchMock({
-      execute: { success: false, error: { message: 'DMN engine unavailable' } },
+      execute: {
+        type: 'about:blank',
+        status: 500,
+        title: 'Chain execution failed',
+        detail: 'DMN engine unavailable',
+        data: { chainId: 'age-check', executionTime: 5, finalOutputs: {} },
+      },
     });
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     render(<ChainBuilder endpoint="e" />);
@@ -412,15 +427,37 @@ describe('ChainBuilder — execution', () => {
       expect(alertSpy).toHaveBeenCalledWith('Execution failed: DMN engine unavailable')
     );
   });
+
+  test('a failed execution with no detail falls back to "Unknown error", not a crash', async () => {
+    global.fetch = fetchMock({
+      execute: { type: 'about:blank', status: 500, title: 'Chain execution failed' },
+    });
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<ChainBuilder endpoint="e" />);
+    await screen.findByText('dmns:1 loading:false');
+    await userEvent.click(screen.getByText('load-sequential'));
+    await screen.findByText('validation:{"isValid":true,"missing":0}');
+
+    await userEvent.click(screen.getByText('execute'));
+
+    await vi.waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith('Execution failed: Unknown error')
+    );
+  });
 });
 
 describe('ChainBuilder — degraded backend responses', () => {
-  test('a semantic-links payload reporting success: false leaves the links empty', async () => {
+  test('a semantic-links payload reporting a problem response leaves the links empty', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url.includes('/api/dmns/enhanced-chain-links')) {
         return Promise.resolve({
-          json: async () => ({ success: false, error: 'links unavailable' }),
+          json: async () => ({
+            type: 'about:blank',
+            status: 500,
+            title: 'Query failed',
+            detail: 'links unavailable',
+          }),
         });
       }
       return fetchMock()(url);

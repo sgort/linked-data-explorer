@@ -20,16 +20,23 @@ info:
     DMN discovery and chain execution, SHACL validation, asset storage and
     integrations for the Linked Data Explorer.
 
-    Most error responses use the `{ success: false, error }` envelope described
-    by the ErrorEnvelope schema. `/triplydb` uses TriplyDbError instead (and
-    `/triplydb/test-connection`'s 503 sends a bare `message`),
-    `POST /dmns/evaluate/{decisionKey}` passes Operaton's own errors through, or
-    sends OperatonProxyError, and `POST /chains/execute`'s nested-failure body
-    has no top-level `error` at all — the message is a plain string at
-    `data.error`. `/dso` and `/vendors` answer SimpleErrorEnvelope, whose
-    `error` is a bare string rather than a code and a message. The move to
-    RFC 9457 problem details is tracked in
-    https://github.com/sgort/linked-data-explorer/issues/131.
+    Every 4xx/5xx response is `application/problem+json` (RFC 9457,
+    schema `Problem`): `status`, `title` and `detail` always; `code`, the
+    machine-readable identifier existing callers branch on, where the
+    handler sets one. Two operations are deliberate exceptions, each noted
+    at its own response: `POST /dmns/evaluate/{decisionKey}` is a byte-for-byte
+    proxy for Operaton's own evaluate endpoint and passes Operaton's error
+    body through unchanged (or answers `OperatonProxyError` when Operaton
+    could not be reached at all), and `GET /health`'s 503 body is the health
+    document itself, not a problem response, because the document *is* the
+    explanation. https://github.com/sgort/linked-data-explorer/issues/131.
+
+    The body parser runs ahead of every route, for every method, not only
+    the ones below that document a request body: a malformed body answers
+    400 (code `MALFORMED_BODY`) and one over 10 MB answers 413 (code
+    `PAYLOAD_TOO_LARGE`) even on a `GET` or `DELETE` that sends one, though
+    that is outside the operation's own contract and so is not documented
+    per operation below. https://github.com/sgort/linked-data-explorer/issues/143.
   contact:
     name: Steven Gort
     email: steven.gort@ictu.nl
@@ -119,9 +126,9 @@ paths:
         '500':
           description: The document could not be read.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /ropa/public:
     get:
       operationId: listPublicRopaRecords
@@ -158,9 +165,9 @@ paths:
         '500':
           description: The records could not be read.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /bundles/public:
     get:
       operationId: listPublicBundles
@@ -190,9 +197,9 @@ paths:
         '500':
           description: The bundles could not be read.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/bpmn:
     get:
       operationId: listBpmn
@@ -222,17 +229,17 @@ paths:
         '500':
           description: The read failed (code LIST_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/bpmn` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
     post:
       operationId: upsertBpmn
       tags: [Assets]
@@ -242,9 +249,11 @@ paths:
         conflict updates every column named below. `readonly` and
         `schemaVersion` are never written by this operation and keep their
         database defaults (`false` and `1`) on insert, and are left
-        unchanged on an update. Nothing in the body is validated: a value a
-        database CHECK constraint rejects (`processRole`, `status`), or a
-        required column left empty, answers 500, never 400.
+        unchanged on an update. Validated against the database's own constraints (#150): every required field's presence,
+        every field's type, and `processRole`/`status` against their CHECK
+        constraint's allowed values, all answering 400. `xml` is checked for
+        presence and type only — it is never parsed, so a malformed BPMN
+        document still reaches the database and is stored as given.
       requestBody:
         required: true
         content:
@@ -252,9 +261,11 @@ paths:
             schema:
               type: object
               description: >-
-                Passed straight to the database with no validation; the
-                fields below are what a successful upsert needs, not what
-                is enforced before that point.
+                Validated against the database's own constraints (#150): the
+                required/type/enum rules below are what a 400 checks before the
+                write. A value the database would merely coerce, such as a string
+                for an integer or JSON null for a required JSON value, is rejected
+                rather than stored.
               required: [id, name, xml, linkedDmnTemplates, createdAt, updatedAt]
               properties:
                 id:
@@ -270,12 +281,14 @@ paths:
                   type: string
                 xml:
                   type: string
-                  description: The BPMN 2.0 XML. Not parsed or validated server-side.
+                  description: >-
+                    The BPMN 2.0 XML. Checked for presence and type only —
+                    never parsed, so a malformed document is still stored.
                 processRole:
                   type: string
                   enum: [shell, subprocess, standalone]
                   default: standalone
-                  description: Database CHECK constraint; an out-of-set value answers 500.
+                  description: Database CHECK constraint; an out-of-set value answers 400.
                 calledElement:
                   type: string
                 shellId:
@@ -286,12 +299,13 @@ paths:
                     type: string
                   description: >-
                     Not defaulted server-side: an omitted value is stored as
-                    NULL against a NOT NULL column and answers 500.
+                    NULL against a NOT NULL column, so it is required and an
+                    omission answers 400.
                 status:
                   type: string
                   enum: [example, wip, e2e]
                   default: wip
-                  description: Database CHECK constraint; an out-of-set value answers 500.
+                  description: Database CHECK constraint; an out-of-set value answers 400.
                 language:
                   type: string
                   maxLength: 2
@@ -317,23 +331,44 @@ paths:
                 properties:
                   success:
                     const: true
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143),
+            or it failed validation (code INVALID_INPUT; #150): a required
+            field (`id`, `name`, `xml`, `linkedDmnTemplates`, `createdAt`,
+            `updatedAt`) missing, any field of the wrong type, or
+            `processRole`/`status` outside its CHECK constraint's allowed
+            values. `detail` names every field that failed.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The write failed (code UPSERT_FAILED) — for example a database
-            CHECK or NOT NULL violation — or the request body was not valid
-            JSON or over 10 MB (code INTERNAL_ERROR; #143).
+            The write failed (code UPSERT_FAILED) — for example a value longer
+            than its column allows, or a `createdAt` or `updatedAt` the
+            database cannot read as a timestamp. The 400 above checks
+            presence, type and enum, not length or date format.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/bpmn` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/bpmn/by-bpmn-id/{bpmnProcessId}:
     get:
       operationId: getBpmnByBpmnProcessId
@@ -375,23 +410,23 @@ paths:
             No process has this bpmnProcessId (code NOT_FOUND). The message
             quotes the requested id verbatim.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The lookup failed (code LOOKUP_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/bpmn` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/bpmn/{id}:
     delete:
       operationId: deleteBpmn
@@ -426,17 +461,17 @@ paths:
         '500':
           description: The delete failed (code DELETE_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/bpmn` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/bpmn/{id}/deploy:
     patch:
       operationId: markBpmnDeployed
@@ -464,14 +499,16 @@ paths:
               description: >-
                 Nothing here is required for a 200: an empty body, or no
                 body at all, still succeeds, since every field is either
-                optional or defaulted.
+                optional or defaulted. Whichever fields are present are
+                type-checked (#150) — none is parsed or checked against a
+                CHECK constraint, since none of these columns has one.
               properties:
                 deploymentId:
                   type: string
                   description: >-
-                    Stored as-is, not validated. Omitted, it is written as
-                    NULL — the column has no NOT NULL constraint, so this
-                    still succeeds.
+                    Stored as-is. Omitted, it is written as NULL — the
+                    column has no NOT NULL constraint, so this still
+                    succeeds.
                 operatonUrl:
                   type: string
                   description: Omitted, stored as NULL.
@@ -507,30 +544,48 @@ paths:
                 properties:
                   success:
                     const: true
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143),
+            or a field that was present had the wrong type (code
+            INVALID_INPUT; #150) — `deploymentId`/`operatonUrl`/
+            `boardOwner` not a string, or `formIds`/`documentIds` not an
+            array of strings. `detail` names every field that failed.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           description: >-
             No process has this id (code NOT_FOUND) — the `UPDATE` matched
             zero rows. The message quotes the requested id verbatim (#155).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The update failed (code DEPLOY_MARK_FAILED), or the request body
-            was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+            The update failed (code DEPLOY_MARK_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/bpmn` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/forms:
     get:
       operationId: listForms
@@ -560,17 +615,17 @@ paths:
         '500':
           description: The read failed (code LIST_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/forms` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
     post:
       operationId: upsertForm
       tags: [Assets]
@@ -582,9 +637,11 @@ paths:
         not read from the database. A schema version is stored for a form, but
         neither this operation nor `GET /assets/forms` writes or reads it, so
         it never appears on the wire — unlike `Document.schemaVersion`, which
-        does. Nothing in the body is
-        validated: a required column left empty, or an over-length
-        `language`/`organization`, answers 500, never 400.
+        does. Validated against the database's own constraints (#150): every required field's presence and every field's
+        type, answering 400. `status` has no database CHECK constraint, so
+        any string is accepted, type-checked only. An over-length
+        `language`/`organization` still answers 500, never 400 — a length
+        limit isn't presence, type or enum, so #150 doesn't check it.
       requestBody:
         required: true
         content:
@@ -592,9 +649,11 @@ paths:
             schema:
               type: object
               description: >-
-                Passed straight to the database with no validation; the
-                fields below are what a successful upsert needs, not what
-                is enforced before that point.
+                Validated against the database's own constraints (#150): the
+                required/type rules below are what a 400 checks before the
+                write. A value the database would merely coerce, such as a string
+                for an integer or JSON null for a required JSON value, is rejected
+                rather than stored.
               required: [id, name, schema, createdAt, updatedAt]
               properties:
                 id:
@@ -608,13 +667,16 @@ paths:
                   type: object
                   description: >-
                     Free-form JSON Schema-like form definition,
-                    `JSON.stringify`'d before storage; nothing checks its
-                    shape. A JSONB column — the driver returns it already
+                    `JSON.stringify`'d before storage. Checked for presence
+                    and type only — never parsed, so its shape isn't
+                    checked. A JSONB column — the driver returns it already
                     parsed, not a JSON-encoded string.
                 status:
                   type: string
                   default: wip
-                  description: No database CHECK constraint; any string is accepted.
+                  description: >-
+                    No database CHECK constraint; any string is accepted,
+                    type-checked only.
                 language:
                   type: string
                   maxLength: 2
@@ -640,23 +702,41 @@ paths:
                 properties:
                   success:
                     const: true
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143),
+            or it failed validation (code INVALID_INPUT; #150): a required
+            field (`id`, `name`, `schema`, `createdAt`, `updatedAt`) missing,
+            or any field of the wrong type. `detail` names every field that
+            failed.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The write failed (code UPSERT_FAILED) — for example a NOT NULL
-            violation — or the request body was not valid JSON or over
-            10 MB (code INTERNAL_ERROR; #143).
+            The write failed (code UPSERT_FAILED) — for example an
+            over-length `language`/`organization`, which #150 doesn't check.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/forms` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/forms/{id}:
     delete:
       operationId: deleteForm
@@ -691,17 +771,17 @@ paths:
         '500':
           description: The delete failed (code DELETE_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/forms` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/documents:
     get:
       operationId: listDocuments
@@ -731,17 +811,17 @@ paths:
         '500':
           description: The read failed (code LIST_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/documents` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
     post:
       operationId: upsertDocument
       tags: [Assets]
@@ -757,9 +837,10 @@ paths:
         the JavaScript value `undefined`, which the Postgres driver sends as
         SQL NULL, and NULL is rejected by each column's NOT NULL constraint.
         The database default therefore never actually applies through this
-        route; omitting any of the three answers 500, not a defaulted value.
-        Nothing in the body is validated: a required column left empty, or
-        an over-length `language`/`organization`, answers 500, never 400.
+        route; all three are required. Validated against the database's own constraints (#150): every required field's
+        presence and every field's type, answering 400. An over-length
+        `language`/`organization` still answers 500, never 400 — a length
+        limit isn't presence, type or enum, so #150 doesn't check it.
       requestBody:
         required: true
         content:
@@ -767,9 +848,11 @@ paths:
             schema:
               type: object
               description: >-
-                Passed straight to the database with no validation; the
-                fields below are what a successful upsert needs, not what
-                is enforced before that point.
+                Validated against the database's own constraints (#150): the
+                required/type rules below are what a 400 checks before the
+                write. A value the database would merely coerce, such as a string
+                for an integer or JSON null for a required JSON value, is rejected
+                rather than stored.
               required: [id, name, schemaVersion, zones, bindings, assets, createdAt, updatedAt]
               properties:
                 id:
@@ -787,29 +870,35 @@ paths:
                   type: integer
                   description: >-
                     The database column defaults to `1`, but that default
-                    never applies through this route (see above) — omitting
-                    this answers 500.
+                    never applies through this route (see above), so it is
+                    required.
                 zones:
                   type: object
                   description: >-
-                    Free-form JSON, `JSON.stringify`'d before storage;
-                    nothing checks its shape. A JSONB column with no
-                    database default — the driver returns it already
-                    parsed, not a JSON-encoded string.
+                    Free-form JSON, `JSON.stringify`'d before storage.
+                    Checked for presence and type only — never parsed, so
+                    its shape isn't checked. A JSONB column with no database
+                    default — the driver returns it already parsed, not a
+                    JSON-encoded string.
                 bindings:
+                  type: array
                   description: >-
-                    Free-form JSON, arrays by convention but not enforced.
-                    The database column defaults to `[]`, but that default
-                    never applies through this route (see above) — omitting
-                    this answers 500.
+                    Free-form JSON, checked for presence and array type only
+                    — the shape of its items isn't checked. The database
+                    column defaults to `[]`, but that default never applies
+                    through this route (see above), so it is required.
                 assets:
+                  type: array
                   description: >-
-                    Free-form JSON, arrays by convention but not enforced.
-                    Same database-default caveat as `bindings`.
+                    Free-form JSON, checked for presence and array type
+                    only — same as `bindings`, including the database-default
+                    caveat.
                 status:
                   type: string
                   default: wip
-                  description: No database CHECK constraint; any string is accepted.
+                  description: >-
+                    No database CHECK constraint; any string is accepted,
+                    type-checked only.
                 language:
                   type: string
                   maxLength: 2
@@ -835,23 +924,41 @@ paths:
                 properties:
                   success:
                     const: true
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143),
+            or it failed validation (code INVALID_INPUT; #150): a required
+            field (`id`, `name`, `schemaVersion`, `zones`, `bindings`,
+            `assets`, `createdAt`, `updatedAt`) missing, or any field of the
+            wrong type. `detail` names every field that failed.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The write failed (code UPSERT_FAILED) — for example a NOT NULL
-            violation — or the request body was not valid JSON or over
-            10 MB (code INTERNAL_ERROR; #143).
+            The write failed (code UPSERT_FAILED) — for example an
+            over-length `language`/`organization`, which #150 doesn't check.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/documents` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/documents/{id}:
     delete:
       operationId: deleteDocument
@@ -886,17 +993,17 @@ paths:
         '500':
           description: The delete failed (code DELETE_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/documents` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/ropa:
     get:
       operationId: listRopa
@@ -927,17 +1034,17 @@ paths:
         '500':
           description: The read failed (code LIST_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/ropa` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
     post:
       operationId: upsertRopa
       tags: [Assets]
@@ -959,11 +1066,10 @@ paths:
         value `undefined`, which the Postgres driver sends as SQL NULL,
         and NULL is rejected by each column's NOT NULL constraint. The
         database default therefore never actually applies through this
-        route. Nothing in the body is validated: a value a database CHECK
-        constraint rejects (`processLevel`, `status`), a required column
-        left empty, or an omitted `personalDataFields` array (iterated
-        directly, so a missing array throws before any database call),
-        answers 500, never 400.
+        route. Validated against the database's own constraints (#150): every required field's presence, every field's
+        type, `processLevel`/`status` against their CHECK constraint's
+        allowed values, and each `personalDataFields` entry the same way —
+        all answering 400.
       requestBody:
         required: true
         content:
@@ -971,9 +1077,11 @@ paths:
             schema:
               type: object
               description: >-
-                Passed straight to the database with no validation; the
-                fields below are what a successful upsert needs, not what
-                is enforced before that point.
+                Validated against the database's own constraints (#150): the
+                required/type/enum rules below are what a 400 checks before the
+                write. A value the database would merely coerce, such as a string
+                for an integer or JSON null for a required JSON value, is rejected
+                rather than stored.
               required:
                 - bpmnProcessId
                 - processLevel
@@ -998,7 +1106,7 @@ paths:
                 processLevel:
                   type: string
                   enum: [shell, subprocess]
-                  description: Database CHECK constraint; an out-of-set value answers 500.
+                  description: Database CHECK constraint; an out-of-set value answers 400.
                 title:
                   type: string
                 controllerName:
@@ -1030,7 +1138,7 @@ paths:
                 status:
                   type: string
                   enum: [draft, active, archived]
-                  description: Database CHECK constraint; an out-of-set value answers 500.
+                  description: Database CHECK constraint; an out-of-set value answers 400.
                 schemaVersion:
                   type: integer
                 personalDataFields:
@@ -1085,24 +1193,46 @@ paths:
                       id:
                         type: string
                         format: uuid
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143),
+            or it failed validation (code INVALID_INPUT; #150): a required
+            field missing, any field of the wrong type,
+            `processLevel`/`status` outside its CHECK constraint's allowed
+            values, or a `personalDataFields` entry with a missing or
+            wrongly-typed field of its own. `detail` names every field that
+            failed, prefixing a personal-data field's with its array index
+            (e.g. `personalDataFields[0].formId`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The write failed (code UPSERT_FAILED) — for example a database
-            CHECK or NOT NULL violation, or a missing `personalDataFields`
-            array — or the request body was not valid JSON or over 10 MB
-            (code INTERNAL_ERROR; #143).
+            The write failed (code UPSERT_FAILED) — for example a value longer
+            than its column allows, in the record or in one of its
+            `personalDataFields`. The 400 above checks presence, type and
+            enum, not length.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/ropa` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/ropa/by-bpmn-id/{bpmnProcessId}:
     get:
       operationId: getRopaByBpmnProcessId
@@ -1140,23 +1270,23 @@ paths:
             No RoPA record has this bpmnProcessId (code NOT_FOUND). The
             message quotes the requested id verbatim.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The lookup failed (code LOOKUP_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/ropa` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /assets/ropa/{id}:
     delete:
       operationId: deleteRopa
@@ -1165,16 +1295,19 @@ paths:
       description: >-
         Deletes by `id`, cascading to its personal-data fields. The delete
         statement is unconditional — an id matching no row still answers
-        200, never 404. `id` is a database UUID column: a non-UUID-shaped
-        value fails Postgres's implicit cast and answers 500, not 400 or
-        404.
+        200, never 404. `id` is a database UUID column: since #150, its
+        shape is checked before the query runs, so a non-UUID-shaped value
+        answers 400 rather than reaching Postgres's implicit cast.
       parameters:
         - name: id
           in: path
           required: true
-          description: The record id to delete.
+          description: >-
+            The record id to delete, in the canonical hyphenated UUID form; any
+            other shape is a 400.
           schema:
             type: string
+            format: uuid
       responses:
         '200':
           description: >-
@@ -1191,22 +1324,30 @@ paths:
                 properties:
                   success:
                     const: true
+        '400':
+          description: >-
+            `id` is not UUID-shaped (code INVALID_INPUT; #150). `detail`
+            quotes the requested id verbatim.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The delete failed (code DELETE_FAILED) — including a
-            non-UUID-shaped id, which fails the column's implicit cast.
+            The delete failed (code DELETE_FAILED) — a database error
+            unrelated to `id`'s shape, which the 400 above already rejects.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '503':
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/ropa` operation can answer this.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /cache/stats:
     get:
       operationId: getCacheStats
@@ -1237,9 +1378,9 @@ paths:
         '500':
           description: The statistics could not be read (code CACHE_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /cache/clear:
     delete:
       operationId: clearCache
@@ -1285,9 +1426,9 @@ paths:
         '500':
           description: The cache could not be cleared (code CACHE_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /norms:
     get:
       operationId: listNorms
@@ -1380,15 +1521,15 @@ paths:
         '400':
           description: A query parameter is invalid (code INVALID_PARAM).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The rules could not be queried (code QUERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /triplydb/query:
     post:
       operationId: queryTriplyDb
@@ -1429,21 +1570,27 @@ paths:
                       success:
                         const: true
         '400':
-          description: '`endpoint` or `query` is missing.'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TriplyDbError'
-        '500':
           description: >-
-            The query failed (`TriplyDbError`), or the request body was not valid
-            JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+            `endpoint` or `query` is missing, or the request body was not
+            valid JSON (code MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                anyOf:
-                  - $ref: '#/components/schemas/TriplyDbError'
-                  - $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The query failed (no `code`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /triplydb/update-service:
     post:
       operationId: updateTriplyDbService
@@ -1490,22 +1637,27 @@ paths:
                     type: string
         '400':
           description: >-
-            `config` or `serviceName` is missing, or `config` lacks `baseUrl`,
-            `account`, `dataset` or `apiToken`.
+            `config` or `serviceName` is missing, `config` lacks `baseUrl`,
+            `account`, `dataset` or `apiToken`, or the request body was not
+            valid JSON (code MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/TriplyDbError'
-        '500':
+                $ref: '#/components/schemas/Problem'
+        '413':
           description: >-
-            The update failed (`TriplyDbError`), or the request body was not valid
-            JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                anyOf:
-                  - $ref: '#/components/schemas/TriplyDbError'
-                  - $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The update failed (no `code`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /triplydb/list-graphs:
     post:
       operationId: listTriplyDbGraphs
@@ -1544,21 +1696,28 @@ paths:
                     type: integer
                     minimum: 0
         '400':
-          description: '`config` is missing or lacks `baseUrl`, `account`, `dataset` or `apiToken`.'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TriplyDbError'
-        '500':
           description: >-
-            Listing failed (`TriplyDbError`), or the request body was not valid
-            JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+            `config` is missing or lacks `baseUrl`, `account`, `dataset` or
+            `apiToken`, or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                anyOf:
-                  - $ref: '#/components/schemas/TriplyDbError'
-                  - $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Listing failed (no `code`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /triplydb/test-connection:
     post:
       operationId: testTriplyDbConnection
@@ -1598,36 +1757,33 @@ paths:
                   status:
                     const: 200
         '400':
-          description: '`config` is missing.'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TriplyDbError'
-        '500':
           description: >-
-            The check itself failed (`TriplyDbError`), or the request body was not
-            valid JSON (`ErrorEnvelope`, INTERNAL_ERROR; #143).
+            `config` is missing, or the request body was not valid JSON
+            (code MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                anyOf:
-                  - $ref: '#/components/schemas/TriplyDbError'
-                  - $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The check itself failed (no `code`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '503':
-          description: The dataset did not answer. This body uses `message`, not `error`.
+          description: The dataset did not answer.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                type: object
-                required: [success, message, status]
-                properties:
-                  success:
-                    const: false
-                  message:
-                    type: string
-                    examples: [Connection failed]
-                  status:
-                    const: 503
+                $ref: '#/components/schemas/Problem'
   /triplydb/assets:
     get:
       operationId: listTriplyDbAssets
@@ -1677,21 +1833,21 @@ paths:
         '400':
           description: '`account` or `dataset` is missing.'
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/TriplyDbError'
+                $ref: '#/components/schemas/Problem'
         '500':
           description: TriplyDB could not be reached, or answered with its own 500.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/TriplyDbError'
+                $ref: '#/components/schemas/Problem'
         default:
           description: TriplyDB rejected the request; its HTTP status is passed through (for example 403).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/TriplyDbError'
+                $ref: '#/components/schemas/Problem'
   /triplydb/health:
     get:
       operationId: getTriplyDbProxyHealth
@@ -1777,9 +1933,9 @@ paths:
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dmns/semantic-equivalences:
     get:
       operationId: listDmnSemanticEquivalences
@@ -1817,9 +1973,9 @@ paths:
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dmns/enhanced-chain-links:
     get:
       operationId: listDmnChainLinks
@@ -1857,9 +2013,9 @@ paths:
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dmns/cycles:
     get:
       operationId: listDmnChainCycles
@@ -1897,9 +2053,9 @@ paths:
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dmns/{identifier}:
     get:
       operationId: getDmn
@@ -1941,15 +2097,15 @@ paths:
         '404':
           description: No DMN has this identifier (code NOT_FOUND).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dmns/{identifier}/xml:
     get:
       operationId: getDmnXml
@@ -1980,15 +2136,15 @@ paths:
         '404':
           description: Operaton has no decision definition with this key (code DMN_NOT_FOUND).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '500':
           description: Operaton could not be reached or answered with an error (code DMN_FETCH_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dmns/drd/deploy:
     post:
       operationId: deployDrd
@@ -2043,19 +2199,28 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`dmnIds` has fewer than two entries or `deploymentName` is blank (code INVALID_INPUT).'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-        '500':
           description: >-
-            Assembly or deployment failed (code DRD_DEPLOY_FAILED), or the request
-            body was not valid JSON (code INTERNAL_ERROR; #143).
+            `dmnIds` has fewer than two entries or `deploymentName` is blank
+            (code INVALID_INPUT), or the request body was not valid JSON
+            (code MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Assembly or deployment failed (code DRD_DEPLOY_FAILED).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /dmns/process/deploy:
     post:
       operationId: deployProcess
@@ -2167,20 +2332,30 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`bpmnXml`, `deploymentName` or `organization` is missing or blank (code INVALID_INPUT).'
+          description: >-
+            `bpmnXml`, `deploymentName` or `organization` is missing or
+            blank (code INVALID_INPUT), or the request body was not valid
+            JSON (code MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
             Deployment failed (code PROCESS_DEPLOY_FAILED; the message carries
-            Operaton's error text), or the request body was not valid JSON (code
-            INTERNAL_ERROR; #143).
+            Operaton's error text).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dmns/deploy:
     post:
       operationId: deployDmn
@@ -2226,19 +2401,28 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`xml` or `deploymentName` is missing or blank (code INVALID_INPUT).'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-        '500':
           description: >-
-            Deployment failed (code DMN_DEPLOY_FAILED), or the request body was not
-            valid JSON (code INTERNAL_ERROR; #143).
+            `xml` or `deploymentName` is missing or blank (code
+            INVALID_INPUT), or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Deployment failed (code DMN_DEPLOY_FAILED).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /dmns/evaluate/{decisionKey}:
     post:
       operationId: evaluateDecision
@@ -2294,22 +2478,39 @@ paths:
         '400':
           description: >-
             Operaton rejected the input (for example a variable of the wrong
-            type), and its error body is passed through unchanged.
+            type), and its error body is passed through unchanged
+            (`application/json`). Problem details (`application/problem+json`,
+            code MALFORMED_BODY) when the request body itself was not valid
+            JSON (#143): that never reaches this route's own handler, so it
+            is the global error handler's shape, not the proxy's.
           content:
             application/json:
               schema:
                 description: Operaton's error body, unchanged.
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143). Like the malformed-body 400 above, this
+            never reaches this route's own handler -- it is the global error
+            handler's shape.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
             Operaton's own error body passed through (for example a
-            `RestException`), a `ProxyError` when Operaton could not be reached, or
-            `ErrorEnvelope` when the request body was not valid JSON (#143).
+            `RestException`), or a `ProxyError` when Operaton could not be
+            reached -- this operation's own proxy behaviour, kept as-is, see
+            the `Problem` schema's description.
           content:
             application/json:
               schema:
                 anyOf:
                   - $ref: '#/components/schemas/OperatonProxyError'
-                  - $ref: '#/components/schemas/ErrorEnvelope'
                   - description: Operaton's error body, unchanged.
         default:
           description: Operaton's own error status and body, passed through unchanged.
@@ -2355,19 +2556,28 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-        '500':
           description: >-
-            The validator failed unexpectedly (code VALIDATION_ERROR), or the
-            request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+            `content` is missing, empty or not a string (code
+            INVALID_REQUEST), or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The validator failed unexpectedly (code VALIDATION_ERROR).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /shacl/validate:
     post:
       operationId: validateShacl
@@ -2409,19 +2619,28 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-        '500':
           description: >-
-            The validator failed unexpectedly (code VALIDATION_ERROR), or the
-            request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+            `content` is missing, empty or not a string (code
+            INVALID_REQUEST), or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The validator failed unexpectedly (code VALIDATION_ERROR).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /shacl/validate-merged:
     post:
       operationId: validateShaclMerged
@@ -2473,21 +2692,31 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
+          description: >-
+            `content` is missing, empty or not a string (code
+            INVALID_REQUEST), or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
             The validator failed unexpectedly (code VALIDATION_ERROR) — no
             endpoint configured, or the remote graph could not be
-            fetched/parsed — or the request body was not valid JSON or over
-            10 MB (code INTERNAL_ERROR; #143).
+            fetched/parsed.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /process/{key}/variable-hints:
     get:
       operationId: getProcessVariableHints
@@ -2536,25 +2765,20 @@ paths:
                             validated or restricted by this API.
         '500':
           description: >-
-            Fetching from Operaton failed (code VARIABLE_HINTS_FAILED). Unlike
-            other operations' 500s, the message is a fixed string, not the
-            underlying error, and the body has no `timestamp`.
+            Fetching from Operaton failed (code VARIABLE_HINTS_FAILED).
+            Unlike other operations' 500s, `detail` is a fixed string, not
+            the underlying error.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                type: object
-                required: [success, error]
-                properties:
-                  success:
-                    const: false
-                  error:
-                    type: object
-                    required: [code, message]
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
                     properties:
+                      detail:
+                        const: Failed to retrieve variable hints
                       code:
                         const: VARIABLE_HINTS_FAILED
-                      message:
-                        const: Failed to retrieve variable hints
   /chains:
     get:
       operationId: discoverChains
@@ -2599,9 +2823,9 @@ paths:
         '500':
           description: The SPARQL lookup failed (code DISCOVERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /chains/execute:
     post:
       operationId: executeChain
@@ -2616,7 +2840,7 @@ paths:
         is only ever added to `steps` once it has completed successfully —
         `orchestration.service.ts` pushes it after its try/catch, and a step
         whose evaluation throws re-throws before that push is reached, so it
-        is never added; the chain-level `error` carries that failure instead.
+        is never added; the problem's `detail` carries that failure instead.
         Every populated `steps` entry therefore always has `outputs`, never
         `error`.
       requestBody:
@@ -2715,65 +2939,65 @@ paths:
           description: >-
             `dmnIds` is missing or empty (message "dmnIds array is required
             and must not be empty"), or `inputs` is missing or an empty
-            object (message "inputs object is required"). Both are code
-            INVALID_REQUEST.
+            object (message "inputs object is required"), both code
+            INVALID_REQUEST -- or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            Two unrelated causes share this status; see the schemas below.
-            The nested-failure payload is the orchestrator resolving with
-            `success: false`. `ErrorEnvelope` covers both the orchestrator
-            call itself throwing and the route's own try/catch catching it
-            (code EXECUTION_ERROR), and the request body not being valid
-            JSON, or over 10 MB (code INTERNAL_ERROR; #143) — the latter
-            never reaches this route's own handler; it is answered by the
-            global error handler.
+            Two causes share this status. The orchestrator resolving with
+            `success: false` (a DMN in the chain threw, or the DRD
+            evaluation threw) answers a problem response whose `data`
+            extension member carries the partial chain result -- which
+            steps ran, the outputs so far -- so that information is not
+            lost alongside the failure (`detail`). The route's own
+            try/catch (code EXECUTION_ERROR) answers a problem response
+            with no `data`.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 anyOf:
-                  - type: object
-                    description: >-
-                      The orchestrator resolved with `success: false` (a DMN
-                      in the chain threw, or the DRD evaluation threw). The
-                      failure is nested under `data.error` as a plain string,
-                      not the top-level `error` object of ErrorEnvelope.
-                    required: [success, data, timestamp]
-                    properties:
-                      success:
-                        const: false
-                      data:
-                        type: object
-                        required: [success, chainId, executionTime, finalOutputs, error]
+                  - allOf:
+                      - $ref: '#/components/schemas/Problem'
+                      - type: object
+                        description: >-
+                          The orchestrator resolved with `success: false`.
+                          `data` carries the same fields the 200 response's
+                          `data` does, minus `success`.
+                        required: [data]
                         properties:
-                          success:
-                            const: false
-                          chainId:
-                            type: string
-                          executionTime:
-                            type: number
-                            description: Milliseconds.
-                          finalOutputs:
+                          data:
                             type: object
-                            description: >-
-                              Free-form: whatever chain variables had
-                              accumulated before the failure. `{}` for a
-                              failed DRD run.
-                          steps:
-                            type: array
-                            description: Present only when the caller set `options.includeIntermediateSteps`. `[]` for a failed DRD run.
-                            items:
-                              $ref: '#/components/schemas/ExecutionStep'
-                          error:
-                            type: string
-                            description: Always present on this shape.
-                      timestamp:
-                        type: string
-                        format: date-time
-                  - $ref: '#/components/schemas/ErrorEnvelope'
+                            required: [chainId, executionTime, finalOutputs]
+                            properties:
+                              chainId:
+                                type: string
+                              executionTime:
+                                type: number
+                                description: Milliseconds.
+                              finalOutputs:
+                                type: object
+                                description: >-
+                                  Free-form: whatever chain variables had
+                                  accumulated before the failure. `{}` for a
+                                  failed DRD run.
+                              steps:
+                                type: array
+                                description: Present only when the caller set `options.includeIntermediateSteps`. `[]` for a failed DRD run.
+                                items:
+                                  $ref: '#/components/schemas/ExecutionStep'
+                  - $ref: '#/components/schemas/Problem'
   /chains/templates:
     get:
       operationId: listChainTemplates
@@ -2848,9 +3072,9 @@ paths:
         '500':
           description: The template lookup failed (code QUERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /chains/templates/{id}:
     get:
       operationId: getChainTemplate
@@ -2898,15 +3122,15 @@ paths:
         '404':
           description: No template has this id (code NOT_FOUND). The message names the requested id.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The template lookup failed (code QUERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /chains/templates/categories/list:
     get:
       operationId: listChainTemplateCategories
@@ -2947,9 +3171,9 @@ paths:
         '500':
           description: The template lookup failed (code QUERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /chains/templates/tags/list:
     get:
       operationId: listChainTemplateTags
@@ -2989,9 +3213,9 @@ paths:
         '500':
           description: The template lookup failed (code QUERY_ERROR).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/activiteiten:
     get:
       operationId: listDsoActiviteiten
@@ -3062,9 +3286,9 @@ paths:
         '502':
           description: The upstream API could not be reached, or answered with a failure.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/activiteiten/oin:
     post:
       operationId: listDsoActiviteitenByOin
@@ -3129,26 +3353,37 @@ paths:
                     type: object
                     description: The upstream API's response, unchanged.
         '400':
-          description: '`oin` is missing.'
+          description: >-
+            `oin` is missing, or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
               examples:
                 missingOin:
-                  value: { success: false, error: 'oin is required' }
+                  value:
+                    {
+                      type: 'about:blank',
+                      status: 400,
+                      title: 'Invalid request',
+                      detail: 'oin is required',
+                      instance: '/v1/dso/activiteiten/oin',
+                    }
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '502':
           description: The upstream API could not be reached, or answered with a failure.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
-        '500':
-          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/activiteiten/zoek:
     post:
       operationId: searchDsoActiviteiten
@@ -3221,18 +3456,27 @@ paths:
                   data:
                     type: object
                     description: The upstream API's response, unchanged.
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '502':
           description: The upstream API could not be reached, or answered with a failure.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
-        '500':
-          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/activiteiten/{urn}:
     get:
       operationId: getDsoActiviteit
@@ -3297,18 +3541,18 @@ paths:
         '404':
           description: No activity exists for this URN.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '502':
           description: >-
             The upstream API could not be reached, or answered with a
             failure other than "not found". Also covers a malformed URN
             that cannot be percent-decoded.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/begrippen:
     get:
       operationId: listDsoBegrippen
@@ -3386,9 +3630,9 @@ paths:
         '502':
           description: The upstream API could not be reached, or answered with a failure.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/werkzaamheden/suggereer:
     post:
       operationId: suggestDsoWerkzaamheden
@@ -3445,26 +3689,37 @@ paths:
                     const: true
                   data: {}
         '400':
-          description: '`zoekterm` is missing.'
+          description: >-
+            `zoekterm` is missing, or the request body was not valid JSON
+            (code MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
               examples:
                 missingZoekterm:
-                  value: { success: false, error: 'zoekterm is required' }
+                  value:
+                    {
+                      type: 'about:blank',
+                      status: 400,
+                      title: 'Invalid request',
+                      detail: 'zoekterm is required',
+                      instance: '/v1/dso/werkzaamheden/suggereer',
+                    }
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '502':
           description: The upstream API could not be reached, or answered with a failure.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
-        '500':
-          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/werkzaamheden/zoek:
     post:
       operationId: searchDsoWerkzaamheden
@@ -3527,18 +3782,27 @@ paths:
                   data:
                     type: object
                     description: The upstream API's response, unchanged.
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '502':
           description: The upstream API could not be reached, or answered with a failure.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
-        '500':
-          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/werkzaamheden/{urn}:
     get:
       operationId: getDsoWerkzaamheid
@@ -3594,18 +3858,18 @@ paths:
         '404':
           description: No werkzaamheid exists for this URN.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '502':
           description: >-
             The upstream API could not be reached, or answered with a
             failure other than "not found". Also covers a malformed URN
             that cannot be percent-decoded.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/toepasbare-regels:
     get:
       operationId: listDsoToepasbareRegels
@@ -3666,26 +3930,33 @@ paths:
             `functioneleStructuurRef` is missing, or repeated (which arrives
             as an array; only a single string value is accepted).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
               examples:
                 missingRef:
-                  value: { success: false, error: 'functioneleStructuurRef is required' }
+                  value:
+                    {
+                      type: 'about:blank',
+                      status: 400,
+                      title: 'Invalid request',
+                      detail: 'functioneleStructuurRef is required',
+                      instance: '/v1/dso/toepasbare-regels',
+                    }
         '404':
           description: No toepasbare regels exist for this `functioneleStructuurRef`.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '502':
           description: >-
             The upstream API could not be reached, or answered with a
             failure other than "not found".
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/toepasbare-regels/{id}/sttr:
     get:
       operationId: downloadDsoToepasbareRegelSttr
@@ -3742,17 +4013,17 @@ paths:
         '404':
           description: No toepasbare regel exists for this id.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '502':
           description: >-
             The upstream API could not be reached, or answered with a
             failure other than "not found".
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/toepasbare-regels/{id}/dmn:
     get:
       operationId: getDsoToepasbareRegelDmn
@@ -3812,21 +4083,24 @@ paths:
         '404':
           description: No toepasbare regel exists for this id.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '422':
           description: The regel's STTR has no embedded DMN `<definitions>` element to extract.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
               examples:
                 noDefinitions:
                   value:
                     {
-                      success: false,
-                      error: 'No DMN <definitions> element found in STTR XML',
+                      type: 'about:blank',
+                      status: 422,
+                      title: 'No DMN found',
+                      detail: 'No DMN <definitions> element found in STTR XML',
+                      instance: '/v1/dso/toepasbare-regels/tr-1/dmn',
                     }
         '502':
           description: >-
@@ -3834,9 +4108,9 @@ paths:
             failure other than "not found". Does not cover an STTR with no
             embedded DMN element (422).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /dso/toepasbare-regels/{id}/form-scaffold:
     get:
       operationId: getDsoToepasbareRegelFormScaffold
@@ -3953,17 +4227,17 @@ paths:
         '404':
           description: No toepasbare regel exists for this id.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
         '502':
           description: >-
             The upstream API could not be reached, or answered with a
             failure other than "not found".
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /edocs/status:
     get:
       operationId: getEdocsStatus
@@ -4046,9 +4320,9 @@ paths:
             EDOCS_STATUS_FAILED). Distinct from an eDOCS outage, which is
             reported as a 200 above.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /edocs/workspaces/ensure:
     post:
       operationId: ensureEdocsWorkspace
@@ -4124,31 +4398,40 @@ paths:
                         },
                     }
         '400':
-          description: '`projectNumber` or `projectName` is missing or blank.'
+          description: >-
+            `projectNumber` or `projectName` is missing or blank, or the
+            request body was not valid JSON (code MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
               examples:
                 missingFields:
                   value:
                     {
-                      success: false,
-                      error:
-                        {
-                          code: 'INVALID_INPUT',
-                          message: 'projectNumber and projectName are required',
-                        },
+                      type: 'about:blank',
+                      status: 400,
+                      title: 'Invalid request',
+                      detail: 'projectNumber and projectName are required',
+                      instance: '/v1/edocs/workspaces/ensure',
+                      code: 'INVALID_INPUT',
                     }
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
             The workspace lookup or creation failed (code
-            EDOCS_WORKSPACE_FAILED), or the request body was not valid JSON
-            or over 10 MB (code INTERNAL_ERROR; #143).
+            EDOCS_WORKSPACE_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /edocs/documents:
     post:
       operationId: uploadEdocsDocument
@@ -4232,31 +4515,37 @@ paths:
         '400':
           description: >-
             `workspaceId`, `filename`, `contentBase64` or
-            `metadata.docName` is missing or blank.
+            `metadata.docName` is missing or blank, or the request body was
+            not valid JSON (code MALFORMED_BODY; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
               examples:
                 missingFields:
                   value:
                     {
-                      success: false,
-                      error:
-                        {
-                          code: 'INVALID_INPUT',
-                          message: 'workspaceId, filename, contentBase64, and metadata.docName are required',
-                        },
+                      type: 'about:blank',
+                      status: 400,
+                      title: 'Invalid request',
+                      detail: 'workspaceId, filename, contentBase64, and metadata.docName are required',
+                      instance: '/v1/edocs/documents',
+                      code: 'INVALID_INPUT',
                     }
-        '500':
+        '413':
           description: >-
-            The upload failed (code EDOCS_UPLOAD_FAILED), or the request
-            body was not valid JSON or over 10 MB (code INTERNAL_ERROR;
-            #143).
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The upload failed (code EDOCS_UPLOAD_FAILED).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /edocs/workspaces/{workspaceId}/documents:
     get:
       operationId: listEdocsWorkspaceDocuments
@@ -4328,9 +4617,9 @@ paths:
         '500':
           description: The listing failed (code EDOCS_DOCUMENTS_FAILED).
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
   /vendors:
     get:
       operationId: listVendorServices
@@ -4377,12 +4666,19 @@ paths:
         '500':
           description: The knowledge graph query failed.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
               examples:
                 queryFailed:
-                  value: { success: false, error: 'SPARQL endpoint timed out' }
+                  value:
+                    {
+                      type: 'about:blank',
+                      status: 500,
+                      title: 'Vendor request failed',
+                      detail: 'SPARQL endpoint timed out',
+                      instance: '/v1/vendors',
+                    }
   /vendors/dmn/{identifier}:
     get:
       operationId: getVendorServicesForDmn
@@ -4445,12 +4741,19 @@ paths:
         '500':
           description: The knowledge graph query failed.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/SimpleErrorEnvelope'
+                $ref: '#/components/schemas/Problem'
               examples:
                 queryFailed:
-                  value: { success: false, error: 'SPARQL endpoint timed out' }
+                  value:
+                    {
+                      type: 'about:blank',
+                      status: 500,
+                      title: 'Vendor request failed',
+                      detail: 'SPARQL endpoint timed out',
+                      instance: '/v1/vendors/dmn/SVB_LeeftijdsInformatie',
+                    }
 components:
   headers:
     ApiVersion:
@@ -4461,41 +4764,52 @@ components:
         examples:
           - '2026.09.4'
   schemas:
-    ErrorEnvelope:
+    Problem:
       type: object
       description: >-
-        The error body the backend returns today. Not RFC 9457 problem details;
-        see https://github.com/sgort/linked-data-explorer/issues/131.
-      required: [success, error]
+        RFC 9457 problem details (https://www.rfc-editor.org/rfc/rfc9457),
+        returned as `application/problem+json` by every 4xx/5xx response
+        except two: `POST /dmns/evaluate/{decisionKey}` forwards Operaton's
+        own error body, and `GET /health`'s 503 is the health document
+        itself -- both documented at their own operation. `code` is kept as
+        an extension member alongside the RFC's own fields: the
+        machine-readable identifier existing callers already branch on.
+        https://github.com/sgort/linked-data-explorer/issues/131.
+      required: [status, title, detail]
       properties:
-        success:
-          const: false
-        error:
-          type: object
-          required: [code, message]
-          properties:
-            code:
-              type: string
-              examples: [LIST_FAILED]
-            message:
-              type: string
-            details:
-              type: string
-        timestamp:
+        type:
           type: string
-          format: date-time
-    SimpleErrorEnvelope:
-      type: object
-      description: >-
-        A plainer sibling of ErrorEnvelope, returned by the DSO and
-        vendor-discovery proxy routes: `error` is a message string, not the
-        `{code, message}` object, and there is no `timestamp`.
-      required: [success, error]
-      properties:
-        success:
-          const: false
-        error:
+          format: uri-reference
+          description: >-
+            A URI identifying the problem type. `about:blank` (RFC 9457
+            §4.2.1) unless an operation's description says otherwise --
+            every problem is that operation's own generic 4xx/5xx, not a
+            documented category with its own reference page.
+          examples: [about:blank]
+        status:
+          type: integer
+          description: The HTTP status, repeated from the response line.
+        title:
           type: string
+          description: >-
+            A short, human-readable summary of the kind of problem. Stable
+            for that kind: the same title recurs across requests and, where
+            there is a `code`, across every response that sets that code.
+          examples: [List failed]
+        detail:
+          type: string
+          description: What went wrong with this request.
+        instance:
+          type: string
+          description: The request path that produced this response.
+          examples: [/v1/assets/bpmn]
+        code:
+          type: string
+          description: >-
+            The machine-readable identifier this operation's description
+            names, kept for callers that already branch on it. Omitted by
+            the few operations that never set one.
+          examples: [LIST_FAILED]
     Health:
       type: object
       required:
@@ -5125,19 +5439,6 @@ components:
         title:
           type: [string, 'null']
           description: Null for rulesets other than the primary one.
-    TriplyDbError:
-      type: object
-      description: >-
-        Error body of the TriplyDB proxy routes. Not `ErrorEnvelope`: `error` is a
-        plain message and `status` repeats the HTTP status (#131).
-      required: [success, error, status]
-      properties:
-        success:
-          const: false
-        error:
-          type: string
-        status:
-          type: integer
     TriplyDbConfig:
       type: object
       description: TriplyDB connection settings supplied by the caller (#142).

@@ -102,10 +102,10 @@ describe('POST /v1/triplydb/query', () => {
     const res = await request(makeApp()).post('/v1/triplydb/query').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({
-      success: false,
-      error: 'Missing required fields: endpoint and query',
+    expect(res.body).toMatchObject({
       status: 400,
+      title: 'Invalid request',
+      detail: 'Missing required fields: endpoint and query',
     });
     expect(svc.executeQuery).not.toHaveBeenCalled();
   });
@@ -118,7 +118,11 @@ describe('POST /v1/triplydb/query', () => {
       .send({ endpoint: 'e', query: 'q' });
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ success: false, error: 'malformed SPARQL', status: 500 });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'TriplyDB request failed',
+      detail: 'malformed SPARQL',
+    });
   });
 
   test('falls back to a generic message for a non-Error rejection', async () => {
@@ -128,7 +132,7 @@ describe('POST /v1/triplydb/query', () => {
       .post('/v1/triplydb/query')
       .send({ endpoint: 'e', query: 'q' });
 
-    expect(res.body.error).toBe('Query execution failed');
+    expect(res.body.detail).toBe('Query execution failed');
   });
 });
 
@@ -170,7 +174,7 @@ describe('POST /v1/triplydb/update-service', () => {
     const res = await request(makeApp()).post('/v1/triplydb/update-service').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Missing required fields: config and serviceName');
+    expect(res.body.detail).toBe('Missing required fields: config and serviceName');
     expect(svc.updateService).not.toHaveBeenCalled();
   });
 
@@ -184,7 +188,9 @@ describe('POST /v1/triplydb/update-service', () => {
         .send({ config: partial, serviceName: 'PublishTest' });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe('Invalid config: missing baseUrl, account, dataset, or apiToken');
+      expect(res.body.detail).toBe(
+        'Invalid config: missing baseUrl, account, dataset, or apiToken'
+      );
       expect(svc.updateService).not.toHaveBeenCalled();
     }
   );
@@ -197,7 +203,11 @@ describe('POST /v1/triplydb/update-service', () => {
       .send({ config: CONFIG, serviceName: 'PublishTest' });
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ success: false, error: '403 Forbidden', status: 500 });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'TriplyDB request failed',
+      detail: '403 Forbidden',
+    });
   });
 
   test('falls back to a generic message for a non-Error rejection', async () => {
@@ -207,7 +217,7 @@ describe('POST /v1/triplydb/update-service', () => {
       .post('/v1/triplydb/update-service')
       .send({ config: CONFIG, serviceName: 'PublishTest' });
 
-    expect(res.body.error).toBe('Service update failed');
+    expect(res.body.detail).toBe('Service update failed');
   });
 });
 
@@ -230,7 +240,7 @@ describe('POST /v1/triplydb/list-graphs', () => {
     const res = await request(makeApp()).post('/v1/triplydb/list-graphs').send({});
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Invalid or missing config');
+    expect(res.body.detail).toBe('Invalid or missing config');
     expect(svc.listGraphs).not.toHaveBeenCalled();
   });
 
@@ -252,7 +262,11 @@ describe('POST /v1/triplydb/list-graphs', () => {
     const res = await request(makeApp()).post('/v1/triplydb/list-graphs').send({ config: CONFIG });
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ success: false, error: 'dataset not found', status: 500 });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'TriplyDB request failed',
+      detail: 'dataset not found',
+    });
   });
 
   test('falls back to a generic message for a non-Error rejection', async () => {
@@ -260,7 +274,7 @@ describe('POST /v1/triplydb/list-graphs', () => {
 
     const res = await request(makeApp()).post('/v1/triplydb/list-graphs').send({ config: CONFIG });
 
-    expect(res.body.error).toBe('Failed to list graphs');
+    expect(res.body.detail).toBe('Failed to list graphs');
   });
 });
 
@@ -284,14 +298,18 @@ describe('POST /v1/triplydb/test-connection', () => {
       .send({ config: CONFIG });
 
     expect(res.status).toBe(503);
-    expect(res.body).toEqual({ success: false, message: 'Connection failed', status: 503 });
+    expect(res.body).toMatchObject({
+      status: 503,
+      title: 'Service unavailable',
+      detail: 'Connection failed',
+    });
   });
 
   test('rejects a missing config with 400', async () => {
     const res = await request(makeApp()).post('/v1/triplydb/test-connection').send({});
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Missing config');
+    expect(res.body.detail).toBe('Missing config');
     expect(svc.testConnection).not.toHaveBeenCalled();
   });
 
@@ -303,7 +321,11 @@ describe('POST /v1/triplydb/test-connection', () => {
       .send({ config: CONFIG });
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ success: false, error: 'DNS failure', status: 500 });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'TriplyDB request failed',
+      detail: 'DNS failure',
+    });
   });
 
   test('falls back to a generic message for a non-Error rejection', async () => {
@@ -313,7 +335,7 @@ describe('POST /v1/triplydb/test-connection', () => {
       .post('/v1/triplydb/test-connection')
       .send({ config: CONFIG });
 
-    expect(res.body.error).toBe('Connection test failed');
+    expect(res.body.detail).toBe('Connection test failed');
   });
 });
 
@@ -413,7 +435,7 @@ describe('GET /v1/triplydb/assets', () => {
     const res = await request(makeApp()).get('/v1/triplydb/assets').query(query);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Missing required parameters: account and dataset');
+    expect(res.body.detail).toBe('Missing required parameters: account and dataset');
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -431,10 +453,10 @@ describe('GET /v1/triplydb/assets', () => {
       .query({ account: 'stevengort', dataset: 'private' });
 
     expect(res.status).toBe(403);
-    expect(res.body).toEqual({
-      success: false,
-      error: 'Failed to list assets: Forbidden',
+    expect(res.body).toMatchObject({
       status: 403,
+      title: 'TriplyDB request failed',
+      detail: 'Failed to list assets: Forbidden',
     });
   });
 
@@ -446,7 +468,11 @@ describe('GET /v1/triplydb/assets', () => {
       .query({ account: 'stevengort', dataset: 'facts' });
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ success: false, error: 'ENOTFOUND', status: 500 });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'TriplyDB request failed',
+      detail: 'ENOTFOUND',
+    });
   });
 
   test('falls back to a generic message for a non-Error rejection', async () => {
@@ -456,7 +482,7 @@ describe('GET /v1/triplydb/assets', () => {
       .get('/v1/triplydb/assets')
       .query({ account: 'stevengort', dataset: 'facts' });
 
-    expect(res.body.error).toBe('Failed to list assets');
+    expect(res.body.detail).toBe('Failed to list assets');
   });
 });
 
@@ -543,11 +569,11 @@ describe('/v1/triplydb matches its OpenAPI description', () => {
     expectToMatchOperation(failed, 'post', '/triplydb/query');
   });
 
-  test('a malformed JSON body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('a malformed JSON body is a 400 problem, as documented (#143)', async () => {
     const res = await post('/query').set('Content-Type', 'application/json').send('{"endpoint":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/triplydb/query');
   });
 

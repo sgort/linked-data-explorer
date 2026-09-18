@@ -132,11 +132,16 @@ describe('POST /v1/chains/execute', () => {
     const res = await request(makeApp()).post('/v1/chains/execute').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({ code: 'INVALID_REQUEST', message });
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: message,
+      code: 'INVALID_REQUEST',
+    });
     expect(mockExecuteChain).not.toHaveBeenCalled();
   });
 
-  test('a failed-but-completed execution answers 500 and carries the error through', async () => {
+  test('a failed-but-completed execution answers a problem response carrying the partial result', async () => {
     mockExecuteChain.mockResolvedValue({
       success: false,
       chainId: 'chain-1',
@@ -150,8 +155,13 @@ describe('POST /v1/chains/execute', () => {
       .send({ dmnIds: ['d1', 'd2'], inputs: { bsn: '123' } });
 
     expect(res.status).toBe(500);
-    expect(res.body.success).toBe(false);
-    expect(res.body.data.error).toBe('DMN d2 returned no matching rule');
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Chain execution failed',
+      detail: 'DMN d2 returned no matching rule',
+      data: { chainId: 'chain-1', executionTime: 12, finalOutputs: {} },
+    });
+    expect(res.body).not.toHaveProperty('code');
   });
 
   test('returns 500 with an EXECUTION_ERROR code when the orchestrator throws', async () => {
@@ -163,8 +173,10 @@ describe('POST /v1/chains/execute', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'EXECUTION_ERROR', message: 'Operaton unreachable' },
+      status: 500,
+      title: 'Chain execution failed',
+      detail: 'Operaton unreachable',
+      code: 'EXECUTION_ERROR',
     });
   });
 });
@@ -225,8 +237,10 @@ describe('GET /v1/chains', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'DISCOVERY_ERROR', message: 'SPARQL endpoint unreachable' },
+      status: 500,
+      title: 'Chain discovery failed',
+      detail: 'SPARQL endpoint unreachable',
+      code: 'DISCOVERY_ERROR',
     });
   });
 });
@@ -358,7 +372,8 @@ describe('/v1/chains matches its OpenAPI description', () => {
       });
 
     expect(res.status).toBe(500);
-    expect(res.body.data.error).toBe('DMN SZW_BijstandsnormInformatie returned no matching rule');
+    expect(res.body.detail).toBe('DMN SZW_BijstandsnormInformatie returned no matching rule');
+    expect(res.body.data.steps).toEqual([FIRST_STEP]);
     expectToMatchOperation(res, 'post', '/chains/execute');
   });
 
@@ -370,18 +385,18 @@ describe('/v1/chains matches its OpenAPI description', () => {
       .send({ dmnIds: ['d1'], inputs: { bsn: '123' } });
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('EXECUTION_ERROR');
+    expect(res.body.code).toBe('EXECUTION_ERROR');
     expectToMatchOperation(res, 'post', '/chains/execute');
   });
 
-  test('POST /execute 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /execute 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/chains/execute')
       .set('Content-Type', 'application/json')
       .send('{"dmnIds":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/chains/execute');
   });
 });

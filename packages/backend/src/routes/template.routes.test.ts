@@ -124,8 +124,10 @@ describe('GET /v1/chains/templates', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'QUERY_ERROR', message: 'SPARQL timeout' },
+      status: 500,
+      title: 'Query failed',
+      detail: 'SPARQL timeout',
+      code: 'QUERY_ERROR',
     });
   });
 });
@@ -158,9 +160,11 @@ describe('GET /v1/chains/templates/:id', () => {
     const res = await request(makeApp()).get('/v1/chains/templates/nope');
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'Not found',
+      detail: 'Template not found or not valid for endpoint: nope',
       code: 'NOT_FOUND',
-      message: 'Template not found or not valid for endpoint: nope',
     });
     expect(svc.incrementUsageCount).not.toHaveBeenCalled();
   });
@@ -171,7 +175,7 @@ describe('GET /v1/chains/templates/:id', () => {
     const res = await request(makeApp()).get('/v1/chains/templates/t1');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('QUERY_ERROR');
+    expect(res.body.code).toBe('QUERY_ERROR');
   });
 });
 
@@ -199,7 +203,7 @@ describe('GET /v1/chains/templates/categories/list', () => {
     const res = await request(makeApp()).get('/v1/chains/templates/categories/list');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('QUERY_ERROR');
+    expect(res.body.code).toBe('QUERY_ERROR');
   });
 });
 
@@ -219,7 +223,7 @@ describe('GET /v1/chains/templates/tags/list', () => {
     const res = await request(makeApp()).get('/v1/chains/templates/tags/list');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('QUERY_ERROR');
+    expect(res.body.code).toBe('QUERY_ERROR');
   });
 });
 

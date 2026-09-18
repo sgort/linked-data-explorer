@@ -9,6 +9,7 @@ import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { shaclValidationService } from '../services/shacl-validation.service';
+import { sendProblem } from '../utils/problem';
 
 const router = Router();
 
@@ -41,14 +42,12 @@ router.post('/validate', async (req: Request, res: Response) => {
     const { content } = req.body as { content?: string };
 
     if (!content || typeof content !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_REQUEST',
-          message: 'Request body must contain a "content" field with the Turtle as a string.',
-        },
-        timestamp: new Date().toISOString(),
-      } as ApiResponse);
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_REQUEST',
+        detail: 'Request body must contain a "content" field with the Turtle as a string.',
+      });
+      return;
     }
 
     logger.info('[SHACL Validate] Validation requested', { contentLength: content.length });
@@ -68,11 +67,11 @@ router.post('/validate', async (req: Request, res: Response) => {
     } as ApiResponse);
   } catch (error: unknown) {
     logger.error('[SHACL Validate] Unexpected error', getErrorDetails(error));
-    res.status(500).json({
-      success: false,
-      error: { code: 'VALIDATION_ERROR', message: getErrorMessage(error) },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, {
+      status: 500,
+      code: 'VALIDATION_ERROR',
+      detail: getErrorMessage(error),
+    });
   }
 });
 
@@ -97,14 +96,12 @@ router.post('/validate-merged', async (req: Request, res: Response) => {
     const { content, endpoint } = req.body as { content?: string; endpoint?: string };
 
     if (!content || typeof content !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_REQUEST',
-          message: 'Request body must contain a "content" field with the Turtle as a string.',
-        },
-        timestamp: new Date().toISOString(),
-      } as ApiResponse);
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_REQUEST',
+        detail: 'Request body must contain a "content" field with the Turtle as a string.',
+      });
+      return;
     }
 
     logger.info('[SHACL Validate] Merged validation requested', {
@@ -127,11 +124,11 @@ router.post('/validate-merged', async (req: Request, res: Response) => {
     } as ApiResponse);
   } catch (error: unknown) {
     logger.error('[SHACL Validate] Merged unexpected error', getErrorDetails(error));
-    res.status(500).json({
-      success: false,
-      error: { code: 'VALIDATION_ERROR', message: getErrorMessage(error) },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, {
+      status: 500,
+      code: 'VALIDATION_ERROR',
+      detail: getErrorMessage(error),
+    });
   }
 });
 

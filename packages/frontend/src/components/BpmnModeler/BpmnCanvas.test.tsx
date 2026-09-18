@@ -473,7 +473,12 @@ describe('BpmnCanvas — deploy modal', () => {
 
   test('a failed deploy shows the server error message', async () => {
     global.fetch = vi.fn().mockResolvedValue({
-      json: async () => ({ success: false, error: { message: 'Operaton unreachable' } }),
+      json: async () => ({
+        type: 'about:blank',
+        status: 502,
+        title: 'Process deploy failed',
+        detail: 'Operaton unreachable',
+      }),
     });
     // organization is mandatory too — give this XML one so the scenario under
     // test (server-side failure) isn't masked by the unrelated organization block.
@@ -940,7 +945,12 @@ describe('BpmnCanvas — deploy request', () => {
 
   test('reports the server message when the deploy is refused', async () => {
     await deploy(async () => ({
-      json: async () => ({ success: false, error: { message: 'engine unreachable' } }),
+      json: async () => ({
+        type: 'about:blank',
+        status: 502,
+        title: 'Process deploy failed',
+        detail: 'engine unreachable',
+      }),
     }));
 
     expect((await screen.findAllByText(/engine unreachable/)).length).toBeGreaterThan(0);

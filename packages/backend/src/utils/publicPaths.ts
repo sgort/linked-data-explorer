@@ -3,7 +3,8 @@
  * rather than the credentialed allowlist in index.ts.
  *
  * They serve deliberately public, read-only data to named third-party consumers:
- * ropa.flevoland.nl and similar for /v1/ropa/public, and the RONL Business API
+ * the public ROPA site (packages/ropa-site, served at ropa.open-regels.nl and
+ * acc.ropa.open-regels.nl) and similar for /v1/ropa/public, and the RONL Business API
  * caseworker dashboard for /v1/bundles/public. /v1/openapi.json serves the API's
  * OpenAPI description, which /core/publish-openapi requires to be readable from
  * any origin. The data behind them is shaped for publication (listPublicRopa

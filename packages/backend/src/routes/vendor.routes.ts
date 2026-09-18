@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { vendorService } from '../services/vendor.service';
 import logger from '../utils/logger';
 import { getErrorMessage } from '../utils/errors';
+import { sendProblem } from '../utils/problem';
 import packageJson from '../../package.json';
 
 const router = express.Router();
@@ -38,9 +39,10 @@ router.get('/', async (req: Request, res: Response) => {
       error: getErrorMessage(error),
     });
 
-    res.status(500).json({
-      success: false,
-      error: getErrorMessage(error),
+    sendProblem(res, req, {
+      status: 500,
+      title: 'Vendor request failed',
+      detail: getErrorMessage(error),
     });
   }
 });
@@ -84,9 +86,10 @@ router.get('/dmn/:identifier', async (req: Request, res: Response) => {
       error: getErrorMessage(error),
     });
 
-    res.status(500).json({
-      success: false,
-      error: getErrorMessage(error),
+    sendProblem(res, req, {
+      status: 500,
+      title: 'Vendor request failed',
+      detail: getErrorMessage(error),
     });
   }
 });

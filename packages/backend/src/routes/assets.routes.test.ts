@@ -58,30 +58,98 @@ describe('BPMN collection', () => {
     const res = await request(makeApp()).get('/v1/assets/bpmn');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'LIST_FAILED', message: 'db unavailable' },
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'List failed',
+      detail: 'db unavailable',
+      code: 'LIST_FAILED',
     });
   });
 
+  // Shaped exactly like BpmnService.saveProcess's POST body
+  // (packages/frontend/src/services/bpmnService.ts:31-49) for a top-level
+  // (non-subprocess) process — the frontend's most common save. This is the
+  // fixture the "succeeds today" tests below build from, per the Phase 3
+  // brief: not the backend's own pre-existing bare-bones fixture.
+  const FRONTEND_BPMN_BODY = {
+    id: 'p1',
+    bpmnProcessId: 'ZorgtoeslagProcess',
+    name: 'Zorgtoeslag aanvragen',
+    description: 'Process for requesting housing benefit',
+    xml: '<bpmn:definitions/>',
+    processRole: 'standalone',
+    linkedDmnTemplates: ['dmn-1'],
+    status: 'wip',
+    language: 'nl',
+    organization: 'Gemeente Utrecht',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+  };
+
   test('POST /bpmn upserts the posted body', async () => {
     svc.upsertBpmn.mockResolvedValue(undefined);
-    const body = { id: 'p1', bpmnProcessId: 'ZorgtoeslagProcess', xml: '<bpmn/>' };
 
-    const res = await request(makeApp()).post('/v1/assets/bpmn').send(body);
+    const res = await request(makeApp()).post('/v1/assets/bpmn').send(FRONTEND_BPMN_BODY);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true });
-    expect(svc.upsertBpmn).toHaveBeenCalledWith(body);
+    expect(svc.upsertBpmn).toHaveBeenCalledWith(FRONTEND_BPMN_BODY);
   });
 
   test('POST /bpmn returns 500 with an UPSERT_FAILED code when the write throws', async () => {
     svc.upsertBpmn.mockRejectedValue(new Error('readonly record'));
 
-    const res = await request(makeApp()).post('/v1/assets/bpmn').send({ id: 'p1' });
+    const res = await request(makeApp()).post('/v1/assets/bpmn').send(FRONTEND_BPMN_BODY);
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'UPSERT_FAILED', message: 'readonly record' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Save failed',
+      detail: 'readonly record',
+      code: 'UPSERT_FAILED',
+    });
+  });
+
+  test('POST /bpmn returns 400 naming every missing required field (#150)', async () => {
+    const res = await request(makeApp()).post('/v1/assets/bpmn').send({ id: 'p1' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail:
+        'name is required; xml is required; linkedDmnTemplates is required; ' +
+        'createdAt is required; updatedAt is required',
+    });
+    expect(svc.upsertBpmn).not.toHaveBeenCalled();
+  });
+
+  test('POST /bpmn returns 400 for a wrongly-typed field (#150)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/bpmn')
+      .send({ ...FRONTEND_BPMN_BODY, linkedDmnTemplates: 'dmn-1' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail: 'linkedDmnTemplates must be an array of strings',
+    });
+    expect(svc.upsertBpmn).not.toHaveBeenCalled();
+  });
+
+  test('POST /bpmn returns 400 for an out-of-enum status (#150)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/bpmn')
+      .send({ ...FRONTEND_BPMN_BODY, status: 'archived' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail: 'status must be one of: example, wip, e2e',
+    });
+    expect(svc.upsertBpmn).not.toHaveBeenCalled();
   });
 
   test('DELETE /bpmn/:id deletes by id', async () => {
@@ -99,7 +167,12 @@ describe('BPMN collection', () => {
     const res = await request(makeApp()).delete('/v1/assets/bpmn/p1');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'DELETE_FAILED', message: 'still referenced' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Delete failed',
+      detail: 'still referenced',
+      code: 'DELETE_FAILED',
+    });
   });
 });
 
@@ -136,6 +209,27 @@ describe('PATCH /bpmn/:id/deploy', () => {
     expect(svc.markDeployed).toHaveBeenCalledWith('p1', 'dep-1', undefined, [], [], undefined);
   });
 
+  test('succeeds with an empty body — nothing here is required (#150)', async () => {
+    svc.markDeployed.mockResolvedValue(true);
+
+    const res = await request(makeApp()).patch('/v1/assets/bpmn/p1/deploy').send({});
+
+    expect(res.status).toBe(200);
+    expect(svc.markDeployed).toHaveBeenCalledWith('p1', undefined, undefined, [], [], undefined);
+  });
+
+  test('returns 400 for a wrongly-typed field (#150)', async () => {
+    const res = await request(makeApp()).patch('/v1/assets/bpmn/p1/deploy').send({ formIds: 'f1' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail: 'formIds must be an array of strings',
+    });
+    expect(svc.markDeployed).not.toHaveBeenCalled();
+  });
+
   test('returns 404 with a NOT_FOUND code when nothing matches the given id (zero-row update)', async () => {
     svc.markDeployed.mockResolvedValue(false);
 
@@ -144,9 +238,11 @@ describe('PATCH /bpmn/:id/deploy', () => {
       .send({ deploymentId: 'dep-1' });
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'NOT_FOUND', message: 'No process found for id: missing-id' },
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'Not found',
+      detail: 'No process found for id: missing-id',
+      code: 'NOT_FOUND',
     });
   });
 
@@ -158,7 +254,12 @@ describe('PATCH /bpmn/:id/deploy', () => {
       .send({ deploymentId: 'dep-1' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'DEPLOY_MARK_FAILED', message: 'no such process' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Deploy record failed',
+      detail: 'no such process',
+      code: 'DEPLOY_MARK_FAILED',
+    });
   });
 });
 
@@ -179,9 +280,11 @@ describe('GET /bpmn/by-bpmn-id/:bpmnProcessId', () => {
     const res = await request(makeApp()).get('/v1/assets/bpmn/by-bpmn-id/MissingSub');
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'Not found',
+      detail: 'No process found for bpmnProcessId: MissingSub',
       code: 'NOT_FOUND',
-      message: 'No process found for bpmnProcessId: MissingSub',
     });
   });
 
@@ -191,7 +294,12 @@ describe('GET /bpmn/by-bpmn-id/:bpmnProcessId', () => {
     const res = await request(makeApp()).get('/v1/assets/bpmn/by-bpmn-id/ZorgtoeslagProcess');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'LOOKUP_FAILED', message: 'query failed' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Lookup failed',
+      detail: 'query failed',
+      code: 'LOOKUP_FAILED',
+    });
   });
 
   test('is not shadowed by the DELETE /bpmn/:id route', async () => {
@@ -204,6 +312,25 @@ describe('GET /bpmn/by-bpmn-id/:bpmnProcessId', () => {
 });
 
 describe('forms', () => {
+  // Shaped exactly like FormService.saveForm's POST body
+  // (packages/frontend/src/services/formService.ts:20-24): the full
+  // FormSchema spread, plus the extra `schema_version` the route reads into
+  // nothing (upsertForm never binds it) — present because the frontend
+  // sends it, not because the backend needs it.
+  const FRONTEND_FORM_BODY = {
+    id: 'f1',
+    name: 'Aanvraagformulier zorgtoeslag',
+    description: 'Intake form for the housing benefit application',
+    schema: { title: 'Zorgtoeslag', fields: ['naam', 'inkomen'] },
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+    readonly: false,
+    status: 'wip',
+    language: 'nl',
+    organization: 'Gemeente Utrecht',
+    schema_version: 1,
+  };
+
   test('GET /forms returns the stored forms', async () => {
     svc.listForms.mockResolvedValue([{ id: 'f1' }]);
 
@@ -215,10 +342,38 @@ describe('forms', () => {
   test('POST /forms upserts the posted body', async () => {
     svc.upsertForm.mockResolvedValue(undefined);
 
-    const res = await request(makeApp()).post('/v1/assets/forms').send({ id: 'f1' });
+    const res = await request(makeApp()).post('/v1/assets/forms').send(FRONTEND_FORM_BODY);
 
     expect(res.body).toEqual({ success: true });
-    expect(svc.upsertForm).toHaveBeenCalledWith({ id: 'f1' });
+    expect(svc.upsertForm).toHaveBeenCalledWith(FRONTEND_FORM_BODY);
+  });
+
+  test('POST /forms returns 400 naming every missing required field (#150)', async () => {
+    const res = await request(makeApp()).post('/v1/assets/forms').send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail:
+        'id is required; name is required; schema is required; ' +
+        'createdAt is required; updatedAt is required',
+    });
+    expect(svc.upsertForm).not.toHaveBeenCalled();
+  });
+
+  test('POST /forms returns 400 for a wrongly-typed field (#150)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/forms')
+      .send({ ...FRONTEND_FORM_BODY, schema: 'not-an-object' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail: 'schema must be an object',
+    });
+    expect(svc.upsertForm).not.toHaveBeenCalled();
   });
 
   test('DELETE /forms/:id deletes by id', async () => {
@@ -230,20 +385,54 @@ describe('forms', () => {
   });
 
   test.each([
-    ['get', '/v1/assets/forms', 'listForms', 'LIST_FAILED'],
-    ['post', '/v1/assets/forms', 'upsertForm', 'UPSERT_FAILED'],
-    ['delete', '/v1/assets/forms/f1', 'deleteForm', 'DELETE_FAILED'],
-  ] as const)('%s %s maps a service failure to %s', async (method, path, fn, code) => {
+    ['get', '/v1/assets/forms', 'listForms', 'LIST_FAILED', 'List failed'],
+    ['delete', '/v1/assets/forms/f1', 'deleteForm', 'DELETE_FAILED', 'Delete failed'],
+  ] as const)('%s %s maps a service failure to %s', async (method, path, fn, code, title) => {
     svc[fn].mockRejectedValue(new Error('boom'));
 
     const res = await request(makeApp())[method](path).send({});
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code, message: 'boom' });
+    expect(res.body).toMatchObject({ status: 500, title, detail: 'boom', code });
+  });
+
+  test('POST /forms maps a service failure to UPSERT_FAILED, given a valid body', async () => {
+    svc.upsertForm.mockRejectedValue(new Error('boom'));
+
+    const res = await request(makeApp()).post('/v1/assets/forms').send(FRONTEND_FORM_BODY);
+
+    expect(res.status).toBe(500);
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Save failed',
+      detail: 'boom',
+      code: 'UPSERT_FAILED',
+    });
   });
 });
 
 describe('documents', () => {
+  // Shaped exactly like DocumentService.saveTemplate's POST body
+  // (packages/frontend/src/services/documentService.ts:20-24): the full
+  // DocumentTemplate, unmodified.
+  const FRONTEND_DOCUMENT_BODY = {
+    id: 'd1',
+    name: 'Beschikkingsbrief',
+    description: 'Decision letter template',
+    processKey: 'ZorgtoeslagProcess',
+    serviceId: 'svc-1',
+    schemaVersion: 1,
+    zones: { letterhead: { blocks: [] } },
+    bindings: [],
+    assets: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-02T00:00:00.000Z',
+    readonly: false,
+    status: 'wip',
+    language: 'nl',
+    organization: 'Gemeente Utrecht',
+  };
+
   test('GET /documents returns the stored templates', async () => {
     svc.listDocuments.mockResolvedValue([{ id: 'd1' }]);
 
@@ -255,10 +444,39 @@ describe('documents', () => {
   test('POST /documents upserts the posted body', async () => {
     svc.upsertDocument.mockResolvedValue(undefined);
 
-    const res = await request(makeApp()).post('/v1/assets/documents').send({ id: 'd1' });
+    const res = await request(makeApp()).post('/v1/assets/documents').send(FRONTEND_DOCUMENT_BODY);
 
     expect(res.body).toEqual({ success: true });
-    expect(svc.upsertDocument).toHaveBeenCalledWith({ id: 'd1' });
+    expect(svc.upsertDocument).toHaveBeenCalledWith(FRONTEND_DOCUMENT_BODY);
+  });
+
+  test('POST /documents returns 400 naming every missing required field (#150)', async () => {
+    const res = await request(makeApp()).post('/v1/assets/documents').send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail:
+        'id is required; name is required; schemaVersion is required; ' +
+        'zones is required; bindings is required; assets is required; ' +
+        'createdAt is required; updatedAt is required',
+    });
+    expect(svc.upsertDocument).not.toHaveBeenCalled();
+  });
+
+  test('POST /documents returns 400 for a wrongly-typed field (#150)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/documents')
+      .send({ ...FRONTEND_DOCUMENT_BODY, bindings: {} });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail: 'bindings must be an array',
+    });
+    expect(svc.upsertDocument).not.toHaveBeenCalled();
   });
 
   test('DELETE /documents/:id deletes by id', async () => {
@@ -270,16 +488,29 @@ describe('documents', () => {
   });
 
   test.each([
-    ['get', '/v1/assets/documents', 'listDocuments', 'LIST_FAILED'],
-    ['post', '/v1/assets/documents', 'upsertDocument', 'UPSERT_FAILED'],
-    ['delete', '/v1/assets/documents/d1', 'deleteDocument', 'DELETE_FAILED'],
-  ] as const)('%s %s maps a service failure to %s', async (method, path, fn, code) => {
+    ['get', '/v1/assets/documents', 'listDocuments', 'LIST_FAILED', 'List failed'],
+    ['delete', '/v1/assets/documents/d1', 'deleteDocument', 'DELETE_FAILED', 'Delete failed'],
+  ] as const)('%s %s maps a service failure to %s', async (method, path, fn, code, title) => {
     svc[fn].mockRejectedValue(new Error('boom'));
 
     const res = await request(makeApp())[method](path).send({});
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code, message: 'boom' });
+    expect(res.body).toMatchObject({ status: 500, title, detail: 'boom', code });
+  });
+
+  test('POST /documents maps a service failure to UPSERT_FAILED, given a valid body', async () => {
+    svc.upsertDocument.mockRejectedValue(new Error('boom'));
+
+    const res = await request(makeApp()).post('/v1/assets/documents').send(FRONTEND_DOCUMENT_BODY);
+
+    expect(res.status).toBe(500);
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Save failed',
+      detail: 'boom',
+      code: 'UPSERT_FAILED',
+    });
   });
 });
 
@@ -382,20 +613,29 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
   test('POST /assets/bpmn 500, as documented', async () => {
     svc.upsertBpmn.mockRejectedValue(new Error('readonly record'));
 
-    const res = await request(makeDocumentedApp()).post('/v1/assets/bpmn').send({ id: 'p1' });
+    const res = await request(makeDocumentedApp()).post('/v1/assets/bpmn').send(FULL_BPMN);
 
     expect(res.status).toBe(500);
     expectToMatchOperation(res, 'post', '/assets/bpmn');
   });
 
-  test('POST /assets/bpmn malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('POST /assets/bpmn malformed body is a 400 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/bpmn')
       .set('Content-Type', 'application/json')
       .send('{"id":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
+    expectToMatchOperation(res, 'post', '/assets/bpmn');
+  });
+
+  test('POST /assets/bpmn invalid input is a 400 problem, as documented (#150)', async () => {
+    const res = await request(makeDocumentedApp()).post('/v1/assets/bpmn').send({ id: 'p1' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(svc.upsertBpmn).not.toHaveBeenCalled();
     expectToMatchOperation(res, 'post', '/assets/bpmn');
   });
 
@@ -474,14 +714,25 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
   });
 
-  test('PATCH /assets/bpmn/{id}/deploy malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('PATCH /assets/bpmn/{id}/deploy malformed body is a 400 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .patch('/v1/assets/bpmn/p1/deploy')
       .set('Content-Type', 'application/json')
       .send('{"deploymentId":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
+    expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
+  });
+
+  test('PATCH /assets/bpmn/{id}/deploy invalid input is a 400 problem, as documented (#150)', async () => {
+    const res = await request(makeDocumentedApp())
+      .patch('/v1/assets/bpmn/p1/deploy')
+      .send({ formIds: 'f1' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(svc.markDeployed).not.toHaveBeenCalled();
     expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
   });
 
@@ -593,24 +844,31 @@ describe('/v1/assets/forms matches its OpenAPI description', () => {
   });
 
   test('POST /assets/forms 500, as documented', async () => {
-    svc.upsertForm.mockRejectedValue(
-      new Error('null value in column "name" violates not-null constraint')
-    );
+    svc.upsertForm.mockRejectedValue(new Error('value too long for type character varying(2)'));
 
-    const res = await request(makeDocumentedApp()).post('/v1/assets/forms').send({ id: 'f1' });
+    const res = await request(makeDocumentedApp()).post('/v1/assets/forms').send(FULL_FORM);
 
     expect(res.status).toBe(500);
     expectToMatchOperation(res, 'post', '/assets/forms');
   });
 
-  test('POST /assets/forms malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('POST /assets/forms malformed body is a 400 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/forms')
       .set('Content-Type', 'application/json')
       .send('{"id":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
+    expectToMatchOperation(res, 'post', '/assets/forms');
+  });
+
+  test('POST /assets/forms invalid input is a 400 problem, as documented (#150)', async () => {
+    const res = await request(makeDocumentedApp()).post('/v1/assets/forms').send({ id: 'f1' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(svc.upsertForm).not.toHaveBeenCalled();
     expectToMatchOperation(res, 'post', '/assets/forms');
   });
 
@@ -744,24 +1002,31 @@ describe('/v1/assets/documents matches its OpenAPI description', () => {
   });
 
   test('POST /assets/documents 500, as documented', async () => {
-    svc.upsertDocument.mockRejectedValue(
-      new Error('null value in column "zones" violates not-null constraint')
-    );
+    svc.upsertDocument.mockRejectedValue(new Error('value too long for type character varying(2)'));
 
-    const res = await request(makeDocumentedApp()).post('/v1/assets/documents').send({ id: 'd1' });
+    const res = await request(makeDocumentedApp()).post('/v1/assets/documents').send(FULL_DOCUMENT);
 
     expect(res.status).toBe(500);
     expectToMatchOperation(res, 'post', '/assets/documents');
   });
 
-  test('POST /assets/documents malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('POST /assets/documents malformed body is a 400 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/documents')
       .set('Content-Type', 'application/json')
       .send('{"id":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
+    expectToMatchOperation(res, 'post', '/assets/documents');
+  });
+
+  test('POST /assets/documents invalid input is a 400 problem, as documented (#150)', async () => {
+    const res = await request(makeDocumentedApp()).post('/v1/assets/documents').send({ id: 'd1' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(svc.upsertDocument).not.toHaveBeenCalled();
     expectToMatchOperation(res, 'post', '/assets/documents');
   });
 

@@ -24,6 +24,7 @@ import {
 import { ChainExecutionResult, DmnModel } from '../../types';
 import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
 import { TestCase } from '../../types/testCase.types';
+import { getProblemDetail } from '../../utils/problem';
 import ChainResults from './ChainResults';
 import ExecutionProgress from './ExecutionProgress';
 import ExportChain from './ExportChain';
@@ -194,13 +195,7 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
         console.log('[SaveTemplate] Deploy response:', deployData);
 
         if (!deployData.success) {
-          const errorMsg =
-            typeof deployData.error === 'string'
-              ? deployData.error
-              : deployData.error?.message ||
-                JSON.stringify(deployData.error) ||
-                'DRD deployment failed';
-          throw new Error(errorMsg);
+          throw new Error(getProblemDetail(deployData, 'DRD deployment failed'));
         }
 
         // Create template with DRD fields

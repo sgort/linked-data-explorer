@@ -6,6 +6,7 @@ import { sparqlService } from '../services/sparql.service';
 import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
+import { sendProblem } from '../utils/problem';
 
 const router = Router();
 
@@ -32,14 +33,7 @@ router.get('/stats', async (req: Request, res: Response) => {
     const errorDetails = getErrorDetails(error);
     logger.error('Cache stats error', errorDetails);
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'CACHE_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, { status: 500, code: 'CACHE_ERROR', detail: getErrorMessage(error) });
   }
 });
 
@@ -74,14 +68,7 @@ router.delete('/clear', async (req: Request, res: Response) => {
     const errorDetails = getErrorDetails(error);
     logger.error('Cache clear error', errorDetails);
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'CACHE_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, { status: 500, code: 'CACHE_ERROR', detail: getErrorMessage(error) });
   }
 });
 

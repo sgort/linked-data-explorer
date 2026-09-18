@@ -94,7 +94,11 @@ describe('POST /v1/dso/activiteiten/oin', () => {
     const res = await request(makeApp()).post('/v1/dso/activiteiten/oin').send({});
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ success: false, error: 'oin is required' });
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'oin is required',
+    });
     expect(svc.getActiviteitenByOin).not.toHaveBeenCalled();
   });
 
@@ -106,7 +110,11 @@ describe('POST /v1/dso/activiteiten/oin', () => {
       .send({ oin: '00000001002220647000' });
 
     expect(res.status).toBe(502);
-    expect(res.body).toEqual({ success: false, error: 'DSO returned 500' });
+    expect(res.body).toMatchObject({
+      status: 502,
+      title: 'Upstream request failed',
+      detail: 'DSO returned 500',
+    });
   });
 
   test('falls back to a generic message for a non-Error rejection', async () => {
@@ -117,7 +125,7 @@ describe('POST /v1/dso/activiteiten/oin', () => {
       .send({ oin: '00000001002220647000' });
 
     expect(res.status).toBe(502);
-    expect(res.body.error).toBe('DSO request failed');
+    expect(res.body.detail).toBe('DSO request failed');
   });
 });
 
@@ -154,7 +162,7 @@ describe('POST /v1/dso/activiteiten/zoek', () => {
     const res = await request(makeApp()).post('/v1/dso/activiteiten/zoek').send({});
 
     expect(res.status).toBe(502);
-    expect(res.body.error).toBe('bad geometry');
+    expect(res.body.detail).toBe('bad geometry');
   });
 });
 
@@ -227,7 +235,7 @@ describe('GET /v1/dso/begrippen', () => {
     const res = await request(makeApp()).get('/v1/dso/begrippen');
 
     expect(res.status).toBe(502);
-    expect(res.body.error).toBe('catalogus unavailable');
+    expect(res.body.detail).toBe('catalogus unavailable');
   });
 
   test('falls back to a generic message for a non-Error rejection', async () => {
@@ -236,7 +244,7 @@ describe('GET /v1/dso/begrippen', () => {
     const res = await request(makeApp()).get('/v1/dso/begrippen');
 
     expect(res.status).toBe(502);
-    expect(res.body.error).toBe('DSO request failed');
+    expect(res.body.detail).toBe('DSO request failed');
   });
 });
 
@@ -261,7 +269,7 @@ describe('GET /v1/dso/activiteiten', () => {
     const res = await request(makeApp()).get('/v1/dso/activiteiten');
 
     expect(res.status).toBe(502);
-    expect(res.body.error).toBe('RTR unavailable');
+    expect(res.body.detail).toBe('RTR unavailable');
   });
 
   test('falls back to a generic message for a non-Error rejection', async () => {
@@ -269,7 +277,7 @@ describe('GET /v1/dso/activiteiten', () => {
 
     const res = await request(makeApp()).get('/v1/dso/activiteiten');
 
-    expect(res.body.error).toBe('DSO request failed');
+    expect(res.body.detail).toBe('DSO request failed');
   });
 });
 
@@ -294,7 +302,7 @@ describe('werkzaamheden search', () => {
     const res = await request(makeApp()).post('/v1/dso/werkzaamheden/zoek').send({});
 
     expect(res.status).toBe(502);
-    expect(res.body.error).toBe('zoekinterface down');
+    expect(res.body.detail).toBe('zoekinterface down');
   });
 
   test('POST /werkzaamheden/suggereer returns the suggestions', async () => {
@@ -313,7 +321,11 @@ describe('werkzaamheden search', () => {
     const res = await request(makeApp()).post('/v1/dso/werkzaamheden/suggereer').send({});
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ success: false, error: 'zoekterm is required' });
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'zoekterm is required',
+    });
     expect(svc.suggereerWerkzaamheden).not.toHaveBeenCalled();
   });
 
@@ -371,7 +383,11 @@ describe('GET /v1/dso/toepasbare-regels', () => {
     const res = await request(makeApp()).get('/v1/dso/toepasbare-regels');
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ success: false, error: 'functioneleStructuurRef is required' });
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'functioneleStructuurRef is required',
+    });
     expect(svc.getToepasbareRegels).not.toHaveBeenCalled();
   });
 
@@ -455,7 +471,7 @@ describe('GET /v1/dso/toepasbare-regels/:id/dmn', () => {
     const res = await request(makeApp()).get('/v1/dso/toepasbare-regels/tr-1/dmn');
 
     expect(res.status).toBe(422);
-    expect(res.body.error).toBe('No DMN definitions found in STTR');
+    expect(res.body.detail).toBe('No DMN definitions found in STTR');
   });
 
   test('translates an upstream 404', async () => {
@@ -472,7 +488,7 @@ describe('GET /v1/dso/toepasbare-regels/:id/dmn', () => {
     const res = await request(makeApp()).get('/v1/dso/toepasbare-regels/tr-1/dmn');
 
     expect(res.status).toBe(502);
-    expect(res.body.error).toBe('DMN extraction failed');
+    expect(res.body.detail).toBe('DMN extraction failed');
   });
 });
 
@@ -516,7 +532,7 @@ describe('GET /v1/dso/toepasbare-regels/:id/form-scaffold', () => {
     const res = await request(makeApp()).get('/v1/dso/toepasbare-regels/tr-1/form-scaffold');
 
     expect(res.status).toBe(502);
-    expect(res.body.error).toBe('Form scaffold extraction failed');
+    expect(res.body.detail).toBe('Form scaffold extraction failed');
   });
 });
 
@@ -797,14 +813,14 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     expectToMatchOperation(res, 'post', '/dso/activiteiten/oin');
   });
 
-  test('POST /activiteiten/oin 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /activiteiten/oin 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/dso/activiteiten/oin')
       .set('Content-Type', 'application/json')
       .send('{"oin":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/dso/activiteiten/oin');
   });
 
@@ -837,14 +853,14 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     expectToMatchOperation(res, 'post', '/dso/activiteiten/zoek');
   });
 
-  test('POST /activiteiten/zoek 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /activiteiten/zoek 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/dso/activiteiten/zoek')
       .set('Content-Type', 'application/json')
       .send('{"datum":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/dso/activiteiten/zoek');
   });
 
@@ -926,14 +942,14 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     expectToMatchOperation(res, 'post', '/dso/werkzaamheden/suggereer');
   });
 
-  test('POST /werkzaamheden/suggereer 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /werkzaamheden/suggereer 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/dso/werkzaamheden/suggereer')
       .set('Content-Type', 'application/json')
       .send('{"zoekterm":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/dso/werkzaamheden/suggereer');
   });
 
@@ -966,14 +982,14 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     expectToMatchOperation(res, 'post', '/dso/werkzaamheden/zoek');
   });
 
-  test('POST /werkzaamheden/zoek 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /werkzaamheden/zoek 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/dso/werkzaamheden/zoek')
       .set('Content-Type', 'application/json')
       .send('{"zoekterm":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/dso/werkzaamheden/zoek');
   });
 

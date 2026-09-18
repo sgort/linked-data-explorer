@@ -4,6 +4,7 @@
 import { Router, Request, Response } from 'express';
 import * as triplydbService from '../services/triplydb.service';
 import { logger } from '../utils/logger';
+import { sendProblem } from '../utils/problem';
 
 const router = Router();
 
@@ -52,11 +53,12 @@ router.post('/query', async (req: Request, res: Response) => {
         hasQuery: !!query,
       });
 
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields: endpoint and query',
+      sendProblem(res, req, {
         status: 400,
+        title: 'Invalid request',
+        detail: 'Missing required fields: endpoint and query',
       });
+      return;
     }
 
     logger.info('[TriplyDB Routes] SPARQL query request received', {
@@ -83,10 +85,10 @@ router.post('/query', async (req: Request, res: Response) => {
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Query execution failed',
+    sendProblem(res, req, {
       status: 500,
+      title: 'TriplyDB request failed',
+      detail: error instanceof Error ? error.message : 'Query execution failed',
     });
   }
 });
@@ -140,11 +142,12 @@ router.post('/update-service', async (req: Request, res: Response) => {
         hasServiceName: !!serviceName,
       });
 
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields: config and serviceName',
+      sendProblem(res, req, {
         status: 400,
+        title: 'Invalid request',
+        detail: 'Missing required fields: config and serviceName',
       });
+      return;
     }
 
     if (!config.baseUrl || !config.account || !config.dataset || !config.apiToken) {
@@ -155,11 +158,12 @@ router.post('/update-service', async (req: Request, res: Response) => {
         hasApiToken: !!config.apiToken,
       });
 
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid config: missing baseUrl, account, dataset, or apiToken',
+      sendProblem(res, req, {
         status: 400,
+        title: 'Invalid request',
+        detail: 'Invalid config: missing baseUrl, account, dataset, or apiToken',
       });
+      return;
     }
 
     logger.info('[TriplyDB Routes] Service update request received', {
@@ -188,10 +192,10 @@ router.post('/update-service', async (req: Request, res: Response) => {
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Service update failed',
+    sendProblem(res, req, {
       status: 500,
+      title: 'TriplyDB request failed',
+      detail: error instanceof Error ? error.message : 'Service update failed',
     });
   }
 });
@@ -237,11 +241,12 @@ router.post('/list-graphs', async (req: Request, res: Response) => {
     if (!config || !config.baseUrl || !config.account || !config.dataset || !config.apiToken) {
       logger.warn('[TriplyDB Routes] Invalid list-graphs request: missing config');
 
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid or missing config',
+      sendProblem(res, req, {
         status: 400,
+        title: 'Invalid request',
+        detail: 'Invalid or missing config',
       });
+      return;
     }
 
     logger.info('[TriplyDB Routes] List graphs request received', {
@@ -268,10 +273,10 @@ router.post('/list-graphs', async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to list graphs',
+    sendProblem(res, req, {
       status: 500,
+      title: 'TriplyDB request failed',
+      detail: error instanceof Error ? error.message : 'Failed to list graphs',
     });
   }
 });
@@ -315,11 +320,12 @@ router.post('/test-connection', async (req: Request, res: Response) => {
     if (!config) {
       logger.warn('[TriplyDB Routes] Test connection request missing config');
 
-      return res.status(400).json({
-        success: false,
-        error: 'Missing config',
+      sendProblem(res, req, {
         status: 400,
+        title: 'Invalid request',
+        detail: 'Missing config',
       });
+      return;
     }
 
     logger.info('[TriplyDB Routes] Connection test requested');
@@ -333,22 +339,29 @@ router.post('/test-connection', async (req: Request, res: Response) => {
       duration: `${duration}ms`,
     });
 
-    const statusCode = isConnected ? 200 : 503;
+    if (!isConnected) {
+      sendProblem(res, req, {
+        status: 503,
+        title: 'Service unavailable',
+        detail: 'Connection failed',
+      });
+      return;
+    }
 
-    res.status(statusCode).json({
-      success: isConnected,
-      message: isConnected ? 'Connection successful' : 'Connection failed',
-      status: statusCode,
+    res.status(200).json({
+      success: true,
+      message: 'Connection successful',
+      status: 200,
     });
   } catch (error) {
     logger.error('[TriplyDB Routes] Connection test error', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Connection test failed',
+    sendProblem(res, req, {
       status: 500,
+      title: 'TriplyDB request failed',
+      detail: error instanceof Error ? error.message : 'Connection test failed',
     });
   }
 });
@@ -397,11 +410,12 @@ router.get('/assets', async (req: Request, res: Response) => {
 
     if (!account || !dataset) {
       logger.warn('[TriplyDB Routes] Invalid assets request: missing account or dataset');
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required parameters: account and dataset',
+      sendProblem(res, req, {
         status: 400,
+        title: 'Invalid request',
+        detail: 'Missing required parameters: account and dataset',
       });
+      return;
     }
 
     logger.info('[TriplyDB Routes] Assets list request', {
@@ -430,11 +444,12 @@ router.get('/assets', async (req: Request, res: Response) => {
         status: response.status,
         error: errorText,
       });
-      return res.status(response.status).json({
-        success: false,
-        error: `Failed to list assets: ${response.statusText}`,
+      sendProblem(res, req, {
         status: response.status,
+        title: 'TriplyDB request failed',
+        detail: `Failed to list assets: ${response.statusText}`,
       });
+      return;
     }
 
     const assets = (await response.json()) as Array<{
@@ -475,10 +490,10 @@ router.get('/assets', async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
 
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to list assets',
+    sendProblem(res, req, {
       status: 500,
+      title: 'TriplyDB request failed',
+      detail: error instanceof Error ? error.message : 'Failed to list assets',
     });
   }
 });

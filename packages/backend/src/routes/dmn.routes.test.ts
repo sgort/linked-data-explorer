@@ -38,6 +38,7 @@ import { sparqlService } from '../services/sparql.service';
 import * as assetsService from '../services/assets.service';
 import dmnRoutes from './dmn.routes';
 import { versionMiddleware } from '../middleware/version.middleware';
+import { errorHandler } from '../middleware/error.middleware';
 import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const operaton = operatonService as unknown as Record<string, jest.Mock>;
@@ -137,8 +138,10 @@ describe('GET /api/dmns', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'QUERY_ERROR', message: 'SPARQL endpoint unreachable' },
+      status: 500,
+      title: 'Query failed',
+      detail: 'SPARQL endpoint unreachable',
+      code: 'QUERY_ERROR',
     });
   });
 });
@@ -173,7 +176,12 @@ describe('chain analysis endpoints', () => {
     const res = await request(makeApp()).get(path);
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'QUERY_ERROR', message: 'SPARQL timeout' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Query failed',
+      detail: 'SPARQL timeout',
+      code: 'QUERY_ERROR',
+    });
   });
 
   test.each(cases)('GET %s is not captured by the /:identifier route', async (path, fn) => {
@@ -218,9 +226,11 @@ describe('POST /api/dmns/drd/deploy', () => {
     const res = await request(makeApp()).post('/api/dmns/drd/deploy').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'dmnIds must be an array with at least 2 entries',
       code: 'INVALID_INPUT',
-      message: 'dmnIds must be an array with at least 2 entries',
     });
     expect(operaton.assembleDrd).not.toHaveBeenCalled();
   });
@@ -232,9 +242,11 @@ describe('POST /api/dmns/drd/deploy', () => {
     const res = await request(makeApp()).post('/api/dmns/drd/deploy').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'deploymentName is required',
       code: 'INVALID_INPUT',
-      message: 'deploymentName is required',
     });
     expect(operaton.assembleDrd).not.toHaveBeenCalled();
   });
@@ -247,7 +259,12 @@ describe('POST /api/dmns/drd/deploy', () => {
       .send({ dmnIds: ['A', 'B'], deploymentName: 'X' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'DRD_DEPLOY_FAILED', message: 'unknown DMN B' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'DRD deploy failed',
+      detail: 'unknown DMN B',
+      code: 'DRD_DEPLOY_FAILED',
+    });
   });
 
   test('returns 500 with a DRD_DEPLOY_FAILED code when the deploy fails', async () => {
@@ -259,7 +276,7 @@ describe('POST /api/dmns/drd/deploy', () => {
       .send({ dmnIds: ['A', 'B'], deploymentName: 'X' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('DRD_DEPLOY_FAILED');
+    expect(res.body.code).toBe('DRD_DEPLOY_FAILED');
   });
 });
 
@@ -270,7 +287,7 @@ describe('POST /api/dmns/process/deploy', () => {
       .send({ bpmnXml: '<bpmn:definitions/>', deploymentName: 'RipR21Process' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_INPUT');
+    expect(res.body.code).toBe('INVALID_INPUT');
     expect(mockDeployProcess).not.toHaveBeenCalled();
   });
 
@@ -282,7 +299,7 @@ describe('POST /api/dmns/process/deploy', () => {
     });
 
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_INPUT');
+    expect(res.body.code).toBe('INVALID_INPUT');
   });
 
   test('passes organization through to deployProcess as the tenant-id tag', async () => {
@@ -321,7 +338,12 @@ describe('POST /api/dmns/process/deploy', () => {
     const res = await request(makeApp()).post('/api/dmns/process/deploy').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({ code: 'INVALID_INPUT', message: 'bpmnXml is required' });
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'bpmnXml is required',
+      code: 'INVALID_INPUT',
+    });
     expect(mockDeployProcess).not.toHaveBeenCalled();
   });
 
@@ -331,9 +353,11 @@ describe('POST /api/dmns/process/deploy', () => {
       .send({ bpmnXml: '<bpmn:definitions/>', deploymentName: '  ', organization: 'flevoland' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'deploymentName is required',
       code: 'INVALID_INPUT',
-      message: 'deploymentName is required',
     });
   });
 
@@ -443,9 +467,11 @@ describe('POST /api/dmns/process/deploy', () => {
     });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Process deploy failed',
+      detail: 'Operaton unreachable',
       code: 'PROCESS_DEPLOY_FAILED',
-      message: 'Operaton unreachable',
     });
   });
 });
@@ -457,7 +483,7 @@ describe('POST /api/dmns/deploy', () => {
       .send({ deploymentName: 'test-dmn' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_INPUT');
+    expect(res.body.code).toBe('INVALID_INPUT');
     expect(operaton.deployDrd).not.toHaveBeenCalled();
   });
 
@@ -467,7 +493,7 @@ describe('POST /api/dmns/deploy', () => {
       .send({ xml: '<dmn:definitions/>' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_INPUT');
+    expect(res.body.code).toBe('INVALID_INPUT');
     expect(operaton.deployDrd).not.toHaveBeenCalled();
   });
 
@@ -512,8 +538,8 @@ describe('POST /api/dmns/deploy', () => {
       .send({ xml: '<dmn:definitions/>', deploymentName: 'test-dmn' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('DMN_DEPLOY_FAILED');
-    expect(res.body.error.message).toBe('Operaton unreachable');
+    expect(res.body.code).toBe('DMN_DEPLOY_FAILED');
+    expect(res.body.detail).toBe('Operaton unreachable');
   });
 });
 
@@ -593,9 +619,11 @@ describe('GET /api/dmns/:identifier/xml', () => {
     const res = await request(makeApp()).get('/api/dmns/Unknown/xml');
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'DMN not found',
+      detail: 'DMN definition not found in Operaton: Unknown',
       code: 'DMN_NOT_FOUND',
-      message: 'DMN definition not found in Operaton: Unknown',
     });
   });
 
@@ -605,9 +633,11 @@ describe('GET /api/dmns/:identifier/xml', () => {
     const res = await request(makeApp()).get('/api/dmns/SVB/xml');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'DMN fetch failed',
+      detail: 'Operaton unreachable',
       code: 'DMN_FETCH_FAILED',
-      message: 'Operaton unreachable',
     });
   });
 
@@ -654,7 +684,12 @@ describe('GET /api/dmns/:identifier', () => {
     const res = await request(makeApp()).get('/api/dmns/Nope');
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toEqual({ code: 'NOT_FOUND', message: 'DMN not found: Nope' });
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'Not found',
+      detail: 'DMN not found: Nope',
+      code: 'NOT_FOUND',
+    });
   });
 
   test('returns 500 with a QUERY_ERROR code when the lookup throws', async () => {
@@ -663,7 +698,12 @@ describe('GET /api/dmns/:identifier', () => {
     const res = await request(makeApp()).get('/api/dmns/SVB');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'QUERY_ERROR', message: 'SPARQL timeout' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Query failed',
+      detail: 'SPARQL timeout',
+      code: 'QUERY_ERROR',
+    });
   });
 });
 
@@ -695,9 +735,11 @@ describe('POST /api/dmns/validate', () => {
     const res = await request(makeApp()).post('/api/dmns/validate').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'Request body must contain a "content" field with the DMN XML as a string.',
       code: 'INVALID_REQUEST',
-      message: 'Request body must contain a "content" field with the DMN XML as a string.',
     });
     expect(mockValidate).not.toHaveBeenCalled();
   });
@@ -727,9 +769,11 @@ describe('POST /api/dmns/validate', () => {
       .send({ content: '<definitions/>' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Validation failed',
+      detail: 'XSD schema missing',
       code: 'VALIDATION_ERROR',
-      message: 'XSD schema missing',
     });
   });
 });
@@ -892,15 +936,47 @@ describe('/v1/dmns reads match their OpenAPI description', () => {
 });
 
 describe('/v1/dmns deploy, evaluate and validate match their OpenAPI description', () => {
-  function makeDocumentedApp() {
+  function makeDocumentedApp(jsonLimit?: string) {
     const app = express();
-    app.use(express.json());
+    app.use(express.json(jsonLimit ? { limit: jsonLimit } : {}));
     app.use(versionMiddleware); // app-wide in index.ts
     app.use('/v1/dmns', dmnRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers unparsable and oversized bodies
     return app;
   }
 
   const post = (path: string) => request(makeDocumentedApp()).post(`/v1/dmns${path}`);
+
+  // Each of these parses a request body, so each documents a 400 for one it
+  // cannot parse (#143). The global error handler answers it before the route
+  // runs, so the check is that every operation's document says so.
+  test.each([
+    ['/drd/deploy', '/dmns/drd/deploy'],
+    ['/process/deploy', '/dmns/process/deploy'],
+    ['/deploy', '/dmns/deploy'],
+    ['/evaluate/zorgtoeslag', '/dmns/evaluate/{decisionKey}'],
+    ['/validate', '/dmns/validate'],
+  ])('POST %s malformed body is a 400, as documented (#143)', async (route, documented) => {
+    const res = await post(route).set('Content-Type', 'application/json').send('{"broken":');
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
+    expectToMatchOperation(res, 'post', documented);
+  });
+
+  // The production limit is 10 MB, too heavy to send in a unit test, so this
+  // app mounts the parser with a tiny limit of its own. What is under test is
+  // that the operation documents the 413 the real handler answers.
+  test('POST /dmns/validate oversized body is a 413, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp('100b'))
+      .post('/v1/dmns/validate')
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify({ content: 'x'.repeat(500) }));
+
+    expect(res.status).toBe(413);
+    expect(res.body.code).toBe('PAYLOAD_TOO_LARGE');
+    expectToMatchOperation(res, 'post', '/dmns/validate');
+  });
 
   test('POST /dmns/evaluate/{decisionKey} passes Operaton results and errors through, as documented', async () => {
     operaton.evaluateRaw.mockResolvedValue([{ aanspraak: { value: true, type: 'Boolean' } }]);

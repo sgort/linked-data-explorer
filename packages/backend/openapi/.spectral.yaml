@@ -9,13 +9,6 @@ extends:
   - ./adr-ruleset-2.2.1.yaml
 
 rules:
-  # Error responses are the { success: false, error } envelope, not RFC 9457
-  # problem details. The document describes them as they are rather than claim
-  # a format the API does not return. Remove both lines when
-  # https://github.com/sgort/linked-data-explorer/issues/131 lands.
-  nlgov:use-problem-schema: 'off'
-  nlgov:problem-schema-members: 'off'
-
   # The release version is calendar-based, YYYY.MM.N with a zero-padded month
   # (2026.09.4), and info.version is the same string as the API-Version header.
   # A zero-padded month is not valid semver, and rewriting it in the document
@@ -80,42 +73,44 @@ overrides:
     rules:
       nlgov:problem-invalid-input: 'off'
 
-  # The Assets operations validate nothing. A body goes straight into an upsert
-  # and a path id straight into a query, so a missing field, an unknown status
-  # or a malformed id surfaces as a 500 from the database rather than a 400 --
-  # see https://github.com/sgort/linked-data-explorer/issues/150, which also
-  # covers the deletes that answer 200 for a row that does not exist. Remove
-  # this whole override when #150 lands and these operations answer 400.
-  # The four plain list reads take no parameter, so the rule never fires there.
+  # #150 landed validation for the four Assets/ROPA upserts, the deploy-mark
+  # PATCH, and DELETE /assets/ropa/{id} (which now checks its id is
+  # UUID-shaped before it reaches Postgres, answering 400 for a malformed one
+  # -- see assets.routes.ts / ropa.routes.ts). What remains below still
+  # genuinely cannot answer 400, for a reason that has nothing to do with
+  # "not implemented yet":
+  # - the two by-bpmn-id lookups take free text -- any string is a
+  #   legitimate lookup key, so a miss is a 404, never a 400;
+  # - the three remaining deletes (BPMN, forms, documents) key on a TEXT
+  #   column (`lde_id`, or the table's own TEXT primary key), never a UUID,
+  #   so there is no malformed shape to reject -- and a delete of a row that
+  #   does not exist stays 200 for all four deletes, ROPA included, by
+  #   design (decision 3 in the plan), not an omission.
   - files:
-      - 'openapi.json#/paths/~1assets~1bpmn/post'
       - 'openapi.json#/paths/~1assets~1bpmn~1by-bpmn-id~1%7BbpmnProcessId%7D/get'
       - 'openapi.json#/paths/~1assets~1bpmn~1%7Bid%7D/delete'
-      - 'openapi.json#/paths/~1assets~1bpmn~1%7Bid%7D~1deploy/patch'
-      - 'openapi.json#/paths/~1assets~1forms/post'
       - 'openapi.json#/paths/~1assets~1forms~1%7Bid%7D/delete'
-      - 'openapi.json#/paths/~1assets~1documents/post'
       - 'openapi.json#/paths/~1assets~1documents~1%7Bid%7D/delete'
-      - 'openapi.json#/paths/~1assets~1ropa/post'
       - 'openapi.json#/paths/~1assets~1ropa~1by-bpmn-id~1%7BbpmnProcessId%7D/get'
-      - 'openapi.json#/paths/~1assets~1ropa~1%7Bid%7D/delete'
     rules:
       nlgov:problem-invalid-input: 'off'
 
   # Phase 5's (#137) shared list of operations that never answer 400, one
   # block for the whole phase rather than one per task.
   #
-  # Nine DSO operations. The four list/search operations (activiteiten,
-  # activiteiten/zoek, begrippen, werkzaamheden/zoek) accept every parameter
-  # unvalidated and forward it to the upstream API as given. The two URN
-  # reads (activiteiten/{urn}, werkzaamheden/{urn}) fall through a malformed
-  # path segment to the same 502 as any other upstream failure, rather than
-  # answering 400. The three toepasbare-regels per-id reads (sttr, dmn,
-  # form-scaffold) take an opaque `id` path parameter that is never
-  # validated either — any value is forwarded to the upstream API as given,
-  # and a miss maps to 404, not 400. Only POST /dso/activiteiten/oin,
-  # POST /dso/werkzaamheden/suggereer and GET /dso/toepasbare-regels validate
-  # their own input, and all three already document a 400.
+  # Seven DSO operations. The two list operations (activiteiten, begrippen)
+  # accept every parameter unvalidated and forward it to the upstream API as
+  # given. The two URN reads (activiteiten/{urn}, werkzaamheden/{urn}) fall
+  # through a malformed path segment to the same 502 as any other upstream
+  # failure, rather than answering 400. The three toepasbare-regels per-id
+  # reads (sttr, dmn, form-scaffold) take an opaque `id` path parameter that
+  # is never validated either — any value is forwarded to the upstream API
+  # as given, and a miss maps to 404, not 400. None of the four DSO POSTs
+  # (activiteiten/oin, activiteiten/zoek, werkzaamheden/suggereer,
+  # werkzaamheden/zoek) needs an entry here any more: two already validated
+  # their own input and documented a 400, and since #143 all four document
+  # one anyway, for the malformed-body case every body-taking operation
+  # shares.
   #
   # Three eDOCS/vendor operations. GET /edocs/workspaces/{workspaceId}/documents
   # takes an opaque `workspaceId` path parameter that is never validated —
@@ -129,10 +124,8 @@ overrides:
   # validate their own input and document the 400 they answer.
   - files:
       - 'openapi.json#/paths/~1dso~1activiteiten/get'
-      - 'openapi.json#/paths/~1dso~1activiteiten~1zoek/post'
       - 'openapi.json#/paths/~1dso~1activiteiten~1%7Burn%7D/get'
       - 'openapi.json#/paths/~1dso~1begrippen/get'
-      - 'openapi.json#/paths/~1dso~1werkzaamheden~1zoek/post'
       - 'openapi.json#/paths/~1dso~1werkzaamheden~1%7Burn%7D/get'
       - 'openapi.json#/paths/~1dso~1toepasbare-regels~1%7Bid%7D~1sttr/get'
       - 'openapi.json#/paths/~1dso~1toepasbare-regels~1%7Bid%7D~1dmn/get'
@@ -142,3 +135,29 @@ overrides:
       - 'openapi.json#/paths/~1vendors~1dmn~1%7Bidentifier%7D/get'
     rules:
       nlgov:problem-invalid-input: 'off'
+
+  # Every error response is RFC 9457 problem details (#131), so
+  # use-problem-schema and problem-schema-members gate everywhere except the
+  # two responses below, which are not ours to reshape.
+  #
+  # GET /health's 503 body is the health document itself, carrying which
+  # dependency is down -- the same information a 200 reports, not an
+  # explanation of a request failure. Replacing it with problem details would
+  # discard the reason the status exists.
+  - files:
+      - 'openapi.json#/paths/~1health/get/responses/503/content'
+    rules:
+      nlgov:use-problem-schema: 'off'
+
+  # POST /dmns/evaluate/{decisionKey} is a byte-for-byte proxy for Operaton's
+  # own evaluate endpoint; the frontend reads Operaton's raw response body
+  # directly. Rewriting a failure into problem details would make the proxy
+  # lie about what Operaton said. Only the 500 is listed: the 400 needs no
+  # exception, because it also carries problem+json for the one sub-case that
+  # is not the proxy's own (a malformed request body, #143, answered by the
+  # global error handler before this route is reached), and that satisfies
+  # the rule on its own.
+  - files:
+      - 'openapi.json#/paths/~1dmns~1evaluate~1%7BdecisionKey%7D/post/responses/500/content'
+    rules:
+      nlgov:use-problem-schema: 'off'
