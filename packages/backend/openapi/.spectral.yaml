@@ -80,23 +80,25 @@ overrides:
     rules:
       nlgov:problem-invalid-input: 'off'
 
-  # The Assets by-id operations validate nothing yet -- see
-  # https://github.com/sgort/linked-data-explorer/issues/150. The two
-  # by-bpmn-id lookups are free-text: any string is a legitimate lookup, so a
-  # miss is a 404, never a 400. The four deletes cast the path id straight
-  # into a query, so a malformed id surfaces as a 500 from the database
-  # rather than a 400, and a delete of a row that does not exist stays 200
-  # either way. The upserts and the deploy-mark no longer need an entry here:
-  # since #143, a malformed body answers 400 on every operation that takes
-  # one, which is what this rule asks for. Remove what remains when #150
-  # lands and the deletes validate the id's shape.
+  # #150 landed validation for the four Assets/ROPA upserts, the deploy-mark
+  # PATCH, and DELETE /assets/ropa/{id} (which now checks its id is
+  # UUID-shaped before it reaches Postgres, answering 400 for a malformed one
+  # -- see assets.routes.ts / ropa.routes.ts). What remains below still
+  # genuinely cannot answer 400, for a reason that has nothing to do with
+  # "not implemented yet":
+  # - the two by-bpmn-id lookups take free text -- any string is a
+  #   legitimate lookup key, so a miss is a 404, never a 400;
+  # - the three remaining deletes (BPMN, forms, documents) key on a TEXT
+  #   column (`lde_id`, or the table's own TEXT primary key), never a UUID,
+  #   so there is no malformed shape to reject -- and a delete of a row that
+  #   does not exist stays 200 for all four deletes, ROPA included, by
+  #   design (decision 3 in the plan), not an omission.
   - files:
       - 'openapi.json#/paths/~1assets~1bpmn~1by-bpmn-id~1%7BbpmnProcessId%7D/get'
       - 'openapi.json#/paths/~1assets~1bpmn~1%7Bid%7D/delete'
       - 'openapi.json#/paths/~1assets~1forms~1%7Bid%7D/delete'
       - 'openapi.json#/paths/~1assets~1documents~1%7Bid%7D/delete'
       - 'openapi.json#/paths/~1assets~1ropa~1by-bpmn-id~1%7BbpmnProcessId%7D/get'
-      - 'openapi.json#/paths/~1assets~1ropa~1%7Bid%7D/delete'
     rules:
       nlgov:problem-invalid-input: 'off'
 

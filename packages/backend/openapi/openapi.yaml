@@ -249,9 +249,11 @@ paths:
         conflict updates every column named below. `readonly` and
         `schemaVersion` are never written by this operation and keep their
         database defaults (`false` and `1`) on insert, and are left
-        unchanged on an update. Nothing in the body is validated: a value a
-        database CHECK constraint rejects (`processRole`, `status`), or a
-        required column left empty, answers 500, never 400.
+        unchanged on an update. Validated against the database's own constraints (#150): every required field's presence,
+        every field's type, and `processRole`/`status` against their CHECK
+        constraint's allowed values, all answering 400. `xml` is checked for
+        presence and type only — it is never parsed, so a malformed BPMN
+        document still reaches the database and is stored as given.
       requestBody:
         required: true
         content:
@@ -259,9 +261,11 @@ paths:
             schema:
               type: object
               description: >-
-                Passed straight to the database with no validation; the
-                fields below are what a successful upsert needs, not what
-                is enforced before that point.
+                Validated against the database's own constraints (#150): the
+                required/type/enum rules below are what a 400 checks before the
+                write. A value the database would merely coerce, such as a string
+                for an integer or JSON null for a required JSON value, is rejected
+                rather than stored.
               required: [id, name, xml, linkedDmnTemplates, createdAt, updatedAt]
               properties:
                 id:
@@ -277,12 +281,14 @@ paths:
                   type: string
                 xml:
                   type: string
-                  description: The BPMN 2.0 XML. Not parsed or validated server-side.
+                  description: >-
+                    The BPMN 2.0 XML. Checked for presence and type only —
+                    never parsed, so a malformed document is still stored.
                 processRole:
                   type: string
                   enum: [shell, subprocess, standalone]
                   default: standalone
-                  description: Database CHECK constraint; an out-of-set value answers 500.
+                  description: Database CHECK constraint; an out-of-set value answers 400.
                 calledElement:
                   type: string
                 shellId:
@@ -293,12 +299,13 @@ paths:
                     type: string
                   description: >-
                     Not defaulted server-side: an omitted value is stored as
-                    NULL against a NOT NULL column and answers 500.
+                    NULL against a NOT NULL column, so it is required and an
+                    omission answers 400.
                 status:
                   type: string
                   enum: [example, wip, e2e]
                   default: wip
-                  description: Database CHECK constraint; an out-of-set value answers 500.
+                  description: Database CHECK constraint; an out-of-set value answers 400.
                 language:
                   type: string
                   maxLength: 2
@@ -326,7 +333,12 @@ paths:
                     const: true
         '400':
           description: >-
-            The request body was not valid JSON (code MALFORMED_BODY; #143).
+            The request body was not valid JSON (code MALFORMED_BODY; #143),
+            or it failed validation (code INVALID_INPUT; #150): a required
+            field (`id`, `name`, `xml`, `linkedDmnTemplates`, `createdAt`,
+            `updatedAt`) missing, any field of the wrong type, or
+            `processRole`/`status` outside its CHECK constraint's allowed
+            values. `detail` names every field that failed.
           content:
             application/problem+json:
               schema:
@@ -341,8 +353,10 @@ paths:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The write failed (code UPSERT_FAILED) — for example a database
-            CHECK or NOT NULL violation.
+            The write failed (code UPSERT_FAILED) — for example a value longer
+            than its column allows, or a `createdAt` or `updatedAt` the
+            database cannot read as a timestamp. The 400 above checks
+            presence, type and enum, not length or date format.
           content:
             application/problem+json:
               schema:
@@ -485,14 +499,16 @@ paths:
               description: >-
                 Nothing here is required for a 200: an empty body, or no
                 body at all, still succeeds, since every field is either
-                optional or defaulted.
+                optional or defaulted. Whichever fields are present are
+                type-checked (#150) — none is parsed or checked against a
+                CHECK constraint, since none of these columns has one.
               properties:
                 deploymentId:
                   type: string
                   description: >-
-                    Stored as-is, not validated. Omitted, it is written as
-                    NULL — the column has no NOT NULL constraint, so this
-                    still succeeds.
+                    Stored as-is. Omitted, it is written as NULL — the
+                    column has no NOT NULL constraint, so this still
+                    succeeds.
                 operatonUrl:
                   type: string
                   description: Omitted, stored as NULL.
@@ -530,7 +546,11 @@ paths:
                     const: true
         '400':
           description: >-
-            The request body was not valid JSON (code MALFORMED_BODY; #143).
+            The request body was not valid JSON (code MALFORMED_BODY; #143),
+            or a field that was present had the wrong type (code
+            INVALID_INPUT; #150) — `deploymentId`/`operatonUrl`/
+            `boardOwner` not a string, or `formIds`/`documentIds` not an
+            array of strings. `detail` names every field that failed.
           content:
             application/problem+json:
               schema:
@@ -617,9 +637,11 @@ paths:
         not read from the database. A schema version is stored for a form, but
         neither this operation nor `GET /assets/forms` writes or reads it, so
         it never appears on the wire — unlike `Document.schemaVersion`, which
-        does. Nothing in the body is
-        validated: a required column left empty, or an over-length
-        `language`/`organization`, answers 500, never 400.
+        does. Validated against the database's own constraints (#150): every required field's presence and every field's
+        type, answering 400. `status` has no database CHECK constraint, so
+        any string is accepted, type-checked only. An over-length
+        `language`/`organization` still answers 500, never 400 — a length
+        limit isn't presence, type or enum, so #150 doesn't check it.
       requestBody:
         required: true
         content:
@@ -627,9 +649,11 @@ paths:
             schema:
               type: object
               description: >-
-                Passed straight to the database with no validation; the
-                fields below are what a successful upsert needs, not what
-                is enforced before that point.
+                Validated against the database's own constraints (#150): the
+                required/type rules below are what a 400 checks before the
+                write. A value the database would merely coerce, such as a string
+                for an integer or JSON null for a required JSON value, is rejected
+                rather than stored.
               required: [id, name, schema, createdAt, updatedAt]
               properties:
                 id:
@@ -643,13 +667,16 @@ paths:
                   type: object
                   description: >-
                     Free-form JSON Schema-like form definition,
-                    `JSON.stringify`'d before storage; nothing checks its
-                    shape. A JSONB column — the driver returns it already
+                    `JSON.stringify`'d before storage. Checked for presence
+                    and type only — never parsed, so its shape isn't
+                    checked. A JSONB column — the driver returns it already
                     parsed, not a JSON-encoded string.
                 status:
                   type: string
                   default: wip
-                  description: No database CHECK constraint; any string is accepted.
+                  description: >-
+                    No database CHECK constraint; any string is accepted,
+                    type-checked only.
                 language:
                   type: string
                   maxLength: 2
@@ -677,7 +704,11 @@ paths:
                     const: true
         '400':
           description: >-
-            The request body was not valid JSON (code MALFORMED_BODY; #143).
+            The request body was not valid JSON (code MALFORMED_BODY; #143),
+            or it failed validation (code INVALID_INPUT; #150): a required
+            field (`id`, `name`, `schema`, `createdAt`, `updatedAt`) missing,
+            or any field of the wrong type. `detail` names every field that
+            failed.
           content:
             application/problem+json:
               schema:
@@ -692,8 +723,8 @@ paths:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The write failed (code UPSERT_FAILED) — for example a NOT NULL
-            violation.
+            The write failed (code UPSERT_FAILED) — for example an
+            over-length `language`/`organization`, which #150 doesn't check.
           content:
             application/problem+json:
               schema:
@@ -806,9 +837,10 @@ paths:
         the JavaScript value `undefined`, which the Postgres driver sends as
         SQL NULL, and NULL is rejected by each column's NOT NULL constraint.
         The database default therefore never actually applies through this
-        route; omitting any of the three answers 500, not a defaulted value.
-        Nothing in the body is validated: a required column left empty, or
-        an over-length `language`/`organization`, answers 500, never 400.
+        route; all three are required. Validated against the database's own constraints (#150): every required field's
+        presence and every field's type, answering 400. An over-length
+        `language`/`organization` still answers 500, never 400 — a length
+        limit isn't presence, type or enum, so #150 doesn't check it.
       requestBody:
         required: true
         content:
@@ -816,9 +848,11 @@ paths:
             schema:
               type: object
               description: >-
-                Passed straight to the database with no validation; the
-                fields below are what a successful upsert needs, not what
-                is enforced before that point.
+                Validated against the database's own constraints (#150): the
+                required/type rules below are what a 400 checks before the
+                write. A value the database would merely coerce, such as a string
+                for an integer or JSON null for a required JSON value, is rejected
+                rather than stored.
               required: [id, name, schemaVersion, zones, bindings, assets, createdAt, updatedAt]
               properties:
                 id:
@@ -836,29 +870,35 @@ paths:
                   type: integer
                   description: >-
                     The database column defaults to `1`, but that default
-                    never applies through this route (see above) — omitting
-                    this answers 500.
+                    never applies through this route (see above), so it is
+                    required.
                 zones:
                   type: object
                   description: >-
-                    Free-form JSON, `JSON.stringify`'d before storage;
-                    nothing checks its shape. A JSONB column with no
-                    database default — the driver returns it already
-                    parsed, not a JSON-encoded string.
+                    Free-form JSON, `JSON.stringify`'d before storage.
+                    Checked for presence and type only — never parsed, so
+                    its shape isn't checked. A JSONB column with no database
+                    default — the driver returns it already parsed, not a
+                    JSON-encoded string.
                 bindings:
+                  type: array
                   description: >-
-                    Free-form JSON, arrays by convention but not enforced.
-                    The database column defaults to `[]`, but that default
-                    never applies through this route (see above) — omitting
-                    this answers 500.
+                    Free-form JSON, checked for presence and array type only
+                    — the shape of its items isn't checked. The database
+                    column defaults to `[]`, but that default never applies
+                    through this route (see above), so it is required.
                 assets:
+                  type: array
                   description: >-
-                    Free-form JSON, arrays by convention but not enforced.
-                    Same database-default caveat as `bindings`.
+                    Free-form JSON, checked for presence and array type
+                    only — same as `bindings`, including the database-default
+                    caveat.
                 status:
                   type: string
                   default: wip
-                  description: No database CHECK constraint; any string is accepted.
+                  description: >-
+                    No database CHECK constraint; any string is accepted,
+                    type-checked only.
                 language:
                   type: string
                   maxLength: 2
@@ -886,7 +926,11 @@ paths:
                     const: true
         '400':
           description: >-
-            The request body was not valid JSON (code MALFORMED_BODY; #143).
+            The request body was not valid JSON (code MALFORMED_BODY; #143),
+            or it failed validation (code INVALID_INPUT; #150): a required
+            field (`id`, `name`, `schemaVersion`, `zones`, `bindings`,
+            `assets`, `createdAt`, `updatedAt`) missing, or any field of the
+            wrong type. `detail` names every field that failed.
           content:
             application/problem+json:
               schema:
@@ -901,8 +945,8 @@ paths:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The write failed (code UPSERT_FAILED) — for example a NOT NULL
-            violation.
+            The write failed (code UPSERT_FAILED) — for example an
+            over-length `language`/`organization`, which #150 doesn't check.
           content:
             application/problem+json:
               schema:
@@ -1022,11 +1066,10 @@ paths:
         value `undefined`, which the Postgres driver sends as SQL NULL,
         and NULL is rejected by each column's NOT NULL constraint. The
         database default therefore never actually applies through this
-        route. Nothing in the body is validated: a value a database CHECK
-        constraint rejects (`processLevel`, `status`), a required column
-        left empty, or an omitted `personalDataFields` array (iterated
-        directly, so a missing array throws before any database call),
-        answers 500, never 400.
+        route. Validated against the database's own constraints (#150): every required field's presence, every field's
+        type, `processLevel`/`status` against their CHECK constraint's
+        allowed values, and each `personalDataFields` entry the same way —
+        all answering 400.
       requestBody:
         required: true
         content:
@@ -1034,9 +1077,11 @@ paths:
             schema:
               type: object
               description: >-
-                Passed straight to the database with no validation; the
-                fields below are what a successful upsert needs, not what
-                is enforced before that point.
+                Validated against the database's own constraints (#150): the
+                required/type/enum rules below are what a 400 checks before the
+                write. A value the database would merely coerce, such as a string
+                for an integer or JSON null for a required JSON value, is rejected
+                rather than stored.
               required:
                 - bpmnProcessId
                 - processLevel
@@ -1061,7 +1106,7 @@ paths:
                 processLevel:
                   type: string
                   enum: [shell, subprocess]
-                  description: Database CHECK constraint; an out-of-set value answers 500.
+                  description: Database CHECK constraint; an out-of-set value answers 400.
                 title:
                   type: string
                 controllerName:
@@ -1093,7 +1138,7 @@ paths:
                 status:
                   type: string
                   enum: [draft, active, archived]
-                  description: Database CHECK constraint; an out-of-set value answers 500.
+                  description: Database CHECK constraint; an out-of-set value answers 400.
                 schemaVersion:
                   type: integer
                 personalDataFields:
@@ -1150,7 +1195,14 @@ paths:
                         format: uuid
         '400':
           description: >-
-            The request body was not valid JSON (code MALFORMED_BODY; #143).
+            The request body was not valid JSON (code MALFORMED_BODY; #143),
+            or it failed validation (code INVALID_INPUT; #150): a required
+            field missing, any field of the wrong type,
+            `processLevel`/`status` outside its CHECK constraint's allowed
+            values, or a `personalDataFields` entry with a missing or
+            wrongly-typed field of its own. `detail` names every field that
+            failed, prefixing a personal-data field's with its array index
+            (e.g. `personalDataFields[0].formId`).
           content:
             application/problem+json:
               schema:
@@ -1165,9 +1217,10 @@ paths:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The write failed (code UPSERT_FAILED) — for example a database
-            CHECK or NOT NULL violation, or a missing `personalDataFields`
-            array.
+            The write failed (code UPSERT_FAILED) — for example a value longer
+            than its column allows, in the record or in one of its
+            `personalDataFields`. The 400 above checks presence, type and
+            enum, not length.
           content:
             application/problem+json:
               schema:
@@ -1242,16 +1295,19 @@ paths:
       description: >-
         Deletes by `id`, cascading to its personal-data fields. The delete
         statement is unconditional — an id matching no row still answers
-        200, never 404. `id` is a database UUID column: a non-UUID-shaped
-        value fails Postgres's implicit cast and answers 500, not 400 or
-        404.
+        200, never 404. `id` is a database UUID column: since #150, its
+        shape is checked before the query runs, so a non-UUID-shaped value
+        answers 400 rather than reaching Postgres's implicit cast.
       parameters:
         - name: id
           in: path
           required: true
-          description: The record id to delete.
+          description: >-
+            The record id to delete, in the canonical hyphenated UUID form; any
+            other shape is a 400.
           schema:
             type: string
+            format: uuid
       responses:
         '200':
           description: >-
@@ -1268,10 +1324,18 @@ paths:
                 properties:
                   success:
                     const: true
+        '400':
+          description: >-
+            `id` is not UUID-shaped (code INVALID_INPUT; #150). `detail`
+            quotes the requested id verbatim.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The delete failed (code DELETE_FAILED) — including a
-            non-UUID-shaped id, which fails the column's implicit cast.
+            The delete failed (code DELETE_FAILED) — a database error
+            unrelated to `id`'s shape, which the 400 above already rejects.
           content:
             application/problem+json:
               schema:

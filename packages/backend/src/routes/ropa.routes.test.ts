@@ -107,21 +107,58 @@ describe('GET /v1/assets/ropa/by-bpmn-id/:bpmnProcessId', () => {
   });
 });
 
+// Shaped exactly like RopaService.upsertRopa's POST body
+// (packages/frontend/src/services/ropaService.ts:23-34): the full
+// RopaRecord minus id/createdAt/updatedAt, which the frontend never sends
+// (both are database-generated/-clocked). This is the fixture the
+// "succeeds today" tests build from, per the Phase 3 brief: not the
+// backend's own pre-existing bare-bones fixture.
+const FRONTEND_ROPA_BODY = {
+  bpmnProcessId: 'ZorgtoeslagProcess',
+  processLevel: 'shell',
+  title: 'Zorgtoeslag verwerking',
+  controllerName: 'Gemeente Utrecht',
+  controllerContact: 'privacy@utrecht.nl',
+  purpose: 'Assessing eligibility for housing benefit',
+  legalBasisUri: 'https://wetten.overheid.nl/BWBR0008659',
+  legalBasisLabel: 'Algemene wet inkomensafhankelijke regelingen',
+  gdprArticle: '6(1)(c)',
+  dataSubjects: 'Applicants for housing benefit',
+  recipients: 'Belastingdienst Toeslagen',
+  thirdCountryTransfers: false,
+  retentionPeriod: '7 years after case closure',
+  securityMeasures: 'Encryption at rest and in transit',
+  status: 'active',
+  schemaVersion: 1,
+  personalDataFields: [
+    {
+      formId: 'form-1',
+      fieldKey: 'income',
+      fieldLabel: 'Household income',
+      dataCategory: 'financial',
+      specialCategory: false,
+      sortOrder: 0,
+    },
+  ],
+};
+
+const VALID_ID = '11111111-1111-4111-8111-111111111111';
+
 describe('POST /v1/assets/ropa', () => {
   test('upserts the posted record and returns its id', async () => {
     mockUpsert.mockResolvedValue('r1');
 
-    const res = await request(makeApp()).post('/v1/assets/ropa').send(RECORD);
+    const res = await request(makeApp()).post('/v1/assets/ropa').send(FRONTEND_ROPA_BODY);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, data: { id: 'r1' } });
-    expect(mockUpsert).toHaveBeenCalledWith(RECORD);
+    expect(mockUpsert).toHaveBeenCalledWith(FRONTEND_ROPA_BODY);
   });
 
   test('returns 500 with an UPSERT_FAILED code when the write throws', async () => {
     mockUpsert.mockRejectedValue(new Error('constraint violation'));
 
-    const res = await request(makeApp()).post('/v1/assets/ropa').send(RECORD);
+    const res = await request(makeApp()).post('/v1/assets/ropa').send(FRONTEND_ROPA_BODY);
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
@@ -131,23 +168,93 @@ describe('POST /v1/assets/ropa', () => {
       code: 'UPSERT_FAILED',
     });
   });
+
+  test('returns 400 naming every missing required field (#150)', async () => {
+    const res = await request(makeApp()).post('/v1/assets/ropa').send(RECORD);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail:
+        'processLevel is required; controllerName is required; controllerContact is required; ' +
+        'purpose is required; legalBasisUri is required; legalBasisLabel is required; ' +
+        'gdprArticle is required; dataSubjects is required; recipients is required; ' +
+        'thirdCountryTransfers is required; retentionPeriod is required; ' +
+        'securityMeasures is required; status is required; schemaVersion is required; ' +
+        'personalDataFields is required',
+    });
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  test('returns 400 for an out-of-enum processLevel (#150)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/ropa')
+      .send({ ...FRONTEND_ROPA_BODY, processLevel: 'top-level' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail: 'processLevel must be one of: shell, subprocess',
+    });
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  // schemaVersion and sortOrder are INTEGER columns. A fractional value used to
+  // pass a plain number check and then fail in the database as a 500.
+  test('returns 400 for a fractional value in an integer field, not a 500 (#150)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/ropa')
+      .send({
+        ...FRONTEND_ROPA_BODY,
+        schemaVersion: 1.5,
+        personalDataFields: [{ ...FRONTEND_ROPA_BODY.personalDataFields[0], sortOrder: 0.5 }],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail:
+        'schemaVersion must be an integer; personalDataFields[0].sortOrder must be an integer',
+    });
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  test('returns 400 naming a missing field inside a personalDataFields entry, prefixed with its index (#150)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/ropa')
+      .send({
+        ...FRONTEND_ROPA_BODY,
+        personalDataFields: [{ ...FRONTEND_ROPA_BODY.personalDataFields[0], formId: undefined }],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail: 'personalDataFields[0].formId is required',
+    });
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
 });
 
 describe('DELETE /v1/assets/ropa/:id', () => {
   test('deletes the record and reports success without a body payload', async () => {
     mockDelete.mockResolvedValue(undefined);
 
-    const res = await request(makeApp()).delete('/v1/assets/ropa/r1');
+    const res = await request(makeApp()).delete(`/v1/assets/ropa/${VALID_ID}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true });
-    expect(mockDelete).toHaveBeenCalledWith('r1');
+    expect(mockDelete).toHaveBeenCalledWith(VALID_ID);
   });
 
   test('returns 500 with a DELETE_FAILED code when the delete throws', async () => {
     mockDelete.mockRejectedValue(new Error('row is referenced'));
 
-    const res = await request(makeApp()).delete('/v1/assets/ropa/r1');
+    const res = await request(makeApp()).delete(`/v1/assets/ropa/${VALID_ID}`);
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
@@ -156,6 +263,18 @@ describe('DELETE /v1/assets/ropa/:id', () => {
       detail: 'row is referenced',
       code: 'DELETE_FAILED',
     });
+  });
+
+  test('returns 400 for a malformed id and never reaches the database (#150)', async () => {
+    const res = await request(makeApp()).delete('/v1/assets/ropa/not-a-uuid');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      status: 400,
+      code: 'INVALID_INPUT',
+      detail: 'id must be a UUID: not-a-uuid',
+    });
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 });
 
@@ -376,10 +495,21 @@ describe('/v1/assets/ropa matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/assets/ropa');
   });
 
+  test('POST /assets/ropa invalid input is a 400 problem, as documented (#150)', async () => {
+    const res = await request(makeDocumentedApp()).post('/v1/assets/ropa').send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(mockUpsert).not.toHaveBeenCalled();
+    expectToMatchOperation(res, 'post', '/assets/ropa');
+  });
+
   test('DELETE /assets/ropa/{id} 200, as documented', async () => {
     mockDelete.mockResolvedValue(undefined);
 
-    const res = await request(makeDocumentedApp()).delete('/v1/assets/ropa/r1');
+    const res = await request(makeDocumentedApp()).delete(
+      '/v1/assets/ropa/11111111-1111-4111-8111-111111111111'
+    );
 
     expect(res.status).toBe(200);
     expectToMatchOperation(res, 'delete', '/assets/ropa/{id}');
@@ -388,9 +518,20 @@ describe('/v1/assets/ropa matches its OpenAPI description', () => {
   test('DELETE /assets/ropa/{id} 500, as documented', async () => {
     mockDelete.mockRejectedValue(new Error('row is referenced'));
 
-    const res = await request(makeDocumentedApp()).delete('/v1/assets/ropa/r1');
+    const res = await request(makeDocumentedApp()).delete(
+      '/v1/assets/ropa/11111111-1111-4111-8111-111111111111'
+    );
 
     expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'delete', '/assets/ropa/{id}');
+  });
+
+  test('DELETE /assets/ropa/{id} invalid input is a 400 problem, as documented (#150)', async () => {
+    const res = await request(makeDocumentedApp()).delete('/v1/assets/ropa/not-a-uuid');
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(mockDelete).not.toHaveBeenCalled();
     expectToMatchOperation(res, 'delete', '/assets/ropa/{id}');
   });
 });
