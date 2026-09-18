@@ -59,7 +59,7 @@ Each was put to the product owner as a choice. The rejected options are recorded
 - Paths are relative to the server: `/health`, not `/v1/health`.
 - `servers` lists only `https://acc.backend.linkeddata.open-regels.nl/v1` and `https://backend.linkeddata.open-regels.nl/v1`. The ADR rules require both the version segment (`nlgov:include-major-version-in-uri`) and HTTPS (`nlgov:servers-use-https`), so no local `http://` server is listed.
 - `info.contact`: name `Steven Gort`, email `steven.gort@ictu.nl`, url `https://iou-architectuur.open-regels.nl/`. This satisfies `/core/doc-openapi-contact`, which asks for a name, URL and email and advises against generic addresses.
-- **Tags mirror the registry's categories**, in the registry's own order, so an operation's tag is the group the root page already shows it under. Each phase declares the tags its mounts need: phase 1 declared _Health & monitoring_, _Discovery_ and _Assets_, and phase 3 added _Validation_ and _Execution_. A phase never invents a tag the registry does not have.
+- **Tags mirror the registry's categories**, in the registry's own order, so an operation's tag is the group the root page already shows it under — except health checks, which are grouped under _Health & monitoring_ regardless of which registry category their mount lives in. Each phase declares the tags its mounts need: phase 1 declared _Health & monitoring_, _Discovery_ and _Assets_, and phase 3 added _Validation_ and _Execution_. A phase never invents a tag the registry does not have.
 
 **Build.** `packages/backend/scripts/build-openapi.cjs` parses the YAML and writes `openapi/openapi.json`, through a temporary file renamed into place so a concurrent reader never sees half-written JSON.
 
@@ -84,6 +84,7 @@ Each was put to the product owner as a choice. The rejected options are recorded
 - It derives the served operations from `routeRegistry`: for each mount, it walks the router's Express stack and collects method + path, with the mount prefix stripped of `/v1` and `:param` rewritten to `{param}`. The result is compared with the document's operations.
 - The test fails when a served operation is not documented, or a documented operation is not served.
 - **While the description was being written**, operations not yet described were listed in `openapi/pending.json`, and a ceiling on that list's length, lowered by each phase, failed the test if an entry was added. The remaining work stayed visible, and the list could only shrink. Phase 5 (#137) emptied it, and the same change deleted the file, the ceiling and the four checks that existed only to police them. What is left is the rule those checks were building towards: a route cannot be served undocumented, and the document cannot describe a route that is not served.
+- Root `README.md`'s "Adding or changing a backend route" section walks a contributor through satisfying this gate — document the operation, add a conformance assertion per status, and the commands to run before opening a pull request.
 
 **Response conformance.** A test helper, `expectToMatchOperation(res, method, path)`:
 

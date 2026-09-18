@@ -29,6 +29,7 @@ jest.mock('../utils/config', () => ({
   default: configMock,
 }));
 
+import { logger } from '../utils/logger';
 import {
   extractDmnFromSttr,
   extractFormScaffoldFromSttr,
@@ -44,6 +45,8 @@ import {
   zoekActiviteiten,
   zoekWerkzaamheden,
 } from './dso.service';
+
+const mockLogWarn = logger.warn as jest.Mock;
 
 const mockFetch = jest.fn();
 const realFetch = global.fetch;
@@ -84,6 +87,7 @@ const TODAY = '05-03-2026';
 beforeEach(() => {
   jest.useFakeTimers().setSystemTime(FIXED_NOW);
   mockFetch.mockReset().mockResolvedValue(response());
+  mockLogWarn.mockReset();
   global.fetch = mockFetch as unknown as typeof fetch;
 });
 
@@ -169,6 +173,113 @@ describe('getActiviteitenByOin', () => {
     expect(url.searchParams.get('page')).toBe('1');
     expect(url.searchParams.get('pageSize')).toBe('200');
     expect(url.pathname).toBe('/rtr/activiteiten/_zoek');
+  });
+
+  test('a single page of results (totalPages: 1) is returned unchanged and fetched once', async () => {
+    const body = {
+      _embedded: { activiteiten: [{ urn: 'urn:nl:imow:activiteit:1' }] },
+      page: { number: 1, size: 1, totalElements: 1, totalPages: 1 },
+      _links: { self: { href: '/rtr/activiteiten/_zoek?page=1&pageSize=200' } },
+    };
+    mockFetch.mockResolvedValue(response({ json: body }));
+
+    const result = await getActiviteitenByOin('OIN');
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(result).toEqual(body);
+  });
+
+  test('combines every page into page 1, in order, and drops the pagination links', async () => {
+    const pageBody = (page: number, urn: string) => ({
+      _embedded: { activiteiten: [{ urn }] },
+      page: { number: page, size: 1, totalElements: 3, totalPages: 3 },
+      _links: {
+        self: { href: `/rtr/activiteiten/_zoek?page=${page}&pageSize=200` },
+        next: { href: `/rtr/activiteiten/_zoek?page=${page + 1}&pageSize=200` },
+        prev: { href: `/rtr/activiteiten/_zoek?page=${page - 1}&pageSize=200` },
+        first: { href: '/rtr/activiteiten/_zoek?page=1&pageSize=200' },
+        last: { href: '/rtr/activiteiten/_zoek?page=3&pageSize=200' },
+      },
+    });
+    mockFetch
+      .mockResolvedValueOnce(response({ json: pageBody(1, 'urn:1') }))
+      .mockResolvedValueOnce(response({ json: pageBody(2, 'urn:2') }))
+      .mockResolvedValueOnce(response({ json: pageBody(3, 'urn:3') }));
+
+    const result = (await getActiviteitenByOin('OIN')) as {
+      _embedded: { activiteiten: { urn: string }[] };
+      page: unknown;
+      _links: Record<string, unknown>;
+    };
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    const calls = mockFetch.mock.calls as Array<[string, RequestInit | undefined]>;
+    expect(calls.map(([url]) => new URL(String(url)).searchParams.get('page'))).toEqual([
+      '1',
+      '2',
+      '3',
+    ]);
+    // Every page — not just page 1 — is requested with the same filter and page size.
+    for (const [url, init] of calls) {
+      expect(new URL(url).searchParams.get('pageSize')).toBe('200');
+      expect(JSON.parse(String(init?.body))).toEqual({
+        datum: TODAY,
+        bestuursorgaan: { oin: 'OIN' },
+      });
+    }
+    expect(result._embedded.activiteiten).toEqual([
+      { urn: 'urn:1' },
+      { urn: 'urn:2' },
+      { urn: 'urn:3' },
+    ]);
+    expect(result.page).toEqual({ number: 1, size: 3, totalElements: 3, totalPages: 1 });
+    expect(result._links).toEqual({
+      self: { href: '/rtr/activiteiten/_zoek?page=1&pageSize=200' },
+    });
+  });
+
+  test('caps at 10 pages and logs a warning when the upstream has more', async () => {
+    mockFetch.mockImplementation((url: string) => {
+      const page = Number(new URL(url).searchParams.get('page'));
+      return Promise.resolve(
+        response({
+          json: {
+            _embedded: { activiteiten: [{ urn: `urn:${page}` }] },
+            page: { number: page, size: 1, totalElements: 15, totalPages: 15 },
+            _links: { self: { href: `/rtr/activiteiten/_zoek?page=${page}&pageSize=200` } },
+          },
+        })
+      );
+    });
+
+    const result = (await getActiviteitenByOin('OIN')) as {
+      _embedded: { activiteiten: { urn: string }[] };
+      page: { number: number; size: number; totalElements: number; totalPages: number };
+    };
+
+    expect(mockFetch).toHaveBeenCalledTimes(10);
+    expect(result._embedded.activiteiten).toHaveLength(10);
+    expect(result.page).toEqual({ number: 1, size: 10, totalElements: 15, totalPages: 1 });
+    expect(mockLogWarn).toHaveBeenCalledWith(
+      expect.stringContaining('[DSO]'),
+      expect.objectContaining({ oin: 'OIN', totalElements: 15, fetchedPages: 10, totalPages: 15 })
+    );
+  });
+
+  test('a failing later page fails the whole call, same as a page-1 failure', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        response({
+          json: {
+            _embedded: { activiteiten: [{ urn: 'urn:1' }] },
+            page: { number: 1, size: 1, totalElements: 2, totalPages: 2 },
+            _links: { self: { href: '/rtr/activiteiten/_zoek?page=1&pageSize=200' } },
+          },
+        })
+      )
+      .mockResolvedValueOnce(response({ ok: false, status: 500, text: 'boom' }));
+
+    await expect(getActiviteitenByOin('OIN')).rejects.toThrow('DSO responded 500: boom');
   });
 
   test('raises the upstream status and body on a failure', async () => {

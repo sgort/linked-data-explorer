@@ -44,20 +44,20 @@ beforeEach(() => {
 
 describe('GET /v1/edocs/status', () => {
   test('reports health, stub mode and latency', async () => {
-    svc.healthCheck.mockResolvedValue({ status: 'ok', latency: 25 });
+    svc.healthCheck.mockResolvedValue({ status: 'up', latency: 25 });
 
     const res = await request(makeApp()).get('/v1/edocs/status');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       success: true,
-      data: { status: 'ok', stubMode: true, latencyMs: 25 },
+      data: { status: 'up', stubMode: true, latencyMs: 25 },
     });
   });
 
   test('reflects the configured stub mode', async () => {
     configMock.edocs.stubMode = false;
-    svc.healthCheck.mockResolvedValue({ status: 'ok' });
+    svc.healthCheck.mockResolvedValue({ status: 'up' });
 
     const res = await request(makeApp()).get('/v1/edocs/status');
 
@@ -65,7 +65,7 @@ describe('GET /v1/edocs/status', () => {
   });
 
   test('omits latency when the health check does not report one', async () => {
-    svc.healthCheck.mockResolvedValue({ status: 'degraded' });
+    svc.healthCheck.mockResolvedValue({ status: 'stub' });
 
     const res = await request(makeApp()).get('/v1/edocs/status');
 
@@ -73,7 +73,7 @@ describe('GET /v1/edocs/status', () => {
   });
 
   test('keeps a zero latency, rather than dropping it as falsy', async () => {
-    svc.healthCheck.mockResolvedValue({ status: 'ok', latency: 0 });
+    svc.healthCheck.mockResolvedValue({ status: 'up', latency: 0 });
 
     const res = await request(makeApp()).get('/v1/edocs/status');
 
