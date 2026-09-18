@@ -88,4 +88,6 @@ The user runs the full suite before the branch is pushed.
 
 ## Known risk
 
-One consumer cannot be checked: `ropa.flevoland.nl` reads the public ROPA endpoint and is not reachable from here. Its success shape is unchanged; only error bodies move. Worth an announcement rather than a compatibility window, since no other consumer reads an error body at all.
+None remains. This plan first listed the public ROPA site as a consumer that could not be checked, under the name `ropa.flevoland.nl`, taken from a stale code comment. That host does not resolve. The site is `packages/ropa-site` in this repository, served at `ropa.open-regels.nl`, and it is unaffected: on a failed response it reads only `res.ok` and `res.status`, never the error body, and its success path reads `json.data`, which does not change.
+
+Every reader of an error body is therefore either updated in this pass or never reads one, so no compatibility window is needed.
