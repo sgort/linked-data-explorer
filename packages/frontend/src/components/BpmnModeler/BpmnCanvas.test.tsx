@@ -389,6 +389,24 @@ describe('BpmnCanvas — deploy modal', () => {
     });
   });
 
+  // #142: the backend always deploys to its own configured Operaton and
+  // ignores operatonUsername/operatonPassword, and refuses any operatonUrl
+  // other than that one — so the modal no longer lets the user set any of
+  // them, and shows a read-only line instead.
+  test('renders no Operaton URL, username or password inputs', async () => {
+    await renderCanvas();
+    await userEvent.click(screen.getByText('Deploy'));
+
+    await screen.findByText('Deploy to Operaton');
+    expect(screen.queryByText('Operaton REST endpoint')).toBeNull();
+    expect(screen.queryByPlaceholderText('https://operaton.open-regels.nl/engine-rest')).toBeNull();
+    expect(screen.queryByPlaceholderText('demo')).toBeNull();
+    expect(screen.queryByPlaceholderText('••••••••')).toBeNull();
+    expect(screen.queryByText(/^Username/)).toBeNull();
+    expect(screen.queryByText(/^Password/)).toBeNull();
+    expect(document.body.textContent).toContain("Deploys to the backend's configured Operaton.");
+  });
+
   test('warns when no ronl:ropaRef is present in the process XML', async () => {
     await renderCanvas();
     await userEvent.click(screen.getByText('Deploy'));
@@ -911,6 +929,8 @@ describe('BpmnCanvas — deploy request', () => {
       'SubProc.bpmn'
     );
     expect(deployCall.body.operatonUrl).toBeUndefined();
+    expect(deployCall.body.operatonUsername).toBeUndefined();
+    expect(deployCall.body.operatonPassword).toBeUndefined();
   });
 
   // The defect this covers (#155): the storage write used to be a second,
