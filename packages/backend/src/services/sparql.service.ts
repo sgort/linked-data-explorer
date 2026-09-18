@@ -4,6 +4,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { config } from '../utils/config';
 import logger from '../utils/logger';
+import { createOutboundClient } from '../utils/outboundHttp';
 import {
   DmnModel,
   DmnVariable,
@@ -96,15 +97,14 @@ export class SparqlService {
 
       // A new Axios instance is created on every call when a custom endpoint is provided.
       // This is intentional: custom endpoints are ad-hoc and their host/base path differ
-      // from the default client, so they cannot share the same Axios instance.
+      // from the default client, so they cannot share the same Axios instance. That
+      // endpoint is also caller-chosen, so this per-call client is the guarded one (#142).
       // The default client (this.client) is reused for performance on the standard endpoint.
       const client = endpoint
-        ? axios.create({
+        ? createOutboundClient({
             baseURL: endpoint,
             timeout: config.triplydb.timeout,
-            headers: {
-              Accept: 'application/sparql-results+json',
-            },
+            headers: { Accept: 'application/sparql-results+json' },
           })
         : this.client;
 

@@ -193,6 +193,36 @@ describe('POST /v1/shacl/validate-merged', () => {
   });
 });
 
+describe('#142 endpoint check', () => {
+  test('POST /v1/shacl/validate-merged refuses an internal endpoint without querying it', async () => {
+    const res = await request(makeApp())
+      .post('/v1/shacl/validate-merged')
+      .send({ content: TURTLE, endpoint: 'https://169.254.169.254/latest' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(mockValidateMerged).not.toHaveBeenCalled();
+  });
+
+  test('POST /v1/shacl/validate-merged refuses an internal endpoint, as documented', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/shacl', shaclRoutes);
+    app.use(errorHandler); // app-wide in index.ts
+
+    const res = await request(app)
+      .post('/v1/shacl/validate-merged')
+      .send({ content: TURTLE, endpoint: 'https://169.254.169.254/latest' });
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/shacl/validate-merged');
+  });
+});
+
 describe('/v1/shacl matches its OpenAPI description', () => {
   function makeDocumentedApp() {
     const app = express();

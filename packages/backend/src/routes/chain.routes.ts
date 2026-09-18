@@ -7,6 +7,7 @@ import { ApiResponse, ChainExecutionRequest } from '../types/api.types';
 import { ChainExecutionResult } from '../types/dmn.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { sendProblem } from '../utils/problem';
+import { refuseOptionalEndpoint } from '../utils/outboundUrl';
 
 const router = Router();
 
@@ -37,6 +38,8 @@ router.post('/execute', async (req: Request, res: Response) => {
       });
       return;
     }
+
+    if (refuseOptionalEndpoint(res, req, endpoint, 'endpoint')) return;
 
     logger.info('Chain execution request', {
       dmnIds,

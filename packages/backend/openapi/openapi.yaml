@@ -1440,7 +1440,7 @@ paths:
         every ruleset in the result has dataset metadata, the response carries
         `ETag` and `Cache-Control: public, max-age=3600`, and a matching
         conditional request is answered 304; otherwise `Cache-Control: no-cache`.
-        The `endpoint` override is not validated (#142).
+        The `endpoint` override is checked before use (#142).
       parameters:
         - name: rulesetid
           in: query
@@ -1467,7 +1467,11 @@ paths:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
       responses:
@@ -1519,7 +1523,12 @@ paths:
               schema:
                 type: string
         '400':
-          description: A query parameter is invalid (code INVALID_PARAM).
+          description: >-
+            A query parameter is invalid (code INVALID_PARAM). The `endpoint`
+            was refused (code INVALID_INPUT; #142): not a string, not a valid
+            URL, not `https:`, containing credentials, or pointing to an
+            internal address. `detail` gives the reason. No request is made
+            to it.
           content:
             application/problem+json:
               schema:
@@ -1537,8 +1546,8 @@ paths:
       summary: Run a SPARQL query against a caller-supplied endpoint
       description: >-
         Forwards `query` to `endpoint` and returns the endpoint's SPARQL JSON
-        results beside `success`, without a `data` wrapper. The endpoint is not
-        validated (#142).
+        results beside `success`, without a `data` wrapper. The endpoint is
+        checked before use (#142).
       requestBody:
         required: true
         content:
@@ -1549,7 +1558,10 @@ paths:
               properties:
                 endpoint:
                   type: string
-                  description: SPARQL endpoint URL.
+                  description: >-
+                    SPARQL endpoint URL. Checked before use (#142): must be a
+                    string, a valid URL, `https:`, without credentials, and
+                    not point to an internal address.
                 query:
                   type: string
                   description: SPARQL query text.
@@ -1571,8 +1583,11 @@ paths:
                         const: true
         '400':
           description: >-
-            `endpoint` or `query` is missing, or the request body was not
-            valid JSON (code MALFORMED_BODY; #143).
+            `endpoint` or `query` is missing, the `endpoint` was refused (code
+            INVALID_INPUT; #142): not a string, not a valid URL, not
+            `https:`, containing credentials, or pointing to an internal
+            address (`detail` gives the reason; no request is made to it), or
+            the request body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -1638,8 +1653,10 @@ paths:
         '400':
           description: >-
             `config` or `serviceName` is missing, `config` lacks `baseUrl`,
-            `account`, `dataset` or `apiToken`, or the request body was not
-            valid JSON (code MALFORMED_BODY; #143).
+            `account`, `dataset` or `apiToken`, `config.baseUrl` not `https:`
+            or its host not in `TRIPLYDB_ALLOWED_HOSTS` (code INVALID_INPUT;
+            #142), or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -1698,8 +1715,9 @@ paths:
         '400':
           description: >-
             `config` is missing or lacks `baseUrl`, `account`, `dataset` or
-            `apiToken`, or the request body was not valid JSON (code
-            MALFORMED_BODY; #143).
+            `apiToken`, `config.baseUrl` not `https:` or its host not in
+            `TRIPLYDB_ALLOWED_HOSTS` (code INVALID_INPUT; #142), or the
+            request body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -1724,8 +1742,11 @@ paths:
       tags: [Discovery]
       summary: Check that a TriplyDB dataset is reachable with the given settings
       description: >-
-        Only the presence of `config` is checked; incomplete settings surface as a
-        failed connection (503). The target is not validated (#142).
+        `config` must be present and have `baseUrl`, `account` and `dataset`;
+        an `apiToken` that turns out to be wrong surfaces as a failed
+        connection (503) rather than a 400. `config.baseUrl` is checked
+        against the TriplyDB host allowlist before any connection is made
+        (#142).
       requestBody:
         required: true
         content:
@@ -1758,8 +1779,10 @@ paths:
                     const: 200
         '400':
           description: >-
-            `config` is missing, or the request body was not valid JSON
-            (code MALFORMED_BODY; #143).
+            `config` is missing or lacks `baseUrl`, `account` or `dataset`
+            (code INVALID_INPUT), `config.baseUrl` not `https:` or its host
+            not in `TRIPLYDB_ALLOWED_HOSTS` (code INVALID_INPUT; #142), or
+            the request body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -1791,7 +1814,11 @@ paths:
       summary: List the assets of a dataset on the Open Regels TriplyDB instance
       description: >-
         Queries `https://api.open-regels.triply.cc`. A private dataset needs
-        `apiToken`, which this operation takes in the query string (#142).
+        a token, sent by the caller as an `Authorization: Bearer <token>`
+        request header (not a query parameter, and not documented as an
+        OpenAPI parameter object -- OpenAPI 3 parameters named `Authorization`
+        are ignored). A token given any other way, such as an `apiToken`
+        query parameter, is not forwarded (#142).
       parameters:
         - name: account
           in: query
@@ -1801,12 +1828,6 @@ paths:
         - name: dataset
           in: query
           required: true
-          schema:
-            type: string
-        - name: apiToken
-          in: query
-          required: false
-          description: Bearer token for a private dataset.
           schema:
             type: string
       responses:
@@ -1885,12 +1906,16 @@ paths:
       summary: DMN decision models published in the knowledge graph
       description: >-
         Results are cached for five minutes per endpoint. The `endpoint` override
-        is not validated (#142).
+        is checked before use (#142).
       parameters:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
         - name: refresh
@@ -1930,6 +1955,16 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
@@ -1941,12 +1976,16 @@ paths:
       operationId: listDmnSemanticEquivalences
       tags: [Discovery]
       summary: Variables of different DMNs linked to the same concept
-      description: The `endpoint` override is not validated (#142).
+      description: The `endpoint` override is checked before use (#142).
       parameters:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
       responses:
@@ -1970,6 +2009,16 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
@@ -1981,12 +2030,16 @@ paths:
       operationId: listDmnChainLinks
       tags: [Discovery]
       summary: Output-to-input links between DMNs, by identifier or shared concept
-      description: The `endpoint` override is not validated (#142).
+      description: The `endpoint` override is checked before use (#142).
       parameters:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
       responses:
@@ -2010,6 +2063,16 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
@@ -2021,12 +2084,16 @@ paths:
       operationId: listDmnChainCycles
       tags: [Discovery]
       summary: Cycles in the DMN chain graph
-      description: The `endpoint` override is not validated (#142).
+      description: The `endpoint` override is checked before use (#142).
       parameters:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
       responses:
@@ -2050,6 +2117,16 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph could not be queried (code QUERY_ERROR).
           content:
@@ -2061,7 +2138,7 @@ paths:
       operationId: getDmn
       tags: [Discovery]
       summary: One DMN decision model
-      description: Served from the same five-minute cache as the list. The `endpoint` override is not validated (#142).
+      description: Served from the same five-minute cache as the list. The `endpoint` override is checked before use (#142).
       parameters:
         - name: identifier
           in: path
@@ -2072,7 +2149,11 @@ paths:
         - name: endpoint
           in: query
           required: false
-          description: SPARQL endpoint URL to query instead of the configured one.
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
           schema:
             type: string
       responses:
@@ -2094,6 +2175,16 @@ paths:
                   timestamp:
                     type: string
                     format: date-time
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           description: No DMN has this identifier (code NOT_FOUND).
           content:
@@ -2228,9 +2319,11 @@ paths:
       summary: Deploy a BPMN process bundle to Operaton
       description: >-
         Deploys the BPMN with its subprocesses, forms and document templates as
-        one Operaton deployment, tagged with `organization` as the tenant. When
-        `operatonUrl` is given, that Operaton instance is used instead (not
-        validated, #142). Operaton's own error status is not passed through.
+        one Operaton deployment, tagged with `organization` as the tenant.
+        Always deploys to the backend's own configured Operaton, with its own
+        credentials (#142); `operatonUrl`, `operatonUsername` and
+        `operatonPassword` are deprecated and ignored. Operaton's own error
+        status is not passed through.
 
 
         After the Operaton deploy succeeds, the backend also records the
@@ -2287,10 +2380,19 @@ paths:
                         type: object
                 operatonUrl:
                   type: string
+                  deprecated: true
+                  description: >-
+                    Ignored unless it differs from the configured Operaton,
+                    which answers 400 (#142). Deploys always go to the
+                    backend's configured Operaton.
                 operatonUsername:
                   type: string
+                  deprecated: true
+                  description: Ignored (#142).
                 operatonPassword:
                   type: string
+                  deprecated: true
+                  description: Ignored (#142).
                 boardOwner:
                   type: string
                   description: Omit to derive it from the BPMN candidate groups; an empty string leaves it unset.
@@ -2334,8 +2436,9 @@ paths:
         '400':
           description: >-
             `bpmnXml`, `deploymentName` or `organization` is missing or
-            blank (code INVALID_INPUT), or the request body was not valid
-            JSON (code MALFORMED_BODY; #143).
+            blank, or `operatonUrl` was given and differs from the
+            configured Operaton (code INVALID_INPUT; #142), or the request
+            body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -2671,7 +2774,10 @@ paths:
                   type: string
                   description: >-
                     SPARQL endpoint to fetch the already-published graph from.
-                    Defaults to the configured TriplyDB endpoint when omitted.
+                    Checked before use (#142): must be a string, a valid URL,
+                    `https:`, without credentials, and not point to an
+                    internal address. Defaults to the configured TriplyDB
+                    endpoint when omitted.
       responses:
         '200':
           description: The validation result, valid or not.
@@ -2694,8 +2800,11 @@ paths:
         '400':
           description: >-
             `content` is missing, empty or not a string (code
-            INVALID_REQUEST), or the request body was not valid JSON (code
-            MALFORMED_BODY; #143).
+            INVALID_REQUEST), the `endpoint` was refused (code INVALID_INPUT;
+            #142): not a string, not a valid URL, not `https:`, containing
+            credentials, or pointing to an internal address (`detail` gives
+            the reason; no request is made to it), or the request body was
+            not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -2880,9 +2989,12 @@ paths:
                   type: string
                   description: >-
                     SPARQL endpoint URL to query instead of the configured
-                    one, used to look up the chain's DMNs. Unvalidated, and
-                    ignored when `isDrd` is true, because that path does not
-                    look the DMNs up.
+                    one, used to look up the chain's DMNs. Checked before use
+                    (#142): must be a string, a valid URL, `https:`, without
+                    credentials, and not point to an internal address — this
+                    check runs regardless of `isDrd`, so a refused value still
+                    answers 400. Ignored for evaluation when `isDrd` is true,
+                    because that path does not look the DMNs up.
                 isDrd:
                   type: boolean
                   description: >-
@@ -2940,8 +3052,12 @@ paths:
             `dmnIds` is missing or empty (message "dmnIds array is required
             and must not be empty"), or `inputs` is missing or an empty
             object (message "inputs object is required"), both code
-            INVALID_REQUEST -- or the request body was not valid JSON (code
-            MALFORMED_BODY; #143).
+            INVALID_REQUEST -- or the `endpoint` was refused (code
+            INVALID_INPUT; #142): not a string, not a valid URL, not
+            `https:`, containing credentials, or pointing to an internal
+            address (`detail` gives the reason; no request is made to it) --
+            or the request body was not valid JSON (code MALFORMED_BODY;
+            #143).
           content:
             application/problem+json:
               schema:
@@ -4634,8 +4750,10 @@ paths:
           in: query
           required: false
           description: >-
-            SPARQL endpoint URL. Not validated; forwarded as given. Omitted,
-            the query runs against this API's configured default endpoint.
+            SPARQL endpoint URL. Checked before use (#142): must be a string,
+            a valid URL, `https:`, without credentials, and not point to an
+            internal address. Omitted, the query runs against this API's
+            configured default endpoint.
           schema:
             type: string
       responses:
@@ -4663,6 +4781,16 @@ paths:
                       count:
                         type: integer
                         description: '`vendorServices.length`, computed locally.'
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph query failed.
           content:
@@ -4704,8 +4832,10 @@ paths:
           in: query
           required: false
           description: >-
-            SPARQL endpoint URL. Not validated; forwarded as given. Omitted,
-            the query runs against this API's configured default endpoint.
+            SPARQL endpoint URL. Checked before use (#142): must be a string,
+            a valid URL, `https:`, without credentials, and not point to an
+            internal address. Omitted, the query runs against this API's
+            configured default endpoint.
           schema:
             type: string
       responses:
@@ -4738,6 +4868,16 @@ paths:
                         description: >-
                           The `identifier` path parameter, echoed back
                           verbatim (URL-decoded, not otherwise validated).
+        '400':
+          description: >-
+            The `endpoint` was refused (code INVALID_INPUT; #142): not a
+            string, not a valid URL, not `https:`, containing credentials, or
+            pointing to an internal address. `detail` gives the reason. No
+            request is made to it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: The knowledge graph query failed.
           content:

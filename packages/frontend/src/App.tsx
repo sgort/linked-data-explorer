@@ -35,7 +35,12 @@ import RopaEditor from './components/RopaEditor/RopaEditor';
 import ShaclValidator from './components/ShaclValidator';
 import { executeSparqlQuery } from './services/sparqlService';
 import { SparqlResponse, ViewMode } from './types';
-import { ALL_QUERIES, PRESET_ENDPOINTS, SAMPLE_QUERIES } from './utils/constants';
+import {
+  ALL_QUERIES,
+  DEFAULT_SELECTED_ENDPOINT,
+  PRESET_ENDPOINTS,
+  SAMPLE_QUERIES,
+} from './utils/constants';
 
 const VIEWMODE_STORAGE_KEY = 'linkedDataExplorer_activeView';
 
@@ -50,7 +55,7 @@ const App: React.FC = () => {
   });
 
   const [savedEndpoints, setSavedEndpoints] = useState(PRESET_ENDPOINTS);
-  const [endpoint, setEndpoint] = useState(PRESET_ENDPOINTS[1]?.url || PRESET_ENDPOINTS[0].url);
+  const [endpoint, setEndpoint] = useState(DEFAULT_SELECTED_ENDPOINT);
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].sparql);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sparqlResult, setSparqlResult] = useState<SparqlResponse | null>(null);
@@ -136,7 +141,7 @@ const App: React.FC = () => {
   const handleResetDefaults = () => {
     if (confirm('Reset endpoints to default system presets?')) {
       setSavedEndpoints(PRESET_ENDPOINTS);
-      setEndpoint(PRESET_ENDPOINTS[1]?.url || PRESET_ENDPOINTS[0].url);
+      setEndpoint(DEFAULT_SELECTED_ENDPOINT);
     }
   };
 

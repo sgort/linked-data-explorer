@@ -143,14 +143,6 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     unmatchedDocuments: [],
   });
 
-  // To make the endpoint user-configurable we need to thread it through the
-  // full chain: modal state → request body → backend route → service method
-  const [operatonUrl, setOperatonUrl] = useState<string>(
-    import.meta.env.VITE_OPERATON_BASE_URL ?? ''
-  );
-  const [operatonUsername, setOperatonUsername] = useState<string>('');
-  const [operatonPassword, setOperatonPassword] = useState<string>('');
-
   // Board-ownership picker (deploy modal). `boardChoice` is the user's selection;
   // `boardAuto` is the auto-detected suggestion shown alongside the Auto option.
   const [boardChoice, setBoardChoice] = useState<BoardChoice>('auto');
@@ -675,7 +667,6 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           forms,
           documents,
           subProcesses: subProcessXmls,
-          operatonUrl: operatonUrl.trim() || undefined,
           boardOwner,
           organization: deployOrganization,
         }),
@@ -1012,51 +1003,13 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                 </div>
               </div>
 
-              {/* Operaton REST endpoint */}
-              <div className="mb-4">
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Operaton REST endpoint
-                </label>
-                <input
-                  type="text"
-                  value={operatonUrl}
-                  onChange={(e) => setOperatonUrl(e.target.value)}
-                  disabled={isDeploying || deployResult?.success === true}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
-                  placeholder="https://operaton.open-regels.nl/engine-rest"
-                />
-              </div>
-
-              {/* Operaton REST endpoint - Username & Password */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Username <span className="text-slate-400 font-normal">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={operatonUsername}
-                    onChange={(e) => setOperatonUsername(e.target.value)}
-                    disabled={isDeploying || deployResult?.success === true}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
-                    placeholder="demo"
-                    autoComplete="username"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Password <span className="text-slate-400 font-normal">(optional)</span>
-                  </label>
-                  <input
-                    type="password"
-                    value={operatonPassword}
-                    onChange={(e) => setOperatonPassword(e.target.value)}
-                    disabled={isDeploying || deployResult?.success === true}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                  />
-                </div>
+              {/* Operaton target — deploys always go to the backend's own
+                  configured Operaton (#142); there is nothing left to pick.
+                  Matches the modal's other status/help lines (e.g. the board
+                  auto-detection note above): mt-2 text-xs text-slate-500. */}
+              <div className="mb-4 mt-2 text-xs text-slate-500">
+                Deploys to{' '}
+                {import.meta.env.VITE_OPERATON_BASE_URL || "the backend's configured Operaton"}.
               </div>
             </div>
 

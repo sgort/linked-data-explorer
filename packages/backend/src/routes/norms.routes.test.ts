@@ -379,6 +379,31 @@ describe('GET /v1/norms failures', () => {
   });
 });
 
+describe('#142 endpoint check', () => {
+  test('GET /v1/norms refuses an internal endpoint without querying it', async () => {
+    const res = await request(makeApp()).get('/v1/norms?endpoint=https://169.254.169.254/latest');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(mockGetAllNorms).not.toHaveBeenCalled();
+    expect(mockGetDatasetVersions).not.toHaveBeenCalled();
+  });
+
+  test('GET /v1/norms refuses an internal endpoint, as documented', async () => {
+    const app = express();
+    app.use(versionMiddleware);
+    app.use('/v1/norms', normsRoutes);
+
+    const res = await request(app).get('/v1/norms?endpoint=https://169.254.169.254/latest');
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'get', '/norms');
+  });
+});
+
 describe('/v1/norms matches its OpenAPI description', () => {
   function makeDocumentedApp() {
     const app = express();

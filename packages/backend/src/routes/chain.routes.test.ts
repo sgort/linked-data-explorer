@@ -245,6 +245,44 @@ describe('GET /v1/chains', () => {
   });
 });
 
+describe('#142 endpoint check', () => {
+  test('POST /v1/chains/execute refuses an internal endpoint without executing', async () => {
+    const res = await request(makeApp())
+      .post('/v1/chains/execute')
+      .send({
+        dmnIds: ['d1'],
+        inputs: { bsn: '123' },
+        endpoint: 'https://169.254.169.254/latest',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(mockExecuteChain).not.toHaveBeenCalled();
+  });
+
+  test('POST /v1/chains/execute refuses an internal endpoint, as documented', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/chains', chainRoutes);
+    app.use(errorHandler); // app-wide in index.ts
+
+    const res = await request(app)
+      .post('/v1/chains/execute')
+      .send({
+        dmnIds: ['d1'],
+        inputs: { bsn: '123' },
+        endpoint: 'https://169.254.169.254/latest',
+      });
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/chains/execute');
+  });
+});
+
 describe('/v1/chains matches its OpenAPI description', () => {
   function makeDocumentedApp() {
     const app = express();

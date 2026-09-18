@@ -561,9 +561,6 @@ describe('deployProcess', () => {
       [],
       [],
       [],
-      undefined,
-      undefined,
-      undefined,
       'infra-board',
       'flevoland'
     );
@@ -580,17 +577,7 @@ describe('deployProcess', () => {
     const post = jest.fn().mockResolvedValue({ data: { id: 'deployment-1' } });
     (service as unknown as { client: { post: jest.Mock } }).client = { post };
 
-    await service.deployProcess(
-      '<bpmn:definitions/>',
-      'RipR21Process',
-      [],
-      [],
-      [],
-      undefined,
-      undefined,
-      undefined,
-      'infra-board'
-    );
+    await service.deployProcess('<bpmn:definitions/>', 'RipR21Process', [], [], [], 'infra-board');
 
     const body = formBody(post.mock.calls[0]);
     expect(body).not.toContain('name="tenant-id"');
@@ -605,9 +592,6 @@ describe('deployProcess', () => {
       [{ id: 'form-a', schema: { components: [] } }],
       [{ filename: 'sub.bpmn', xml: '<bpmn:definitions/>' }],
       [{ id: 'doc-a', template: { zones: [] } }],
-      undefined,
-      undefined,
-      undefined,
       ''
     );
 
@@ -628,75 +612,28 @@ describe('deployProcess', () => {
       [],
       [],
       [],
-      undefined,
-      undefined,
-      undefined,
       ''
     );
 
     expect(result.resourceCount).toBe(1);
   });
 
-  test('targets a custom Operaton instance when a URL is supplied', async () => {
+  test('always posts through the shared client, never a per-request one (#142)', async () => {
     mockPost.mockResolvedValue({ data: { id: 'dep-1' } });
     mockCreate.mockClear();
 
-    await new OperatonService().deployProcess(
-      '<bpmn:definitions/>',
-      'P',
-      [],
-      [],
-      [],
-      'http://other:8080/engine-rest',
-      'demo',
-      'demo',
-      ''
-    );
+    await new OperatonService().deployProcess('<bpmn:definitions/>', 'P', [], [], [], '');
 
-    expect(mockCreate).toHaveBeenCalledWith({
-      baseURL: 'http://other:8080/engine-rest',
-      timeout: 10000,
-      auth: { username: 'demo', password: 'demo' },
-    });
-  });
-
-  test('omits basic auth when only a URL is supplied', async () => {
-    mockPost.mockResolvedValue({ data: { id: 'dep-1' } });
-    mockCreate.mockClear();
-
-    await new OperatonService().deployProcess(
-      '<bpmn:definitions/>',
-      'P',
-      [],
-      [],
-      [],
-      'http://other:8080/engine-rest',
-      undefined,
-      undefined,
-      ''
-    );
-
-    expect(mockCreate).toHaveBeenCalledWith({
-      baseURL: 'http://other:8080/engine-rest',
-      timeout: 10000,
-    });
+    // axios.create ran once, at construction — deployProcess must not call it again.
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockPost).toHaveBeenCalledTimes(1);
   });
 
   test('surfaces a string error body from Operaton', async () => {
     mockPost.mockRejectedValue(axiosError(400, 'ENGINE-09005 Could not parse BPMN process'));
 
     await expect(
-      new OperatonService().deployProcess(
-        '<bpmn:definitions/>',
-        'P',
-        [],
-        [],
-        [],
-        undefined,
-        undefined,
-        undefined,
-        ''
-      )
+      new OperatonService().deployProcess('<bpmn:definitions/>', 'P', [], [], [], '')
     ).rejects.toThrow('Process deployment failed: ENGINE-09005 Could not parse BPMN process');
   });
 
@@ -704,17 +641,7 @@ describe('deployProcess', () => {
     mockPost.mockRejectedValue(axiosError(400, { type: 'ProcessEngineException', message: 'bad' }));
 
     await expect(
-      new OperatonService().deployProcess(
-        '<bpmn:definitions/>',
-        'P',
-        [],
-        [],
-        [],
-        undefined,
-        undefined,
-        undefined,
-        ''
-      )
+      new OperatonService().deployProcess('<bpmn:definitions/>', 'P', [], [], [], '')
     ).rejects.toThrow(
       'Process deployment failed: {"type":"ProcessEngineException","message":"bad"}'
     );
@@ -724,17 +651,7 @@ describe('deployProcess', () => {
     mockPost.mockRejectedValue(new Error('ECONNREFUSED'));
 
     await expect(
-      new OperatonService().deployProcess(
-        '<bpmn:definitions/>',
-        'P',
-        [],
-        [],
-        [],
-        undefined,
-        undefined,
-        undefined,
-        ''
-      )
+      new OperatonService().deployProcess('<bpmn:definitions/>', 'P', [], [], [], '')
     ).rejects.toThrow('Process deployment failed: ECONNREFUSED');
   });
 });
@@ -742,17 +659,7 @@ describe('deployProcess', () => {
 describe('boardOwner tagging', () => {
   async function deployAndReadXml(bpmnXml: string, boardOwner?: string) {
     mockPost.mockResolvedValue({ data: { id: 'dep-1' } });
-    await new OperatonService().deployProcess(
-      bpmnXml,
-      'P',
-      [],
-      [],
-      [],
-      undefined,
-      undefined,
-      undefined,
-      boardOwner
-    );
+    await new OperatonService().deployProcess(bpmnXml, 'P', [], [], [], boardOwner);
     return formBody(mockPost.mock.calls[0]);
   }
 

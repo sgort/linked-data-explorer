@@ -77,7 +77,7 @@ describe('POST /v1/triplydb/query', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/query')
-      .send({ endpoint: 'e', query: 'q' });
+      .send({ endpoint: 'https://triplydb.example/sparql', query: 'q' });
 
     expect(res.headers['api-version']).toBe(packageJson.version);
     expect(res.headers['content-type']).toMatch(/application\/json/);
@@ -88,7 +88,7 @@ describe('POST /v1/triplydb/query', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/query')
-      .send({ endpoint: 'e', query: 'ASK {?s ?p ?o}' });
+      .send({ endpoint: 'https://triplydb.example/sparql', query: 'ASK {?s ?p ?o}' });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, boolean: true });
@@ -115,7 +115,7 @@ describe('POST /v1/triplydb/query', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/query')
-      .send({ endpoint: 'e', query: 'q' });
+      .send({ endpoint: 'https://triplydb.example/sparql', query: 'q' });
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
@@ -130,7 +130,7 @@ describe('POST /v1/triplydb/query', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/query')
-      .send({ endpoint: 'e', query: 'q' });
+      .send({ endpoint: 'https://triplydb.example/sparql', query: 'q' });
 
     expect(res.body.detail).toBe('Query execution failed');
   });
@@ -415,12 +415,13 @@ describe('GET /v1/triplydb/assets', () => {
     );
   });
 
-  test('sends a bearer token when one is supplied for a private dataset', async () => {
+  test('sends a bearer token from the Authorization header for a private dataset', async () => {
     mockFetch.mockResolvedValue(assetResponse([]));
 
     await request(makeApp())
       .get('/v1/triplydb/assets')
-      .query({ account: 'stevengort', dataset: 'facts', apiToken: 'tok-1' });
+      .query({ account: 'stevengort', dataset: 'facts' })
+      .set('Authorization', 'Bearer tok-1');
 
     expect(mockFetch).toHaveBeenCalledWith(expect.any(String), {
       headers: { Accept: 'application/json', Authorization: 'Bearer tok-1' },
@@ -486,6 +487,54 @@ describe('GET /v1/triplydb/assets', () => {
   });
 });
 
+describe('#142 TriplyDB host allowlist', () => {
+  test.each(['/update-service', '/list-graphs', '/test-connection'])(
+    '%s refuses a host that is not allowed, without calling TriplyDB',
+    async (path) => {
+      const res = await request(makeApp())
+        .post(`/v1/triplydb${path}`)
+        .send({ config: { ...CONFIG, baseUrl: 'https://example.org' }, serviceName: 'svc' });
+      expect(res.status).toBe(400);
+      expect(res.body.detail).toBe(
+        '`config.baseUrl` host example.org is not an allowed TriplyDB host'
+      );
+      for (const fn of Object.values(svc)) {
+        if (typeof fn === 'function') expect(fn).not.toHaveBeenCalled();
+      }
+    }
+  );
+
+  test('test-connection refuses a config with missing fields', async () => {
+    const res = await request(makeApp()).post('/v1/triplydb/test-connection').send({ config: {} });
+    expect(res.status).toBe(400);
+    expect(svc.testConnection).not.toHaveBeenCalled();
+  });
+});
+
+describe('#142 GET /v1/triplydb/assets token', () => {
+  test('forwards a bearer token from the Authorization header', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    await request(makeApp())
+      .get('/v1/triplydb/assets?account=a&dataset=b')
+      .set('Authorization', 'Bearer tok-9');
+    expect(mockFetch.mock.calls[0][1].headers.Authorization).toBe('Bearer tok-9');
+  });
+
+  test('ignores an apiToken query parameter', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    await request(makeApp()).get('/v1/triplydb/assets?account=a&dataset=b&apiToken=leak');
+    expect(mockFetch.mock.calls[0][1].headers.Authorization).toBeUndefined();
+  });
+
+  test('encodes account and dataset into the upstream path', async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    await request(makeApp()).get('/v1/triplydb/assets?account=a%2F..&dataset=b%3Fx%3D1');
+    expect(mockFetch.mock.calls[0][0]).toBe(
+      'https://api.open-regels.triply.cc/datasets/a%2F../b%3Fx%3D1/assets'
+    );
+  });
+});
+
 describe('GET /v1/triplydb/health', () => {
   test('reports the proxy as ok with version and uptime', async () => {
     const res = await request(makeApp()).get('/v1/triplydb/health');
@@ -506,6 +555,49 @@ describe('GET /v1/triplydb/health', () => {
 
     expect(svc.testConnection).not.toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('#142 endpoint check', () => {
+  test('POST /v1/triplydb/query refuses an internal endpoint without querying it', async () => {
+    const res = await request(makeApp())
+      .post('/v1/triplydb/query')
+      .send({ endpoint: 'https://169.254.169.254/latest', query: 'SELECT * WHERE {?s ?p ?o}' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(svc.executeQuery).not.toHaveBeenCalled();
+  });
+
+  test('POST /v1/triplydb/query refuses a non-https endpoint without querying it', async () => {
+    const res = await request(makeApp())
+      .post('/v1/triplydb/query')
+      .send({ endpoint: 'http://example.org/sparql', query: 'SELECT * WHERE {?s ?p ?o}' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` must use https',
+    });
+    expect(svc.executeQuery).not.toHaveBeenCalled();
+  });
+
+  test('POST /v1/triplydb/query refuses an internal endpoint, as documented', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/triplydb', triplydbRoutes);
+    app.use(errorHandler); // app-wide in index.ts
+
+    const res = await request(app)
+      .post('/v1/triplydb/query')
+      .send({ endpoint: 'https://169.254.169.254/latest', query: 'SELECT * WHERE {?s ?p ?o}' });
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/triplydb/query');
   });
 });
 

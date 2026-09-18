@@ -10,6 +10,7 @@ import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { shaclValidationService } from '../services/shacl-validation.service';
 import { sendProblem } from '../utils/problem';
+import { refuseOptionalEndpoint } from '../utils/outboundUrl';
 
 const router = Router();
 
@@ -103,6 +104,8 @@ router.post('/validate-merged', async (req: Request, res: Response) => {
       });
       return;
     }
+
+    if (refuseOptionalEndpoint(res, req, endpoint, 'endpoint')) return;
 
     logger.info('[SHACL Validate] Merged validation requested', {
       contentLength: content.length,
