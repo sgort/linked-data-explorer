@@ -9,13 +9,6 @@ extends:
   - ./adr-ruleset-2.2.1.yaml
 
 rules:
-  # Error responses are the { success: false, error } envelope, not RFC 9457
-  # problem details. The document describes them as they are rather than claim
-  # a format the API does not return. Remove both lines when
-  # https://github.com/sgort/linked-data-explorer/issues/131 lands.
-  nlgov:use-problem-schema: 'off'
-  nlgov:problem-schema-members: 'off'
-
   # The release version is calendar-based, YYYY.MM.N with a zero-padded month
   # (2026.09.4), and info.version is the same string as the API-Version header.
   # A zero-padded month is not valid semver, and rewriting it in the document
@@ -143,10 +136,9 @@ overrides:
     rules:
       nlgov:problem-invalid-input: 'off'
 
-  # #131's two deliberate pass-throughs, once use-problem-schema is switched
-  # back on (Phase 4). Inert for now: the rule is off above, so these entries
-  # do nothing until that line is removed, but are written here so the exact
-  # scope is settled and checkable ahead of time.
+  # Every error response is RFC 9457 problem details (#131), so
+  # use-problem-schema and problem-schema-members gate everywhere except the
+  # two responses below, which are not ours to reshape.
   #
   # GET /health's 503 body is the health document itself, carrying which
   # dependency is down -- the same information a 200 reports, not an
