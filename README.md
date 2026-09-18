@@ -127,6 +127,19 @@ linked-data-explorer/
 
 ---
 
+## Adding or changing a backend route
+
+The backend's API is a published contract, not just its code: `packages/backend/openapi/openapi.yaml` describes every `/v1` route, and a gate (`src/openapi/coverage.test.ts`) fails `npm test` when a served operation is undocumented or a documented one is not served. Adding or changing a route means:
+
+1. Document the operation in `packages/backend/openapi/openapi.yaml` — path, parameters, request and response bodies, and every status it can answer.
+2. Add an `expectToMatchOperation` assertion per documented status to the route's test file, so a response that drifts from its schema fails the test that touches it.
+3. If the handler genuinely cannot answer `400` (there is no invalid input for it to reject), add a narrowly scoped override to `openapi/.spectral.yaml` with a reason a reviewer can check, rather than documenting a status the handler never returns.
+4. Run `npm run test:contract --workspace=packages/backend` and `npm run lint:openapi --workspace=packages/backend` before opening a pull request.
+
+`npm run test:contract --workspace=packages/backend` runs the coverage gate together with every `expectToMatchOperation` assertion across the route tests — the one command that answers "does the code still match its description?" A narrower `npm run test:openapi-coverage --workspace=packages/backend` runs only `src/openapi` — the served-vs-documented coverage gate and the document's own tests (that the YAML parses, builds and is internally consistent); it is fast, but validates no route's actual response.
+
+---
+
 ## Documentation
 
 Full documentation is at [iou-architectuur.open-regels.nl/linked-data-explorer](https://iou-architectuur.open-regels.nl/linked-data-explorer/).

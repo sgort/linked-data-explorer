@@ -244,6 +244,17 @@ describe('/v1/shacl matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/shacl/validate');
   });
 
+  test('POST /validate 200 with a shape layer that failed to load (complete: false), as documented', async () => {
+    mockValidateFile.mockResolvedValue(RESULT);
+
+    const res = await post('/validate').send({ content: TURTLE });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.complete).toBe(false);
+    expect(res.body.data.layers.cprmv.loaded).toBe(false);
+    expectToMatchOperation(res, 'post', '/shacl/validate');
+  });
+
   test('POST /validate 200 with issues, as documented', async () => {
     mockValidateFile.mockResolvedValue(RESULT_WITH_ISSUES);
 

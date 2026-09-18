@@ -633,8 +633,8 @@ paths:
       description: >-
         Upserts by `id`: inserts a new row, or on a conflict updates every
         column named below. `readonly` is never written by this operation;
-        the response always reports it as `false`, hardcoded by the mapper,
-        not read from the database. A schema version is stored for a form, but
+        the response always reports it as `false`; not stored. A schema
+        version is stored for a form, but
         neither this operation nor `GET /assets/forms` writes or reads it, so
         it never appears on the wire — unlike `Document.schemaVersion`, which
         does. Validated against the database's own constraints (#150): every required field's presence and every field's
@@ -829,8 +829,8 @@ paths:
       description: >-
         Upserts by `id`: inserts a new row, or on a conflict updates every
         column named below. `readonly` is never written by this operation;
-        the response always reports it as `false`, hardcoded by the mapper,
-        not read from the database. `schemaVersion`, `bindings` and `assets`
+        the response always reports it as `false`; not stored.
+        `schemaVersion`, `bindings` and `assets`
         each have a database default (`1` and `'[]'` respectively), but this
         operation always supplies a value for all three explicitly, even
         when the caller omits them from the body — an omitted value becomes
@@ -2942,14 +2942,12 @@ paths:
       summary: Execute a chain of DMNs sequentially, or a pre-assembled DRD in one call
       description: >-
         Threads each DMN's outputs into the next DMN's inputs, evaluating each
-        one in Operaton in turn (`orchestrationService.executeChain`). When
-        `isDrd` and `drdEntryPointId` are both given, that sequential
-        execution is skipped entirely and all `inputs` are sent to Operaton's
-        evaluation of the pre-assembled DRD in a single call instead. A step
-        is only ever added to `steps` once it has completed successfully —
-        `orchestration.service.ts` pushes it after its try/catch, and a step
-        whose evaluation throws re-throws before that push is reached, so it
-        is never added; the problem's `detail` carries that failure instead.
+        one in Operaton in turn. When `isDrd` and `drdEntryPointId` are both
+        given, that sequential execution is skipped entirely and all `inputs`
+        are sent to Operaton's evaluation of the pre-assembled DRD in a
+        single call instead. A step is only ever added to `steps` once it has
+        completed successfully; a step whose evaluation throws is never
+        added, and the problem's `detail` carries that failure instead.
         Every populated `steps` entry therefore always has `outputs`, never
         `error`.
       requestBody:
@@ -3411,10 +3409,11 @@ paths:
       tags: [Integrations]
       summary: RTR activities registered by one authority (OIN)
       description: >-
-        Proxies the DSO RTR Gegevens API's search, fetching the whole result
-        set in one page (the upstream caps the page size to the actual
-        count, so this never over-fetches), so a caller can filter
-        client-side.
+        Proxies the DSO RTR Gegevens API's search and fetches every page of
+        results, combining them into a single page 1 so a caller can filter
+        client-side. Fetching stops after 2000 activities (10 upstream pages
+        of 200); `page.size` below `page.totalElements` in the response means
+        that cap was hit and the list is incomplete.
       parameters:
         - name: x-dso-env
           in: header
@@ -3467,7 +3466,10 @@ paths:
                     const: true
                   data:
                     type: object
-                    description: The upstream API's response, unchanged.
+                    description: >-
+                      The upstream response with every page's `_embedded`
+                      items combined, `page` rewritten to describe that
+                      single combined page, and pagination links removed.
         '400':
           description: >-
             `oin` is missing, or the request body was not valid JSON (code
@@ -4357,7 +4359,7 @@ paths:
   /edocs/status:
     get:
       operationId: getEdocsStatus
-      tags: [Integrations]
+      tags: [Health & monitoring]
       summary: eDOCS connectivity status
       description: >-
         Reports whether the OpenText eDOCS document management bridge is
@@ -5355,7 +5357,7 @@ components:
           format: date-time
         readonly:
           const: false
-          description: Hardcoded by the mapper; never read from the database.
+          description: Always reported as `false`; not stored.
     Document:
       type: object
       description: A stored document template, as returned by `GET /assets/documents`.
@@ -5422,7 +5424,7 @@ components:
           format: date-time
         readonly:
           const: false
-          description: Hardcoded by the mapper; never read from the database.
+          description: Always reported as `false`; not stored.
     RopaRecord:
       type: object
       description: >-
@@ -5829,6 +5831,11 @@ components:
           type: string
     DmnValidationResult:
       type: object
+      description: >-
+        Deliberately the same shape as ShaclValidationResult (layers,
+        summary, issues), so a client can render both with one component;
+        this schema's issue codes come from the DMN rule catalogue, which is
+        why the issue schemas themselves stay separate.
       required: [valid, parseError, layers, summary]
       properties:
         valid:
@@ -5851,18 +5858,20 @@ components:
             content:
               $ref: '#/components/schemas/ValidationLayer'
         summary:
-          type: object
-          required: [errors, warnings, infos]
-          properties:
-            errors:
-              type: integer
-              minimum: 0
-            warnings:
-              type: integer
-              minimum: 0
-            infos:
-              type: integer
-              minimum: 0
+          $ref: '#/components/schemas/ValidationSummary'
+    ValidationSummary:
+      type: object
+      required: [errors, warnings, infos]
+      properties:
+        errors:
+          type: integer
+          minimum: 0
+        warnings:
+          type: integer
+          minimum: 0
+        infos:
+          type: integer
+          minimum: 0
     ValidationLayer:
       type: object
       required: [label, issues]
@@ -5896,6 +5905,11 @@ components:
       description: >-
         `layers` is a closed set of exactly three shape layers — not a map,
         unlike the similarly-named ShaclLayerStatus block in /health.
+        Deliberately the same shape as DmnValidationResult (layers, summary,
+        issues), so a client can render both with one component; this
+        schema's issue codes come from the SHACL constraint components a
+        violation triggers, which is why the issue schemas themselves stay
+        separate.
       required: [valid, complete, parseError, layers, summary]
       properties:
         valid:
@@ -5919,18 +5933,7 @@ components:
             ronl-custom:
               $ref: '#/components/schemas/ShaclLayerResult'
         summary:
-          type: object
-          required: [errors, warnings, infos]
-          properties:
-            errors:
-              type: integer
-              minimum: 0
-            warnings:
-              type: integer
-              minimum: 0
-            infos:
-              type: integer
-              minimum: 0
+          $ref: '#/components/schemas/ValidationSummary'
     ShaclLayerResult:
       type: object
       required: [label, loaded, issues]
@@ -5963,8 +5966,8 @@ components:
     ChainTemplate:
       type: object
       description: >-
-        A predefined chain template, defined in code (TemplateService), not
-        sourced from the knowledge graph. Serves both `GET /chains/templates`
+        A predefined chain template, built into the API rather than sourced
+        from the knowledge graph. Serves both `GET /chains/templates`
         and `GET /chains/templates/{id}`.
       required:
         - id
@@ -6054,10 +6057,9 @@ components:
       type: object
       description: >-
         One source DMN and every downstream DMN it can feed, built by
-        grouping the pairwise SPARQL chain links by their `from` DMN
-        (chain.routes.ts, the handler's own local `ChainMapEntry`
-        interface). Distinct from the DMN-record schemas of phase 2
-        (DmnModel, DmnReference, EnhancedChainLink, ChainCycle).
+        grouping the pairwise SPARQL chain links by their `from` DMN.
+        Distinct from the DMN-record schemas of phase 2 (DmnModel,
+        DmnReference, EnhancedChainLink, ChainCycle).
       required: [from, connections]
       properties:
         from:
@@ -6083,14 +6085,11 @@ components:
     ExecutionStep:
       type: object
       description: >-
-        One DMN evaluated within a chain execution. orchestration.service.ts
-        only pushes a step onto `steps` after it has completed successfully;
-        a step whose evaluation throws sets its own `error` field but is then
-        discarded, re-thrown to the caller before that push runs, so it is
-        never added to `steps`. Every step this API actually returns
-        therefore always carries `outputs`, and `error` never appears here —
-        unlike the `ExecutionStep` TypeScript type, which marks `outputs` and
-        `error` as mutually-exclusive optionals.
+        One DMN evaluated within a chain execution. A step is only added to
+        `steps` after it has completed successfully; a step whose evaluation
+        throws is never added, and its failure surfaces as the response's
+        `detail` instead. Every step this API actually returns therefore
+        always carries `outputs`, and never an error of its own.
       required: [dmnId, dmnTitle, startTime, endTime, duration, inputs, outputs]
       properties:
         dmnId:

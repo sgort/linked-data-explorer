@@ -14,6 +14,8 @@
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:openapi-coverage": "jest --config jest.config.js src/openapi --coverage=false",
+    "test:contract": "jest --config jest.config.js src/openapi src/routes --coverage=false",
     "lint": "eslint .",
     "lint:openapi": "npm run build:openapi && spectral lint openapi/openapi.json --ruleset openapi/.spectral.yaml --fail-severity error",
     "typecheck": "tsc --noEmit",

@@ -14,6 +14,12 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  authoritiesByLevel,
+  AuthorityLevel,
+  findAuthorityByOin,
+  shortName,
+} from '../../data/dsoAuthorities';
+import {
   ActiviteitenResult,
   BegrippenResult,
   dmnDownloadUrl,
@@ -501,20 +507,18 @@ const WerkzaamhedenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 
 // ── Activities tab ───────────────────────────────────────────────────────────
 
-// Known authorities with human-readable names, keyed by OIN. Drives both the
-// location presets below and the organization label used when importing forms,
-// since the RTR API only returns the authority code (e.g. "GM0995"), not a name.
-const LOCATION_PRESETS = [
-  { label: 'Lelystad', oin: '00000001005024249000' },
-  { label: 'Flevoland', oin: '00000001006203243000' },
-  { label: 'Ede', oin: '00000001001104524000' },
-  { label: 'Gelderland', oin: '00000001001825100000' },
-] as const;
+// Authority levels, in the order the Level dropdown offers them.
+const AUTHORITY_LEVELS: { value: AuthorityLevel; label: string }[] = [
+  { value: 'gemeente', label: 'Gemeente' },
+  { value: 'provincie', label: 'Provincie' },
+  { value: 'waterschap', label: 'Waterschap' },
+  { value: 'rijk', label: 'Rijk' },
+];
 
 /**
  * Resolve a readable authority name for an activity's bestuursorgaan.
  * Falls back to the bare code (organisatieType + organisatieCode) when the
- * authority is not one of the known presets.
+ * authority is not one of the ones the register carries an OIN for.
  */
 function authorityLabel(bestuursorgaan?: {
   oin: string;
@@ -522,8 +526,10 @@ function authorityLabel(bestuursorgaan?: {
   organisatieCode: string;
 }): string | undefined {
   if (!bestuursorgaan) return undefined;
-  const preset = LOCATION_PRESETS.find((p) => p.oin === bestuursorgaan.oin);
-  return preset?.label ?? `${bestuursorgaan.organisatieType}${bestuursorgaan.organisatieCode}`;
+  const authority = findAuthorityByOin(bestuursorgaan.oin);
+  return authority
+    ? shortName(authority)
+    : `${bestuursorgaan.organisatieType}${bestuursorgaan.organisatieCode}`;
 }
 
 // ── DSO → DMN publish handoff (CPSV Editor) ──────────────────────────────────
@@ -1096,9 +1102,6 @@ const ActiviteitRow: React.FC<{
 );
 
 const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
-  // ── preset authorities ───────────────────────────────────────────────
-  const PRESETS = LOCATION_PRESETS;
-
   const [datum, setDatum] = useState('');
   const [activeDatum, setActiveDatum] = useState<string | undefined>(undefined);
   const [result, setResult] = useState<ActiviteitenResult | null>(null);
@@ -1108,10 +1111,14 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedUrn, setSelectedUrn] = useState<string | null>(null);
   const [urnInput, setUrnInput] = useState('');
-  const [activePreset, setActivePreset] = useState<string | null>(null);
-  // Client-side name filter — only meaningful when a location preset is fixed,
+  const [level, setLevel] = useState<AuthorityLevel>('gemeente');
+  const [authorityOin, setAuthorityOin] = useState('');
+  // Client-side name filter — only meaningful when an authority is fixed,
   // since OIN mode loads the authority's full activity set in one call.
   const [nameFilter, setNameFilter] = useState('');
+
+  const levelAuthorities = authoritiesByLevel(level);
+  const selectedAuthority = authorityOin ? findAuthorityByOin(authorityOin) : undefined;
 
   const toDsoDate = (iso: string) => {
     if (!iso) return undefined;
@@ -1159,7 +1166,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 
   useEffect(() => {
     setSelectedUrn(null);
-    setActivePreset(null);
+    setAuthorityOin('');
     setOinMode(false);
     load('', 1);
   }, [load]);
@@ -1167,32 +1174,41 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   const handleLoad = () => {
     setPage(1);
     setSelectedUrn(null);
-    if (activePreset) {
-      const preset = PRESETS.find((p) => p.label === activePreset);
-      if (preset) loadByOin(preset.oin, toDsoDate(datum));
+    if (authorityOin) {
+      loadByOin(authorityOin, toDsoDate(datum));
     } else {
       setOinMode(false);
       load(datum, 1);
     }
   };
 
-  const handlePreset = (preset: (typeof PRESETS)[number]) => {
-    const isActive = activePreset === preset.label;
-    setActivePreset(isActive ? null : preset.label);
+  const handleLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLevel = e.target.value as AuthorityLevel;
+    setLevel(newLevel);
+    setAuthorityOin('');
     setSelectedUrn(null);
     setNameFilter('');
-    if (isActive) {
+    setOinMode(false);
+    setResult(null);
+  };
+
+  const handleAuthorityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const oin = e.target.value;
+    setAuthorityOin(oin);
+    setSelectedUrn(null);
+    setNameFilter('');
+    if (!oin) {
       setOinMode(false);
       setDatum('');
       load('', 1);
-    } else {
-      // Show yesterday in the Valid on field so the user sees what date filters the preset
-      const d = new Date();
-      d.setDate(d.getDate() - 1);
-      const yesterday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      setDatum(yesterday);
-      loadByOin(preset.oin, toDsoDate(yesterday));
+      return;
     }
+    // Show yesterday in the Valid on field so the user sees what date filters the authority
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const yesterday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setDatum(yesterday);
+    loadByOin(oin, toDsoDate(yesterday));
   };
 
   const goPage = (p: number) => {
@@ -1231,41 +1247,43 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
             Load
           </button>
         </div>
-        {/* Row 2: location presets */}
+        {/* Row 2: authority level + authority */}
         <div className="px-3 py-2 flex items-center gap-2 border-b border-slate-100">
-          <span className="text-xs text-slate-400 shrink-0">Location</span>
-          {PRESETS.map((p) => (
-            <button
-              key={p.label}
-              onClick={() => handlePreset(p)}
-              className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
-                activePreset === p.label
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-          {activePreset && (
-            <>
-              <span className="text-[10px] text-slate-400 italic">
-                Showing {activePreset} activities only
-              </span>
-              <button
-                onClick={() => {
-                  setActivePreset(null);
-                  setOinMode(false);
-                  setSelectedUrn(null);
-                  setDatum('');
-                  setNameFilter('');
-                  load('', 1);
-                }}
-                className="ml-auto text-[10px] text-slate-400 hover:text-slate-600 underline transition-colors"
-              >
-                Clear
-              </button>
-            </>
+          <label htmlFor="dso-authority-level" className="text-xs text-slate-400 shrink-0">
+            Level
+          </label>
+          <select
+            id="dso-authority-level"
+            value={level}
+            onChange={handleLevelChange}
+            className="px-2.5 py-1 text-xs rounded-md border border-slate-300 bg-white text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            {AUTHORITY_LEVELS.map((l) => (
+              <option key={l.value} value={l.value}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="dso-authority" className="text-xs text-slate-400 shrink-0">
+            Authority
+          </label>
+          <select
+            id="dso-authority"
+            value={authorityOin}
+            onChange={handleAuthorityChange}
+            className="flex-1 min-w-0 px-2.5 py-1 text-xs rounded-md border border-slate-300 bg-white text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            <option value="">Choose an authority…</option>
+            {levelAuthorities.map((a) => (
+              <option key={a.oin} value={a.oin}>
+                {shortName(a)}
+              </option>
+            ))}
+          </select>
+          {selectedAuthority && (
+            <span className="text-[10px] text-slate-400 italic shrink-0">
+              Showing {shortName(selectedAuthority)} activities only
+            </span>
           )}
         </div>
         {/* Row 2b: name search — only when a location is fixed */}
@@ -1282,7 +1300,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
                   setNameFilter(e.target.value);
                   setSelectedUrn(null);
                 }}
-                placeholder={`Filter ${activePreset ?? 'location'} activities by name…`}
+                placeholder={`Filter ${selectedAuthority ? shortName(selectedAuthority) : 'location'} activities by name…`}
                 className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
             </div>

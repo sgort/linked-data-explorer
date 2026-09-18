@@ -89,6 +89,18 @@ export interface ZoekOptions {
   pageSize?: number;
 }
 
+// Safety cap on how many pages getActiviteitenByOin will fetch: 10 pages of
+// 200 = 2000 activities. Above that, the response is truncated (page.size
+// stays below page.totalElements) rather than fetched without bound.
+const MAX_ACTIVITEITEN_OIN_PAGES = 10;
+
+interface DsoPageInfo {
+  number: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 export async function getActiviteitenByOin(
   oin: string,
   env: DsoEnv = 'pre',
@@ -98,41 +110,109 @@ export async function getActiviteitenByOin(
   const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
   const effectiveDatum = datum ?? today;
 
-  const params = new URLSearchParams();
-  params.set('page', '1');
-  // Full set in one call so the Activities tab can filter client-side.
-  // The API caps `size` to the actual count, so this never over-fetches.
-  params.set('pageSize', '200');
-
   const body = {
     datum: effectiveDatum,
     bestuursorgaan: { oin },
   };
 
-  const url = `${getDsoConfig(env).rtrBaseUrl}/activiteiten/_zoek?${params}`;
-  logger.info('[DSO] POST activiteiten/_zoek by OIN', { env, oin, datum: effectiveDatum });
+  const fetchPage = async (page: number): Promise<Record<string, unknown>> => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('pageSize', '200');
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'x-api-key': getDsoConfig(env).apiKey,
-        'Content-Type': 'application/json',
-        Accept: 'application/hal+json',
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
+    const url = `${getDsoConfig(env).rtrBaseUrl}/activiteiten/_zoek?${params}`;
+    logger.info('[DSO] POST activiteiten/_zoek by OIN', {
+      env,
+      oin,
+      datum: effectiveDatum,
+      page,
     });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`DSO responded ${response.status}: ${text}`);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'x-api-key': getDsoConfig(env).apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/hal+json',
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`DSO responded ${response.status}: ${text}`);
+      }
+      return (await response.json()) as Record<string, unknown>;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return response.json();
-  } finally {
-    clearTimeout(timeoutId);
+  };
+
+  const first = await fetchPage(1);
+  const page = first.page as DsoPageInfo | undefined;
+
+  if (!page || page.totalPages <= 1) {
+    return first;
   }
+
+  const lastPage = Math.min(page.totalPages, MAX_ACTIVITEITEN_OIN_PAGES);
+  const pages = [first];
+  // Fetched sequentially, on purpose: kinder to the upstream's rate limits
+  // than firing every page at once, at the cost of a worst case around
+  // (pages × DSO timeout) rather than one timeout's worth.
+  for (let p = 2; p <= lastPage; p++) {
+    pages.push(await fetchPage(p));
+  }
+
+  // Union of every page's _embedded keys, in first-seen order — not just
+  // page 1's — in case a later page introduces a key page 1 didn't have.
+  const embeddedKeys: string[] = [];
+  for (const p of pages) {
+    for (const key of Object.keys((p._embedded as Record<string, unknown[]>) ?? {})) {
+      if (!embeddedKeys.includes(key)) embeddedKeys.push(key);
+    }
+  }
+  const mergedEmbedded: Record<string, unknown[]> = {};
+  let totalReturned = 0;
+  for (const key of embeddedKeys) {
+    const items = pages.flatMap(
+      (p) => ((p._embedded as Record<string, unknown[]>) ?? {})[key] ?? []
+    );
+    mergedEmbedded[key] = items;
+    totalReturned += items.length;
+  }
+
+  if (lastPage < page.totalPages) {
+    logger.warn('[DSO] activiteiten/oin: hit the page cap, response is truncated', {
+      oin,
+      totalElements: page.totalElements,
+      fetchedPages: lastPage,
+      totalPages: page.totalPages,
+    });
+  }
+
+  const {
+    next: _next,
+    prev: _prev,
+    first: _first,
+    last: _last,
+    ...restLinks
+  } = (first._links as Record<string, unknown>) ?? {};
+
+  return {
+    ...first,
+    _embedded: mergedEmbedded,
+    page: {
+      number: 1,
+      size: totalReturned,
+      totalElements: page.totalElements,
+      totalPages: 1,
+    },
+    _links: restLinks,
+  };
 }
 
 export async function zoekActiviteiten(
