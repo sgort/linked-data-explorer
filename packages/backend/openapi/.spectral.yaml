@@ -142,3 +142,26 @@ overrides:
       - 'openapi.json#/paths/~1vendors~1dmn~1%7Bidentifier%7D/get'
     rules:
       nlgov:problem-invalid-input: 'off'
+
+  # #131's two deliberate pass-throughs, once use-problem-schema is switched
+  # back on (Phase 4). Inert for now: the rule is off above, so these entries
+  # do nothing until that line is removed, but are written here so the exact
+  # scope is settled and checkable ahead of time.
+  #
+  # GET /health's 503 body is the health document itself, carrying which
+  # dependency is down -- the same information a 200 reports, not an
+  # explanation of a request failure. Replacing it with problem details would
+  # discard the reason the status exists.
+  - files:
+      - 'openapi.json#/paths/~1health/get/responses/503/content'
+    rules:
+      nlgov:use-problem-schema: 'off'
+
+  # POST /dmns/evaluate/{decisionKey} is a byte-for-byte proxy for Operaton's
+  # own evaluate endpoint; the frontend reads Operaton's raw response body
+  # directly. Rewriting a failure into problem details would make the proxy
+  # lie about what Operaton said.
+  - files:
+      - 'openapi.json#/paths/~1dmns~1evaluate~1%7BdecisionKey%7D/post/responses/400/content'
+    rules:
+      nlgov:use-problem-schema: 'off'

@@ -264,7 +264,11 @@ describe('DmnValidator validation', () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 422,
-      json: async () => ({ success: false, error: { message: 'Not a DMN document' } }),
+      json: async () => ({
+        type: 'about:blank',
+        title: 'Invalid request',
+        detail: 'Not a DMN document',
+      }),
     });
 
     const { container } = render(<DmnValidator apiBaseUrl={API} />);
@@ -292,7 +296,7 @@ describe('DmnValidator validation', () => {
     fetchMock.mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ success: false, error: { message: 'Validator offline' } }),
+      json: async () => ({ success: false, detail: 'Validator offline' }),
     });
 
     const { container } = render(<DmnValidator apiBaseUrl={API} />);

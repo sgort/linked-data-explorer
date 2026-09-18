@@ -3,6 +3,7 @@ import cors from 'cors';
 import { listPublicRopa } from '../services/ropa.service';
 import { getErrorMessage } from '../utils/errors';
 import logger from '../utils/logger';
+import { sendProblem } from '../utils/problem';
 
 const router = Router();
 
@@ -19,9 +20,7 @@ router.get('/', async (req: Request, res: Response) => {
     res.json({ success: true, data });
   } catch (err) {
     logger.error('[ropa.public] listPublicRopa failed', { error: getErrorMessage(err) });
-    res
-      .status(500)
-      .json({ success: false, error: { code: 'LIST_FAILED', message: getErrorMessage(err) } });
+    sendProblem(res, req, { status: 500, code: 'LIST_FAILED', detail: getErrorMessage(err) });
   }
 });
 

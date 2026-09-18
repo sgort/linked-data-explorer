@@ -11,6 +11,7 @@ import {
 } from '../services/norms.service';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
+import { sendProblem } from '../utils/problem';
 import { computeNormsEtag, computeLastModified } from '../utils/etag';
 import logger from '../utils/logger';
 import packageJson from '../../package.json';
@@ -89,39 +90,33 @@ router.get('/', async (req: Request, res: Response) => {
   // Validate filter inputs upfront. Reject on any pattern mismatch so the
   // service layer can safely treat values as injection-safe.
   if (rulesetid !== undefined && !RULESETID_PATTERN.test(rulesetid)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_PARAM',
-        message: 'Invalid rulesetid: must match /^[A-Za-z0-9_-]+$/',
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, {
+      status: 400,
+      code: 'INVALID_PARAM',
+      detail: 'Invalid rulesetid: must match /^[A-Za-z0-9_-]+$/',
+    });
+    return;
   }
 
   if (applicableDate !== undefined && !APPLICABLE_DATE_PATTERN.test(applicableDate)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_PARAM',
-        message: 'Invalid applicable_date: must be YYYY-MM-DD',
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, {
+      status: 400,
+      code: 'INVALID_PARAM',
+      detail: 'Invalid applicable_date: must be YYYY-MM-DD',
+    });
+    return;
   }
 
   if (
     requestedCprmvVersion !== undefined &&
     !SUPPORTED_CPRMV_VERSION_SET.has(requestedCprmvVersion)
   ) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'INVALID_PARAM',
-        message: `Invalid cprmv_version: must be one of ${SUPPORTED_CPRMV_VERSIONS.join(', ')}`,
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, {
+      status: 400,
+      code: 'INVALID_PARAM',
+      detail: `Invalid cprmv_version: must be one of ${SUPPORTED_CPRMV_VERSIONS.join(', ')}`,
+    });
+    return;
   }
 
   // Validated; fall back to the default namespace when omitted.
@@ -256,14 +251,7 @@ router.get('/', async (req: Request, res: Response) => {
   } catch (error: unknown) {
     logger.error('Norms list error', getErrorDetails(error));
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'QUERY_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
   }
 });
 

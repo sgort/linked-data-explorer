@@ -58,9 +58,11 @@ describe('BPMN collection', () => {
     const res = await request(makeApp()).get('/v1/assets/bpmn');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'LIST_FAILED', message: 'db unavailable' },
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'List failed',
+      detail: 'db unavailable',
+      code: 'LIST_FAILED',
     });
   });
 
@@ -81,7 +83,12 @@ describe('BPMN collection', () => {
     const res = await request(makeApp()).post('/v1/assets/bpmn').send({ id: 'p1' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'UPSERT_FAILED', message: 'readonly record' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Save failed',
+      detail: 'readonly record',
+      code: 'UPSERT_FAILED',
+    });
   });
 
   test('DELETE /bpmn/:id deletes by id', async () => {
@@ -99,7 +106,12 @@ describe('BPMN collection', () => {
     const res = await request(makeApp()).delete('/v1/assets/bpmn/p1');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'DELETE_FAILED', message: 'still referenced' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Delete failed',
+      detail: 'still referenced',
+      code: 'DELETE_FAILED',
+    });
   });
 });
 
@@ -144,9 +156,11 @@ describe('PATCH /bpmn/:id/deploy', () => {
       .send({ deploymentId: 'dep-1' });
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'NOT_FOUND', message: 'No process found for id: missing-id' },
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'Not found',
+      detail: 'No process found for id: missing-id',
+      code: 'NOT_FOUND',
     });
   });
 
@@ -158,7 +172,12 @@ describe('PATCH /bpmn/:id/deploy', () => {
       .send({ deploymentId: 'dep-1' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'DEPLOY_MARK_FAILED', message: 'no such process' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Deploy record failed',
+      detail: 'no such process',
+      code: 'DEPLOY_MARK_FAILED',
+    });
   });
 });
 
@@ -179,9 +198,11 @@ describe('GET /bpmn/by-bpmn-id/:bpmnProcessId', () => {
     const res = await request(makeApp()).get('/v1/assets/bpmn/by-bpmn-id/MissingSub');
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'Not found',
+      detail: 'No process found for bpmnProcessId: MissingSub',
       code: 'NOT_FOUND',
-      message: 'No process found for bpmnProcessId: MissingSub',
     });
   });
 
@@ -191,7 +212,12 @@ describe('GET /bpmn/by-bpmn-id/:bpmnProcessId', () => {
     const res = await request(makeApp()).get('/v1/assets/bpmn/by-bpmn-id/ZorgtoeslagProcess');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'LOOKUP_FAILED', message: 'query failed' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Lookup failed',
+      detail: 'query failed',
+      code: 'LOOKUP_FAILED',
+    });
   });
 
   test('is not shadowed by the DELETE /bpmn/:id route', async () => {
@@ -230,16 +256,16 @@ describe('forms', () => {
   });
 
   test.each([
-    ['get', '/v1/assets/forms', 'listForms', 'LIST_FAILED'],
-    ['post', '/v1/assets/forms', 'upsertForm', 'UPSERT_FAILED'],
-    ['delete', '/v1/assets/forms/f1', 'deleteForm', 'DELETE_FAILED'],
-  ] as const)('%s %s maps a service failure to %s', async (method, path, fn, code) => {
+    ['get', '/v1/assets/forms', 'listForms', 'LIST_FAILED', 'List failed'],
+    ['post', '/v1/assets/forms', 'upsertForm', 'UPSERT_FAILED', 'Save failed'],
+    ['delete', '/v1/assets/forms/f1', 'deleteForm', 'DELETE_FAILED', 'Delete failed'],
+  ] as const)('%s %s maps a service failure to %s', async (method, path, fn, code, title) => {
     svc[fn].mockRejectedValue(new Error('boom'));
 
     const res = await request(makeApp())[method](path).send({});
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code, message: 'boom' });
+    expect(res.body).toMatchObject({ status: 500, title, detail: 'boom', code });
   });
 });
 
@@ -270,16 +296,16 @@ describe('documents', () => {
   });
 
   test.each([
-    ['get', '/v1/assets/documents', 'listDocuments', 'LIST_FAILED'],
-    ['post', '/v1/assets/documents', 'upsertDocument', 'UPSERT_FAILED'],
-    ['delete', '/v1/assets/documents/d1', 'deleteDocument', 'DELETE_FAILED'],
-  ] as const)('%s %s maps a service failure to %s', async (method, path, fn, code) => {
+    ['get', '/v1/assets/documents', 'listDocuments', 'LIST_FAILED', 'List failed'],
+    ['post', '/v1/assets/documents', 'upsertDocument', 'UPSERT_FAILED', 'Save failed'],
+    ['delete', '/v1/assets/documents/d1', 'deleteDocument', 'DELETE_FAILED', 'Delete failed'],
+  ] as const)('%s %s maps a service failure to %s', async (method, path, fn, code, title) => {
     svc[fn].mockRejectedValue(new Error('boom'));
 
     const res = await request(makeApp())[method](path).send({});
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code, message: 'boom' });
+    expect(res.body).toMatchObject({ status: 500, title, detail: 'boom', code });
   });
 });
 
@@ -388,14 +414,14 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/assets/bpmn');
   });
 
-  test('POST /assets/bpmn malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('POST /assets/bpmn malformed body is a 500 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/bpmn')
       .set('Content-Type', 'application/json')
       .send('{"id":');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.body.code).toBe('INTERNAL_ERROR');
     expectToMatchOperation(res, 'post', '/assets/bpmn');
   });
 
@@ -474,14 +500,14 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
   });
 
-  test('PATCH /assets/bpmn/{id}/deploy malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('PATCH /assets/bpmn/{id}/deploy malformed body is a 500 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .patch('/v1/assets/bpmn/p1/deploy')
       .set('Content-Type', 'application/json')
       .send('{"deploymentId":');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.body.code).toBe('INTERNAL_ERROR');
     expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
   });
 
@@ -603,14 +629,14 @@ describe('/v1/assets/forms matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/assets/forms');
   });
 
-  test('POST /assets/forms malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('POST /assets/forms malformed body is a 500 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/forms')
       .set('Content-Type', 'application/json')
       .send('{"id":');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.body.code).toBe('INTERNAL_ERROR');
     expectToMatchOperation(res, 'post', '/assets/forms');
   });
 
@@ -754,14 +780,14 @@ describe('/v1/assets/documents matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/assets/documents');
   });
 
-  test('POST /assets/documents malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('POST /assets/documents malformed body is a 500 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/documents')
       .set('Content-Type', 'application/json')
       .send('{"id":');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.body.code).toBe('INTERNAL_ERROR');
     expectToMatchOperation(res, 'post', '/assets/documents');
   });
 

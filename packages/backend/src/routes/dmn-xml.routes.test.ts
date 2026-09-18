@@ -42,9 +42,11 @@ describe('GET /api/dmns/:definitionKey/xml', () => {
     const res = await request(makeApp()).get('/api/dmns/missing-key/xml');
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'DMN_NOT_FOUND', message: 'DMN definition not found: missing-key' },
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'DMN not found',
+      detail: 'DMN definition not found: missing-key',
+      code: 'DMN_NOT_FOUND',
     });
   });
 
@@ -54,9 +56,11 @@ describe('GET /api/dmns/:definitionKey/xml', () => {
     const res = await request(makeApp()).get('/api/dmns/aow-key/xml');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'DMN_FETCH_FAILED', message: 'Failed to fetch DMN: Operaton unreachable' },
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'DMN fetch failed',
+      detail: 'Failed to fetch DMN: Operaton unreachable',
+      code: 'DMN_FETCH_FAILED',
     });
   });
 
@@ -66,6 +70,6 @@ describe('GET /api/dmns/:definitionKey/xml', () => {
     const res = await request(makeApp()).get('/api/dmns/aow-key/xml');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.message).toBe('Failed to fetch DMN: Unknown error');
+    expect(res.body.detail).toBe('Failed to fetch DMN: Unknown error');
   });
 });

@@ -61,12 +61,11 @@ describe('GET /v1/openapi.json', () => {
     ).get('/v1/openapi.json');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: {
-        code: 'OPENAPI_UNAVAILABLE',
-        message: 'The OpenAPI description is not available',
-      },
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'OpenAPI description unavailable',
+      detail: 'The OpenAPI description is not available',
+      code: 'OPENAPI_UNAVAILABLE',
     });
     expectToMatchOperation(res, 'get', '/openapi.json');
     expect(mockLoggerError).toHaveBeenCalledWith('[openapi] document unavailable', {

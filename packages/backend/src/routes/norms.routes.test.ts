@@ -120,9 +120,11 @@ describe('GET /v1/norms parameter validation', () => {
     const res = await request(makeApp()).get('/v1/norms').query({ rulesetid: 'awb"; DROP' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'Invalid rulesetid: must match /^[A-Za-z0-9_-]+$/',
       code: 'INVALID_PARAM',
-      message: 'Invalid rulesetid: must match /^[A-Za-z0-9_-]+$/',
     });
     expect(mockGetAllNorms).not.toHaveBeenCalled();
   });
@@ -143,9 +145,11 @@ describe('GET /v1/norms parameter validation', () => {
     const res = await request(makeApp()).get('/v1/norms').query({ applicable_date: '01-01-2026' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'Invalid applicable_date: must be YYYY-MM-DD',
       code: 'INVALID_PARAM',
-      message: 'Invalid applicable_date: must be YYYY-MM-DD',
     });
     expect(mockGetAllNorms).not.toHaveBeenCalled();
   });
@@ -164,9 +168,11 @@ describe('GET /v1/norms parameter validation', () => {
     const res = await request(makeApp()).get('/v1/norms').query({ cprmv_version: '9.9.9' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'Invalid cprmv_version: must be one of 0.3.0, 0.3.2, 0.4.1',
       code: 'INVALID_PARAM',
-      message: 'Invalid cprmv_version: must be one of 0.3.0, 0.3.2, 0.4.1',
     });
     expect(mockGetAllNorms).not.toHaveBeenCalled();
   });
@@ -356,8 +362,10 @@ describe('GET /v1/norms failures', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'QUERY_ERROR', message: 'SPARQL endpoint unreachable' },
+      status: 500,
+      title: 'Query failed',
+      detail: 'SPARQL endpoint unreachable',
+      code: 'QUERY_ERROR',
     });
   });
 
@@ -367,7 +375,7 @@ describe('GET /v1/norms failures', () => {
     const res = await request(makeApp()).get('/v1/norms').query({ rulesetid: 'awb' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('QUERY_ERROR');
+    expect(res.body.code).toBe('QUERY_ERROR');
   });
 });
 

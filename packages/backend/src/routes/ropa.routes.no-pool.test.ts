@@ -31,8 +31,10 @@ function makeApp() {
 }
 
 const EXPECTED = {
-  success: false,
-  error: { code: 'DB_NOT_CONFIGURED', message: 'Asset storage not configured' },
+  status: 503,
+  title: 'Storage not configured',
+  detail: 'Asset storage not configured',
+  code: 'DB_NOT_CONFIGURED',
 };
 
 describe('/v1/assets/ropa with no database configured', () => {
@@ -45,7 +47,7 @@ describe('/v1/assets/ropa with no database configured', () => {
     const res = await request(makeApp())[method](path).send({});
 
     expect(res.status).toBe(503);
-    expect(res.body).toEqual(EXPECTED);
+    expect(res.body).toMatchObject(EXPECTED);
   });
 
   test('no service function is called when storage is unavailable', async () => {

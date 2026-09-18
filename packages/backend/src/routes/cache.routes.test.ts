@@ -51,8 +51,10 @@ describe('GET /v1/cache/stats', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'CACHE_ERROR', message: 'cache backend unavailable' },
+      status: 500,
+      title: 'Cache operation failed',
+      detail: 'cache backend unavailable',
+      code: 'CACHE_ERROR',
     });
   });
 });
@@ -95,8 +97,10 @@ describe('DELETE /v1/cache/clear', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'CACHE_ERROR', message: 'cache is locked' },
+      status: 500,
+      title: 'Cache operation failed',
+      detail: 'cache is locked',
+      code: 'CACHE_ERROR',
     });
   });
 });

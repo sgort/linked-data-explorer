@@ -6,6 +6,7 @@ import { ApiResponse, ChainExecutionRequest } from '../types/api.types';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ChainExecutionResult } from '../types/dmn.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
+import { sendProblem } from '../utils/problem';
 
 const router = Router();
 
@@ -20,25 +21,21 @@ router.post('/execute', async (req: Request, res: Response) => {
 
     // Validate dmnIds exists and is not empty
     if (!dmnIds || dmnIds.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_REQUEST',
-          message: 'dmnIds array is required and must not be empty',
-        },
-        timestamp: new Date().toISOString(),
-      } as ApiResponse);
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_REQUEST',
+        detail: 'dmnIds array is required and must not be empty',
+      });
+      return;
     }
 
     if (!inputs || Object.keys(inputs).length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_REQUEST',
-          message: 'inputs object is required',
-        },
-        timestamp: new Date().toISOString(),
-      } as ApiResponse);
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_REQUEST',
+        detail: 'inputs object is required',
+      });
+      return;
     }
 
     logger.info('Chain execution request', {
@@ -57,33 +54,49 @@ router.post('/execute', async (req: Request, res: Response) => {
       drdEntryPointId
     );
 
+    if (!result.success) {
+      // The orchestrator resolved rather than threw, but the chain still
+      // carries real information -- which steps ran, the outputs so far --
+      // alongside the failure. That is kept as the `data` extension member
+      // rather than dropped, matching the shape the 200 response uses for
+      // the same fields.
+      sendProblem(res, req, {
+        status: 500,
+        title: 'Chain execution failed',
+        detail: result.error ?? 'Chain execution failed',
+        extensions: {
+          data: {
+            chainId: result.chainId,
+            executionTime: result.executionTime,
+            finalOutputs: result.finalOutputs,
+            ...(options?.includeIntermediateSteps && { steps: result.steps }),
+          },
+        },
+      });
+      return;
+    }
+
     const responseData = {
-      success: result.success,
+      success: true as const,
       chainId: result.chainId,
       executionTime: result.executionTime,
       finalOutputs: result.finalOutputs,
       ...(options?.includeIntermediateSteps && { steps: result.steps }),
-      ...(result.error && { error: result.error }),
     };
 
-    const statusCode = result.success ? 200 : 500;
-
-    res.status(statusCode).json({
-      success: result.success,
+    res.status(200).json({
+      success: true,
       data: responseData,
       timestamp: new Date().toISOString(),
     } as ApiResponse);
   } catch (error: unknown) {
     logger.error('Chain execution error', getErrorDetails(error));
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'EXECUTION_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, {
+      status: 500,
+      code: 'EXECUTION_ERROR',
+      detail: getErrorMessage(error),
+    });
   }
 });
 
@@ -143,14 +156,11 @@ router.get('/', async (req: Request, res: Response) => {
   } catch (error: unknown) {
     logger.error('Chain discovery error', getErrorDetails(error));
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'DISCOVERY_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, {
+      status: 500,
+      code: 'DISCOVERY_ERROR',
+      detail: getErrorMessage(error),
+    });
   }
 });
 

@@ -12,9 +12,15 @@ import logger from '../utils/logger';
 import { errorHandler, notFoundHandler } from './error.middleware';
 
 function mockReqRes(overrides: Partial<Request> = {}) {
-  const req = { path: '/v1/norms', method: 'GET', ...overrides } as Request;
+  const req = {
+    path: '/v1/norms',
+    originalUrl: '/v1/norms',
+    method: 'GET',
+    ...overrides,
+  } as Request;
   const res = {
     status: jest.fn().mockReturnThis(),
+    type: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
   } as unknown as Response;
   return { req, res };
@@ -39,13 +45,14 @@ describe('errorHandler', () => {
       expect.objectContaining({ path: '/v1/norms', method: 'GET' })
     );
     expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.type).toHaveBeenCalledWith('application/problem+json');
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        success: false,
-        error: expect.objectContaining({
-          code: 'INTERNAL_ERROR',
-          message: 'Internal server error',
-        }),
+        status: 500,
+        title: 'Internal server error',
+        code: 'INTERNAL_ERROR',
+        detail: 'Internal server error',
+        instance: '/v1/norms',
       })
     );
   });
@@ -57,7 +64,7 @@ describe('errorHandler', () => {
     errorHandler(new Error('a specific failure'), req, res, jest.fn());
 
     const response = (res.json as jest.Mock).mock.calls[0][0];
-    expect(response.error.message).toBe('a specific failure');
+    expect(response.detail).toBe('a specific failure');
   });
 
   test('includes the stack trace only in development', () => {
@@ -67,7 +74,7 @@ describe('errorHandler', () => {
     errorHandler(new Error('boom'), req, res, jest.fn());
 
     const response = (res.json as jest.Mock).mock.calls[0][0];
-    expect(response.error.details).toBeDefined();
+    expect(response.details).toBeDefined();
   });
 
   test('omits error details outside development', () => {
@@ -77,7 +84,7 @@ describe('errorHandler', () => {
     errorHandler(new Error('boom'), req, res, jest.fn());
 
     const response = (res.json as jest.Mock).mock.calls[0][0];
-    expect(response.error.details).toBeUndefined();
+    expect(response.details).toBeUndefined();
   });
 
   test('handles a non-Error thrown value (e.g. a rejected string)', () => {
@@ -88,24 +95,28 @@ describe('errorHandler', () => {
 
     expect(res.status).toHaveBeenCalledWith(500);
     const response = (res.json as jest.Mock).mock.calls[0][0];
-    expect(response.error.message).toBe('a plain string rejection');
+    expect(response.detail).toBe('a plain string rejection');
   });
 });
 
 describe('notFoundHandler', () => {
-  test('responds 404 with the method and path in the message', () => {
-    const { req, res } = mockReqRes({ path: '/v1/unknown', method: 'POST' });
+  test('responds 404 with the method and path in the detail', () => {
+    const { req, res } = mockReqRes({
+      path: '/v1/unknown',
+      originalUrl: '/v1/unknown',
+      method: 'POST',
+    });
 
     notFoundHandler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        success: false,
-        error: expect.objectContaining({
-          code: 'NOT_FOUND',
-          message: 'Endpoint not found: POST /v1/unknown',
-        }),
+        status: 404,
+        title: 'Not found',
+        code: 'NOT_FOUND',
+        detail: 'Endpoint not found: POST /v1/unknown',
+        instance: '/v1/unknown',
       })
     );
   });

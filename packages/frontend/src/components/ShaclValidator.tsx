@@ -30,6 +30,8 @@ import {
 } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 
+import { getProblemDetail } from '../utils/problem';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ValidationIssue {
@@ -457,10 +459,10 @@ const ShaclValidator: React.FC<ShaclValidatorProps> = ({ apiBaseUrl }) => {
       const data = (await response.json()) as {
         success: boolean;
         data?: ValidationResult;
-        error?: { message: string };
+        detail?: string;
       };
       if (!response.ok || !data.success) {
-        throw new Error(data.error?.message ?? `Server error: ${response.status}`);
+        throw new Error(getProblemDetail(data, `Server error: ${response.status}`));
       }
       setEntries((prev) =>
         prev.map((e) =>

@@ -62,9 +62,11 @@ describe('GET /v1/assets-public', () => {
     const res = await request(makeApp()).get('/v1/assets-public');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'LIST_FAILED', message: 'db unavailable' },
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'List failed',
+      detail: 'db unavailable',
+      code: 'LIST_FAILED',
     });
     expectToMatchOperation(res, 'get', '/bundles/public');
   });

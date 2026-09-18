@@ -19,6 +19,7 @@ import { BpmnService } from '@/src/services/bpmnService';
 import { DocumentService } from '../../services/documentService';
 import { FormService } from '../../services/formService';
 import { DocumentTemplate } from '../../types/document.types';
+import { getProblemDetail } from '../../utils/problem';
 import DmnTemplateSelector from './DmnTemplateSelector';
 import DocumentTemplateSelector from './DocumentTemplateSelector';
 import FormTemplateSelector from './FormTemplateSelector';
@@ -696,7 +697,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
             'the dashboard or the public site until it is saved and deployed again.';
         setDeployResult({ success: true, warning: !recorded, message });
       } else {
-        setDeployResult({ success: false, message: data.error?.message ?? 'Deployment failed' });
+        setDeployResult({ success: false, message: getProblemDetail(data, 'Deployment failed') });
       }
     } catch (err) {
       setDeployResult({

@@ -46,9 +46,11 @@ describe('GET /v1/process/:key/variable-hints', () => {
     const res = await request(makeApp()).get('/v1/process/ZorgtoeslagProcess/variable-hints');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'VARIABLE_HINTS_FAILED', message: 'Failed to retrieve variable hints' },
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Variable hints unavailable',
+      detail: 'Failed to retrieve variable hints',
+      code: 'VARIABLE_HINTS_FAILED',
     });
   });
 });

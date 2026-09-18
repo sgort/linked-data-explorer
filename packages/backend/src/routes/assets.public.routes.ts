@@ -4,6 +4,7 @@ import cors from 'cors';
 import { listPublicBundles } from '../services/assets.service';
 import { getErrorMessage } from '../utils/errors';
 import logger from '../utils/logger';
+import { sendProblem } from '../utils/problem';
 
 const router = Router();
 
@@ -13,16 +14,13 @@ const router = Router();
 // nosemgrep: javascript.express.web.cors-permissive-express.cors-permissive-express
 router.use(cors({ origin: '*', methods: ['GET', 'OPTIONS'] }));
 
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
     const data = await listPublicBundles();
     res.json({ success: true, data });
   } catch (err) {
     logger.error('[assets.public] listPublicBundles failed', { error: getErrorMessage(err) });
-    res.status(500).json({
-      success: false,
-      error: { code: 'LIST_FAILED', message: getErrorMessage(err) },
-    });
+    sendProblem(res, req, { status: 500, code: 'LIST_FAILED', detail: getErrorMessage(err) });
   }
 });
 

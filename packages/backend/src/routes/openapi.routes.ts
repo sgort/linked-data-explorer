@@ -9,6 +9,7 @@ import cors from 'cors';
 import { OpenApiDocument, readOpenApiDocument } from '../openapi/document';
 import { getErrorMessage } from '../utils/errors';
 import logger from '../utils/logger';
+import { sendProblem } from '../utils/problem';
 
 export function createOpenApiRouter(load: () => OpenApiDocument = readOpenApiDocument): Router {
   const router = Router();
@@ -21,7 +22,7 @@ export function createOpenApiRouter(load: () => OpenApiDocument = readOpenApiDoc
   // nosemgrep: javascript.express.web.cors-permissive-express.cors-permissive-express
   router.use(cors({ origin: '*', methods: ['GET', 'OPTIONS'] }));
 
-  router.get('/', (_req: Request, res: Response) => {
+  router.get('/', (req: Request, res: Response) => {
     try {
       // Read once: the file is part of the deploy artifact and changes only with
       // a redeploy, which restarts the process. A failed read is not cached.
@@ -29,12 +30,10 @@ export function createOpenApiRouter(load: () => OpenApiDocument = readOpenApiDoc
       res.json(cached);
     } catch (err) {
       logger.error('[openapi] document unavailable', { error: getErrorMessage(err) });
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'OPENAPI_UNAVAILABLE',
-          message: 'The OpenAPI description is not available',
-        },
+      sendProblem(res, req, {
+        status: 500,
+        code: 'OPENAPI_UNAVAILABLE',
+        detail: 'The OpenAPI description is not available',
       });
     }
   });

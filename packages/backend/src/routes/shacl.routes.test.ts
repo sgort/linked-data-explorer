@@ -106,9 +106,11 @@ describe('POST /v1/shacl/validate', () => {
     const res = await request(makeApp()).post('/v1/shacl/validate').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'Request body must contain a "content" field with the Turtle as a string.',
       code: 'INVALID_REQUEST',
-      message: 'Request body must contain a "content" field with the Turtle as a string.',
     });
     expect(mockValidateFile).not.toHaveBeenCalled();
   });
@@ -133,8 +135,10 @@ describe('POST /v1/shacl/validate', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'VALIDATION_ERROR', message: 'shape files missing' },
+      status: 500,
+      title: 'Validation failed',
+      detail: 'shape files missing',
+      code: 'VALIDATION_ERROR',
     });
   });
 });
@@ -168,7 +172,7 @@ describe('POST /v1/shacl/validate-merged', () => {
     const res = await request(makeApp()).post('/v1/shacl/validate-merged').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_REQUEST');
+    expect(res.body.code).toBe('INVALID_REQUEST');
     expect(mockValidateMerged).not.toHaveBeenCalled();
   });
 
@@ -180,9 +184,11 @@ describe('POST /v1/shacl/validate-merged', () => {
       .send({ content: TURTLE });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Validation failed',
+      detail: 'CONSTRUCT query failed',
       code: 'VALIDATION_ERROR',
-      message: 'CONSTRUCT query failed',
     });
   });
 });
@@ -269,11 +275,11 @@ describe('/v1/shacl matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/shacl/validate-merged');
   });
 
-  test('a malformed JSON body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('a malformed JSON body is a 500 problem response, as documented (#143)', async () => {
     const res = await post('/validate').set('Content-Type', 'application/json').send('{"content":');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.body.code).toBe('INTERNAL_ERROR');
     expectToMatchOperation(res, 'post', '/shacl/validate');
   });
 });

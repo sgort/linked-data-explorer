@@ -84,7 +84,12 @@ describe('GET /v1/vendors', () => {
     const res = await request(makeApp()).get('/v1/vendors');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ success: false, error: 'SPARQL endpoint timed out' });
+    expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Vendor request failed',
+      detail: 'SPARQL endpoint timed out',
+    });
     expect(res.headers['api-version']).toBe(packageJson.version);
   });
 });
@@ -130,7 +135,11 @@ describe('GET /v1/vendors/dmn/:identifier', () => {
     const res = await request(makeApp()).get('/v1/vendors/dmn/Nope');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ success: false, error: 'unknown DMN' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Vendor request failed',
+      detail: 'unknown DMN',
+    });
   });
 });
 

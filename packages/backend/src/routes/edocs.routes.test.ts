@@ -95,9 +95,11 @@ describe('GET /v1/edocs/status', () => {
     const res = await request(makeApp()).get('/v1/edocs/status');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'eDOCS status check failed',
+      detail: 'eDOCS unreachable',
       code: 'EDOCS_STATUS_FAILED',
-      message: 'eDOCS unreachable',
     });
   });
 });
@@ -139,9 +141,11 @@ describe('POST /v1/edocs/workspaces/ensure', () => {
     const res = await request(makeApp()).post('/v1/edocs/workspaces/ensure').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'projectNumber and projectName are required',
       code: 'INVALID_INPUT',
-      message: 'projectNumber and projectName are required',
     });
     expect(svc.ensureWorkspace).not.toHaveBeenCalled();
   });
@@ -154,7 +158,12 @@ describe('POST /v1/edocs/workspaces/ensure', () => {
       .send({ projectNumber: 'P-001', projectName: 'Kapvergunning' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'EDOCS_WORKSPACE_FAILED', message: 'library full' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'eDOCS workspace request failed',
+      detail: 'library full',
+      code: 'EDOCS_WORKSPACE_FAILED',
+    });
   });
 });
 
@@ -227,9 +236,11 @@ describe('POST /v1/edocs/documents', () => {
     const res = await request(makeApp()).post('/v1/edocs/documents').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'workspaceId, filename, contentBase64, and metadata.docName are required',
       code: 'INVALID_INPUT',
-      message: 'workspaceId, filename, contentBase64, and metadata.docName are required',
     });
     expect(svc.uploadDocument).not.toHaveBeenCalled();
   });
@@ -240,7 +251,12 @@ describe('POST /v1/edocs/documents', () => {
     const res = await request(makeApp()).post('/v1/edocs/documents').send(BODY);
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'EDOCS_UPLOAD_FAILED', message: 'quota exceeded' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'eDOCS upload failed',
+      detail: 'quota exceeded',
+      code: 'EDOCS_UPLOAD_FAILED',
+    });
   });
 });
 
@@ -269,9 +285,11 @@ describe('GET /v1/edocs/workspaces/:workspaceId/documents', () => {
     const res = await request(makeApp()).get('/v1/edocs/workspaces/ws-9/documents');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'eDOCS document list failed',
+      detail: 'no such workspace',
       code: 'EDOCS_DOCUMENTS_FAILED',
-      message: 'no such workspace',
     });
   });
 });
@@ -372,7 +390,7 @@ describe('/v1/edocs operations match their OpenAPI description', () => {
       .send('{"projectNumber":');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.body.code).toBe('INTERNAL_ERROR');
     expectToMatchOperation(res, 'post', '/edocs/workspaces/ensure');
   });
 
@@ -451,7 +469,7 @@ describe('/v1/edocs operations match their OpenAPI description', () => {
       .send('{"workspaceId":');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.body.code).toBe('INTERNAL_ERROR');
     expectToMatchOperation(res, 'post', '/edocs/documents');
   });
 

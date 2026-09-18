@@ -58,9 +58,11 @@ describe('GET /v1/assets/ropa', () => {
     const res = await request(makeApp()).get('/v1/assets/ropa');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'LIST_FAILED', message: 'db unavailable' },
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'List failed',
+      detail: 'db unavailable',
+      code: 'LIST_FAILED',
     });
   });
 });
@@ -82,9 +84,11 @@ describe('GET /v1/assets/ropa/by-bpmn-id/:bpmnProcessId', () => {
     const res = await request(makeApp()).get('/v1/assets/ropa/by-bpmn-id/UnknownProcess');
 
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'NOT_FOUND', message: 'No RoPA record for bpmnProcessId: UnknownProcess' },
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'Not found',
+      detail: 'No RoPA record for bpmnProcessId: UnknownProcess',
+      code: 'NOT_FOUND',
     });
   });
 
@@ -94,9 +98,11 @@ describe('GET /v1/assets/ropa/by-bpmn-id/:bpmnProcessId', () => {
     const res = await request(makeApp()).get('/v1/assets/ropa/by-bpmn-id/ZorgtoeslagProcess');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'LOOKUP_FAILED', message: 'query failed' },
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Lookup failed',
+      detail: 'query failed',
+      code: 'LOOKUP_FAILED',
     });
   });
 });
@@ -118,9 +124,11 @@ describe('POST /v1/assets/ropa', () => {
     const res = await request(makeApp()).post('/v1/assets/ropa').send(RECORD);
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'UPSERT_FAILED', message: 'constraint violation' },
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Save failed',
+      detail: 'constraint violation',
+      code: 'UPSERT_FAILED',
     });
   });
 });
@@ -142,9 +150,11 @@ describe('DELETE /v1/assets/ropa/:id', () => {
     const res = await request(makeApp()).delete('/v1/assets/ropa/r1');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'DELETE_FAILED', message: 'row is referenced' },
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Delete failed',
+      detail: 'row is referenced',
+      code: 'DELETE_FAILED',
     });
   });
 });
@@ -355,14 +365,14 @@ describe('/v1/assets/ropa matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/assets/ropa');
   });
 
-  test('POST /assets/ropa malformed body is a 500 ErrorEnvelope, as documented (#143)', async () => {
+  test('POST /assets/ropa malformed body is a 500 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/ropa')
       .set('Content-Type', 'application/json')
       .send('{"bpmnProcessId":');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.body.code).toBe('INTERNAL_ERROR');
     expectToMatchOperation(res, 'post', '/assets/ropa');
   });
 

@@ -3,6 +3,7 @@
 import { Router, Request, Response } from 'express';
 import * as dsoService from '../services/dso.service';
 import { logger } from '../utils/logger';
+import { sendProblem } from '../utils/problem';
 import packageJson from '../../package.json';
 
 const router = Router();
@@ -23,14 +24,15 @@ router.post('/activiteiten/oin', async (req: Request, res: Response) => {
   try {
     const { oin, datum } = req.body as { oin?: string; datum?: string };
     if (!oin) {
-      return res.status(400).json({ success: false, error: 'oin is required' });
+      sendProblem(res, req, { status: 400, title: 'Invalid request', detail: 'oin is required' });
+      return;
     }
     const data = await dsoService.getActiviteitenByOin(oin, getEnv(req), datum);
     res.status(200).json({ success: true, data });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     logger.error('[DSO Routes] POST /activiteiten/oin failed', { error: msg });
-    res.status(502).json({ success: false, error: msg });
+    sendProblem(res, req, { status: 502, title: 'Upstream request failed', detail: msg });
   }
 });
 
@@ -58,7 +60,7 @@ router.post('/activiteiten/zoek', async (req: Request, res: Response) => {
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     logger.error('[DSO Routes] POST /activiteiten/zoek failed', { error: msg });
-    res.status(502).json({ success: false, error: msg });
+    sendProblem(res, req, { status: 502, title: 'Upstream request failed', detail: msg });
   }
 });
 
@@ -82,7 +84,11 @@ router.get('/activiteiten/:urn', async (req: Request, res: Response) => {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     const status = msg.includes('404') ? 404 : 502;
     logger.error('[DSO Routes] GET /activiteiten/:urn failed', { error: msg });
-    res.status(status).json({ success: false, error: msg });
+    sendProblem(res, req, {
+      status,
+      title: status === 404 ? 'Not found' : 'Upstream request failed',
+      detail: msg,
+    });
   }
 });
 
@@ -119,9 +125,10 @@ router.get('/begrippen', async (req: Request, res: Response) => {
     logger.error('[DSO Routes] GET /begrippen failed', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-    res.status(502).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'DSO request failed',
+    sendProblem(res, req, {
+      status: 502,
+      title: 'Upstream request failed',
+      detail: error instanceof Error ? error.message : 'DSO request failed',
     });
   }
 });
@@ -155,9 +162,10 @@ router.get('/activiteiten', async (req: Request, res: Response) => {
     logger.error('[DSO Routes] GET /activiteiten failed', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-    res.status(502).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'DSO request failed',
+    sendProblem(res, req, {
+      status: 502,
+      title: 'Upstream request failed',
+      detail: error instanceof Error ? error.message : 'DSO request failed',
     });
   }
 });
@@ -180,7 +188,7 @@ router.post('/werkzaamheden/zoek', async (req: Request, res: Response) => {
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     logger.error('[DSO Routes] POST /werkzaamheden/zoek failed', { error: msg });
-    res.status(502).json({ success: false, error: msg });
+    sendProblem(res, req, { status: 502, title: 'Upstream request failed', detail: msg });
   }
 });
 
@@ -194,14 +202,19 @@ router.post('/werkzaamheden/suggereer', async (req: Request, res: Response) => {
   try {
     const { zoekterm } = req.body as { zoekterm?: string };
     if (!zoekterm) {
-      return res.status(400).json({ success: false, error: 'zoekterm is required' });
+      sendProblem(res, req, {
+        status: 400,
+        title: 'Invalid request',
+        detail: 'zoekterm is required',
+      });
+      return;
     }
     const data = await dsoService.suggereerWerkzaamheden(zoekterm, getEnv(req));
     res.status(200).json({ success: true, data });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     logger.error('[DSO Routes] POST /werkzaamheden/suggereer failed', { error: msg });
-    res.status(502).json({ success: false, error: msg });
+    sendProblem(res, req, { status: 502, title: 'Upstream request failed', detail: msg });
   }
 });
 
@@ -219,7 +232,11 @@ router.get('/werkzaamheden/:urn', async (req: Request, res: Response) => {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     const status = msg.includes('404') ? 404 : 502;
     logger.error('[DSO Routes] GET /werkzaamheden/:urn failed', { error: msg });
-    res.status(status).json({ success: false, error: msg });
+    sendProblem(res, req, {
+      status,
+      title: status === 404 ? 'Not found' : 'Upstream request failed',
+      detail: msg,
+    });
   }
 });
 
@@ -234,7 +251,12 @@ router.get('/toepasbare-regels', async (req: Request, res: Response) => {
   res.set('API-Version', packageJson.version);
   const { functioneleStructuurRef } = req.query;
   if (!functioneleStructuurRef || typeof functioneleStructuurRef !== 'string') {
-    return res.status(400).json({ success: false, error: 'functioneleStructuurRef is required' });
+    sendProblem(res, req, {
+      status: 400,
+      title: 'Invalid request',
+      detail: 'functioneleStructuurRef is required',
+    });
+    return;
   }
   try {
     const data = await dsoService.getToepasbareRegels(functioneleStructuurRef, getEnv(req));
@@ -243,7 +265,11 @@ router.get('/toepasbare-regels', async (req: Request, res: Response) => {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     const status = msg.includes('404') ? 404 : 502;
     logger.error('[DSO Routes] GET /toepasbare-regels failed', { error: msg });
-    res.status(status).json({ success: false, error: msg });
+    sendProblem(res, req, {
+      status,
+      title: status === 404 ? 'Not found' : 'Upstream request failed',
+      detail: msg,
+    });
   }
 });
 
@@ -262,7 +288,11 @@ router.get('/toepasbare-regels/:id/sttr', async (req: Request, res: Response) =>
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     const status = msg.includes('404') ? 404 : 502;
     logger.error('[DSO Routes] GET /toepasbare-regels/:id/sttr failed', { error: msg });
-    res.status(status).json({ success: false, error: msg });
+    sendProblem(res, req, {
+      status,
+      title: status === 404 ? 'Not found' : 'Upstream request failed',
+      detail: msg,
+    });
   }
 });
 
@@ -283,7 +313,12 @@ router.get('/toepasbare-regels/:id/dmn', async (req: Request, res: Response) => 
     const msg = error instanceof Error ? error.message : 'DMN extraction failed';
     const status = msg.includes('404') ? 404 : msg.includes('No DMN') ? 422 : 502;
     logger.error('[DSO Routes] GET /toepasbare-regels/:id/dmn failed', { error: msg });
-    res.status(status).json({ success: false, error: msg });
+    sendProblem(res, req, {
+      status,
+      title:
+        status === 404 ? 'Not found' : status === 422 ? 'No DMN found' : 'Upstream request failed',
+      detail: msg,
+    });
   }
 });
 
@@ -305,7 +340,11 @@ router.get('/toepasbare-regels/:id/form-scaffold', async (req: Request, res: Res
     const msg = error instanceof Error ? error.message : 'Form scaffold extraction failed';
     const status = msg.includes('404') ? 404 : 502;
     logger.error('[DSO Routes] GET /toepasbare-regels/:id/form-scaffold failed', { error: msg });
-    res.status(status).json({ success: false, error: msg });
+    sendProblem(res, req, {
+      status,
+      title: status === 404 ? 'Not found' : 'Upstream request failed',
+      detail: msg,
+    });
   }
 });
 
