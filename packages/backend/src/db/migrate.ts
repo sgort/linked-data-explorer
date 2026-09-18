@@ -111,6 +111,17 @@ export async function migrate(): Promise<void> {
         ON document_templates (organization)
         WHERE organization IS NOT NULL;
 
+      -- status has always defaulted to 'wip' but was nullable, so a row written
+      -- outside the upserts could reach the API as "status": null, which the
+      -- OpenAPI description forbids (#151). Backfill, then enforce. Both steps
+      -- are safe to repeat on every start.
+      UPDATE form_schemas SET status = 'wip' WHERE status IS NULL;
+      ALTER TABLE form_schemas
+        ALTER COLUMN status SET NOT NULL;
+      UPDATE document_templates SET status = 'wip' WHERE status IS NULL;
+      ALTER TABLE document_templates
+        ALTER COLUMN status SET NOT NULL;
+
       CREATE TABLE IF NOT EXISTS ropa_records (
         id                       UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
         bpmn_process_id          VARCHAR(255) NOT NULL,
