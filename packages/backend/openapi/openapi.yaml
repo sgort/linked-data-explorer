@@ -2319,9 +2319,11 @@ paths:
       summary: Deploy a BPMN process bundle to Operaton
       description: >-
         Deploys the BPMN with its subprocesses, forms and document templates as
-        one Operaton deployment, tagged with `organization` as the tenant. When
-        `operatonUrl` is given, that Operaton instance is used instead (not
-        validated, #142). Operaton's own error status is not passed through.
+        one Operaton deployment, tagged with `organization` as the tenant.
+        Always deploys to the backend's own configured Operaton, with its own
+        credentials (#142); `operatonUrl`, `operatonUsername` and
+        `operatonPassword` are deprecated and ignored. Operaton's own error
+        status is not passed through.
 
 
         After the Operaton deploy succeeds, the backend also records the
@@ -2378,10 +2380,19 @@ paths:
                         type: object
                 operatonUrl:
                   type: string
+                  deprecated: true
+                  description: >-
+                    Ignored unless it differs from the configured Operaton,
+                    which answers 400 (#142). Deploys always go to the
+                    backend's configured Operaton.
                 operatonUsername:
                   type: string
+                  deprecated: true
+                  description: Ignored (#142).
                 operatonPassword:
                   type: string
+                  deprecated: true
+                  description: Ignored (#142).
                 boardOwner:
                   type: string
                   description: Omit to derive it from the BPMN candidate groups; an empty string leaves it unset.
@@ -2425,8 +2436,9 @@ paths:
         '400':
           description: >-
             `bpmnXml`, `deploymentName` or `organization` is missing or
-            blank (code INVALID_INPUT), or the request body was not valid
-            JSON (code MALFORMED_BODY; #143).
+            blank, or `operatonUrl` was given and differs from the
+            configured Operaton (code INVALID_INPUT; #142), or the request
+            body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:

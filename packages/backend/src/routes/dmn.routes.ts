@@ -10,7 +10,8 @@ import { operatonService } from '../services/operaton.service';
 import { dmnValidationService } from '../services/dmn-validation.service';
 import { recordDeployedBundle } from '../services/assets.service';
 import { sendProblem } from '../utils/problem';
-import { refuseOptionalEndpoint } from '../utils/outboundUrl';
+import { refuseOptionalEndpoint, refuseTarget, checkOperatonTarget } from '../utils/outboundUrl';
+import { config } from '../utils/config';
 
 const router = Router();
 
@@ -236,8 +237,6 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       subProcesses = [],
       documents = [],
       operatonUrl,
-      operatonUsername,
-      operatonPassword,
       boardOwner,
       organization,
     } = req.body as {
@@ -247,7 +246,9 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       subProcesses: { filename: string; xml: string }[];
       documents: { id: string; template: Record<string, unknown> }[];
       operatonUrl?: string;
+      /** @deprecated ignored (#142) */
       operatonUsername?: string;
+      /** @deprecated ignored (#142) */
       operatonPassword?: string;
       /** Owning board for the deployed process; auto-derived from candidate groups when omitted. */
       boardOwner?: string;
@@ -282,15 +283,21 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       return;
     }
 
+    // The deploy target is the configured Operaton, never the caller's (#142).
+    // A matching operatonUrl is still accepted so an older frontend keeps working.
+    if (
+      operatonUrl !== undefined &&
+      refuseTarget(res, req, checkOperatonTarget(operatonUrl, 'operatonUrl'))
+    ) {
+      return;
+    }
+
     const result = await operatonService.deployProcess(
       bpmnXml,
       deploymentName,
       forms,
       subProcesses,
       documents,
-      operatonUrl,
-      operatonUsername,
-      operatonPassword,
       boardOwner,
       organization
     );
@@ -307,7 +314,7 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
         bpmnXml,
         organization,
         deploymentId: result.deploymentId,
-        operatonUrl,
+        operatonUrl: config.operaton.baseUrl,
         formIds: forms.map((f) => f.id),
         documentIds: documents.map((d) => d.id),
         boardOwner,

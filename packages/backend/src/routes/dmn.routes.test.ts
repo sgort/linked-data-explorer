@@ -40,6 +40,7 @@ import dmnRoutes from './dmn.routes';
 import { versionMiddleware } from '../middleware/version.middleware';
 import { errorHandler } from '../middleware/error.middleware';
 import { expectToMatchOperation } from '../openapi/testing/conformance';
+import { config } from '../utils/config';
 
 const operaton = operatonService as unknown as Record<string, jest.Mock>;
 const sparql = sparqlService as unknown as Record<string, jest.Mock>;
@@ -324,9 +325,6 @@ describe('POST /api/dmns/process/deploy', () => {
       [],
       [],
       undefined,
-      undefined,
-      undefined,
-      undefined,
       'flevoland'
     );
   });
@@ -361,7 +359,7 @@ describe('POST /api/dmns/process/deploy', () => {
     });
   });
 
-  test('forwards the full artefact bundle and Operaton credentials', async () => {
+  test('forwards the full artefact bundle, ignoring any operaton credentials in the body (#142)', async () => {
     mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 5 });
     const forms = [{ id: 'f1', schema: {} }];
     const subProcesses = [{ filename: 'sub.bpmn', xml: '<bpmn/>' }];
@@ -373,7 +371,6 @@ describe('POST /api/dmns/process/deploy', () => {
       forms,
       subProcesses,
       documents,
-      operatonUrl: 'http://localhost:8081/engine-rest',
       operatonUsername: 'demo',
       operatonPassword: 'demo',
       boardOwner: 'flevoland',
@@ -386,9 +383,6 @@ describe('POST /api/dmns/process/deploy', () => {
       forms,
       subProcesses,
       documents,
-      'http://localhost:8081/engine-rest',
-      'demo',
-      'demo',
       'flevoland',
       'flevoland'
     );
@@ -399,7 +393,7 @@ describe('POST /api/dmns/process/deploy', () => {
       bpmnXml: '<bpmn:definitions/>',
       organization: 'flevoland',
       deploymentId: 'dep-1',
-      operatonUrl: 'http://localhost:8081/engine-rest',
+      operatonUrl: config.operaton.baseUrl,
       formIds: ['f1'],
       documentIds: ['d1'],
       boardOwner: 'flevoland',
@@ -473,6 +467,54 @@ describe('POST /api/dmns/process/deploy', () => {
       detail: 'Operaton unreachable',
       code: 'PROCESS_DEPLOY_FAILED',
     });
+  });
+});
+
+describe('#142 POST /api/dmns/process/deploy target', () => {
+  const body = { bpmnXml: '<definitions/>', deploymentName: 'd', organization: 'org' };
+  // config.operaton.baseUrl may be '' under NODE_ENV=test (no OPERATON_BASE_URL set),
+  // so pin it to a known value for the duration of these tests and restore it after.
+  let originalBaseUrl: string;
+
+  beforeEach(() => {
+    originalBaseUrl = config.operaton.baseUrl;
+    config.operaton.baseUrl = 'https://operaton.example/engine-rest';
+  });
+
+  afterEach(() => {
+    config.operaton.baseUrl = originalBaseUrl;
+  });
+
+  test('a different operatonUrl answers 400 and nothing is deployed', async () => {
+    const res = await request(makeApp())
+      .post('/api/dmns/process/deploy')
+      .send({ ...body, operatonUrl: 'https://evil.example/engine-rest' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(mockDeployProcess).not.toHaveBeenCalled();
+  });
+
+  test('the configured operatonUrl is accepted, and credentials in the body are not passed on', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    const res = await request(makeApp())
+      .post('/api/dmns/process/deploy')
+      .send({
+        ...body,
+        operatonUrl: config.operaton.baseUrl,
+        operatonUsername: 'u',
+        operatonPassword: 'p',
+      });
+    expect(res.status).toBe(200);
+    expect(mockDeployProcess.mock.calls[0]).not.toContain('u');
+    expect(mockDeployProcess.mock.calls[0]).not.toContain('p');
+  });
+
+  test('the bundle record carries the configured Operaton URL', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    await request(makeApp()).post('/api/dmns/process/deploy').send(body);
+    expect(mockRecordDeployedBundle).toHaveBeenCalledWith(
+      expect.objectContaining({ operatonUrl: config.operaton.baseUrl })
+    );
   });
 });
 
@@ -1187,9 +1229,6 @@ describe('/v1/dmns deploy, evaluate and validate match their OpenAPI description
       forms,
       subProcesses,
       documents,
-      operatonUrl: 'http://localhost:8081/engine-rest',
-      operatonUsername: 'demo',
-      operatonPassword: 'demo',
       boardOwner: 'flevoland',
       organization: 'flevoland',
     });
