@@ -389,14 +389,14 @@ describe('/v1/chains matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/chains/execute');
   });
 
-  test('POST /execute 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /execute 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/chains/execute')
       .set('Content-Type', 'application/json')
       .send('{"dmnIds":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/chains/execute');
   });
 });

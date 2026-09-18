@@ -383,14 +383,14 @@ describe('/v1/edocs operations match their OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/edocs/workspaces/ensure');
   });
 
-  test('POST /workspaces/ensure 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /workspaces/ensure 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/edocs/workspaces/ensure')
       .set('Content-Type', 'application/json')
       .send('{"projectNumber":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/edocs/workspaces/ensure');
   });
 
@@ -462,14 +462,14 @@ describe('/v1/edocs operations match their OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/edocs/documents');
   });
 
-  test('POST /documents 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /documents 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/edocs/documents')
       .set('Content-Type', 'application/json')
       .send('{"workspaceId":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/edocs/documents');
   });
 

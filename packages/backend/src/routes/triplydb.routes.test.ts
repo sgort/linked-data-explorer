@@ -569,11 +569,11 @@ describe('/v1/triplydb matches its OpenAPI description', () => {
     expectToMatchOperation(failed, 'post', '/triplydb/query');
   });
 
-  test('a malformed JSON body is a 500 problem, as documented (#143)', async () => {
+  test('a malformed JSON body is a 400 problem, as documented (#143)', async () => {
     const res = await post('/query').set('Content-Type', 'application/json').send('{"endpoint":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/triplydb/query');
   });
 

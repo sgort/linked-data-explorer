@@ -56,6 +56,9 @@ const CODE_TITLES = {
   EDOCS_WORKSPACE_FAILED: 'eDOCS workspace request failed',
   EDOCS_UPLOAD_FAILED: 'eDOCS upload failed',
   EDOCS_DOCUMENTS_FAILED: 'eDOCS document list failed',
+  MALFORMED_BODY: 'Malformed request body',
+  PAYLOAD_TOO_LARGE: 'Request body too large',
+  INVALID_BODY: 'Invalid request body',
 } as const satisfies Record<string, string>;
 
 /** A `code` this API answers with; each has a stable title above. */

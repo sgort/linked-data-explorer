@@ -30,6 +30,13 @@ info:
     could not be reached at all), and `GET /health`'s 503 body is the health
     document itself, not a problem response, because the document *is* the
     explanation. https://github.com/sgort/linked-data-explorer/issues/131.
+
+    The body parser runs ahead of every route, for every method, not only
+    the ones below that document a request body: a malformed body answers
+    400 (code `MALFORMED_BODY`) and one over 10 MB answers 413 (code
+    `PAYLOAD_TOO_LARGE`) even on a `GET` or `DELETE` that sends one, though
+    that is outside the operation's own contract and so is not documented
+    per operation below. https://github.com/sgort/linked-data-explorer/issues/143.
   contact:
     name: Steven Gort
     email: steven.gort@ictu.nl
@@ -317,11 +324,25 @@ paths:
                 properties:
                   success:
                     const: true
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
             The write failed (code UPSERT_FAILED) — for example a database
-            CHECK or NOT NULL violation — or the request body was not valid
-            JSON or over 10 MB (code INTERNAL_ERROR; #143).
+            CHECK or NOT NULL violation.
           content:
             application/problem+json:
               schema:
@@ -507,6 +528,13 @@ paths:
                 properties:
                   success:
                     const: true
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '404':
           description: >-
             No process has this id (code NOT_FOUND) — the `UPDATE` matched
@@ -515,10 +543,17 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            The update failed (code DEPLOY_MARK_FAILED), or the request body
-            was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+            The update failed (code DEPLOY_MARK_FAILED).
           content:
             application/problem+json:
               schema:
@@ -640,11 +675,25 @@ paths:
                 properties:
                   success:
                     const: true
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
             The write failed (code UPSERT_FAILED) — for example a NOT NULL
-            violation — or the request body was not valid JSON or over
-            10 MB (code INTERNAL_ERROR; #143).
+            violation.
           content:
             application/problem+json:
               schema:
@@ -835,11 +884,25 @@ paths:
                 properties:
                   success:
                     const: true
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
             The write failed (code UPSERT_FAILED) — for example a NOT NULL
-            violation — or the request body was not valid JSON or over
-            10 MB (code INTERNAL_ERROR; #143).
+            violation.
           content:
             application/problem+json:
               schema:
@@ -1085,12 +1148,26 @@ paths:
                       id:
                         type: string
                         format: uuid
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
             The write failed (code UPSERT_FAILED) — for example a database
             CHECK or NOT NULL violation, or a missing `personalDataFields`
-            array — or the request body was not valid JSON or over 10 MB
-            (code INTERNAL_ERROR; #143).
+            array.
           content:
             application/problem+json:
               schema:
@@ -1429,15 +1506,23 @@ paths:
                       success:
                         const: true
         '400':
-          description: '`endpoint` or `query` is missing.'
+          description: >-
+            `endpoint` or `query` is missing, or the request body was not
+            valid JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
-          description: >-
-            The query failed (no `code`), or the request body was not valid
-            JSON (code INTERNAL_ERROR; #143).
+          description: The query failed (no `code`).
           content:
             application/problem+json:
               schema:
@@ -1488,16 +1573,23 @@ paths:
                     type: string
         '400':
           description: >-
-            `config` or `serviceName` is missing, or `config` lacks `baseUrl`,
-            `account`, `dataset` or `apiToken`.
+            `config` or `serviceName` is missing, `config` lacks `baseUrl`,
+            `account`, `dataset` or `apiToken`, or the request body was not
+            valid JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
-          description: >-
-            The update failed (no `code`), or the request body was not valid
-            JSON (code INTERNAL_ERROR; #143).
+          description: The update failed (no `code`).
           content:
             application/problem+json:
               schema:
@@ -1540,15 +1632,24 @@ paths:
                     type: integer
                     minimum: 0
         '400':
-          description: '`config` is missing or lacks `baseUrl`, `account`, `dataset` or `apiToken`.'
+          description: >-
+            `config` is missing or lacks `baseUrl`, `account`, `dataset` or
+            `apiToken`, or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
-          description: >-
-            Listing failed (no `code`), or the request body was not valid
-            JSON (code INTERNAL_ERROR; #143).
+          description: Listing failed (no `code`).
           content:
             application/problem+json:
               schema:
@@ -1592,15 +1693,23 @@ paths:
                   status:
                     const: 200
         '400':
-          description: '`config` is missing.'
+          description: >-
+            `config` is missing, or the request body was not valid JSON
+            (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
-          description: >-
-            The check itself failed (no `code`), or the request body was not
-            valid JSON (code INTERNAL_ERROR; #143).
+          description: The check itself failed (no `code`).
           content:
             application/problem+json:
               schema:
@@ -2026,15 +2135,24 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`dmnIds` has fewer than two entries or `deploymentName` is blank (code INVALID_INPUT).'
+          description: >-
+            `dmnIds` has fewer than two entries or `deploymentName` is blank
+            (code INVALID_INPUT), or the request body was not valid JSON
+            (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
-          description: >-
-            Assembly or deployment failed (code DRD_DEPLOY_FAILED), or the request
-            body was not valid JSON (code INTERNAL_ERROR; #143).
+          description: Assembly or deployment failed (code DRD_DEPLOY_FAILED).
           content:
             application/problem+json:
               schema:
@@ -2150,7 +2268,18 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`bpmnXml`, `deploymentName` or `organization` is missing or blank (code INVALID_INPUT).'
+          description: >-
+            `bpmnXml`, `deploymentName` or `organization` is missing or
+            blank (code INVALID_INPUT), or the request body was not valid
+            JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
@@ -2158,8 +2287,7 @@ paths:
         '500':
           description: >-
             Deployment failed (code PROCESS_DEPLOY_FAILED; the message carries
-            Operaton's error text), or the request body was not valid JSON (code
-            INTERNAL_ERROR; #143).
+            Operaton's error text).
           content:
             application/problem+json:
               schema:
@@ -2209,15 +2337,24 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`xml` or `deploymentName` is missing or blank (code INVALID_INPUT).'
+          description: >-
+            `xml` or `deploymentName` is missing or blank (code
+            INVALID_INPUT), or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
-          description: >-
-            Deployment failed (code DMN_DEPLOY_FAILED), or the request body was not
-            valid JSON (code INTERNAL_ERROR; #143).
+          description: Deployment failed (code DMN_DEPLOY_FAILED).
           content:
             application/problem+json:
               schema:
@@ -2277,30 +2414,40 @@ paths:
         '400':
           description: >-
             Operaton rejected the input (for example a variable of the wrong
-            type), and its error body is passed through unchanged.
+            type), and its error body is passed through unchanged
+            (`application/json`). Problem details (`application/problem+json`,
+            code MALFORMED_BODY) when the request body itself was not valid
+            JSON (#143): that never reaches this route's own handler, so it
+            is the global error handler's shape, not the proxy's.
           content:
             application/json:
               schema:
                 description: Operaton's error body, unchanged.
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143). Like the malformed-body 400 above, this
+            never reaches this route's own handler -- it is the global error
+            handler's shape.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
             Operaton's own error body passed through (for example a
             `RestException`), or a `ProxyError` when Operaton could not be
-            reached (`application/json`, this operation's own proxy
-            behaviour -- kept as-is, see the `Problem` schema's
-            description). Problem details (`application/problem+json`) when
-            the request body itself was not valid JSON (#143): that never
-            reaches this route's own handler, so it is the global error
-            handler's shape, not the proxy's.
+            reached -- this operation's own proxy behaviour, kept as-is, see
+            the `Problem` schema's description.
           content:
             application/json:
               schema:
                 anyOf:
                   - $ref: '#/components/schemas/OperatonProxyError'
                   - description: Operaton's error body, unchanged.
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
         default:
           description: Operaton's own error status and body, passed through unchanged.
           content:
@@ -2345,15 +2492,24 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
+          description: >-
+            `content` is missing, empty or not a string (code
+            INVALID_REQUEST), or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
-          description: >-
-            The validator failed unexpectedly (code VALIDATION_ERROR), or the
-            request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          description: The validator failed unexpectedly (code VALIDATION_ERROR).
           content:
             application/problem+json:
               schema:
@@ -2399,15 +2555,24 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
+          description: >-
+            `content` is missing, empty or not a string (code
+            INVALID_REQUEST), or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
-          description: >-
-            The validator failed unexpectedly (code VALIDATION_ERROR), or the
-            request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+          description: The validator failed unexpectedly (code VALIDATION_ERROR).
           content:
             application/problem+json:
               schema:
@@ -2463,7 +2628,18 @@ paths:
                     type: string
                     format: date-time
         '400':
-          description: '`content` is missing, empty or not a string (code INVALID_REQUEST).'
+          description: >-
+            `content` is missing, empty or not a string (code
+            INVALID_REQUEST), or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
@@ -2472,8 +2648,7 @@ paths:
           description: >-
             The validator failed unexpectedly (code VALIDATION_ERROR) — no
             endpoint configured, or the remote graph could not be
-            fetched/parsed — or the request body was not valid JSON or over
-            10 MB (code INTERNAL_ERROR; #143).
+            fetched/parsed.
           content:
             application/problem+json:
               schema:
@@ -2700,25 +2875,31 @@ paths:
           description: >-
             `dmnIds` is missing or empty (message "dmnIds array is required
             and must not be empty"), or `inputs` is missing or an empty
-            object (message "inputs object is required"). Both are code
-            INVALID_REQUEST.
+            object (message "inputs object is required"), both code
+            INVALID_REQUEST -- or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: >-
-            Three causes share this status. The orchestrator resolving with
+            Two causes share this status. The orchestrator resolving with
             `success: false` (a DMN in the chain threw, or the DRD
             evaluation threw) answers a problem response whose `data`
             extension member carries the partial chain result -- which
             steps ran, the outputs so far -- so that information is not
             lost alongside the failure (`detail`). The route's own
-            try/catch (code EXECUTION_ERROR) and the request body not being
-            valid JSON, or over 10 MB (code INTERNAL_ERROR; #143 — the
-            latter never reaches this route's own handler; it is answered
-            by the global error handler) answer a problem response with no
-            `data`.
+            try/catch (code EXECUTION_ERROR) answers a problem response
+            with no `data`.
           content:
             application/problem+json:
               schema:
@@ -3108,7 +3289,9 @@ paths:
                     type: object
                     description: The upstream API's response, unchanged.
         '400':
-          description: '`oin` is missing.'
+          description: >-
+            `oin` is missing, or the request body was not valid JSON (code
+            MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -3123,14 +3306,16 @@ paths:
                       detail: 'oin is required',
                       instance: '/v1/dso/activiteiten/oin',
                     }
-        '502':
-          description: The upstream API could not be reached, or answered with a failure.
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        '500':
-          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
           content:
             application/problem+json:
               schema:
@@ -3207,14 +3392,23 @@ paths:
                   data:
                     type: object
                     description: The upstream API's response, unchanged.
-        '502':
-          description: The upstream API could not be reached, or answered with a failure.
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        '500':
-          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
           content:
             application/problem+json:
               schema:
@@ -3431,7 +3625,9 @@ paths:
                     const: true
                   data: {}
         '400':
-          description: '`zoekterm` is missing.'
+          description: >-
+            `zoekterm` is missing, or the request body was not valid JSON
+            (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -3446,14 +3642,16 @@ paths:
                       detail: 'zoekterm is required',
                       instance: '/v1/dso/werkzaamheden/suggereer',
                     }
-        '502':
-          description: The upstream API could not be reached, or answered with a failure.
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        '500':
-          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
           content:
             application/problem+json:
               schema:
@@ -3520,14 +3718,23 @@ paths:
                   data:
                     type: object
                     description: The upstream API's response, unchanged.
-        '502':
-          description: The upstream API could not be reached, or answered with a failure.
+        '400':
+          description: >-
+            The request body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-        '500':
-          description: The request body was not valid JSON or over 10 MB (code INTERNAL_ERROR; #143).
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
           content:
             application/problem+json:
               schema:
@@ -4127,7 +4334,9 @@ paths:
                         },
                     }
         '400':
-          description: '`projectNumber` or `projectName` is missing or blank.'
+          description: >-
+            `projectNumber` or `projectName` is missing or blank, or the
+            request body was not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -4143,11 +4352,18 @@ paths:
                       instance: '/v1/edocs/workspaces/ensure',
                       code: 'INVALID_INPUT',
                     }
+        '413':
+          description: >-
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '500':
           description: >-
             The workspace lookup or creation failed (code
-            EDOCS_WORKSPACE_FAILED), or the request body was not valid JSON
-            or over 10 MB (code INTERNAL_ERROR; #143).
+            EDOCS_WORKSPACE_FAILED).
           content:
             application/problem+json:
               schema:
@@ -4235,7 +4451,8 @@ paths:
         '400':
           description: >-
             `workspaceId`, `filename`, `contentBase64` or
-            `metadata.docName` is missing or blank.
+            `metadata.docName` is missing or blank, or the request body was
+            not valid JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:
@@ -4251,11 +4468,16 @@ paths:
                       instance: '/v1/edocs/documents',
                       code: 'INVALID_INPUT',
                     }
-        '500':
+        '413':
           description: >-
-            The upload failed (code EDOCS_UPLOAD_FAILED), or the request
-            body was not valid JSON or over 10 MB (code INTERNAL_ERROR;
-            #143).
+            The request body was over the 10 MB limit (code
+            PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The upload failed (code EDOCS_UPLOAD_FAILED).
           content:
             application/problem+json:
               schema:

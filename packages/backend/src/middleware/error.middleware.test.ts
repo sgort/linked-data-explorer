@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import express, { Request, Response } from 'express';
+import request from 'supertest';
 
 // logger.ts self-executes real winston transports (Console + File) and a
 // mkdirSync('logs') side effect on import — mock it so this test never
@@ -9,7 +10,7 @@ jest.mock('../utils/logger', () => ({
 }));
 
 import logger from '../utils/logger';
-import { errorHandler, notFoundHandler } from './error.middleware';
+import { errorHandler, notFoundHandler, BODY_SIZE_LIMIT } from './error.middleware';
 
 function mockReqRes(overrides: Partial<Request> = {}) {
   const req = {
@@ -96,6 +97,146 @@ describe('errorHandler', () => {
     expect(res.status).toHaveBeenCalledWith(500);
     const response = (res.json as jest.Mock).mock.calls[0][0];
     expect(response.detail).toBe('a plain string rejection');
+  });
+
+  test('still answers 500 for a thrown error that merely happens to carry a status (#143)', () => {
+    // A body-parser error is recognised by its `type`, not by the presence
+    // of `status` -- otherwise any thrown error with a `status` property
+    // could pick its own response status.
+    process.env.NODE_ENV = 'test';
+    const { req, res } = mockReqRes();
+    const err = Object.assign(new Error('looks like a client error'), { status: 400 });
+
+    errorHandler(err, req, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    const response = (res.json as jest.Mock).mock.calls[0][0];
+    expect(response.code).toBe('INTERNAL_ERROR');
+  });
+
+  test('entity.parse.failed (malformed JSON/urlencoded body) is 400 MALFORMED_BODY (#143)', () => {
+    process.env.NODE_ENV = 'test';
+    const { req, res } = mockReqRes();
+    const err = Object.assign(new SyntaxError('Unexpected token'), {
+      status: 400,
+      statusCode: 400,
+      type: 'entity.parse.failed',
+    });
+
+    errorHandler(err, req, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.type).toHaveBeenCalledWith('application/problem+json');
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 400,
+        code: 'MALFORMED_BODY',
+        title: 'Malformed request body',
+      })
+    );
+  });
+
+  test('entity.too.large (body over the limit) is 413 PAYLOAD_TOO_LARGE naming the limit (#143)', () => {
+    process.env.NODE_ENV = 'test';
+    const { req, res } = mockReqRes();
+    const err = Object.assign(new Error('request entity too large'), {
+      status: 413,
+      statusCode: 413,
+      type: 'entity.too.large',
+    });
+
+    errorHandler(err, req, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    const response = (res.json as jest.Mock).mock.calls[0][0];
+    expect(response.code).toBe('PAYLOAD_TOO_LARGE');
+    expect(response.detail).toContain('10mb');
+  });
+
+  test.each([
+    ['charset.unsupported', 415, 'unsupported charset "X-MADE-UP"'],
+    ['encoding.unsupported', 415, 'unsupported content encoding "brotli"'],
+    ['request.aborted', 400, 'request aborted'],
+    ['request.size.invalid', 400, 'request size did not match content length'],
+    ['parameters.too.many', 413, 'too many parameters'],
+    ['querystring.parse.rangeError', 400, 'The input exceeded the depth'],
+  ])("%s honours body-parser's own %i status as INVALID_BODY (#143)", (type, status, message) => {
+    process.env.NODE_ENV = 'test';
+    const { req, res } = mockReqRes();
+    const err = Object.assign(new Error(message), { status, statusCode: status, type });
+
+    errorHandler(err, req, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(status);
+    const response = (res.json as jest.Mock).mock.calls[0][0];
+    expect(response.code).toBe('INVALID_BODY');
+    expect(response.detail).toBe(message);
+  });
+});
+
+describe('errorHandler mounted in a real app (#143)', () => {
+  test('a body over the configured limit answers 413 PAYLOAD_TOO_LARGE through the real handler', async () => {
+    // The real 10 MB limit (BODY_SIZE_LIMIT, index.ts) is too heavy to send
+    // in a test; this app mounts express.json with a tiny limit of its own
+    // instead, so a payload just over it exercises the same body-parser
+    // error path cheaply. That proves the handler, not the parser.
+    const app = express();
+    app.use(express.json({ limit: '100b' }));
+    app.post('/echo', (_req, res) => res.json({ success: true }));
+    app.use(errorHandler);
+
+    const res = await request(app)
+      .post('/echo')
+      .set('Content-Type', 'application/json')
+      .send({ padding: 'x'.repeat(200) });
+
+    expect(res.status).toBe(413);
+    expect(res.type).toBe('application/problem+json');
+    expect(res.body).toMatchObject({
+      status: 413,
+      code: 'PAYLOAD_TOO_LARGE',
+      title: 'Request body too large',
+    });
+    // The handler always names BODY_SIZE_LIMIT (the production limit), not
+    // this test app's own tiny one -- it has no way to know a caller's.
+    expect(res.body.detail).toContain(BODY_SIZE_LIMIT);
+  });
+
+  test('a malformed body answers 400 MALFORMED_BODY through the real handler', async () => {
+    const app = express();
+    app.use(express.json());
+    app.post('/echo', (_req, res) => res.json({ success: true }));
+    app.use(errorHandler);
+
+    const res = await request(app)
+      .post('/echo')
+      .set('Content-Type', 'application/json')
+      .send('{"broken":');
+
+    expect(res.status).toBe(400);
+    expect(res.type).toBe('application/problem+json');
+    expect(res.body).toMatchObject({ status: 400, code: 'MALFORMED_BODY' });
+  });
+
+  // Found by the Phase 2 review against the running server: the app mounts
+  // express.urlencoded({ extended: true }), whose qs parser rejects bracket
+  // nesting past its depth limit with its own 400. Before this type was
+  // recognised, that 400 was flattened into a 500 INTERNAL_ERROR.
+  test('a urlencoded body nested too deep answers 400, not 500, through the real handler', async () => {
+    const app = express();
+    app.use(express.urlencoded({ extended: true }));
+    app.post('/echo', (_req, res) => res.json({ success: true }));
+    app.use(errorHandler);
+
+    const tooDeep = 'a' + '[b]'.repeat(40) + '=1';
+    const res = await request(app)
+      .post('/echo')
+      .set('Content-Type', 'application/x-www-form-urlencoded')
+      .send(tooDeep);
+
+    expect(res.status).toBe(400);
+    expect(res.type).toBe('application/problem+json');
+    expect(res.body).toMatchObject({ status: 400, code: 'INVALID_BODY' });
   });
 });
 

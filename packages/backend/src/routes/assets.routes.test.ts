@@ -414,14 +414,14 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/assets/bpmn');
   });
 
-  test('POST /assets/bpmn malformed body is a 500 problem, as documented (#143)', async () => {
+  test('POST /assets/bpmn malformed body is a 400 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/bpmn')
       .set('Content-Type', 'application/json')
       .send('{"id":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/assets/bpmn');
   });
 
@@ -500,14 +500,14 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
   });
 
-  test('PATCH /assets/bpmn/{id}/deploy malformed body is a 500 problem, as documented (#143)', async () => {
+  test('PATCH /assets/bpmn/{id}/deploy malformed body is a 400 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .patch('/v1/assets/bpmn/p1/deploy')
       .set('Content-Type', 'application/json')
       .send('{"deploymentId":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'patch', '/assets/bpmn/{id}/deploy');
   });
 
@@ -629,14 +629,14 @@ describe('/v1/assets/forms matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/assets/forms');
   });
 
-  test('POST /assets/forms malformed body is a 500 problem, as documented (#143)', async () => {
+  test('POST /assets/forms malformed body is a 400 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/forms')
       .set('Content-Type', 'application/json')
       .send('{"id":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/assets/forms');
   });
 
@@ -780,14 +780,14 @@ describe('/v1/assets/documents matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/assets/documents');
   });
 
-  test('POST /assets/documents malformed body is a 500 problem, as documented (#143)', async () => {
+  test('POST /assets/documents malformed body is a 400 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/documents')
       .set('Content-Type', 'application/json')
       .send('{"id":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/assets/documents');
   });
 

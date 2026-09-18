@@ -38,6 +38,7 @@ import { sparqlService } from '../services/sparql.service';
 import * as assetsService from '../services/assets.service';
 import dmnRoutes from './dmn.routes';
 import { versionMiddleware } from '../middleware/version.middleware';
+import { errorHandler } from '../middleware/error.middleware';
 import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const operaton = operatonService as unknown as Record<string, jest.Mock>;
@@ -935,15 +936,47 @@ describe('/v1/dmns reads match their OpenAPI description', () => {
 });
 
 describe('/v1/dmns deploy, evaluate and validate match their OpenAPI description', () => {
-  function makeDocumentedApp() {
+  function makeDocumentedApp(jsonLimit?: string) {
     const app = express();
-    app.use(express.json());
+    app.use(express.json(jsonLimit ? { limit: jsonLimit } : {}));
     app.use(versionMiddleware); // app-wide in index.ts
     app.use('/v1/dmns', dmnRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers unparsable and oversized bodies
     return app;
   }
 
   const post = (path: string) => request(makeDocumentedApp()).post(`/v1/dmns${path}`);
+
+  // Each of these parses a request body, so each documents a 400 for one it
+  // cannot parse (#143). The global error handler answers it before the route
+  // runs, so the check is that every operation's document says so.
+  test.each([
+    ['/drd/deploy', '/dmns/drd/deploy'],
+    ['/process/deploy', '/dmns/process/deploy'],
+    ['/deploy', '/dmns/deploy'],
+    ['/evaluate/zorgtoeslag', '/dmns/evaluate/{decisionKey}'],
+    ['/validate', '/dmns/validate'],
+  ])('POST %s malformed body is a 400, as documented (#143)', async (route, documented) => {
+    const res = await post(route).set('Content-Type', 'application/json').send('{"broken":');
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
+    expectToMatchOperation(res, 'post', documented);
+  });
+
+  // The production limit is 10 MB, too heavy to send in a unit test, so this
+  // app mounts the parser with a tiny limit of its own. What is under test is
+  // that the operation documents the 413 the real handler answers.
+  test('POST /dmns/validate oversized body is a 413, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp('100b'))
+      .post('/v1/dmns/validate')
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify({ content: 'x'.repeat(500) }));
+
+    expect(res.status).toBe(413);
+    expect(res.body.code).toBe('PAYLOAD_TOO_LARGE');
+    expectToMatchOperation(res, 'post', '/dmns/validate');
+  });
 
   test('POST /dmns/evaluate/{decisionKey} passes Operaton results and errors through, as documented', async () => {
     operaton.evaluateRaw.mockResolvedValue([{ aanspraak: { value: true, type: 'Boolean' } }]);

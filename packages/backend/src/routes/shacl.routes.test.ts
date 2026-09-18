@@ -275,11 +275,11 @@ describe('/v1/shacl matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/shacl/validate-merged');
   });
 
-  test('a malformed JSON body is a 500 problem response, as documented (#143)', async () => {
+  test('a malformed JSON body is a 400 problem response, as documented (#143)', async () => {
     const res = await post('/validate').set('Content-Type', 'application/json').send('{"content":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/shacl/validate');
   });
 });

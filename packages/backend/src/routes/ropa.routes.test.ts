@@ -365,14 +365,14 @@ describe('/v1/assets/ropa matches its OpenAPI description', () => {
     expectToMatchOperation(res, 'post', '/assets/ropa');
   });
 
-  test('POST /assets/ropa malformed body is a 500 problem, as documented (#143)', async () => {
+  test('POST /assets/ropa malformed body is a 400 problem, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/assets/ropa')
       .set('Content-Type', 'application/json')
       .send('{"bpmnProcessId":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/assets/ropa');
   });
 

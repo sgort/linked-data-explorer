@@ -813,14 +813,14 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     expectToMatchOperation(res, 'post', '/dso/activiteiten/oin');
   });
 
-  test('POST /activiteiten/oin 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /activiteiten/oin 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/dso/activiteiten/oin')
       .set('Content-Type', 'application/json')
       .send('{"oin":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/dso/activiteiten/oin');
   });
 
@@ -853,14 +853,14 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     expectToMatchOperation(res, 'post', '/dso/activiteiten/zoek');
   });
 
-  test('POST /activiteiten/zoek 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /activiteiten/zoek 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/dso/activiteiten/zoek')
       .set('Content-Type', 'application/json')
       .send('{"datum":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/dso/activiteiten/zoek');
   });
 
@@ -942,14 +942,14 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     expectToMatchOperation(res, 'post', '/dso/werkzaamheden/suggereer');
   });
 
-  test('POST /werkzaamheden/suggereer 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /werkzaamheden/suggereer 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/dso/werkzaamheden/suggereer')
       .set('Content-Type', 'application/json')
       .send('{"zoekterm":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/dso/werkzaamheden/suggereer');
   });
 
@@ -982,14 +982,14 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     expectToMatchOperation(res, 'post', '/dso/werkzaamheden/zoek');
   });
 
-  test('POST /werkzaamheden/zoek 500 INTERNAL_ERROR for a malformed JSON body, as documented (#143)', async () => {
+  test('POST /werkzaamheden/zoek 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
     const res = await request(makeDocumentedApp())
       .post('/v1/dso/werkzaamheden/zoek')
       .set('Content-Type', 'application/json')
       .send('{"zoekterm":');
 
-    expect(res.status).toBe(500);
-    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
     expectToMatchOperation(res, 'post', '/dso/werkzaamheden/zoek');
   });
 

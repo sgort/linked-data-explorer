@@ -5,7 +5,7 @@ import { config } from './utils/config';
 import logger from './utils/logger';
 import routes from './routes';
 import { corsMiddleware } from './middleware/cors.middleware';
-import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { errorHandler, notFoundHandler, BODY_SIZE_LIMIT } from './middleware/error.middleware';
 import { versionMiddleware } from './middleware/version.middleware';
 import { externalTaskWorker } from './services/externalTaskWorker.service';
 import { migrate } from './db/migrate';
@@ -27,8 +27,10 @@ app.use('/api/dmns', dmnXmlRoutes);
 
 // Body parsing middleware — only applied to routes registered after this point.
 // The 10 MB limit accommodates large BPMN/DMN XML payloads submitted for deployment.
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// BODY_SIZE_LIMIT also drives the 413 `detail` the error handler sends when a
+// body goes over it — see middleware/error.middleware.ts.
+app.use(express.json({ limit: BODY_SIZE_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: BODY_SIZE_LIMIT }));
 
 // Request logging
 app.use((req, res, next) => {
