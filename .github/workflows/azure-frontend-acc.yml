@@ -15,6 +15,9 @@ on:
       # shared and a hoisted dependency can move under either workspace. #97.
       - 'package-lock.json'
       - 'package.json'
+      # .nvmrc sets the Node version this workflow builds, tests and ships on.
+      # Without it here, a Node bump built and deployed nothing (#119).
+      - '.nvmrc'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
@@ -62,7 +65,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           # The paths under push: above, as one regular expression. Keep the two in step.
-          PATTERN: '^(packages/frontend/|\.github/workflows/azure-frontend-acc\.yml$|package-lock\.json$|package\.json$)'
+          PATTERN: '^(\.nvmrc$|packages/frontend/|\.github/workflows/azure-frontend-acc\.yml$|package-lock\.json$|package\.json$)'
         run: |
           if [ "$EVENT" != "pull_request" ]; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
