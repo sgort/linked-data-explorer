@@ -157,6 +157,26 @@ build environment is Microsoft's and unpinnable, but with no dependency manifest
 there is nothing for it to resolve. Worth stating precisely, because
 "unpinned build environment" and "unpinned dependencies" are not the same claim.
 
+### 6. The runner image: `ubuntu-24.04`, a version label, not a digest
+
+Every job ran on `ubuntu-latest` until #119, a label GitHub moves to a new
+Ubuntu release on its own schedule. Every job now names `ubuntu-24.04`, so a
+change of OS release arrives as a diff in this repository rather than a
+silent change under all twelve jobs at once. ICTU recommendation 2.
+
+That pins the **release**, not the image. GitHub rebuilds `ubuntu-24.04` about
+weekly with new preinstalled tools and security updates, and a hosted runner
+cannot be pinned to a digest. What the jobs depend on is pinned separately
+anyway: Node through `.nvmrc`, actions by digest, and npm packages by the
+lockfile. So the weekly rebuild changes the environment around the build, not
+the inputs to it.
+
+Renovate's `github-actions` manager reads a versioned `runs-on` label as a
+`github-runner` dependency (its `github-runners` datasource), which it could not
+do for `ubuntu-latest`. So a newer Ubuntu release should arrive as a Renovate
+update rather than by hand. Confirm on the Dependency Dashboard (#36) that
+`ubuntu-24.04` is listed before relying on that.
+
 ## Version currency
 
 All seven `actions/checkout` references now pin **v7.0.1**, converged in
