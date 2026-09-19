@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
@@ -775,5 +775,316 @@ describe('BpmnModeler — ronl:* attribute rewriting on save', () => {
     expect(saveProcess).toHaveBeenCalledWith(
       expect.objectContaining({ bpmnProcessId: 'DefaultProcess', processRole: 'standalone' })
     );
+  });
+});
+
+describe('BpmnModeler — bpmnProcessId recomputed on save (#156)', () => {
+  function setup(xml: string) {
+    const p = process({ bpmnProcessId: 'DefaultProcess', xml });
+    getProcesses.mockReturnValue([p]);
+    getProcess.mockReturnValue(p);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([p]);
+  }
+
+  // The mocked BpmnCanvas's save-canvas button always replaces
+  // "DefaultProcess" with "EditedProcess" in whatever xml it was given —
+  // a stand-in for renaming the process id in the properties panel.
+  test('recomputes bpmnProcessId from the XML being saved, not the create-time value', async () => {
+    setup('<bpmn:definitions><bpmn:process id="DefaultProcess"/></bpmn:definitions>');
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveProcess).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'p1', bpmnProcessId: 'EditedProcess' })
+    );
+  });
+
+  // #156: a bare `\b` before `id=` also matches right after `xsi:`'s `:`,
+  // so the old regex backtracked onto whichever id-suffixed attribute came
+  // last in the tag.
+  test('prefers the real process id over a same-tag xsi:id attribute', async () => {
+    setup(
+      '<bpmn:definitions><bpmn:process id="DefaultProcess" xsi:id="WRONG"/></bpmn:definitions>'
+    );
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveProcess).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'EditedProcess' })
+    );
+    expect(saveProcess).not.toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'WRONG' })
+    );
+  });
+
+  test('finds the id attribute regardless of attribute order', async () => {
+    setup(
+      '<bpmn:definitions><bpmn:process xsi:id="WRONG" name="X" id="DefaultProcess"/></bpmn:definitions>'
+    );
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveProcess).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'EditedProcess' })
+    );
+  });
+
+  // #156 fix round 1: the old `(?:bpmn:)?` prefix only ever matched a
+  // literal "bpmn:" (or no prefix at all). Now that every save recomputes
+  // this id, a `bpmn2:`-prefixed process used to save as "unknown" instead
+  // of its real id.
+  test('matches any namespace prefix, e.g. bpmn2:process', async () => {
+    setup('<bpmn2:definitions><bpmn2:process id="DefaultProcess"/></bpmn2:definitions>');
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveProcess).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'EditedProcess' })
+    );
+  });
+
+  // #156 fix round 1: `\b` right after `process` so a tag that merely
+  // starts with the word "process" (but isn't the element) is never
+  // mistaken for it. No real `<process>` element exists here, so
+  // extraction falls back to the process's existing bpmnProcessId rather
+  // than overwriting it with "unknown".
+  test('does not match a <processType> element, and falls back to the existing bpmnProcessId', async () => {
+    setup('<bpmn:definitions><processType id="DefaultProcess"/></bpmn:definitions>');
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveProcess).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'DefaultProcess' })
+    );
+    expect(saveProcess).not.toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'unknown' })
+    );
+  });
+
+  test('falls back to the existing bpmnProcessId when the XML has no process element at all', async () => {
+    setup('<bpmn:definitions><bpmn:collaboration id="DefaultProcess"/></bpmn:definitions>');
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(saveProcess).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'DefaultProcess' })
+    );
+    expect(saveProcess).not.toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'unknown' })
+    );
+  });
+});
+
+describe('BpmnModeler — surfacing failed create/import/rename writes (#156)', () => {
+  test('shows an error banner when creating a process fails to persist', async () => {
+    getProcesses.mockReturnValue([]);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([]);
+    saveProcess.mockResolvedValue(false);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('create-process'));
+
+    // Exact substring, not a full-element exact match: the banner's "✗ "
+    // prefix is a sibling text node, so the element's own full text never
+    // equals the message alone.
+    expect(await screen.findByText(/Could not save "New Process" to the server\./)).toBeTruthy();
+  });
+
+  test('shows an error banner when importing a process fails to persist', async () => {
+    getProcesses.mockReturnValue([]);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([]);
+    saveProcess.mockResolvedValue(false);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('import-process'));
+
+    expect(await screen.findByText(/Could not save the imported process/)).toBeTruthy();
+  });
+
+  test('shows an error banner when renaming a process fails to persist', async () => {
+    getProcesses.mockReturnValue([process()]);
+    getProcess.mockReturnValue(process());
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([process()]);
+    saveProcess.mockResolvedValue(false);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('rename-active'));
+
+    expect(await screen.findByText(/Could not save the new name/)).toBeTruthy();
+  });
+
+  test('a subsequent successful write clears the error banner', async () => {
+    getProcesses.mockReturnValue([]);
+    // Prevents the unrelated "seed the Asylum Migration example" effect
+    // (gated on `!getProcess(id)`, not on `getStoredVersion`) from consuming
+    // one of the queued `mockResolvedValueOnce` values below before the
+    // user's own click does.
+    getProcess.mockReturnValue(process());
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([]);
+    saveProcess.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('create-process'));
+    expect(await screen.findByText(/Could not save/)).toBeTruthy();
+
+    await userEvent.click(screen.getByText('create-process'));
+    expect(screen.queryByText(/Could not save/)).toBeNull();
+  });
+});
+
+describe('BpmnModeler — create/import/rename update local state immediately (#156 fix round 1/2)', () => {
+  test('creating a process updates the active selection immediately, without waiting for the server round trip', async () => {
+    getProcesses.mockReturnValue([]);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([]);
+    // Never resolves during this test — if the local update needed it, the
+    // synchronous query below would never see anything.
+    saveProcess.mockReturnValue(new Promise<boolean>(() => {}));
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('create-process'));
+
+    expect(screen.getByText(/^active:process_/)).toBeTruthy();
+  });
+
+  test('importing a process updates the active selection immediately, without waiting for the server round trip', async () => {
+    getProcesses.mockReturnValue([]);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([]);
+    saveProcess.mockReturnValue(new Promise<boolean>(() => {}));
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('import-process'));
+
+    expect(screen.getByText(/^active:process_/)).toBeTruthy();
+  });
+
+  // #156 fix round 2: a previous version of this fix suppressed the error
+  // whenever the active process had changed by the time the write settled —
+  // but that drops GENUINE failures, not just misattributed ones. The common
+  // path: type a new name, click another card — the click's blur fires the
+  // rename save, the click itself loads the other card, and if the rename
+  // then fails, it must still be reported (it names the process it
+  // concerns, so it's safe to show no matter what is selected by then).
+  // Only local-state-first updates and clearing on switch/close are kept.
+  test('a late create failure after switching to another process still shows its named banner, without changing the selection', async () => {
+    getProcesses.mockReturnValue([process()]);
+    getProcess.mockReturnValue(process());
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([process()]);
+    let resolveFirstSave: (v: boolean) => void = () => {};
+    saveProcess.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveFirstSave = resolve;
+        })
+    );
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('create-process')); // pending — resolveFirstSave not called yet
+    expect(screen.getByText(/^active:process_/)).toBeTruthy();
+
+    // The user navigates away before the pending create's server round trip settles.
+    await userEvent.click(screen.getByText('load-p1'));
+    expect(screen.getByText('active:p1')).toBeTruthy();
+
+    // The stale create now resolves as a failure — after the user has moved
+    // on. `act` flushes the resulting state update, so the assertions below
+    // cannot pass simply because nothing has re-rendered yet.
+    await act(async () => {
+      resolveFirstSave(false);
+    });
+
+    expect(screen.getByText('active:p1')).toBeTruthy();
+    expect(await screen.findByText(/Could not save "New Process" to the server\./)).toBeTruthy();
+  });
+
+  test('a rename that fails after the user has already clicked another card still shows its named banner', async () => {
+    const p2 = process({ id: 'p2', name: 'Other' });
+    getProcesses.mockReturnValue([process(), p2]);
+    getProcess.mockImplementation((id: string) => (id === 'p2' ? p2 : process()));
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([process(), p2]);
+    let resolveRenameSave: (v: boolean) => void = () => {};
+    saveProcess.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveRenameSave = resolve;
+        })
+    );
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('rename-active')); // pending
+
+    // Mirrors ProcessList.tsx: a click on another card both blurs the
+    // rename input (firing its save) and loads that card.
+    await userEvent.click(screen.getByText('load-p2'));
+    expect(screen.getByText('active:p2')).toBeTruthy();
+
+    await act(async () => {
+      resolveRenameSave(false);
+    });
+
+    expect(screen.getByText('active:p2')).toBeTruthy();
+    expect(
+      await screen.findByText(/Could not save the new name "Renamed" to the server\./)
+    ).toBeTruthy();
+  });
+});
+
+describe('BpmnModeler — processError clears on switch/close (#156 fix round 1)', () => {
+  test('clears the error banner when switching to a different process', async () => {
+    const p2 = process({ id: 'p2', name: 'Other' });
+    getProcesses.mockReturnValue([process(), p2]);
+    getProcess.mockImplementation((id: string) => (id === 'p2' ? p2 : process()));
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([process(), p2]);
+    saveProcess.mockResolvedValue(false);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('rename-active'));
+    expect(await screen.findByText(/Could not save the new name/)).toBeTruthy();
+
+    await userEvent.click(screen.getByText('load-p2'));
+
+    expect(screen.queryByText(/Could not save/)).toBeNull();
+  });
+
+  test('clears the error banner when closing the process', async () => {
+    getProcesses.mockReturnValue([process()]);
+    getProcess.mockReturnValue(process());
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([process()]);
+    saveProcess.mockResolvedValue(false);
+    render(<BpmnModeler endpoint="e" />);
+
+    await userEvent.click(screen.getByText('load-p1'));
+    await userEvent.click(screen.getByText('rename-active'));
+    expect(await screen.findByText(/Could not save the new name/)).toBeTruthy();
+
+    await userEvent.click(screen.getByText('close-canvas'));
+
+    expect(screen.queryByText(/Could not save/)).toBeNull();
   });
 });

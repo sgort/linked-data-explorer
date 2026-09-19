@@ -137,3 +137,44 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export function isUuid(value: string): boolean {
   return UUID_RE.test(value);
 }
+
+/** A lowercase, hyphenated slug — the shape every real `boardOwner` tag
+ *  uses (`caseworker`, `infra-board`). */
+const BOARD_OWNER_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * Validates a `boardOwner` field wherever the backend accepts one as
+ * external input (#156). Semantics, unchanged from before this check
+ * existed: *omitted* (`undefined`) means "derive it"; `''` means "opt out,
+ * leave it untagged"; any other value is stored as-is once it passes this
+ * check. Only a non-empty string is checked against the slug pattern — an
+ * omitted or empty value is always valid.
+ *
+ * A JSON `null` is deliberately NOT treated the same as omitted, even
+ * though `checkField`'s `present` check (elsewhere in this file) does fold
+ * the two together for other fields. `operaton.service.ts`'s
+ * `deployProcess` only derives on `boardOwner === undefined`; a `null`
+ * reaches it as `null`, which `injectBoardOwner` treats as falsy — silently
+ * "no tag" rather than "derive". OpenAPI also documents this field as
+ * `type: string`, not `string | null`. So `null` is rejected here with the
+ * same "must be a string" a non-string, non-null value gets.
+ */
+export function checkBoardOwner(
+  errors: FieldErrors,
+  body: Record<string, unknown>,
+  field = 'boardOwner'
+): void {
+  const value = body[field];
+  if (value === undefined) return;
+  if (typeof value !== 'string') {
+    errors.push(`${field} must be a string`);
+    return;
+  }
+  if (value === '') return;
+  if (!BOARD_OWNER_SLUG_RE.test(value)) {
+    errors.push(
+      `${field} must be a lowercase slug matching ^[a-z0-9]+(?:-[a-z0-9]+)*$ ` +
+        `(e.g. "caseworker", "infra-board") when non-empty`
+    );
+  }
+}

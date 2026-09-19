@@ -17,7 +17,7 @@ import { getErrorMessage } from '../utils/errors';
 import logger from '../utils/logger';
 import pool from '../db/pool';
 import { sendProblem } from '../utils/problem';
-import { asRecord, checkField, FieldErrors } from '../utils/validation';
+import { asRecord, checkBoardOwner, checkField, FieldErrors } from '../utils/validation';
 
 const router = Router();
 
@@ -120,7 +120,7 @@ function validateBpmnDeploy(body: Record<string, unknown>): FieldErrors {
   checkField(errors, body, 'operatonUrl', { type: 'string' });
   checkField(errors, body, 'formIds', { type: 'stringArray' });
   checkField(errors, body, 'documentIds', { type: 'stringArray' });
-  checkField(errors, body, 'boardOwner', { type: 'string' });
+  checkBoardOwner(errors, body);
   return errors;
 }
 

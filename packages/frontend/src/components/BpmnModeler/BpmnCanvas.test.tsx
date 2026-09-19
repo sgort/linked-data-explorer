@@ -230,6 +230,42 @@ describe('BpmnCanvas — lifecycle', () => {
     expect((await screen.findAllByText(/could not be stored/)).length).toBeGreaterThan(0);
   });
 
+  // #156: saveResult used to survive switching to another process entirely,
+  // so a stale failure banner could sit over an unrelated diagram.
+  test('clears a save-failure banner when processId changes, without needing the xml to change', async () => {
+    const onSave = vi.fn().mockResolvedValue(false);
+    const { rerender } = render(
+      <BpmnCanvas
+        xml={SIMPLE_XML}
+        endpoint="e"
+        processId="p1"
+        onSave={onSave}
+        onClose={vi.fn()}
+        onElementSelect={vi.fn()}
+      />
+    );
+    await vi.waitFor(() => expect(modelerInstances.length).toBe(1));
+    const modeler = modelerInstances[0];
+    await vi.waitFor(() => expect(modeler.xml).toBe(SIMPLE_XML));
+
+    act(() => modeler.eventBus.emit('commandStack.changed'));
+    await userEvent.click(await screen.findByRole('button', { name: /Save/ }));
+    expect((await screen.findAllByText(/could not be stored/)).length).toBeGreaterThan(0);
+
+    rerender(
+      <BpmnCanvas
+        xml={SIMPLE_XML}
+        endpoint="e"
+        processId="p2"
+        onSave={onSave}
+        onClose={vi.fn()}
+        onElementSelect={vi.fn()}
+      />
+    );
+
+    await vi.waitFor(() => expect(screen.queryByText(/could not be stored/)).toBeNull());
+  });
+
   test('Export builds a .bpmn blob download', async () => {
     const createObjectURL = vi.fn().mockReturnValue('blob:mock');
     const revokeObjectURL = vi.fn();

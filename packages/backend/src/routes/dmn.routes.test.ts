@@ -67,7 +67,7 @@ beforeEach(() => {
   }
   // Defaults every /process/deploy test to the "bundle recorded" happy path;
   // tests exercising the storage-failure branch override this explicitly.
-  mockRecordDeployedBundle.mockResolvedValue(true);
+  mockRecordDeployedBundle.mockResolvedValue({ recorded: true });
 });
 
 describe('GET /api/dmns', () => {
@@ -414,6 +414,52 @@ describe('POST /api/dmns/process/deploy', () => {
     );
   });
 
+  // #156: a naive `\bid="` regex backtracks onto the LAST id-suffixed
+  // attribute in the tag, since `\b` also matches right after `xsi:`'s `:`.
+  test.each([
+    [
+      'a real id followed by an unrelated id-suffixed attribute',
+      '<bpmn:definitions><bpmn:process id="REAL" xsi:id="WRONG"/></bpmn:definitions>',
+      'REAL',
+    ],
+    [
+      'the id-suffixed attribute declared before the real one',
+      '<bpmn:definitions><bpmn:process xsi:id="WRONG" id="REAL"/></bpmn:definitions>',
+      'REAL',
+    ],
+    [
+      'other attributes surrounding id, in any order',
+      '<bpmn:definitions><bpmn:process name="X" id="REAL" isExecutable="true"/></bpmn:definitions>',
+      'REAL',
+    ],
+  ])('extracts the real process id — %s', async (_label, bpmnXml, expectedId) => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+
+    await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml,
+      deploymentName: 'SomeOtherDeploymentName',
+      organization: 'flevoland',
+    });
+
+    expect(mockRecordDeployedBundle).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: expectedId })
+    );
+  });
+
+  test('falls back to deploymentName when the XML has no process element', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+
+    await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:collaboration id="c"/></bpmn:definitions>',
+      deploymentName: 'FallbackName',
+      organization: 'flevoland',
+    });
+
+    expect(mockRecordDeployedBundle).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'FallbackName' })
+    );
+  });
+
   test('reports the deploy as successful but the bundle as unrecorded when storage throws', async () => {
     mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
     mockRecordDeployedBundle.mockRejectedValue(new Error('connection terminated'));
@@ -435,9 +481,12 @@ describe('POST /api/dmns/process/deploy', () => {
     });
   });
 
-  test('reports the bundle as unrecorded (without an exception) when recordDeployedBundle resolves false', async () => {
+  // #156 fix round 1: creation itself succeeds in this case — only the
+  // immediately following stamp-by-id matches no row. The old wording,
+  // "...and creating one failed", named the wrong step.
+  test('names "created ... but marking it deployed matched no row" when recordDeployedBundle reports new-row-not-stamped', async () => {
     mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
-    mockRecordDeployedBundle.mockResolvedValue(false);
+    mockRecordDeployedBundle.mockResolvedValue({ recorded: false, reason: 'new-row-not-stamped' });
 
     const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
       bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
@@ -449,6 +498,119 @@ describe('POST /api/dmns/process/deploy', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.bundleRecorded).toBe(false);
     expect(res.body.data.bundleRecordingError).toEqual(expect.stringContaining('P'));
+    expect(res.body.data.bundleRecordingError).toMatch(/was created/);
+    expect(res.body.data.bundleRecordingError).toMatch(/matched no row/);
+    expect(res.body.data.bundleRecordingError).not.toMatch(/creating one failed/);
+  });
+
+  // #156: the message used to be the same regardless of cause, even when no
+  // creation was ever attempted (no database, or an existing row's stamp
+  // simply matched no rows) — now each names its own real cause.
+  test('names "no database configured" when recordDeployedBundle reports db-not-configured', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    mockRecordDeployedBundle.mockResolvedValue({ recorded: false, reason: 'db-not-configured' });
+
+    const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.bundleRecordingError).toMatch(/not configured/i);
+    expect(res.body.data.bundleRecordingError).not.toMatch(/creating one failed/);
+  });
+
+  test('names "found but not stamped" when recordDeployedBundle reports existing-row-not-stamped', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    mockRecordDeployedBundle.mockResolvedValue({
+      recorded: false,
+      reason: 'existing-row-not-stamped',
+    });
+
+    const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.bundleRecordingError).toMatch(/was found/);
+    expect(res.body.data.bundleRecordingError).not.toMatch(/creating one failed/);
+    expect(res.body.data.bundleRecordingError).toEqual(expect.stringContaining('P'));
+  });
+
+  // #156: boardOwner used to be enforced only in the browser.
+  describe('boardOwner validation', () => {
+    const body = {
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    };
+
+    test.each(['caseworker', 'infra-board'])('accepts the valid slug %s', async (boardOwner) => {
+      mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+
+      const res = await request(makeApp())
+        .post('/api/dmns/process/deploy')
+        .send({ ...body, boardOwner });
+
+      expect(res.status).toBe(200);
+      expect(mockDeployProcess).toHaveBeenCalled();
+    });
+
+    test('accepts an empty string (opts out of tagging)', async () => {
+      mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+
+      const res = await request(makeApp())
+        .post('/api/dmns/process/deploy')
+        .send({ ...body, boardOwner: '' });
+
+      expect(res.status).toBe(200);
+    });
+
+    test.each([
+      ['uppercase', 'Infra-Board'],
+      ['a space', 'infra board'],
+      ['an underscore', 'infra_board'],
+    ])('rejects a %s value with 400, and deploys nothing', async (_label, boardOwner) => {
+      const res = await request(makeApp())
+        .post('/api/dmns/process/deploy')
+        .send({ ...body, boardOwner });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ status: 400, code: 'INVALID_INPUT' });
+      expect(res.body.detail).toContain('boardOwner');
+      expect(mockDeployProcess).not.toHaveBeenCalled();
+    });
+
+    test('rejects a non-string value with 400, and deploys nothing', async () => {
+      const res = await request(makeApp())
+        .post('/api/dmns/process/deploy')
+        .send({ ...body, boardOwner: 42 });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ status: 400, code: 'INVALID_INPUT' });
+      expect(res.body.detail).toContain('boardOwner');
+      expect(mockDeployProcess).not.toHaveBeenCalled();
+    });
+
+    // #156 fix round 1: a JSON `null` used to pass as "omitted" (→ derive),
+    // but operaton.service.ts's deployProcess only derives on
+    // `=== undefined` — a `null` reaches it as `null`, which
+    // injectBoardOwner treats as falsy ("no tag"), silently contradicting
+    // "derive". OpenAPI also documents this field as `type: string`, not
+    // nullable.
+    test('rejects an explicit null with 400, and deploys nothing', async () => {
+      const res = await request(makeApp())
+        .post('/api/dmns/process/deploy')
+        .send({ ...body, boardOwner: null });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ status: 400, code: 'INVALID_INPUT' });
+      expect(res.body.detail).toContain('boardOwner');
+      expect(mockDeployProcess).not.toHaveBeenCalled();
+    });
   });
 
   test('returns 500 with a PROCESS_DEPLOY_FAILED code when the deploy throws', async () => {

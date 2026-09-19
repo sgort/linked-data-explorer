@@ -48,7 +48,7 @@ describe('assets.service with no database configured', () => {
         formIds: [],
         documentIds: [],
       })
-    ).resolves.toBe(false);
+    ).resolves.toEqual({ recorded: false, reason: 'db-not-configured' });
     await expect(
       upsertForm({
         id: 'x',
