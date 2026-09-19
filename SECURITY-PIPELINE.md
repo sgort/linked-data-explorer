@@ -89,21 +89,27 @@ the container only uploads `packages/frontend/dist`. It still runs, unpinned,
 on every deploy; it no longer decides what is in the artifact. The two
 `ropa-site` workflows are unchanged — see §5.
 
-### 2. `npm install --production --omit=dev` in the backend deploy step
+### 2. ~~`npm install --production --omit=dev` in the backend deploy step~~ — closed in #119
 
-Both backend workflows build with `npm ci`, then assemble a `deploy/` folder and
-run a **second, lockfile-less install** inside it:
+Both backend workflows built with `npm ci`, then assembled a `deploy/` folder and
+ran a **second, lockfile-less install** inside it. `npm install` in a folder
+without a lockfile resolves ranges fresh at deploy time, so the code shipped to
+Azure could contain dependency versions that no build step ever saw and no
+lockfile records.
 
-- `azure-backend-acc.yml:95`
-- `azure-backend-production.yml:86`
+This section once proposed copying the workspace lockfile into `deploy/` and
+running `npm ci --omit=dev` there. That doesn't work in this monorepo: the only
+lockfile is the root one, and it describes every workspace. What the workflows do
+instead is run `npm ci --omit=dev --workspace=@linked-data-explorer/backend` in a
+staging copy that holds the root `package.json` and `package-lock.json` plus the
+backend's manifest, then copy the resulting `node_modules` into `deploy/`.
+Measured before it landed: 349 packages, every one at the root lockfile's
+version and integrity hash.
 
-`npm ci` requires a lockfile and installs it exactly. `npm install` in a folder
-without one resolves ranges fresh at deploy time — so the code shipped to Azure
-can contain dependency versions that no build step ever saw and no lockfile
-records. This is a real gap, inside the deploy path, and it is fixable: copying
-the workspace lockfile into `deploy/` and using `npm ci --omit=dev` would close
-it. Left alone deliberately, because the pinning work was scoped to be
-behaviour-preserving.
+The step fails if a production dependency is installed un-hoisted, under
+`packages/backend/node_modules`, because the copy would not carry it. On the ACC
+workflow it runs on pull requests too, so a lockfile that can't produce the
+artifact fails before the merge.
 
 ### 3. Node — pinned now, recorded here for its history
 
