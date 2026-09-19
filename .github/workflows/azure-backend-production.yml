@@ -189,11 +189,20 @@ jobs:
           # A production dependency the backend needs at a version other than
           # the hoisted one would be installed under packages/backend/node_modules,
           # and would not reach the artifact from here. None does today; fail
-          # rather than ship without it on the day one does.
-          if [ -d "$stage/packages/backend/node_modules" ]; then
-            echo "❌ Backend production dependencies installed un-hoisted; the packaging below would drop them:"
-            ls "$stage/packages/backend/node_modules"
-            exit 1
+          # rather than ship without it on the day one does. Only real package
+          # entries count: on the runner npm leaves the directory in place with
+          # hidden entries in it (npm bookkeeping such as .bin), which are not
+          # dependencies -- the first version of this check failed on exactly
+          # that. Its contents are logged either way, so the next surprise names
+          # itself.
+          nested="$stage/packages/backend/node_modules"
+          if [ -d "$nested" ]; then
+            echo "packages/backend/node_modules holds: $(ls -A "$nested" | xargs)"
+            if find "$nested" -mindepth 1 -maxdepth 1 ! -name ".*" | grep -q .; then
+              echo "❌ Backend production dependencies installed un-hoisted; the packaging below would drop them:"
+              find "$nested" -mindepth 1 -maxdepth 1 ! -name ".*"
+              exit 1
+            fi
           fi
           # The workspace's own link, pointing back into the staging copy.
           rm -rf "$stage/node_modules/@linked-data-explorer"
