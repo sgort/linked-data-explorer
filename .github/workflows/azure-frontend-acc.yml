@@ -52,13 +52,17 @@ jobs:
           submodules: true
           persist-credentials: false
           lfs: false
-      - name: Setup Node.js 20
+      - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20.20.2"
+          # Read from .nvmrc, the one place this repository states its Node
+          # version; the backend workflows read the same file. Until #119 this
+          # was a literal 20.20.2 that governed lint and tests only, because
+          # Oryx built the shipped bundle on a Node it chose itself (22.22.0 in
+          # run 34612031473). Now the runner builds, so this pin decides what
+          # ships. See #113.
+          node-version-file: .nvmrc
           cache: "npm"
-      # The Static Web Apps action builds inside its own container and runs
-      # none of our scripts, so lint and tests get explicit steps ahead of it.
       # Installing from the workspace root, since the only lockfile is there.
       - name: Install dependencies
         run: npm ci
@@ -68,19 +72,25 @@ jobs:
         run: npm run typecheck --workspace=packages/frontend
       - name: Unit tests
         run: npm test --workspace=packages/frontend
-      - name: Build And Deploy
-        id: builddeploy
-        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
+      # The bundle is built HERE, from the tree `npm ci` installed and on the
+      # Node the tests just ran on, and uploaded as-is with skip_app_build.
+      # Until #119 the deploy action built it instead: Oryx ran `npm install`
+      # inside the floating staticappsclient:stable container, re-resolving
+      # the lockfile's ranges on a Node version this repository never chose.
+      # So the code that passed the tests and the code that shipped were two
+      # different builds. ICTU recommendations 2, 3 and 4; RONL Business API
+      # has always built this way.
+      - name: Build frontend for ACC
+        working-directory: packages/frontend
         # Stamps the bundle with which BUILD it is, not just which release —
         # the changelog version is authored at release time, so ACC and
         # production can serve different builds of the same version string.
+        # Vite merges VITE_-prefixed process.env over .env.acceptance.
         #
-        # These sit on the deploy step rather than a build step because there
-        # is no build step: app_build_command hands the build to Oryx inside
-        # the action's own container, and the action forwards the runner's
-        # environment into it. That is also why nothing is derived from git at
-        # build time — .git is not guaranteed to exist in that container, and a
-        # build id that silently fails to resolve is worse than none.
+        # Nothing is derived from git at build time, although the runner now
+        # has .git: the values are injected so that buildInfo.ts has exactly
+        # one source, and a build id that silently fails to resolve is worse
+        # than none.
         #
         # Absent (local builds, forks), src/utils/buildInfo.ts renders
         # 'local build'. On a pull request github.sha is the merge commit
@@ -89,17 +99,22 @@ jobs:
         env:
           VITE_BUILD_SHA: ${{ github.sha }}
           VITE_BUILD_RUN: ${{ github.run_number }}
+        run: |
+          npm run build:acc
+          test -f dist/index.html || { echo "::error::dist/index.html not found after build"; exit 1; }
+      - name: Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BRAVE_BAY_04F351E03 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "/packages/frontend" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "dist" # Output folder RELATIVE to app_location
-          app_build_command: "npm run build:acc" # Explicit ACC build
-      ###### End of Repository/Build Configurations ######
+          # With skip_app_build, app_location is the built output itself.
+          app_location: "/packages/frontend/dist"
+          api_location: ""
+          output_location: ""
+          skip_app_build: true
 
   close_pull_request_job:
     permissions: {}

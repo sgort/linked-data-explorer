@@ -11,10 +11,11 @@
  * The SHA says what was built; the run number distinguishes two builds of
  * identical code. Both are injected by the deploy workflows (see
  * .github/workflows/azure-frontend-{acc,production}.yml). Nothing is derived
- * from git here, and here that is not merely a preference: the Static Web
- * Apps action builds inside its own Oryx container rather than on the runner,
- * so neither `git` nor `.git` is guaranteed to exist at build time. A build id
- * that silently fails to resolve is worse than none — it lies.
+ * from git here. That was a necessity while the Static Web Apps action built
+ * inside its own Oryx container, where `.git` was not guaranteed to exist; the
+ * runner builds since #119, and the rule stays so there is exactly one source
+ * for these values. A build id that silently fails to resolve is worse than
+ * none — it lies.
  */
 
 export interface BuildInfo {
