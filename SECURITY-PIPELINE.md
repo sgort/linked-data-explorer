@@ -210,6 +210,16 @@ than floating. `renovate.json` supplies the other half:
   annotate it as pending.
 - **`vulnerabilityAlerts` with `minimumReleaseAge: null`** — the fast lane. A
   fix for a known advisory must not wait out the cooldown.
+- **`.npmrc` with `min-release-age=14`** — the same cooldown, applied by npm
+  itself, since #119. Renovate's `minimumReleaseAge` covers only the updates
+  Renovate proposes. Lock-file maintenance hands the refresh to npm, which is
+  where the transitive tree moves, and Renovate documents that its own cooldown
+  cannot apply there. For its own update pull requests Renovate uses whichever
+  cutoff is stricter, and if npm answers `ETARGET` on a security fix it retries
+  without the cutoff. Two limits, both measured: `npm ci` ignores the setting on
+  purpose, and npm older than 11.10 ignores it without a warning. The second
+  covers Node 22's bundled npm 10, so `scripts/check-deps.sh` warns about it at
+  dev-server start and push.
 - **Three workspace groups** — `backend`, `frontend`, `ropa-site`. An update
   that breaks one deployable should not be entangled with the other two.
 - **`Azure/static-web-apps-deploy` disabled.** It is pinned to the newest commit
