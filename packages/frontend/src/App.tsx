@@ -90,6 +90,19 @@ const App: React.FC = () => {
     localStorage.setItem('lde_dso_env', dsoEnv);
   }, [dsoEnv]);
 
+  // Changelog, DMN Validator and SHACL Validator are full-width: the 450px
+  // Settings overlay would cover them, so Settings is not available there.
+  // Close it on the way in, so it does not stay "open" out of sight and
+  // reappear on its own when the user moves on (#76).
+  const settingsUnavailable =
+    viewMode === ViewMode.CHANGELOG ||
+    viewMode === ViewMode.VALIDATE ||
+    viewMode === ViewMode.SHACL;
+
+  useEffect(() => {
+    if (settingsUnavailable) setShowSettings(false);
+  }, [settingsUnavailable]);
+
   const handleRunQuery = async () => {
     setIsLoading(true);
     setError(null);
@@ -341,8 +354,15 @@ const App: React.FC = () => {
 
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className={`p-3 rounded-xl transition-all ${showSettings ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`}
-          title="Settings"
+          disabled={settingsUnavailable}
+          className={`p-3 rounded-xl transition-all ${
+            settingsUnavailable
+              ? 'text-slate-600 cursor-not-allowed'
+              : showSettings
+                ? 'text-blue-400'
+                : 'text-slate-400 hover:text-white'
+          }`}
+          title={settingsUnavailable ? 'Settings are not available on this view' : 'Settings'}
         >
           <Settings size={24} />
         </button>
@@ -435,7 +455,7 @@ const App: React.FC = () => {
               only be triggered from Orchestration, so its failures used to set the
               error state correctly and then have nowhere to render. */}
           {error && (
-            <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="absolute top-4 left-4 right-4 z-50 bg-red-50 text-red-700 px-4 py-3 rounded-lg border border-red-200 shadow-lg flex items-start gap-3 animate-fade-in-down motion-reduce:animate-none">
               <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
               <div className="text-sm whitespace-pre-wrap font-medium flex-1">{error}</div>
               <button
@@ -514,205 +534,202 @@ const App: React.FC = () => {
           </div>
 
           {/* Settings Panel Overlay */}
-          {showSettings &&
-            viewMode !== ViewMode.CHANGELOG &&
-            viewMode !== ViewMode.VALIDATE &&
-            viewMode !== ViewMode.SHACL && (
-              <div className="absolute top-0 left-0 z-30 w-[450px] h-full bg-white border-r border-slate-200 shadow-2xl p-5 animate-in slide-in-from-left fade-in duration-200 flex flex-col">
-                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
-                  <h3 className="font-semibold text-slate-700 flex items-center gap-2">
-                    <Settings size={18} /> Configuration
-                  </h3>
-                  <button
-                    onClick={() => setShowSettings(false)}
-                    className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
-                    aria-label="Close settings"
-                  >
-                    &times;
-                  </button>
-                </div>
+          {showSettings && !settingsUnavailable && (
+            <div className="absolute top-0 left-0 z-30 w-[450px] h-full bg-white border-r border-slate-200 shadow-2xl p-5 animate-slide-in-left motion-reduce:animate-none flex flex-col">
+              <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                <h3 className="font-semibold text-slate-700 flex items-center gap-2">
+                  <Settings size={18} /> Configuration
+                </h3>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+                  aria-label="Close settings"
+                >
+                  &times;
+                </button>
+              </div>
 
-                <div className="space-y-4 overflow-y-auto pr-1">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
-                      Active Endpoint URL
-                    </label>
-                    <input
-                      type="text"
-                      value={endpoint}
-                      onChange={(e) => setEndpoint(e.target.value)}
-                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-slate-600"
-                    />
+              <div className="space-y-4 overflow-y-auto pr-1">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">
+                    Active Endpoint URL
+                  </label>
+                  <input
+                    type="text"
+                    value={endpoint}
+                    onChange={(e) => setEndpoint(e.target.value)}
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-slate-600"
+                  />
 
-                    {/* Connection type indicator */}
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-[10px] text-slate-400">
-                        Changes are reset on browser refresh.
-                      </p>
-                      <div
-                        className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium ${
-                          getConnectionType() === 'direct'
-                            ? 'bg-green-50 text-green-700 border border-green-200'
-                            : 'bg-blue-50 text-blue-700 border border-blue-200'
-                        }`}
-                      >
-                        {getConnectionType() === 'direct' ? (
-                          <>
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                              />
-                            </svg>
-                            <span>Direct Connection</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                              />
-                            </svg>
-                            <span>Proxied via Backend</span>
-                          </>
-                        )}
-                      </div>
+                  {/* Connection type indicator */}
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-[10px] text-slate-400">
+                      Changes are reset on browser refresh.
+                    </p>
+                    <div
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium ${
+                        getConnectionType() === 'direct'
+                          ? 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-blue-50 text-blue-700 border border-blue-200'
+                      }`}
+                    >
+                      {getConnectionType() === 'direct' ? (
+                        <>
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                            />
+                          </svg>
+                          <span>Direct Connection</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                          <span>Proxied via Backend</span>
+                        </>
+                      )}
                     </div>
                   </div>
+                </div>
 
-                  <hr className="border-slate-100" />
+                <hr className="border-slate-100" />
 
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Session Endpoints
-                      </label>
-                      <button
-                        onClick={handleResetDefaults}
-                        className="text-[10px] text-blue-500 hover:underline"
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Session Endpoints
+                    </label>
+                    <button
+                      onClick={handleResetDefaults}
+                      className="text-[10px] text-blue-500 hover:underline"
+                    >
+                      Reset Defaults
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 mb-3 max-h-[300px] overflow-y-auto pr-1">
+                    {savedEndpoints.map((ep, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between group p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all"
                       >
-                        Reset Defaults
-                      </button>
-                    </div>
-
-                    <div className="space-y-2 mb-3 max-h-[300px] overflow-y-auto pr-1">
-                      {savedEndpoints.map((ep, idx) => (
                         <div
-                          key={idx}
-                          className="flex items-center justify-between group p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all"
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => {
+                            setEndpoint(ep.url);
+                          }}
                         >
-                          <div
-                            className="flex-1 min-w-0 cursor-pointer"
-                            onClick={() => {
-                              setEndpoint(ep.url);
-                            }}
-                          >
-                            <div className="text-sm font-medium text-slate-700 truncate">
-                              {ep.name}
-                            </div>
-                            <div className="text-[10px] text-slate-400 truncate font-mono">
-                              {ep.url}
-                            </div>
+                          <div className="text-sm font-medium text-slate-700 truncate">
+                            {ep.name}
                           </div>
-                          <div className="flex items-center gap-2">
-                            {endpoint === ep.url && (
-                              <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                                Active
-                              </span>
-                            )}
-                            <button
-                              onClick={() => handleDeleteEndpoint(idx)}
-                              className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Remove Endpoint"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                          <div className="text-[10px] text-slate-400 truncate font-mono">
+                            {ep.url}
                           </div>
                         </div>
-                      ))}
-                    </div>
-
-                    {/* Add New Endpoint Form */}
-                    <div className="bg-slate-50 p-3 rounded border border-slate-200 shadow-inner">
-                      <div className="text-xs font-medium text-slate-500 mb-2">
-                        Add New TripleDB/Jena Endpoint
+                        <div className="flex items-center gap-2">
+                          {endpoint === ep.url && (
+                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                              Active
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleDeleteEndpoint(idx)}
+                            className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove Endpoint"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+
+                  {/* Add New Endpoint Form */}
+                  <div className="bg-slate-50 p-3 rounded border border-slate-200 shadow-inner">
+                    <div className="text-xs font-medium text-slate-500 mb-2">
+                      Add New TripleDB/Jena Endpoint
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Display Name (e.g. Local TripleDB)"
+                      value={newEndpointName}
+                      onChange={(e) => setNewEndpointName(e.target.value)}
+                      className="w-full mb-2 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    />
+                    <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Display Name (e.g. Local TripleDB)"
-                        value={newEndpointName}
-                        onChange={(e) => setNewEndpointName(e.target.value)}
-                        className="w-full mb-2 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                        placeholder="SPARQL Endpoint URL"
+                        value={newEndpointUrl}
+                        onChange={(e) => setNewEndpointUrl(e.target.value)}
+                        className="flex-1 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
                       />
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="SPARQL Endpoint URL"
-                          value={newEndpointUrl}
-                          onChange={(e) => setNewEndpointUrl(e.target.value)}
-                          className="flex-1 border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
-                        />
-                        <button
-                          onClick={handleAddEndpoint}
-                          disabled={!newEndpointName || !newEndpointUrl}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium disabled:opacity-50 transition-colors shadow-sm"
-                        >
-                          <Plus size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <hr className="border-slate-100" />
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wider">
-                      DSO Environment
-                    </label>
-                    <div className="flex gap-2">
                       <button
-                        onClick={() => setDsoEnv('pre')}
-                        className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
-                          dsoEnv === 'pre'
-                            ? 'bg-amber-100 text-amber-800 border-amber-300'
-                            : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
-                        }`}
+                        onClick={handleAddEndpoint}
+                        disabled={!newEndpointName || !newEndpointUrl}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium disabled:opacity-50 transition-colors shadow-sm"
                       >
-                        Pre-production
-                      </button>
-                      <button
-                        onClick={() => setDsoEnv('prod')}
-                        className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
-                          dsoEnv === 'prod'
-                            ? 'bg-green-100 text-green-800 border-green-300'
-                            : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
-                        }`}
-                      >
-                        Production
+                        <Plus size={16} />
                       </button>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Independent of the LDE environment. Persisted across sessions.
-                    </p>
                   </div>
                 </div>
+
+                <hr className="border-slate-100" />
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wider">
+                    DSO Environment
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setDsoEnv('pre')}
+                      className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                        dsoEnv === 'pre'
+                          ? 'bg-amber-100 text-amber-800 border-amber-300'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                      }`}
+                    >
+                      Pre-production
+                    </button>
+                    <button
+                      onClick={() => setDsoEnv('prod')}
+                      className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                        dsoEnv === 'prod'
+                          ? 'bg-green-100 text-green-800 border-green-300'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                      }`}
+                    >
+                      Production
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Independent of the LDE environment. Persisted across sessions.
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
+          )}
 
           {/* Left Editor Pane */}
           {viewMode !== ViewMode.VISUALIZE &&

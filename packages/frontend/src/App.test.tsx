@@ -228,6 +228,39 @@ describe('App — settings panel', () => {
     expect(screen.queryByText('Configuration')).toBeNull();
   });
 
+  // Changelog, DMN Validator and SHACL Validator are full-width views the
+  // 450px panel would cover, so Settings is not available there (#76).
+  test.each(['SHACL Validator', 'DMN Validator', 'Changelog'])(
+    'switching to %s closes Settings, and it does not reopen on the way back',
+    async (view) => {
+      render(<App />);
+      await userEvent.click(screen.getByTitle('Settings'));
+      expect(screen.getByText('Configuration')).toBeTruthy();
+
+      await userEvent.click(screen.getByTitle(view));
+      expect(screen.queryByText('Configuration')).toBeNull();
+
+      await userEvent.click(screen.getByTitle('Graph Visualization'));
+      expect(screen.queryByText('Configuration')).toBeNull();
+    }
+  );
+
+  test.each(['SHACL Validator', 'DMN Validator', 'Changelog'])(
+    'on %s the gear is disabled and says why',
+    async (view) => {
+      render(<App />);
+      await userEvent.click(screen.getByTitle(view));
+
+      const gear = screen.getByTitle('Settings are not available on this view');
+      expect(gear).toBeDisabled();
+      await userEvent.click(gear);
+      expect(screen.queryByText('Configuration')).toBeNull();
+
+      await userEvent.click(screen.getByTitle('Graph Visualization'));
+      expect(screen.getByTitle('Settings')).toBeEnabled();
+    }
+  );
+
   test('adding a new endpoint appends it to the session list and clears the form', async () => {
     render(<App />);
     await userEvent.click(screen.getByTitle('Settings'));
