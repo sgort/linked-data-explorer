@@ -57,13 +57,13 @@ function validatePersonalDataField(item: unknown, index: number): FieldErrors {
  */
 function validateRopaUpsert(body: Record<string, unknown>): FieldErrors {
   const errors: FieldErrors = [];
-  checkField(errors, body, 'bpmnProcessId', { required: true, type: 'string' });
+  checkField(errors, body, 'bpmnProcessId', { required: true, type: 'string', nonBlank: true });
   checkField(errors, body, 'processLevel', {
     required: true,
     type: 'string',
     enum: ['shell', 'subprocess'],
   });
-  checkField(errors, body, 'title', { required: true, type: 'string' });
+  checkField(errors, body, 'title', { required: true, type: 'string', nonBlank: true });
   checkField(errors, body, 'controllerName', { required: true, type: 'string' });
   checkField(errors, body, 'controllerContact', { required: true, type: 'string' });
   checkField(errors, body, 'dpoContact', { type: 'string' });

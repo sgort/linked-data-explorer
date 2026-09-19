@@ -338,7 +338,8 @@ paths:
             field (`id`, `name`, `xml`, `linkedDmnTemplates`, `createdAt`,
             `updatedAt`) missing, any field of the wrong type, or
             `processRole`/`status` outside its CHECK constraint's allowed
-            values. `detail` names every field that failed.
+            values, or `id`, `bpmnProcessId` or `name` empty or only spaces
+            (#156). `detail` names every field that failed.
           content:
             application/problem+json:
               schema:
@@ -713,8 +714,8 @@ paths:
             The request body was not valid JSON (code MALFORMED_BODY; #143),
             or it failed validation (code INVALID_INPUT; #150): a required
             field (`id`, `name`, `schema`, `createdAt`, `updatedAt`) missing,
-            or any field of the wrong type. `detail` names every field that
-            failed.
+            any field of the wrong type, or `id` or `name` empty or only
+            spaces (#156). `detail` names every field that failed.
           content:
             application/problem+json:
               schema:
@@ -935,8 +936,9 @@ paths:
             The request body was not valid JSON (code MALFORMED_BODY; #143),
             or it failed validation (code INVALID_INPUT; #150): a required
             field (`id`, `name`, `schemaVersion`, `zones`, `bindings`,
-            `assets`, `createdAt`, `updatedAt`) missing, or any field of the
-            wrong type. `detail` names every field that failed.
+            `assets`, `createdAt`, `updatedAt`) missing, any field of the
+            wrong type, or `id` or `name` empty or only spaces (#156).
+            `detail` names every field that failed.
           content:
             application/problem+json:
               schema:
@@ -1206,7 +1208,10 @@ paths:
             field missing, any field of the wrong type,
             `processLevel`/`status` outside its CHECK constraint's allowed
             values, or a `personalDataFields` entry with a missing or
-            wrongly-typed field of its own. `detail` names every field that
+            wrongly-typed field of its own, or `title` or `bpmnProcessId`
+            empty or only spaces (#156); other text fields may be empty, so
+            a draft can be saved while it is written. `detail` names every
+            field that
             failed, prefixing a personal-data field's with its array index
             (e.g. `personalDataFields[0].formId`).
           content:

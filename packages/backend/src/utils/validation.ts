@@ -76,6 +76,10 @@ export interface FieldSpec {
   /** A database CHECK constraint's allowed values. Checked only when the
    *  field is present (and, if `type` is also given, only when it matched). */
   enum?: readonly string[];
+  /** For a string that identifies or names a record: refuse an empty or
+   *  whitespace-only value, which the column's NOT NULL would otherwise accept
+   *  (#156). Checked only when the field is present and is a string. */
+  nonBlank?: boolean;
 }
 
 /**
@@ -99,6 +103,11 @@ export function checkField(
 
   if (spec.type && !matchesType(value, spec.type)) {
     errors.push(`${field} must be ${describeType(spec.type)}`);
+    return value;
+  }
+
+  if (spec.nonBlank && typeof value === 'string' && value.trim() === '') {
+    errors.push(`${field} must not be blank`);
     return value;
   }
 

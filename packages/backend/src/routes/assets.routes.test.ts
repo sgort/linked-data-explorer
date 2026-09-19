@@ -110,6 +110,19 @@ describe('BPMN collection', () => {
     });
   });
 
+  test('POST /bpmn refuses a blank id or bpmnProcessId or name (#156)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/bpmn')
+      .send({ ...FRONTEND_BPMN_BODY, id: '  ', bpmnProcessId: '  ', name: '  ' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: 'id must not be blank; bpmnProcessId must not be blank; name must not be blank',
+    });
+    expect(svc.upsertBpmn).not.toHaveBeenCalled();
+  });
+
   test('POST /bpmn returns 400 naming every missing required field (#150)', async () => {
     const res = await request(makeApp()).post('/v1/assets/bpmn').send({ id: 'p1' });
 
@@ -397,6 +410,19 @@ describe('forms', () => {
     expect(svc.upsertForm).toHaveBeenCalledWith(FRONTEND_FORM_BODY);
   });
 
+  test('POST /forms refuses a blank id or name (#156)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/forms')
+      .send({ ...FRONTEND_FORM_BODY, id: '  ', name: '  ' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: 'id must not be blank; name must not be blank',
+    });
+    expect(svc.upsertForm).not.toHaveBeenCalled();
+  });
+
   test('POST /forms returns 400 naming every missing required field (#150)', async () => {
     const res = await request(makeApp()).post('/v1/assets/forms').send({});
 
@@ -497,6 +523,19 @@ describe('documents', () => {
 
     expect(res.body).toEqual({ success: true });
     expect(svc.upsertDocument).toHaveBeenCalledWith(FRONTEND_DOCUMENT_BODY);
+  });
+
+  test('POST /documents refuses a blank id or name (#156)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/documents')
+      .send({ ...FRONTEND_DOCUMENT_BODY, id: '  ', name: '  ' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: 'id must not be blank; name must not be blank',
+    });
+    expect(svc.upsertDocument).not.toHaveBeenCalled();
   });
 
   test('POST /documents returns 400 naming every missing required field (#150)', async () => {

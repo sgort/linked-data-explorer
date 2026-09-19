@@ -112,18 +112,35 @@ linked-data-explorer/
 │   │   ├── .env.acceptance
 │   │   └── .env.production
 │   │
-│   └── backend/                    # Node.js/Express orchestration API
-│       ├── src/
-│       │   ├── routes/             # /v1/dmns, /v1/chains, /v1/health
-│       │   ├── services/           # SPARQL, Operaton, orchestration
-│       │   ├── middleware/
-│       │   └── utils/
-│       └── .env.example
+│   ├── backend/                    # Node.js/Express orchestration API
+│   │   ├── src/
+│   │   │   ├── routes/             # /v1/dmns, /v1/chains, /v1/health
+│   │   │   ├── services/           # SPARQL, Operaton, orchestration
+│   │   │   ├── middleware/
+│   │   │   └── utils/
+│   │   └── .env.example
+│   │
+│   └── ropa-site/                  # Public ROPA register (static, no build step)
 │
 ├── examples/ttl/                   # Test DMN data (6 models)
 ├── .github/workflows/              # CI/CD pipelines (acc + production)
 └── package.json                    # Workspace root
 ```
+
+---
+
+## Running the public ROPA site locally
+
+`packages/ropa-site` is a static page that reads `GET /v1/ropa/public` from a backend chosen by the hostname it is served on. **Serve it on localhost; do not open `index.html` as a file.** Opened from disk, the page has no hostname and talks to the **production** backend.
+
+With the LDE backend running on port 3001:
+
+```bash
+cd packages/ropa-site
+npx serve . -l 5500
+```
+
+Then open `http://localhost:5500`. The page calls `http://localhost:3001`. Port 5500 is used because the LDE frontend already takes 3000. See [`packages/ropa-site/README.md`](packages/ropa-site/README.md) for the hostname-to-backend table and deployment.
 
 ---
 

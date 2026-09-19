@@ -41,9 +41,9 @@ const dbRequired = (req: Request, res: Response): boolean => {
  */
 function validateBpmnUpsert(body: Record<string, unknown>): FieldErrors {
   const errors: FieldErrors = [];
-  checkField(errors, body, 'id', { required: true, type: 'string' });
-  checkField(errors, body, 'bpmnProcessId', { type: 'string' });
-  checkField(errors, body, 'name', { required: true, type: 'string' });
+  checkField(errors, body, 'id', { required: true, type: 'string', nonBlank: true });
+  checkField(errors, body, 'bpmnProcessId', { type: 'string', nonBlank: true });
+  checkField(errors, body, 'name', { required: true, type: 'string', nonBlank: true });
   checkField(errors, body, 'description', { type: 'string' });
   checkField(errors, body, 'xml', { required: true, type: 'string' });
   checkField(errors, body, 'processRole', {
@@ -67,8 +67,8 @@ function validateBpmnUpsert(body: Record<string, unknown>): FieldErrors {
  */
 function validateFormUpsert(body: Record<string, unknown>): FieldErrors {
   const errors: FieldErrors = [];
-  checkField(errors, body, 'id', { required: true, type: 'string' });
-  checkField(errors, body, 'name', { required: true, type: 'string' });
+  checkField(errors, body, 'id', { required: true, type: 'string', nonBlank: true });
+  checkField(errors, body, 'name', { required: true, type: 'string', nonBlank: true });
   checkField(errors, body, 'description', { type: 'string' });
   checkField(errors, body, 'schema', { required: true, type: 'object' });
   checkField(errors, body, 'status', { type: 'string' });
@@ -89,8 +89,8 @@ function validateFormUpsert(body: Record<string, unknown>): FieldErrors {
  */
 function validateDocumentUpsert(body: Record<string, unknown>): FieldErrors {
   const errors: FieldErrors = [];
-  checkField(errors, body, 'id', { required: true, type: 'string' });
-  checkField(errors, body, 'name', { required: true, type: 'string' });
+  checkField(errors, body, 'id', { required: true, type: 'string', nonBlank: true });
+  checkField(errors, body, 'name', { required: true, type: 'string', nonBlank: true });
   checkField(errors, body, 'description', { type: 'string' });
   checkField(errors, body, 'processKey', { type: 'string' });
   checkField(errors, body, 'serviceId', { type: 'string' });
