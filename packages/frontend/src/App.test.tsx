@@ -228,6 +228,19 @@ describe('App — settings panel', () => {
     expect(screen.queryByText('Configuration')).toBeNull();
   });
 
+  // Every view routes its queries through the backend now (#161), including
+  // the SPARQL editor (QUERY, the default view) which used to fetch a SPARQL
+  // endpoint directly from the browser and showed a green "Direct Connection"
+  // badge for it. The badge must say so, reusing the same "Proxied via
+  // Backend" label/style Orchestration already used.
+  test('shows "Proxied via Backend", not "Direct Connection", for the SPARQL editor', async () => {
+    render(<App />);
+    await userEvent.click(screen.getByTitle('Settings'));
+
+    expect(screen.getByText('Proxied via Backend')).toBeTruthy();
+    expect(screen.queryByText('Direct Connection')).toBeNull();
+  });
+
   // Changelog, DMN Validator and SHACL Validator are full-width views the
   // 450px panel would cover, so Settings is not available there (#76).
   test.each(['SHACL Validator', 'DMN Validator', 'Changelog'])(

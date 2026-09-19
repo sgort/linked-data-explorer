@@ -47,7 +47,7 @@ const OrganizationsView: React.FC<OrganizationsViewProps> = ({ endpoint }) => {
     setError(null);
 
     try {
-      const result = await executeSparqlQuery(ORGANIZATIONS_QUERY, endpoint);
+      const result = await executeSparqlQuery(endpoint, ORGANIZATIONS_QUERY);
       const orgs = parseOrganizations(result);
       setOrganizations(orgs);
     } catch (err) {

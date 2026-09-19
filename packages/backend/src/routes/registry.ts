@@ -6,6 +6,7 @@
 
 import type { Router } from 'express';
 import healthRoutes from './health.routes';
+import cspReportsRoutes from './cspReports.routes';
 import dmnRoutes from './dmn.routes';
 import chainRoutes from './chain.routes';
 import templateRoutes from './template.routes';
@@ -63,6 +64,12 @@ export const routeRegistry: ReadonlyArray<RouteDefinition> = [
     mount: '/v1/cache',
     router: cacheRoutes,
     summary: 'DMN cache statistics and invalidation',
+    category: 'Health & monitoring',
+  },
+  {
+    mount: '/v1/csp-reports',
+    router: cspReportsRoutes,
+    summary: 'Content-Security-Policy violation report collector',
     category: 'Health & monitoring',
   },
 

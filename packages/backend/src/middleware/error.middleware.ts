@@ -4,9 +4,12 @@ import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { sendProblem } from '../utils/problem';
 
 /**
- * The `express.json`/`express.urlencoded` body-size limit (see `index.ts`),
- * and what the 413 `detail` below names as the limit a caller went over.
- * One constant so the two can never drift apart.
+ * The app-wide `express.json`/`express.urlencoded` body-size limit
+ * (see `index.ts`). Named in the 413 `detail` below only as a fallback, when
+ * a body-parser error carries no `limit` of its own — a route with its own,
+ * smaller limit (e.g. the CSP report collector's 64 kb, #161) throws an
+ * error whose `limit` names *that* limit instead, and the 413 names it, not
+ * this constant.
  */
 export const BODY_SIZE_LIMIT = '10mb';
 
@@ -38,6 +41,22 @@ interface BodyParserError {
   status?: number;
   statusCode?: number;
   message?: string;
+  /** The limit (bytes) body-parser/raw-body actually enforced for entity.too.large. */
+  limit?: number;
+}
+
+/**
+ * A byte count as a short, human-readable size ("16 kB", "10 MB"), for the
+ * 413 detail below. Binary units (1024, not 1000) since that is what
+ * body-parser's own `limit` option means (bytes.parse('16kb') === 16384).
+ */
+function formatBytes(bytes: number): string {
+  const format = (value: number, unit: string) =>
+    `${Number.isInteger(value) ? value : value.toFixed(1)} ${unit}`;
+
+  if (bytes >= 1024 * 1024) return format(bytes / (1024 * 1024), 'MB');
+  if (bytes >= 1024) return format(bytes / 1024, 'kB');
+  return `${bytes} B`;
 }
 
 function isBodyParserError(err: unknown): err is BodyParserError {
@@ -63,13 +82,19 @@ function sendBodyParserProblem(res: Response, req: Request, err: BodyParserError
         detail: 'The request body could not be parsed.',
       });
       return;
-    case 'entity.too.large':
+    case 'entity.too.large': {
+      // body-parser/raw-body sets `limit` (bytes) to whatever this specific
+      // parser was actually configured with -- BODY_SIZE_LIMIT is only the
+      // app-wide default (index.ts) and would misreport a route with its own
+      // smaller limit (e.g. the CSP report collector's 16 kb, #161).
+      const limit = typeof err.limit === 'number' ? formatBytes(err.limit) : BODY_SIZE_LIMIT;
       sendProblem(res, req, {
         status: 413,
         code: 'PAYLOAD_TOO_LARGE',
-        detail: `The request body exceeds the ${BODY_SIZE_LIMIT} limit.`,
+        detail: `The request body exceeds the ${limit} limit.`,
       });
       return;
+    }
     default: {
       // charset.unsupported / encoding.unsupported (415), request.aborted /
       // request.size.invalid (400), parameters.too.many (413, urlencoded
