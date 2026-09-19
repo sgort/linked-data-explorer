@@ -25,6 +25,9 @@ on:
       - '.github/workflows/azure-backend-acc.yml'
       - 'package-lock.json'
       - 'package.json'
+      # .nvmrc sets the Node version this workflow builds, tests and ships on.
+      # Without it here, a Node bump built and deployed nothing (#119).
+      - '.nvmrc'
   workflow_dispatch:
 
 # Serialise deployments to one environment. Keyed on the pull-request
@@ -75,7 +78,7 @@ jobs:
           # moved 338 packages, 82 of them runtime, and CI ran audit and scan alone.
           # A backend-only bump reaches this workflow too, because the lockfile is
           # shared and a hoisted dependency can move under either workspace. #97.
-          PATTERN: '^(packages/backend/|\.github/workflows/azure-backend-acc\.yml$|package-lock\.json$|package\.json$)'
+          PATTERN: '^(\.nvmrc$|packages/backend/|\.github/workflows/azure-backend-acc\.yml$|package-lock\.json$|package\.json$)'
         run: |
           if [ "$EVENT" != "pull_request" ]; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"

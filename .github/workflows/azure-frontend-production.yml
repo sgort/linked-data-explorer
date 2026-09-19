@@ -12,6 +12,9 @@ on:
       # workflow and #97.
       - 'package-lock.json'
       - 'package.json'
+      # .nvmrc sets the Node version this workflow builds, tests and ships on.
+      # Without it here, a Node bump built and deployed nothing (#119).
+      - '.nvmrc'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
@@ -21,6 +24,7 @@ on:
       - '.github/workflows/azure-frontend-production.yml'
       - 'package-lock.json'
       - 'package.json'
+      - '.nvmrc'
 
 # Same serialisation as the acc workflow, but production runs QUEUE
 # rather than cancel: interrupting a live production deployment to
