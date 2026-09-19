@@ -205,11 +205,11 @@ jobs:
           # the hoisted one would be installed under packages/backend/node_modules,
           # and would not reach the artifact from here. None does today; fail
           # rather than ship without it on the day one does. Only real package
-          # entries count: on the runner npm leaves the directory in place with
-          # hidden entries in it (npm bookkeeping such as .bin), which are not
-          # dependencies -- the first version of this check failed on exactly
-          # that. Its contents are logged either way, so the next surprise names
-          # itself.
+          # entries count, not the directory: on the runner npm 10 leaves it
+          # behind EMPTY, and the first version of this check failed a correct
+          # install on that alone. Hidden entries are ignored too, since npm
+          # bookkeeping such as .bin is not a dependency. Its contents are logged
+          # either way, so the next surprise names itself.
           nested="$stage/packages/backend/node_modules"
           if [ -d "$nested" ]; then
             echo "packages/backend/node_modules holds: $(ls -A "$nested" | xargs)"
