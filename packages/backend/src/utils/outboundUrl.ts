@@ -36,10 +36,14 @@ for (const [net, prefix] of [
 // family's `check()` exact. IPv4-mapped, IPv4-compatible, NAT64 and 6to4
 // addresses are decoded to their embedded IPv4 below instead and checked
 // against `internalV4`.
+// `::/128` and `::1/128` are deliberately NOT listed here: the IPv4-compatible
+// decoding above (`embeddedIPv4`) turns `::` and `::1` into `0.0.0.0` and
+// `0.0.0.1`, which `internalV4` already refuses -- an entry here could never
+// match, since `isInternalAddress` sends any address with an embedded IPv4 to
+// `internalV4` before it ever reaches this list. See the tests proving `::`
+// and `::1` are still classified as internal.
 const internalV6 = new BlockList();
 for (const [net, prefix] of [
-  ['::', 128],
-  ['::1', 128],
   ['64:ff9b::', 96],
   ['fc00::', 7],
   ['fe80::', 10],

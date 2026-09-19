@@ -144,6 +144,16 @@ vi.mock('../../services/documentService', () => ({
   DocumentService: { getTemplates: (...args: unknown[]) => getTemplates(...args) },
 }));
 
+// Mocked directly (#165) rather than left to hit `global.fetch`, which
+// several deploy tests below reassign per-test for the deploy POST itself —
+// sharing it with getDeployTarget's own fetch would make one call's mock
+// leak into the other, and its module-level cache would then pin whichever
+// resolved first for the rest of this file's tests.
+const getDeployTarget = vi.fn();
+vi.mock('../../services/deployTargetService', () => ({
+  getDeployTarget: (...args: unknown[]) => getDeployTarget(...args),
+}));
+
 import BpmnCanvas from './BpmnCanvas';
 
 const SIMPLE_XML =
@@ -154,6 +164,7 @@ afterEach(() => {
   getProcesses.mockReset();
   getForms.mockReset();
   getTemplates.mockReset();
+  getDeployTarget.mockReset();
   vi.restoreAllMocks();
 });
 
@@ -163,6 +174,7 @@ async function renderCanvas(
     forms?: unknown[];
     templates?: unknown[];
     processes?: unknown[];
+    deployTarget?: string | null;
     onSave?: (xml: string) => void | boolean | Promise<void | boolean>;
     onClose?: () => void;
     onElementSelect?: (element: unknown) => void;
@@ -173,6 +185,7 @@ async function renderCanvas(
   getProcesses.mockReturnValue(options.processes ?? []);
   getForms.mockReturnValue(options.forms ?? []);
   getTemplates.mockReturnValue(options.templates ?? []);
+  getDeployTarget.mockResolvedValue(options.deployTarget ?? null);
   const onSave = options.onSave ?? vi.fn();
   const onClose = options.onClose ?? vi.fn();
   const onElementSelect = options.onElementSelect ?? vi.fn();
@@ -441,6 +454,20 @@ describe('BpmnCanvas — deploy modal', () => {
     expect(screen.queryByText(/^Username/)).toBeNull();
     expect(screen.queryByText(/^Password/)).toBeNull();
     expect(document.body.textContent).toContain("Deploys to the backend's configured Operaton.");
+  });
+
+  // #165: the modal names the Operaton the backend actually deploys to,
+  // fetched from the backend, rather than a frontend build setting.
+  test('shows the Operaton fetched from the backend once it resolves', async () => {
+    await renderCanvas({ deployTarget: 'https://operaton.example.org/engine-rest' });
+    await userEvent.click(screen.getByText('Deploy'));
+
+    await screen.findByText('Deploy to Operaton');
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain(
+        'Deploys to https://operaton.example.org/engine-rest.'
+      )
+    );
   });
 
   test('warns when no ronl:ropaRef is present in the process XML', async () => {
