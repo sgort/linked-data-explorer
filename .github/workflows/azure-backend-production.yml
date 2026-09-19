@@ -158,9 +158,50 @@ jobs:
           echo "SHACL shapes:"
           ls -R deploy/shapes/
           
-          # Install production dependencies in deploy folder
+          # Install production dependencies FROM THE LOCKFILE (#119). This used
+          # to be `npm install --production` in deploy/, which had package.json
+          # and no lockfile, so it re-resolved every caret range at deploy time:
+          # the artifact could ship versions no test ran against and no lockfile
+          # records, with no cooldown. ICTU recommendations 3 and 4.
+          #
+          # The only lockfile is the workspace root's, and `npm ci` in deploy/
+          # cannot use it: it describes every workspace. So the install runs in a
+          # staging copy holding the root manifest and lockfile and the backend's
+          # manifest alone, filtered to the backend workspace with production
+          # dependencies only. `npm ci` refuses a lockfile that does not satisfy
+          # the manifests, rather than resolving around it. Measured before this
+          # landed: 349 packages, every one at the root lockfile's version and
+          # integrity hash. The frontend's manifest is left out on purpose -- with
+          # it present, npm also installs four of the frontend's packages.
+          #
+          # Scripts are NOT ignored: libxmljs2 is native and builds or fetches
+          # its binary in its install script. The root postinstall needs its
+          # script copied in; the root prepare is `husky || true`, and husky is
+          # a devDependency, so it no-ops.
+          stage="$RUNNER_TEMP/backend-prod"
+          rm -rf "$stage"
+          mkdir -p "$stage/packages/backend" "$stage/scripts"
+          cp ../../package.json ../../package-lock.json "$stage/"
+          cp ../../scripts/write-deps-marker.mjs "$stage/scripts/"
+          cp package.json "$stage/packages/backend/"
+          (cd "$stage" && npm ci --omit=dev --workspace=@linked-data-explorer/backend --no-audit --no-fund)
+
+          # A production dependency the backend needs at a version other than
+          # the hoisted one would be installed under packages/backend/node_modules,
+          # and would not reach the artifact from here. None does today; fail
+          # rather than ship without it on the day one does.
+          if [ -d "$stage/packages/backend/node_modules" ]; then
+            echo "❌ Backend production dependencies installed un-hoisted; the packaging below would drop them:"
+            ls "$stage/packages/backend/node_modules"
+            exit 1
+          fi
+          # The workspace's own link, pointing back into the staging copy.
+          rm -rf "$stage/node_modules/@linked-data-explorer"
+          cp -r "$stage/node_modules" deploy/
+          node -e "require('./deploy/node_modules/libxmljs2')" && echo "libxmljs2 native binding loads"
+          echo "Production dependencies: $(ls deploy/node_modules | wc -l) top-level entries"
+
           cd deploy
-          npm install --production --omit=dev
           
           # Tell Azure not to rebuild (we already built)
           echo "[config]" > .deployment
