@@ -445,11 +445,10 @@ router.post('/evaluate/:decisionKey', async (req: Request, res: Response) => {
  * GET /v1/dmns/:identifier/xml
  * Fetch the deployed DMN XML content from Operaton.
  *
- * Mirrors the handler in `dmn-xml.routes.ts` (still mounted at the legacy
- * `/api/dmns` path in `index.ts` for backward compatibility) but exposes the
- * route under the canonical `/v1/dmns` mount via the registry, and uses the
- * `:identifier` parameter name to match the convention of the surrounding
- * routes. The `identifier` value is passed verbatim as the Operaton decision
+ * Served under the canonical `/v1/dmns` mount via the registry, and at the
+ * legacy `/api/dmns` alias, which adds the `Deprecation` and successor `Link`
+ * headers (see routes/index.ts). Uses the `:identifier` parameter name to match
+ * the convention of the surrounding routes. The `identifier` value is passed verbatim as the Operaton decision
  * definition key — for RONL DMNs deployed via this platform these are
  * equivalent by convention.
  *

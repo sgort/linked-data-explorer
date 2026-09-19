@@ -1,5 +1,4 @@
 import express, { Express } from 'express';
-import dmnXmlRoutes from './routes/dmn-xml.routes';
 import helmet from 'helmet';
 import { config } from './utils/config';
 import logger from './utils/logger';
@@ -19,11 +18,6 @@ app.use(helmet());
 // apply CORS to both normal requests and preflight
 app.use(corsMiddleware);
 app.options('*', corsMiddleware);
-
-// Register /api/dmns XML route BEFORE body-parsing middleware.
-// dmnXmlRoutes streams raw XML (Content-Type: application/xml), so it must not
-// pass through express.json(), which would attempt to parse the body as JSON.
-app.use('/api/dmns', dmnXmlRoutes);
 
 // Body parsing middleware — only applied to routes registered after this point.
 // The 10 MB limit accommodates large BPMN/DMN XML payloads submitted for deployment.
