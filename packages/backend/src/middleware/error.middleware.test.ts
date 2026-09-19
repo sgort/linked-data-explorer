@@ -136,7 +136,7 @@ describe('errorHandler', () => {
     );
   });
 
-  test('entity.too.large (body over the limit) is 413 PAYLOAD_TOO_LARGE naming the limit (#143)', () => {
+  test('entity.too.large falls back to BODY_SIZE_LIMIT when the error carries no limit (#143)', () => {
     process.env.NODE_ENV = 'test';
     const { req, res } = mockReqRes();
     const err = Object.assign(new Error('request entity too large'), {
@@ -150,8 +150,34 @@ describe('errorHandler', () => {
     expect(res.status).toHaveBeenCalledWith(413);
     const response = (res.json as jest.Mock).mock.calls[0][0];
     expect(response.code).toBe('PAYLOAD_TOO_LARGE');
-    expect(response.detail).toContain('10mb');
+    expect(response.detail).toContain(BODY_SIZE_LIMIT);
   });
+
+  test.each([
+    [16384, '16 kB'], // the CSP report collector's route-scoped limit (#161)
+    [10 * 1024 * 1024, '10 MB'], // the app-wide default (BODY_SIZE_LIMIT)
+    [500, '500 B'], // below 1 kB
+    [1536, '1.5 kB'], // not a whole number of kB
+  ])(
+    'entity.too.large names the error\'s own %i-byte limit as "%s" when present (#161)',
+    (limit, formatted) => {
+      process.env.NODE_ENV = 'test';
+      const { req, res } = mockReqRes();
+      const err = Object.assign(new Error('request entity too large'), {
+        status: 413,
+        statusCode: 413,
+        type: 'entity.too.large',
+        limit,
+      });
+
+      errorHandler(err, req, res, jest.fn());
+
+      expect(res.status).toHaveBeenCalledWith(413);
+      const response = (res.json as jest.Mock).mock.calls[0][0];
+      expect(response.code).toBe('PAYLOAD_TOO_LARGE');
+      expect(response.detail).toBe(`The request body exceeds the ${formatted} limit.`);
+    }
+  );
 
   test.each([
     ['charset.unsupported', 415, 'unsupported charset "X-MADE-UP"'],
@@ -197,9 +223,11 @@ describe('errorHandler mounted in a real app (#143)', () => {
       code: 'PAYLOAD_TOO_LARGE',
       title: 'Request body too large',
     });
-    // The handler always names BODY_SIZE_LIMIT (the production limit), not
-    // this test app's own tiny one -- it has no way to know a caller's.
-    expect(res.body.detail).toContain(BODY_SIZE_LIMIT);
+    // body-parser/raw-body sets `limit` to whatever this parser was actually
+    // configured with (100 bytes here, from express.json({ limit: '100b' })
+    // above), so the handler names that, not the app-wide BODY_SIZE_LIMIT
+    // (#161) -- this app's parser has its own limit, not the production one.
+    expect(res.body.detail).toBe('The request body exceeds the 100 B limit.');
   });
 
   test('a malformed body answers 400 MALFORMED_BODY through the real handler', async () => {

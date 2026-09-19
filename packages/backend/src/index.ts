@@ -21,8 +21,12 @@ app.options('*', corsMiddleware);
 
 // Body parsing middleware — only applied to routes registered after this point.
 // The 10 MB limit accommodates large BPMN/DMN XML payloads submitted for deployment.
-// BODY_SIZE_LIMIT also drives the 413 `detail` the error handler sends when a
-// body goes over it — see middleware/error.middleware.ts.
+// A route with its own, smaller body-size limit (e.g. the CSP report
+// collector's 64 kb, cspReports.routes.ts) still lands on the same error
+// handler; the handler reads each body-parser error's own `limit` for the
+// 413 `detail`, so BODY_SIZE_LIMIT is this app-wide default's value and the
+// handler's fallback when an error carries no `limit` of its own — see
+// middleware/error.middleware.ts.
 app.use(express.json({ limit: BODY_SIZE_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: BODY_SIZE_LIMIT }));
 

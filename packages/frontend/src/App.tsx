@@ -71,16 +71,6 @@ const App: React.FC = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
-  /**
-   * Returns 'proxied' for the Orchestration view because DMN discovery and chain execution
-   * must go through the Express backend (which holds Operaton credentials, caches SPARQL
-   * results, and avoids CORS restrictions imposed by TriplyDB on browser-to-API calls).
-   * All other views query SPARQL endpoints directly from the browser.
-   */
-  const getConnectionType = (): 'direct' | 'proxied' => {
-    return viewMode === ViewMode.ORCHESTRATION ? 'proxied' : 'direct';
-  };
-
   // Save viewMode to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem(VIEWMODE_STORAGE_KEY, viewMode);
@@ -566,48 +556,23 @@ const App: React.FC = () => {
                     <p className="text-[10px] text-slate-400">
                       Changes are reset on browser refresh.
                     </p>
-                    <div
-                      className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium ${
-                        getConnectionType() === 'direct'
-                          ? 'bg-green-50 text-green-700 border border-green-200'
-                          : 'bg-blue-50 text-blue-700 border border-blue-200'
-                      }`}
-                    >
-                      {getConnectionType() === 'direct' ? (
-                        <>
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                            />
-                          </svg>
-                          <span>Direct Connection</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                          </svg>
-                          <span>Proxied via Backend</span>
-                        </>
-                      )}
+                    {/* Every query goes through the backend (#161): sparqlService.ts sends
+                        it to POST /v1/triplydb/query, so connect-src can name one origin. */}
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                      <span>Proxied via Backend</span>
                     </div>
                   </div>
                 </div>

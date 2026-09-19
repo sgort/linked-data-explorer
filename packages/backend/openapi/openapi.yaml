@@ -1440,6 +1440,83 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /csp-reports:
+    post:
+      operationId: collectCspReports
+      tags: [Health & monitoring]
+      summary: Collect Content-Security-Policy violation reports
+      description: >-
+        The frontend's build-time-generated `Content-Security-Policy-Report-Only`
+        header (packages/frontend/vite/cspPlugin.ts) names this endpoint as
+        both `report-uri` and the `report-to` group `csp` (#161), so a
+        browser sends every policy violation here in one of two shapes:
+        the legacy `report-uri` body (`application/csp-report`, one report:
+        `{ "csp-report": { ... } } `) or the newer Reporting API body
+        (`application/reports+json`, an array of `{ "type": "csp-violation",
+        "body": { ... } }`; any other `type` in the array is ignored rather
+        than rejected). Each report is logged once at `warn`, with a fixed
+        set of fields truncated to a sane length, and at most 20 reports are
+        logged from one request. Nothing is persisted or returned to the
+        caller.
+      requestBody:
+        required: true
+        content:
+          application/csp-report:
+            schema:
+              type: object
+              required: [csp-report]
+              properties:
+                csp-report:
+                  type: object
+                  description: >-
+                    The legacy `report-uri` violation report. Field names are
+                    as the User Agent sends them (hyphenated); unrecognised
+                    fields are ignored.
+          application/reports+json:
+            schema:
+              type: array
+              items:
+                type: object
+                required: [type, body]
+                properties:
+                  type:
+                    type: string
+                    examples: [csp-violation]
+                  body:
+                    type: object
+                    description: >-
+                      The Reporting API violation report body. Field names
+                      are as the User Agent sends them (camelCase);
+                      unrecognised fields are ignored.
+      responses:
+        '204':
+          description: The report (or reports) were accepted; zero reports is also a 204.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+        '400':
+          description: >-
+            The body's Content-Type matched one of the two accepted media
+            types but its shape was not a report (code INVALID_INPUT), or
+            the body was not valid JSON (code MALFORMED_BODY; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          description: The request body was over the 64 KB limit (code PAYLOAD_TOO_LARGE; #143).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '415':
+          description: >-
+            Content-Type was neither `application/csp-report` nor
+            `application/reports+json` (no `code`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /norms:
     get:
       operationId: listNorms
