@@ -317,14 +317,31 @@ here is enforced by being written down. It is written down because otherwise the
 only account of what gates `acc` and `main` lives in a settings page nobody reads
 until something is already stuck.
 
-| Ruleset                 | Id         | Ref               | Required checks | Merge methods |
-| ----------------------- | ---------- | ----------------- | --------------- | ------------- |
-| `acc supply-chain gate` | `21794157` | `refs/heads/acc`  | `audit`, `scan` | merge only    |
-| `main promotion gate`   | `22630654` | `refs/heads/main` | `audit`, `scan` | merge only    |
+| Ruleset                 | Id         | Ref               | Required checks                                                                      | Merge methods |
+| ----------------------- | ---------- | ----------------- | ------------------------------------------------------------------------------------ | ------------- |
+| `acc supply-chain gate` | `21794157` | `refs/heads/acc`  | `audit`, `scan`, `deploy`, `Build and Deploy Frontend`, `Build and Deploy ROPA Site` | merge only    |
+| `main promotion gate`   | `22630654` | `refs/heads/main` | `audit`, `scan`                                                                      | merge only    |
 
 `audit` is `zizmor.yml`; `scan` is `semgrep.yml`, added to both on 2026-09-11.
 Both workflows trigger on `pull_request` with no branch or path filter, which is
 what makes them safe to require: neither can go missing on any base.
+
+The three build checks on `acc` were added for #119, so a red build or test run
+blocks a merge — a dependency pull request above all. They are the jobs of
+`azure-backend-acc.yml`, `azure-frontend-acc.yml` and `azure-ropa-site-acc.yml`,
+whose `pull_request` triggers used to be path-filtered. A workflow its trigger
+filters out reports no check, and a required check that never reports blocks
+forever, so the filter moved into a `changes` job in each workflow (#184): the
+build job is skipped on an unrelated pull request, and a skipped job counts as
+passed. If `changes` fails, the build runs anyway. Two things follow:
+
+- **Required checks match by job name.** Both deploy jobs used to be called
+  `Build and Deploy Job`; they were renamed so each can be required on its own.
+  Rename one of these jobs and the ruleset waits for a name that no longer
+  reports. Update the ruleset in the same change.
+- **`main` requires `audit` and `scan` only, deliberately.** The backend
+  production workflow has no `pull_request` trigger (#46), and promotion carries
+  commits that already passed these checks on `acc`.
 
 **The two rulesets differ in one parameter, deliberately.**
 `require_extra_approval_for_unattributed_changes` is `true` on `acc` and `false`

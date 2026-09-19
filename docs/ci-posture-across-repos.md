@@ -68,7 +68,8 @@ Explorer's rows were re-verified the same day.
 | ----------------------------- | --------------------- | ------------------------- | ------------------------- |
 | **Build id in the changelog** | ✅                    | ✅                        | ✅ exercised in PROD      |
 | **check-supply-chain**        | ✅ blocking           | ✅ blocking               | ✅ blocking               |
-| **Semgrep Code + SCA**        | ✅ required           | ✅ required               | ⚠️ runs, not required, 25 |
+| **Semgrep Code + SCA**        | ✅ required           | ✅ required               | ✅ required on `acc`, 25  |
+| **Build checks required**     | ✅ `acc`, #119        | ✅ `acc`, #119            | ✅ `acc`, #119            |
 | **Per-file 80% branch floor** | ✅ 1 runner           | ✅ 2 runners              | ✅ 5 runners              |
 | **Formatting checked in CI**  | ✅                    | ✅                        | ✅                        |
 | **Tests run before merge**    | ✅                    | ✅                        | ✅                        |
@@ -701,7 +702,9 @@ findings to **25**, with no manifest change:
 
 The same count stood on `e187086` on 15 September. Open Dependabot alerts went
 from 154 to 7, and none of the seven can be closed by a routine update. The 16 Code
-findings are untouched, and `scan` is still not required.
+findings are untouched. `scan` was made a required check on `acc` on 19 September
+2026, under #119, with the 25 still to triage: none is policy-blocking, so it
+blocks only new blocking findings and a scan that cannot run.
 
 Three things differed when it was ported to Linked Data Explorer, a monorepo:
 
@@ -1874,7 +1877,7 @@ point where that is now noticed rather than discovered six months later.
 
 | repository                       | issue | what                                                                                                                                                                     |
 | -------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ronl-business-api                | —     | Semgrep `scan` runs but is not required; 25 findings to triage after lock-file maintenance: 9 Supply Chain, none reachable, 16 Code                                      |
+| ronl-business-api                | —     | Semgrep `scan` is required on `acc` since #119; 25 findings still to triage after lock-file maintenance: 9 Supply Chain, none reachable, 16 Code                         |
 | ronl-business-api                | #34   | the backend deploy bundle's dependencies come from `npm install`, with no lockfile; v2026.09.8 went to acceptance that way                                               |
 | ronl-business-api                | #35   | the backend deploy is a hand-run script, outside every gate on this page                                                                                                 |
 | ronl-business-api                | #37   | PR previews cannot reach the backend, so they only prove pages render                                                                                                    |
