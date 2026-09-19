@@ -214,7 +214,7 @@ function escapeXml(unsafe: string): string {
  * Fetch DMN XML from backend
  */
 async function fetchDmnXml(definitionKey: string): Promise<string> {
-  const response = await fetch(`${API_BASE_URL}/api/dmns/${definitionKey}/xml`);
+  const response = await fetch(`${API_BASE_URL}/v1/dmns/${encodeURIComponent(definitionKey)}/xml`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch DMN ${definitionKey}: ${response.statusText}`);
