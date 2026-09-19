@@ -50,6 +50,14 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001
 interface BpmnCanvasProps {
   xml: string;
   endpoint: string;
+  /**
+   * The active process's own id. Used only to clear a stale save-failure
+   * banner when the selection changes (#156) — `saveResult` otherwise
+   * survives switching to an unrelated process and sits over its diagram.
+   * Not required: omitted, the banner simply never auto-clears on its own,
+   * same as before this prop existed.
+   */
+  processId?: string | null;
   /** True when the parent has pending footer (metadata) edits — enables the Save button. */
   hasFooterChanges?: boolean;
   /** Called when the canvas dirty state changes, so the parent can guard navigation. */
@@ -104,6 +112,7 @@ const extractOrganizationFromXml = (xml: string): string | null => {
 const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   xml,
   endpoint,
+  processId,
   hasFooterChanges = false,
   onDirtyChange,
   onSave,
@@ -164,6 +173,14 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     setSelectedElement(element);
     onElementSelectRef.current(element);
   }, []);
+
+  // Clears a stale save-failure banner when the selected process changes
+  // (#156) — keyed on `processId`, not `xml`, since `xml` also changes after
+  // every save (success or failure) within the SAME process, which would
+  // otherwise clear the banner the instant it appeared.
+  useEffect(() => {
+    setSaveResult(null);
+  }, [processId]);
 
   useEffect(() => {
     if (!containerRef.current || !propertiesPanelRef.current) return;

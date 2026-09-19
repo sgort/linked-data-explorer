@@ -147,4 +147,43 @@ describe('RopaEditor', () => {
 
     expect(await screen.findByText('Select a record or create a new one')).toBeTruthy();
   });
+
+  // #156 fix round 1: handleSave must NOT catch the rejection itself —
+  // RopaRecordEditor already catches its own `onSave` call and shows the
+  // problem detail inline next to Save (RopaRecordEditor.test.tsx's "a
+  // failed save surfaces the error message next to the header"). This test
+  // is composed across both components (RopaEditor is not mocking
+  // RopaRecordEditor) to prove that wiring still reaches the real child
+  // unbroken, and that RopaEditor's own top banner — reserved for delete —
+  // stays out of it.
+  test("a failed save surfaces the server's problem detail inline next to Save, not the top banner", async () => {
+    listRopa.mockResolvedValue([]);
+    upsertRopa.mockRejectedValue(new Error('title is required'));
+    render(<RopaEditor />);
+
+    await userEvent.click(await screen.findByTitle('New RoPA record'));
+    await userEvent.click(screen.getByRole('button', { name: /Save/ }));
+
+    expect(await screen.findByText('title is required')).toBeTruthy();
+    // The top banner always renders its text prefixed with "✗ " — absent
+    // here confirms handleSave let the rejection propagate rather than
+    // swallowing it into RopaEditor's own `error` state.
+    expect(screen.queryByText(/✗/)).toBeNull();
+  });
+
+  // #156: delete used to fire without checking the result at all — a
+  // failure was silently swallowed. Unlike save, delete has no inline
+  // display of its own, so this one does surface through RopaEditor's top
+  // banner.
+  test('shows an error banner when deleting fails', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    listRopa.mockResolvedValue([record()]);
+    deleteRopa.mockRejectedValue(new Error('record is referenced'));
+    render(<RopaEditor />);
+
+    const card = (await screen.findByText('Zorgtoeslag')).closest('div')!.parentElement!;
+    await userEvent.click(within(card).getByRole('button'));
+
+    expect(await screen.findByText(/record is referenced/)).toBeTruthy();
+  });
 });

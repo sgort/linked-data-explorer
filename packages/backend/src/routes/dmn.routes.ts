@@ -12,6 +12,7 @@ import { recordDeployedBundle } from '../services/assets.service';
 import { sendProblem } from '../utils/problem';
 import { refuseOptionalEndpoint, refuseTarget, checkOperatonTarget } from '../utils/outboundUrl';
 import { config } from '../utils/config';
+import { asRecord, checkBoardOwner } from '../utils/validation';
 
 const router = Router();
 
@@ -25,7 +26,12 @@ const router = Router();
  * when the XML has no `process` element to match.
  */
 function extractBpmnProcessId(bpmnXml: string): string | null {
-  const match = bpmnXml.match(/<(?:[\w-]+:)?process\b[^>]*\bid="([^"]*)"/);
+  // Requires an actual whitespace character immediately before `id=` (not
+  // just a word boundary) so `<bpmn:process id="REAL" xsi:id="WRONG">`
+  // captures "REAL" — a bare `\b` also matches right after the `:` in
+  // `xsi:id`, since `:` is a non-word character, so it used to backtrack
+  // onto whichever `id=`-suffixed attribute came last in the tag (#156).
+  const match = bpmnXml.match(/<(?:[\w-]+:)?process\b[^>]*\sid="([^"]*)"/);
   const id = match?.[1]?.trim();
   return id ? id : null;
 }
@@ -283,6 +289,17 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       return;
     }
 
+    const boardOwnerErrors: string[] = [];
+    checkBoardOwner(boardOwnerErrors, asRecord(req.body));
+    if (boardOwnerErrors.length > 0) {
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_INPUT',
+        detail: boardOwnerErrors.join('; '),
+      });
+      return;
+    }
+
     // The deploy target is the configured Operaton, never the caller's (#142).
     // A matching operatonUrl is still accepted so an older frontend keeps working.
     if (
@@ -309,7 +326,7 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
     let bundleRecordingError: string | undefined;
     try {
       const bpmnProcessId = extractBpmnProcessId(bpmnXml) ?? deploymentName;
-      bundleRecorded = await recordDeployedBundle({
+      const recordResult = await recordDeployedBundle({
         bpmnProcessId,
         bpmnXml,
         organization,
@@ -319,8 +336,27 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
         documentIds: documents.map((d) => d.id),
         boardOwner,
       });
-      if (!bundleRecorded) {
-        bundleRecordingError = `No stored process matched process id "${bpmnProcessId}", and creating one failed.`;
+      bundleRecorded = recordResult.recorded;
+      if (!recordResult.recorded) {
+        switch (recordResult.reason) {
+          case 'db-not-configured':
+            bundleRecordingError =
+              'Bundle storage is not configured (no database connection), so the process was not recorded.';
+            break;
+          case 'existing-row-not-stamped':
+            bundleRecordingError =
+              `A stored process for id "${bpmnProcessId}" was found, but marking it deployed ` +
+              `matched no row.`;
+            break;
+          case 'new-row-not-stamped':
+          default:
+            // Creation itself succeeded here — only the immediately
+            // following stamp-by-id matched no row (#156 fix round 1: the
+            // old wording, "...and creating one failed", named the wrong
+            // step).
+            bundleRecordingError = `A stored process was created for process id "${bpmnProcessId}", but marking it deployed matched no row.`;
+            break;
+        }
       }
     } catch (error: unknown) {
       bundleRecorded = false;

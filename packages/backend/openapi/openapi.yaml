@@ -338,7 +338,8 @@ paths:
             field (`id`, `name`, `xml`, `linkedDmnTemplates`, `createdAt`,
             `updatedAt`) missing, any field of the wrong type, or
             `processRole`/`status` outside its CHECK constraint's allowed
-            values. `detail` names every field that failed.
+            values, or `id`, `bpmnProcessId` or `name` empty or only spaces
+            (#156). `detail` names every field that failed.
           content:
             application/problem+json:
               schema:
@@ -481,8 +482,8 @@ paths:
         Marks a stored process as deployed to Operaton. `deployedAt` is
         always set to the server clock; it is never read from the request.
         An id matching no stored process answers 404 rather than a silent
-        200 (#155) — the underlying `UPDATE` can match zero rows, and a 200
-        for that case used to be indistinguishable from an actual write.
+        200 (#155) — a request naming an id with no matching process used to
+        still answer 200, indistinguishable from an actual write.
       parameters:
         - name: id
           in: path
@@ -526,10 +527,13 @@ paths:
                   description: Defaults to an empty array when omitted.
                 boardOwner:
                   type: string
+                  pattern: '^$|^[a-z0-9]+(-[a-z0-9]+)*$'
                   description: >-
                     Omitted, the existing stored value is left untouched
                     rather than overwritten to NULL — unlike every other
-                    field here, which always overwrites.
+                    field here, which always overwrites. When present, must
+                    be either empty (opts the process out of a board tag) or
+                    a lowercase slug such as `caseworker`/`infra-board`.
       responses:
         '200':
           description: The deployment was recorded. The response carries no data.
@@ -548,17 +552,20 @@ paths:
           description: >-
             The request body was not valid JSON (code MALFORMED_BODY; #143),
             or a field that was present had the wrong type (code
-            INVALID_INPUT; #150) — `deploymentId`/`operatonUrl`/
-            `boardOwner` not a string, or `formIds`/`documentIds` not an
-            array of strings. `detail` names every field that failed.
+            INVALID_INPUT; #150) — `deploymentId`/`operatonUrl` not a
+            string, or `formIds`/`documentIds` not an array of strings — or
+            `boardOwner` was present but not a string or (when non-empty)
+            not a lowercase slug (code INVALID_INPUT; #156). `detail` names
+            every field that failed.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '404':
           description: >-
-            No process has this id (code NOT_FOUND) — the `UPDATE` matched
-            zero rows. The message quotes the requested id verbatim (#155).
+            No process has this id (code NOT_FOUND) — no stored process
+            matched the requested id. The message quotes the requested id
+            verbatim (#155).
           content:
             application/problem+json:
               schema:
@@ -707,8 +714,8 @@ paths:
             The request body was not valid JSON (code MALFORMED_BODY; #143),
             or it failed validation (code INVALID_INPUT; #150): a required
             field (`id`, `name`, `schema`, `createdAt`, `updatedAt`) missing,
-            or any field of the wrong type. `detail` names every field that
-            failed.
+            any field of the wrong type, or `id` or `name` empty or only
+            spaces (#156). `detail` names every field that failed.
           content:
             application/problem+json:
               schema:
@@ -929,8 +936,9 @@ paths:
             The request body was not valid JSON (code MALFORMED_BODY; #143),
             or it failed validation (code INVALID_INPUT; #150): a required
             field (`id`, `name`, `schemaVersion`, `zones`, `bindings`,
-            `assets`, `createdAt`, `updatedAt`) missing, or any field of the
-            wrong type. `detail` names every field that failed.
+            `assets`, `createdAt`, `updatedAt`) missing, any field of the
+            wrong type, or `id` or `name` empty or only spaces (#156).
+            `detail` names every field that failed.
           content:
             application/problem+json:
               schema:
@@ -1200,7 +1208,10 @@ paths:
             field missing, any field of the wrong type,
             `processLevel`/`status` outside its CHECK constraint's allowed
             values, or a `personalDataFields` entry with a missing or
-            wrongly-typed field of its own. `detail` names every field that
+            wrongly-typed field of its own, or `title` or `bpmnProcessId`
+            empty or only spaces (#156); other text fields may be empty, so
+            a draft can be saved while it is written. `detail` names every
+            field that
             failed, prefixing a personal-data field's with its array index
             (e.g. `personalDataFields[0].formId`).
           content:
@@ -2395,7 +2406,12 @@ paths:
                   description: Ignored (#142).
                 boardOwner:
                   type: string
-                  description: Omit to derive it from the BPMN candidate groups; an empty string leaves it unset.
+                  pattern: '^$|^[a-z0-9]+(-[a-z0-9]+)*$'
+                  description: >-
+                    Omit to derive it from the BPMN candidate groups; an
+                    empty string leaves it unset. A non-empty value must be a
+                    lowercase slug (`^[a-z0-9]+(?:-[a-z0-9]+)*$`, e.g.
+                    `caseworker`, `infra-board`) — anything else answers 400.
       responses:
         '200':
           description: The bundle was deployed.
@@ -2436,9 +2452,11 @@ paths:
         '400':
           description: >-
             `bpmnXml`, `deploymentName` or `organization` is missing or
-            blank, or `operatonUrl` was given and differs from the
-            configured Operaton (code INVALID_INPUT; #142), or the request
-            body was not valid JSON (code MALFORMED_BODY; #143).
+            blank, `boardOwner` is present but not a string or (when
+            non-empty) not a lowercase slug (code INVALID_INPUT; #156), or
+            `operatonUrl` was given and differs from the configured Operaton
+            (code INVALID_INPUT; #142), or the request body was not valid
+            JSON (code MALFORMED_BODY; #143).
           content:
             application/problem+json:
               schema:

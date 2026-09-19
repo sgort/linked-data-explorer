@@ -169,6 +169,29 @@ describe('POST /v1/assets/ropa', () => {
     });
   });
 
+  test('refuses a blank title or bpmnProcessId (#156)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/ropa')
+      .send({ ...FRONTEND_ROPA_BODY, bpmnProcessId: '', title: '   ' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: 'bpmnProcessId must not be blank; title must not be blank',
+    });
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  test('still accepts blank descriptive fields, so a draft can be saved while it is written (#156)', async () => {
+    mockUpsert.mockResolvedValue('r1');
+
+    const res = await request(makeApp())
+      .post('/v1/assets/ropa')
+      .send({ ...FRONTEND_ROPA_BODY, status: 'draft', purpose: '', recipients: '' });
+
+    expect(res.status).toBe(200);
+  });
+
   test('returns 400 naming every missing required field (#150)', async () => {
     const res = await request(makeApp()).post('/v1/assets/ropa').send(RECORD);
 

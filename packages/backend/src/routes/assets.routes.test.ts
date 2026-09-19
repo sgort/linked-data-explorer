@@ -110,6 +110,19 @@ describe('BPMN collection', () => {
     });
   });
 
+  test('POST /bpmn refuses a blank id or bpmnProcessId or name (#156)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/bpmn')
+      .send({ ...FRONTEND_BPMN_BODY, id: '  ', bpmnProcessId: '  ', name: '  ' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: 'id must not be blank; bpmnProcessId must not be blank; name must not be blank',
+    });
+    expect(svc.upsertBpmn).not.toHaveBeenCalled();
+  });
+
   test('POST /bpmn returns 400 naming every missing required field (#150)', async () => {
     const res = await request(makeApp()).post('/v1/assets/bpmn').send({ id: 'p1' });
 
@@ -230,6 +243,55 @@ describe('PATCH /bpmn/:id/deploy', () => {
     expect(svc.markDeployed).not.toHaveBeenCalled();
   });
 
+  // #156: boardOwner is now validated against the same lowercase-slug shape
+  // as the deploy route, not just typed as a string.
+  describe('boardOwner validation', () => {
+    test.each(['caseworker', 'infra-board'])('accepts the valid slug %s', async (boardOwner) => {
+      svc.markDeployed.mockResolvedValue(true);
+
+      const res = await request(makeApp()).patch('/v1/assets/bpmn/p1/deploy').send({ boardOwner });
+
+      expect(res.status).toBe(200);
+    });
+
+    test('accepts an empty string (opts out of tagging)', async () => {
+      svc.markDeployed.mockResolvedValue(true);
+
+      const res = await request(makeApp())
+        .patch('/v1/assets/bpmn/p1/deploy')
+        .send({ boardOwner: '' });
+
+      expect(res.status).toBe(200);
+    });
+
+    test.each([
+      ['uppercase', 'Infra-Board'],
+      ['a space', 'infra board'],
+      ['an underscore', 'infra_board'],
+    ])('rejects a %s value with 400', async (_label, boardOwner) => {
+      const res = await request(makeApp()).patch('/v1/assets/bpmn/p1/deploy').send({ boardOwner });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ status: 400, code: 'INVALID_INPUT' });
+      expect(res.body.detail).toContain('boardOwner');
+      expect(svc.markDeployed).not.toHaveBeenCalled();
+    });
+
+    // #156 fix round 1: OpenAPI documents boardOwner as `type: string`
+    // here too — an explicit JSON null is not a string, so it is now
+    // rejected the same as any other wrongly-typed value.
+    test('rejects an explicit null with 400', async () => {
+      const res = await request(makeApp())
+        .patch('/v1/assets/bpmn/p1/deploy')
+        .send({ boardOwner: null });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ status: 400, code: 'INVALID_INPUT' });
+      expect(res.body.detail).toContain('boardOwner');
+      expect(svc.markDeployed).not.toHaveBeenCalled();
+    });
+  });
+
   test('returns 404 with a NOT_FOUND code when nothing matches the given id (zero-row update)', async () => {
     svc.markDeployed.mockResolvedValue(false);
 
@@ -348,6 +410,19 @@ describe('forms', () => {
     expect(svc.upsertForm).toHaveBeenCalledWith(FRONTEND_FORM_BODY);
   });
 
+  test('POST /forms refuses a blank id or name (#156)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/forms')
+      .send({ ...FRONTEND_FORM_BODY, id: '  ', name: '  ' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: 'id must not be blank; name must not be blank',
+    });
+    expect(svc.upsertForm).not.toHaveBeenCalled();
+  });
+
   test('POST /forms returns 400 naming every missing required field (#150)', async () => {
     const res = await request(makeApp()).post('/v1/assets/forms').send({});
 
@@ -448,6 +523,19 @@ describe('documents', () => {
 
     expect(res.body).toEqual({ success: true });
     expect(svc.upsertDocument).toHaveBeenCalledWith(FRONTEND_DOCUMENT_BODY);
+  });
+
+  test('POST /documents refuses a blank id or name (#156)', async () => {
+    const res = await request(makeApp())
+      .post('/v1/assets/documents')
+      .send({ ...FRONTEND_DOCUMENT_BODY, id: '  ', name: '  ' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: 'id must not be blank; name must not be blank',
+    });
+    expect(svc.upsertDocument).not.toHaveBeenCalled();
   });
 
   test('POST /documents returns 400 naming every missing required field (#150)', async () => {

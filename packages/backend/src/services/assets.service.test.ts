@@ -151,6 +151,18 @@ describe('BPMN', () => {
     expect(await getBpmnByBpmnProcessId('unknown')).toBeNull();
   });
 
+  test('getBpmnByBpmnProcessId orders by deployed_at DESC NULLS LAST, updated_at DESC before LIMIT 1 (#156)', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    await getBpmnByBpmnProcessId('ZorgtoeslagProcess');
+
+    const [sql] = mockQuery.mock.calls[0];
+    expect(sql).toEqual(
+      expect.stringContaining('ORDER BY deployed_at DESC NULLS LAST, updated_at DESC')
+    );
+    expect(sql.indexOf('ORDER BY')).toBeGreaterThan(-1);
+    expect(sql.indexOf('ORDER BY')).toBeLessThan(sql.indexOf('LIMIT 1'));
+  });
+
   test('getBpmnByBpmnProcessId returns the id/bpmnProcessId/xml when found', async () => {
     mockQuery.mockResolvedValueOnce({
       rows: [{ lde_id: 'p1', bpmn_process_id: 'ZorgtoeslagProcess', xml: '<bpmn/>' }],
@@ -219,7 +231,7 @@ describe('BPMN', () => {
         // markDeployed UPDATE
         .mockResolvedValueOnce({ rows: [], rowCount: 1 });
 
-      expect(await recordDeployedBundle(input)).toBe(true);
+      expect(await recordDeployedBundle(input)).toEqual({ recorded: true });
       expect(mockQuery).toHaveBeenCalledTimes(2);
       const [updateSql, updateParams] = mockQuery.mock.calls[1];
       expect(updateSql).toEqual(expect.stringContaining('UPDATE process_definitions'));
@@ -235,7 +247,7 @@ describe('BPMN', () => {
         // markDeployed UPDATE
         .mockResolvedValueOnce({ rows: [], rowCount: 1 });
 
-      expect(await recordDeployedBundle(input)).toBe(true);
+      expect(await recordDeployedBundle(input)).toEqual({ recorded: true });
       expect(mockQuery).toHaveBeenCalledTimes(3);
 
       const [insertSql, insertParams] = mockQuery.mock.calls[1];
@@ -252,14 +264,32 @@ describe('BPMN', () => {
       expect(updateParams[0]).toBe('ZorgtoeslagProcess');
     });
 
-    test('reports false, rather than throwing, when the stamp lands on zero rows', async () => {
+    test('reports "existing-row-not-stamped", rather than throwing, when an existing row\'s stamp lands on zero rows', async () => {
       mockQuery
         .mockResolvedValueOnce({
           rows: [{ lde_id: 'p1', bpmn_process_id: 'ZorgtoeslagProcess', xml: '<bpmn/>' }],
         })
         .mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
-      expect(await recordDeployedBundle(input)).toBe(false);
+      expect(await recordDeployedBundle(input)).toEqual({
+        recorded: false,
+        reason: 'existing-row-not-stamped',
+      });
+    });
+
+    test('reports "new-row-not-stamped" when a freshly created row\'s stamp lands on zero rows', async () => {
+      mockQuery
+        // getBpmnByBpmnProcessId lookup — nothing found
+        .mockResolvedValueOnce({ rows: [] })
+        // upsertBpmn INSERT
+        .mockResolvedValueOnce({ rows: [] })
+        // markDeployed UPDATE — matches nothing
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+
+      expect(await recordDeployedBundle(input)).toEqual({
+        recorded: false,
+        reason: 'new-row-not-stamped',
+      });
     });
   });
 

@@ -13,9 +13,25 @@ interface BpmnModelerProps {
   endpoint: string;
 }
 
+/**
+ * Same pattern shape as the backend's own extraction in dmn.routes.ts, so
+ * the two agree (#156):
+ * - `[\w-]+:` (not just a literal `bpmn:`) so any namespace prefix matches,
+ *   e.g. `bpmn2:process` — the old `(?:bpmn:)?` left every other prefix
+ *   unmatched, which mattered once every save started recomputing this id:
+ *   a `bpmn2:`-prefixed process used to save as "unknown" instead of its
+ *   real id.
+ * - `\b` right after `process` so `processType` (or any other tag merely
+ *   starting with the word "process") is never mistaken for the element.
+ * - an actual whitespace character (`\s`), not just a word boundary,
+ *   immediately before `id=` — a bare `\b` also matches right after the `:`
+ *   in `xsi:id`, since `:` is a non-word character, so
+ *   `<bpmn:process id="REAL" xsi:id="WRONG">` used to capture "WRONG".
+ */
 const extractBpmnProcessId = (xml: string): string => {
-  const match = xml.match(/<(?:bpmn:)?process[^>]+\bid="([^"]+)"/);
-  return match?.[1] ?? 'unknown';
+  const match = xml.match(/<(?:[\w-]+:)?process\b[^>]*\sid="([^"]*)"/);
+  const id = match?.[1]?.trim();
+  return id ? id : 'unknown';
 };
 
 /** Returns every calledElement value found in callActivity elements. */
@@ -90,6 +106,21 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   const [draft, setDraft] = useState<FooterDraft>({});
   const [hasFooterChanges, setHasFooterChanges] = useState(false);
   const [hasCanvasChanges, setHasCanvasChanges] = useState(false);
+  // Surfaces a create/import/rename write that reached the canvas but could
+  // not be persisted (#156) — these used to fire without checking the
+  // result at all, so a failure here was invisible until the process
+  // vanished on the next reload. Every message below names the process it
+  // concerns (#156 fix round 2) so it can be shown safely no matter what is
+  // selected by the time the write's result comes back — there is
+  // deliberately no "still on the same process" guard here: a create,
+  // import or rename that fails after the user has already clicked another
+  // card (a click that also fires an in-flight edit's blur, e.g.
+  // ProcessList.tsx's rename input) is exactly the swallowed-failure shape
+  // #156 removes, and would otherwise leave an unsaved local record with no
+  // signal at all. Switching or closing (below) clears whatever banner
+  // already existed at that point, but a result that arrives afterward
+  // still sets a fresh one.
+  const [processError, setProcessError] = useState<string | null>(null);
 
   const activeProcess = processes.find((p) => p.id === activeProcessId) || null;
 
@@ -379,11 +410,22 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       bpmnProcessId: extractBpmnProcessId(DEFAULT_BPMN_XML),
       processRole: 'standalone',
     };
-    BpmnService.saveProcess(newProcess);
+    // BpmnService.saveProcess writes to localStorage synchronously before
+    // its network part resolves, so the local state below reflects the new
+    // process immediately, same as before create/import/rename started
+    // checking the write's result (#156 fix round 1) — only the error
+    // reporting waits on the network.
+    const savePromise = Promise.resolve(BpmnService.saveProcess(newProcess));
+    setProcessError(null);
     setProcesses(BpmnService.getProcesses());
     setActiveProcessId(newProcess.id);
     setCurrentXml(newProcess.xml);
     resetEditState();
+    savePromise.then((saved) => {
+      if (saved === false) {
+        setProcessError(`Could not save "${newProcess.name}" to the server.`);
+      }
+    });
   };
 
   const handleImportProcess = (xml: string, name: string, inferredLanguage?: string) => {
@@ -408,12 +450,18 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       language,
       organization,
     };
-    BpmnService.saveProcess(newProcess);
+    const savePromise = Promise.resolve(BpmnService.saveProcess(newProcess));
+    setProcessError(null);
     reclassifyProcessRoles(BpmnService.getProcesses());
     setProcesses(BpmnService.getProcesses());
     setActiveProcessId(newProcess.id);
     setCurrentXml(xml);
     resetEditState();
+    savePromise.then((saved) => {
+      if (saved === false) {
+        setProcessError(`Could not save the imported process "${name}" to the server.`);
+      }
+    });
   };
 
   const handleLoadProcess = (processId: string) => {
@@ -423,6 +471,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     if (process) {
       setActiveProcessId(process.id);
       setCurrentXml(process.xml);
+      setProcessError(null);
       resetEditState();
     }
   };
@@ -441,9 +490,24 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     if ('dsoActiviteitUrn' in draft)
       mergedXml = applyRonlAttr(mergedXml, 'dsoActiviteitUrn', draft.dsoActiviteitUrn);
 
+    // Recomputed from the XML being saved, not carried over from create/
+    // import time (#156) — otherwise renaming the process id in the
+    // properties panel leaves the stored value stale forever, and the next
+    // deploy creates a second row keyed by the new id. But when extraction
+    // finds no `<process>` element to match at all, "unknown" is not an
+    // improvement over whatever id the record already had — fall back to
+    // the existing value rather than overwriting a good id with the
+    // sentinel (e.g. a save mid-edit where the process element is
+    // momentarily malformed, or an XML shape this extraction doesn't
+    // recognise).
+    const extractedBpmnProcessId = extractBpmnProcessId(mergedXml);
     const merged: BpmnProcess = {
       ...process,
       xml: mergedXml,
+      bpmnProcessId:
+        extractedBpmnProcessId === 'unknown'
+          ? (process.bpmnProcessId ?? extractedBpmnProcessId)
+          : extractedBpmnProcessId,
       language: 'language' in draft ? draft.language : process.language,
       organization: 'organization' in draft ? draft.organization : process.organization,
       updatedAt: new Date().toISOString(),
@@ -529,8 +593,20 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   const handleUpdateProcessName = (processId: string, name: string) => {
     const process = BpmnService.getProcess(processId);
     if (process) {
-      BpmnService.saveProcess({ ...process, name, updatedAt: new Date().toISOString() });
+      const savePromise = Promise.resolve(
+        BpmnService.saveProcess({
+          ...process,
+          name,
+          updatedAt: new Date().toISOString(),
+        })
+      );
+      setProcessError(null);
       setProcesses(BpmnService.getProcesses());
+      savePromise.then((saved) => {
+        if (saved === false) {
+          setProcessError(`Could not save the new name "${name}" to the server.`);
+        }
+      });
     }
   };
 
@@ -538,6 +614,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     if (!confirmDiscardIfDirty()) return;
     setActiveProcessId(null);
     setCurrentXml(DEFAULT_BPMN_XML);
+    setProcessError(null);
     resetEditState();
   };
 
@@ -566,7 +643,12 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
   };
 
   return (
-    <div className="flex h-full bg-slate-50">
+    <div className="flex h-full bg-slate-50 relative">
+      {processError && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 shadow">
+          ✗ {processError}
+        </div>
+      )}
       <ProcessList
         processes={processes}
         activeProcessId={activeProcessId}
@@ -590,6 +672,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           <BpmnCanvas
             xml={currentXml}
             endpoint={endpoint}
+            processId={activeProcessId}
             hasFooterChanges={hasFooterChanges}
             onDirtyChange={setHasCanvasChanges}
             onSave={handleSaveProcess}

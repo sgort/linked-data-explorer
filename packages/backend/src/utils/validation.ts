@@ -76,6 +76,10 @@ export interface FieldSpec {
   /** A database CHECK constraint's allowed values. Checked only when the
    *  field is present (and, if `type` is also given, only when it matched). */
   enum?: readonly string[];
+  /** For a string that identifies or names a record: refuse an empty or
+   *  whitespace-only value, which the column's NOT NULL would otherwise accept
+   *  (#156). Checked only when the field is present and is a string. */
+  nonBlank?: boolean;
 }
 
 /**
@@ -99,6 +103,11 @@ export function checkField(
 
   if (spec.type && !matchesType(value, spec.type)) {
     errors.push(`${field} must be ${describeType(spec.type)}`);
+    return value;
+  }
+
+  if (spec.nonBlank && typeof value === 'string' && value.trim() === '') {
+    errors.push(`${field} must not be blank`);
     return value;
   }
 
@@ -136,4 +145,45 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  *  specific UUID version. */
 export function isUuid(value: string): boolean {
   return UUID_RE.test(value);
+}
+
+/** A lowercase, hyphenated slug — the shape every real `boardOwner` tag
+ *  uses (`caseworker`, `infra-board`). */
+const BOARD_OWNER_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * Validates a `boardOwner` field wherever the backend accepts one as
+ * external input (#156). Semantics, unchanged from before this check
+ * existed: *omitted* (`undefined`) means "derive it"; `''` means "opt out,
+ * leave it untagged"; any other value is stored as-is once it passes this
+ * check. Only a non-empty string is checked against the slug pattern — an
+ * omitted or empty value is always valid.
+ *
+ * A JSON `null` is deliberately NOT treated the same as omitted, even
+ * though `checkField`'s `present` check (elsewhere in this file) does fold
+ * the two together for other fields. `operaton.service.ts`'s
+ * `deployProcess` only derives on `boardOwner === undefined`; a `null`
+ * reaches it as `null`, which `injectBoardOwner` treats as falsy — silently
+ * "no tag" rather than "derive". OpenAPI also documents this field as
+ * `type: string`, not `string | null`. So `null` is rejected here with the
+ * same "must be a string" a non-string, non-null value gets.
+ */
+export function checkBoardOwner(
+  errors: FieldErrors,
+  body: Record<string, unknown>,
+  field = 'boardOwner'
+): void {
+  const value = body[field];
+  if (value === undefined) return;
+  if (typeof value !== 'string') {
+    errors.push(`${field} must be a string`);
+    return;
+  }
+  if (value === '') return;
+  if (!BOARD_OWNER_SLUG_RE.test(value)) {
+    errors.push(
+      `${field} must be a lowercase slug matching ^[a-z0-9]+(?:-[a-z0-9]+)*$ ` +
+        `(e.g. "caseworker", "infra-board") when non-empty`
+    );
+  }
 }

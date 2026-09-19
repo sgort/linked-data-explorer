@@ -44,10 +44,11 @@ from disk, the page has no hostname, so it falls through to the last row above a
 talks to the **production** backend, not your local one.
 
 ```bash
-npx serve .
+npx serve . -l 5500
 ```
 
-Then open the `localhost` address it prints, with the LDE backend running on port 3001.
+Then open `http://localhost:5500`, with the LDE backend running on port 3001. Port 5500
+is used because the LDE frontend already takes 3000; any free port works.
 
 The endpoint must have CORS open for `*` on `GET /v1/ropa/public`. That is
 configured in `packages/backend/src/utils/publicPaths.ts`.
