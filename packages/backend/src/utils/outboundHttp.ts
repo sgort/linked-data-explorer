@@ -81,8 +81,11 @@ export function createOutboundClient(defaults: CreateAxiosDefaults = {}): AxiosI
     // default cannot turn proxying back on.
     proxy: false,
     // Forces the Node `http`/`https` adapter (which honours httpAgent/httpsAgent
-    // and `lookup`) rather than a fetch-based adapter that could sidestep the
-    // guarded agents.
+    // and `lookup`), rather than the fetch adapter, which ignores both. (#166)
+    adapter: 'http',
+    // Prevents the HTTP/2 transport, which ignores httpAgent/httpsAgent and
+    // `lookup` (even under the `http` adapter above) just as the fetch
+    // adapter does. (#166)
     httpVersion: 1,
   });
   client.interceptors.request.use((request) => {
@@ -95,8 +98,26 @@ export function createOutboundClient(defaults: CreateAxiosDefaults = {}): AxiosI
     request.proxy = false;
     request.httpAgent = httpAgent;
     request.httpsAgent = httpsAgent;
+    // A per-request `httpVersion: 2` or `adapter: 'fetch'` would otherwise
+    // override the defaults above and bypass the guarded agents the same way
+    // transport/socketPath/lookup do. (#166)
+    request.httpVersion = 1;
+    request.adapter = 'http';
     assertOutboundUrl(client.getUri(request));
     return request;
+  });
+  // A refused DNS lookup rejects with an OutboundRefusedError directly, but a
+  // refused redirect (via beforeRedirect above) surfaces from axios as
+  // ERR_FR_REDIRECTION_FAILURE, with the OutboundRefusedError buried at
+  // err.cause.cause. Unwrap it here so both refusals look the same to a
+  // caller branching on `code` (#167).
+  client.interceptors.response.use(undefined, (error: unknown) => {
+    let cause: unknown = error;
+    while (cause && typeof cause === 'object') {
+      if (cause instanceof OutboundRefusedError) return Promise.reject(cause);
+      cause = (cause as { cause?: unknown }).cause;
+    }
+    return Promise.reject(error);
   });
   return client;
 }

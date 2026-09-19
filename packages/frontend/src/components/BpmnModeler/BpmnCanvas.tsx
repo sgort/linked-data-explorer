@@ -16,6 +16,7 @@ import ReactDOM from 'react-dom/client';
 
 import { BpmnService } from '@/src/services/bpmnService';
 
+import { getDeployTarget } from '../../services/deployTargetService';
 import { DocumentService } from '../../services/documentService';
 import { FormService } from '../../services/formService';
 import { DocumentTemplate } from '../../types/document.types';
@@ -157,6 +158,10 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   const [boardChoice, setBoardChoice] = useState<BoardChoice>('auto');
   const [boardAuto, setBoardAuto] = useState<string | null>(null);
   const [deployOrganization, setDeployOrganization] = useState<string | null>(null);
+  // The Operaton the backend actually deploys to (#165), shown in the modal
+  // instead of a frontend build setting. null while loading or on failure —
+  // the modal falls back to generic wording in both cases.
+  const [deployTargetUrl, setDeployTargetUrl] = useState<string | null>(null);
 
   const [selectedElement, setSelectedElement] = useState<any>(null);
 
@@ -589,6 +594,8 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     setDeployOrganization(extractOrganizationFromXml(xml));
     setDeployResult(null);
     setShowDeployModal(true);
+    // Cached for the session (#165) — cheap to call on every open.
+    getDeployTarget().then(setDeployTargetUrl);
   };
 
   const handleDeploy = async () => {
@@ -1022,11 +1029,12 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
               {/* Operaton target — deploys always go to the backend's own
                   configured Operaton (#142); there is nothing left to pick.
-                  Matches the modal's other status/help lines (e.g. the board
-                  auto-detection note above): mt-2 text-xs text-slate-500. */}
+                  Named from the backend itself (#165), not a frontend build
+                  setting, so it can never drift from where deploys actually
+                  go. Matches the modal's other status/help lines (e.g. the
+                  board auto-detection note above): mt-2 text-xs text-slate-500. */}
               <div className="mb-4 mt-2 text-xs text-slate-500">
-                Deploys to{' '}
-                {import.meta.env.VITE_OPERATON_BASE_URL || "the backend's configured Operaton"}.
+                Deploys to {deployTargetUrl ?? "the backend's configured Operaton"}.
               </div>
             </div>
 

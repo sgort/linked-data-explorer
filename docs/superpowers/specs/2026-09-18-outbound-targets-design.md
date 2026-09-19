@@ -41,7 +41,7 @@ Two checks, because one is not enough.
 
 **At the route — `src/utils/outboundUrl.ts`.** Three functions, `checkSparqlEndpoint`, `checkTriplyDbBaseUrl` and `checkOperatonTarget`, each taking the raw value and returning either the parsed `URL` or a reason. They parse the URL and check scheme, credentials in the URL (refused), the host allowlist where one applies, and IP-literal hosts. Routes turn a reason into a 400 through the existing `sendProblem`. This is what gives the caller a clear answer.
 
-**At connect — `src/utils/guardedAgent.ts`.** An `http.Agent` and `https.Agent` whose `lookup` resolves the name and refuses an internal address. This closes what the route check cannot see: a public name that resolves to an internal address, a name whose DNS answer changes between check and request, and a redirect to an internal host. A refusal here surfaces as a failed upstream call, which the routes already answer as an error.
+**At connect — `src/utils/outboundHttp.ts`.** An `http.Agent` and `https.Agent` whose `lookup` resolves the name and refuses an internal address. This closes what the route check cannot see: a public name that resolves to an internal address, a name whose DNS answer changes between check and request, and a redirect to an internal host. A refusal here surfaces as a failed upstream call, which the routes already answer as an error.
 
 Every client that goes to a caller-supplied host uses the guarded agent: the per-endpoint axios clients in `sparql.service.ts` and `norms.service.ts`, whatever client the chain, vendor and SHACL routes reach their endpoint through (the plan traces each), and the TriplyDB service. The five `fetch` calls in `triplydb.service.ts` move to axios so there is one mechanism to guard. The clients for configured hosts (Operaton, DSO) are left alone.
 
@@ -99,7 +99,7 @@ Both go into `.env.example` with a comment. Because App Service settings are set
 ## Testing
 
 - `outboundUrl.ts`: for each check, an allowed host, a disallowed host, `http:`, an IP literal in each internal range, userinfo in the URL, a malformed URL, and the effect of `ALLOW_LOCAL_ENDPOINTS`.
-- `guardedAgent.ts`: a name resolving to a public address connects; one resolving to each internal range is refused; a redirect to an internal host is refused. DNS is stubbed, not live.
+- `outboundHttp.ts`: a name resolving to a public address connects; one resolving to each internal range is refused; a redirect to an internal host is refused. DNS is stubbed, not live.
 - Route tests: each affected operation answers 400 for a refused target and makes no outbound call; conformance assertions cover the new responses.
 - `process/deploy`: a matching `operatonUrl` succeeds, a different one answers 400, credentials in the body are not used, and the recorded bundle carries the configured URL.
 - Frontend: the deploy modal no longer renders the three fields; the Jena preset is absent outside development.

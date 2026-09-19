@@ -1844,8 +1844,7 @@ paths:
               required: [config]
               properties:
                 config:
-                  type: object
-                  description: TriplyDB connection settings (`baseUrl`, `account`, `dataset`, `apiToken`).
+                  $ref: '#/components/schemas/TriplyDbTestConnectionConfig'
       responses:
         '200':
           description: The dataset answered.
@@ -2550,6 +2549,49 @@ paths:
           description: >-
             Deployment failed (code PROCESS_DEPLOY_FAILED; the message carries
             Operaton's error text).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dmns/process/deploy-target:
+    get:
+      operationId: getDmnProcessDeployTarget
+      tags: [Discovery]
+      summary: The Operaton `POST /dmns/process/deploy` actually deploys to
+      description: >-
+        Read-only. Names the backend's own configured Operaton -- the target
+        `POST /dmns/process/deploy` always deploys to -- so a caller (the
+        deploy modal) can show it instead of relying on its own separate,
+        build-time configuration, which can drift from it (#165). Takes no
+        input.
+      responses:
+        '200':
+          description: The configured Operaton base URL.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [operatonUrl]
+                    properties:
+                      operatonUrl:
+                        type: string
+                        description: The backend's configured `OPERATON_BASE_URL`.
+                  timestamp:
+                    type: string
+                    format: date-time
+        '503':
+          description: >-
+            No Operaton is configured -- `OPERATON_BASE_URL` is empty (code
+            OPERATON_NOT_CONFIGURED).
           content:
             application/problem+json:
               schema:
@@ -5676,10 +5718,12 @@ components:
         title:
           type: [string, 'null']
           description: Null for rulesets other than the primary one.
-    TriplyDbConfig:
+    TriplyDbConfigBase:
       type: object
-      description: TriplyDB connection settings supplied by the caller (#142).
-      required: [baseUrl, account, dataset, apiToken]
+      description: >-
+        Fields shared by every TriplyDB connection settings schema (#142,
+        #167).
+      required: [baseUrl, account, dataset]
       properties:
         baseUrl:
           type: string
@@ -5688,8 +5732,26 @@ components:
           type: string
         dataset:
           type: string
-        apiToken:
-          type: string
+    TriplyDbConfig:
+      description: TriplyDB connection settings supplied by the caller (#142).
+      allOf:
+        - $ref: '#/components/schemas/TriplyDbConfigBase'
+        - type: object
+          required: [apiToken]
+          properties:
+            apiToken:
+              type: string
+    TriplyDbTestConnectionConfig:
+      description: >-
+        TriplyDB connection settings to test (#167). Unlike `TriplyDbConfig`,
+        `apiToken` is optional: a wrong or missing token surfaces as a failed
+        connection (503), not a 400.
+      allOf:
+        - $ref: '#/components/schemas/TriplyDbConfigBase'
+        - type: object
+          properties:
+            apiToken:
+              type: string
     SparqlResults:
       type: object
       description: >-

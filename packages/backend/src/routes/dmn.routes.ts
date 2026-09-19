@@ -385,6 +385,35 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /v1/dmns/process/deploy-target
+ * The Operaton instance `POST /dmns/process/deploy` actually deploys to
+ * (#165) -- read-only, so the deploy modal can show the backend's real
+ * target instead of the frontend's own build-time setting, which can drift
+ * from it. Takes no input.
+ *
+ * Declared before `GET /:identifier` below (as every other literal route in
+ * this file is) so `process` is never captured as an `:identifier` value.
+ */
+router.get('/process/deploy-target', (req: Request, res: Response) => {
+  const operatonUrl = config.operaton.baseUrl;
+
+  if (!operatonUrl) {
+    sendProblem(res, req, {
+      status: 503,
+      code: 'OPERATON_NOT_CONFIGURED',
+      detail: 'No Operaton is configured (OPERATON_BASE_URL is empty).',
+    });
+    return;
+  }
+
+  res.json({
+    success: true,
+    data: { operatonUrl },
+    timestamp: new Date().toISOString(),
+  } as ApiResponse);
+});
+
+/**
  * POST /v1/dmns/deploy
  * Deploy raw, ad-hoc DMN XML content directly to Operaton.
  *

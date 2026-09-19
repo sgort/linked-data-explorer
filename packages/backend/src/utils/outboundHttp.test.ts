@@ -183,4 +183,52 @@ describe('createOutboundClient', () => {
       )
     ).toThrow(OutboundRefusedError);
   });
+
+  // #166: httpVersion: 2 (the HTTP/2 transport) and adapter: 'fetch' both
+  // ignore httpAgent/httpsAgent and `lookup`, sidestepping guardedLookup
+  // entirely -- unless the request interceptor resets them on every request,
+  // the same as it already does for transport/socketPath/lookup.
+  test('a per-request httpVersion: 2 does not bypass the guard', async () => {
+    config.outbound.allowLocalEndpoints = false;
+    stubDns([{ address: '127.0.0.1', family: 4 }]);
+    await expect(
+      createOutboundClient().get(`https://rebind.example:${port}/`, { httpVersion: 2 })
+    ).rejects.toMatchObject({ code: 'EOUTBOUNDREFUSED' });
+  });
+
+  test("a per-request adapter: 'fetch' does not bypass the guard", async () => {
+    config.outbound.allowLocalEndpoints = false;
+    stubDns([{ address: '127.0.0.1', family: 4 }]);
+    await expect(
+      createOutboundClient().get(`https://rebind.example:${port}/`, { adapter: 'fetch' })
+    ).rejects.toMatchObject({ code: 'EOUTBOUNDREFUSED' });
+  });
+
+  // #167: a refused redirect otherwise surfaces from axios as
+  // ERR_FR_REDIRECTION_FAILURE, with the OutboundRefusedError buried at
+  // err.cause.cause -- indistinguishable from any other redirect failure to a
+  // caller branching on `code`. The response interceptor unwraps it.
+  //
+  // The first hop must actually succeed so the redirect is followed at all:
+  // allowLocal is ON and the name resolves to loopback, over plain http (so
+  // https' scheme check doesn't itself refuse it) -- then the server 302s to
+  // an ftp: URL, which guardRedirect refuses regardless of allowLocal (unlike
+  // an internal host, which allowLocal would admit).
+  test('a refused redirect surfaces as OutboundRefusedError (code EOUTBOUNDREFUSED), not the raw axios failure', async () => {
+    config.outbound.allowLocalEndpoints = true;
+    stubDns([{ address: '127.0.0.1', family: 4 }]);
+    const redirectServer = http.createServer((_req, res) => {
+      res.writeHead(302, { Location: 'ftp://169.254.169.254/' });
+      res.end();
+    });
+    await new Promise<void>((resolve) => redirectServer.listen(0, '127.0.0.1', () => resolve()));
+    const redirectPort = (redirectServer.address() as AddressInfo).port;
+    try {
+      await expect(
+        createOutboundClient().get(`http://rebind.example:${redirectPort}/`)
+      ).rejects.toMatchObject({ code: 'EOUTBOUNDREFUSED' });
+    } finally {
+      await new Promise<void>((resolve) => redirectServer.close(() => resolve()));
+    }
+  });
 });
