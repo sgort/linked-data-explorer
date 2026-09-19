@@ -19,11 +19,8 @@ on:
     types: [opened, synchronize, reopened, closed]
     branches:
       - acc
-    paths:
-      - 'packages/frontend/**'
-      - '.github/workflows/azure-frontend-acc.yml'
-      - 'package-lock.json'
-      - 'package.json'
+    # No path filter here, deliberately: see the `changes` job. Filtering the
+    # trigger would leave this workflow's required check unreported.
 
 # Serialise deployments to one environment. Keyed on the pull-request
 # NUMBER rather than the ref: keyed on github.ref alone, the
@@ -39,13 +36,54 @@ permissions:
   contents: read
 
 jobs:
+  # Which files did this pull request change? The path filter used to sit on the
+  # pull_request trigger, and a workflow its trigger filters out never starts, so
+  # it reports no check at all. A required check that never reports waits
+  # forever, and a pull request that does not touch these paths could never
+  # merge. A job skipped by its own `if:` reports success instead. So the filter
+  # lives here, and the jobs below are skipped rather than never started, which
+  # is what lets their checks be required (#119).
+  #
+  # Fail-safe: the jobs below run when this job did NOT succeed, not only when it
+  # says "relevant". An API failure here means a full build, never a free pass.
+  # push keeps its trigger filter; nothing is required on a push.
+  changes:
+    permissions:
+      pull-requests: read
+    runs-on: ubuntu-24.04
+    outputs:
+      relevant: ${{ steps.filter.outputs.relevant }}
+    steps:
+      - name: Match the changed files against this workflow's paths
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          # The paths under push: above, as one regular expression. Keep the two in step.
+          PATTERN: '^(packages/frontend/|\.github/workflows/azure-frontend-acc\.yml$|package-lock\.json$|package\.json$)'
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Renames count under both names, as GitHub's own path filter does.
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)')
+          if printf '%s\n' "$files" | grep -qE "$PATTERN"; then relevant=true; else relevant=false; fi
+          echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
+          echo "Changed files relevant to this workflow: $relevant"
+
   build_and_deploy_job:
+    needs: changes
     permissions:
       contents: read
       pull-requests: write
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    if: ${{ !cancelled() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')) && (needs.changes.result != 'success' || needs.changes.outputs.relevant == 'true') }}
     runs-on: ubuntu-24.04
-    name: Build and Deploy Job
+    # Unique across workflows: required checks are matched by job name, and
+    # two jobs called "Build and Deploy Job" could not be told apart (#119).
+    name: Build and Deploy Frontend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -117,8 +155,9 @@ jobs:
           skip_app_build: true
 
   close_pull_request_job:
+    needs: changes
     permissions: {}
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    if: ${{ !cancelled() && (github.event_name == 'pull_request' && github.event.action == 'closed') && (needs.changes.result != 'success' || needs.changes.outputs.relevant == 'true') }}
     runs-on: ubuntu-24.04
     name: Close Pull Request Job
     steps:
