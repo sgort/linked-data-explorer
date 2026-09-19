@@ -20,6 +20,8 @@ jest.mock('../services/template.service', () => ({
 
 import { templateService } from '../services/template.service';
 import templateRoutes from './template.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const svc = templateService as unknown as Record<string, jest.Mock>;
 
@@ -122,8 +124,10 @@ describe('GET /v1/chains/templates', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'QUERY_ERROR', message: 'SPARQL timeout' },
+      status: 500,
+      title: 'Query failed',
+      detail: 'SPARQL timeout',
+      code: 'QUERY_ERROR',
     });
   });
 });
@@ -156,9 +160,11 @@ describe('GET /v1/chains/templates/:id', () => {
     const res = await request(makeApp()).get('/v1/chains/templates/nope');
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'Not found',
+      detail: 'Template not found or not valid for endpoint: nope',
       code: 'NOT_FOUND',
-      message: 'Template not found or not valid for endpoint: nope',
     });
     expect(svc.incrementUsageCount).not.toHaveBeenCalled();
   });
@@ -169,7 +175,7 @@ describe('GET /v1/chains/templates/:id', () => {
     const res = await request(makeApp()).get('/v1/chains/templates/t1');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('QUERY_ERROR');
+    expect(res.body.code).toBe('QUERY_ERROR');
   });
 });
 
@@ -197,7 +203,7 @@ describe('GET /v1/chains/templates/categories/list', () => {
     const res = await request(makeApp()).get('/v1/chains/templates/categories/list');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('QUERY_ERROR');
+    expect(res.body.code).toBe('QUERY_ERROR');
   });
 });
 
@@ -217,6 +223,188 @@ describe('GET /v1/chains/templates/tags/list', () => {
     const res = await request(makeApp()).get('/v1/chains/templates/tags/list');
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('QUERY_ERROR');
+    expect(res.body.code).toBe('QUERY_ERROR');
+  });
+});
+
+describe('/v1/chains/templates matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/chains/templates', templateRoutes);
+    return app;
+  }
+
+  const get = (path: string) => request(makeDocumentedApp()).get(`/v1/chains/templates${path}`);
+
+  // Exercises every value of ChainTemplate's enums (type, category,
+  // complexity) and both presence and absence of its optional fields
+  // (defaultInputs, drdId, drdDeploymentId, usageCount, author), so a
+  // schema that narrowed any of those would fail this test even though
+  // today's three real predefined templates never populate drd/legal/custom.
+  const FULL_TEMPLATE = {
+    id: 'heusdenpas-full',
+    name: 'Heusdenpas volledige aanvraag',
+    description: 'Full chain for a Heusdenpas application.',
+    type: 'sequential',
+    category: 'social',
+    dmnIds: ['dmn-1', 'dmn-2'],
+    defaultInputs: {
+      dagVanAanvraag: '2026-09-16',
+      inkomen: 2100,
+      heeftPartner: true,
+      opmerking: null,
+    },
+    tags: ['social', 'benefits', 'municipal'],
+    complexity: 'simple',
+    estimatedTime: 1100,
+    usageCount: 156,
+    createdAt: '2026-01-08T10:00:00Z',
+    updatedAt: '2026-01-08T10:00:00Z',
+    author: 'RONL Team',
+    isPublic: true,
+  };
+
+  const DRD_TEMPLATE = {
+    id: 'drd-template',
+    name: 'DRD template',
+    description: 'A DRD-based template.',
+    type: 'drd',
+    category: 'legal',
+    dmnIds: [],
+    drdId: 'entry-point-1',
+    drdDeploymentId: 'deployment-1',
+    tags: ['legal'],
+    complexity: 'complex',
+    estimatedTime: 500,
+    createdAt: '2026-02-01T09:00:00Z',
+    updatedAt: '2026-02-01T09:00:00Z',
+    isPublic: false,
+  };
+
+  const FINANCIAL_TEMPLATE = {
+    id: 'benefits-calculation',
+    name: 'Benefits calculation',
+    description: 'Calculates a benefit amount.',
+    type: 'sequential',
+    category: 'financial',
+    dmnIds: ['dmn-3'],
+    tags: ['benefits', 'financial'],
+    complexity: 'medium',
+    estimatedTime: 450,
+    createdAt: '2026-01-09T11:30:00Z',
+    updatedAt: '2026-01-09T11:30:00Z',
+    isPublic: true,
+  };
+
+  const CUSTOM_TEMPLATE = {
+    id: 'custom-template',
+    name: 'Custom template',
+    description: 'A custom-category template.',
+    type: 'sequential',
+    category: 'custom',
+    dmnIds: ['dmn-4'],
+    tags: ['custom'],
+    complexity: 'simple',
+    estimatedTime: 300,
+    createdAt: '2026-03-01T08:00:00Z',
+    updatedAt: '2026-03-01T08:00:00Z',
+    isPublic: true,
+  };
+
+  test('GET / 200, as documented', async () => {
+    svc.getAllTemplates.mockResolvedValue([
+      FULL_TEMPLATE,
+      DRD_TEMPLATE,
+      FINANCIAL_TEMPLATE,
+      CUSTOM_TEMPLATE,
+    ]);
+
+    const res = await get('/');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/chains/templates');
+  });
+
+  test('GET / 200 filtered by category, as documented', async () => {
+    svc.getTemplatesByCategory.mockResolvedValue([FINANCIAL_TEMPLATE]);
+
+    const res = await get('/').query({ category: 'financial' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.templates).toEqual([FINANCIAL_TEMPLATE]);
+    expectToMatchOperation(res, 'get', '/chains/templates');
+  });
+
+  test('GET / 500, as documented', async () => {
+    svc.getAllTemplates.mockRejectedValue(new Error('SPARQL timeout'));
+
+    const res = await get('/');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/chains/templates');
+  });
+
+  test('GET /:id 200, as documented', async () => {
+    svc.getTemplateById.mockResolvedValue(DRD_TEMPLATE);
+
+    const res = await get('/drd-template');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/chains/templates/{id}');
+  });
+
+  test('GET /:id 404, as documented', async () => {
+    svc.getTemplateById.mockResolvedValue(null);
+
+    const res = await get('/nope');
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/chains/templates/{id}');
+  });
+
+  test('GET /:id 500, as documented', async () => {
+    svc.getTemplateById.mockRejectedValue(new Error('SPARQL timeout'));
+
+    const res = await get('/heusdenpas-full');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/chains/templates/{id}');
+  });
+
+  test('GET /categories/list 200, as documented', async () => {
+    svc.getCategories.mockResolvedValue(['social', 'financial', 'legal', 'custom']);
+
+    const res = await get('/categories/list');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/chains/templates/categories/list');
+  });
+
+  test('GET /categories/list 500, as documented', async () => {
+    svc.getCategories.mockRejectedValue(new Error('SPARQL timeout'));
+
+    const res = await get('/categories/list');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/chains/templates/categories/list');
+  });
+
+  test('GET /tags/list 200, as documented', async () => {
+    svc.getTags.mockResolvedValue(['social', 'benefits', 'municipal', 'legal']);
+
+    const res = await get('/tags/list');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/chains/templates/tags/list');
+  });
+
+  test('GET /tags/list 500, as documented', async () => {
+    svc.getTags.mockRejectedValue(new Error('SPARQL timeout'));
+
+    const res = await get('/tags/list');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/chains/templates/tags/list');
   });
 });

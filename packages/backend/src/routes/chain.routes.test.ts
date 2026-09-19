@@ -16,6 +16,9 @@ jest.mock('../services/sparql.service', () => ({
 
 import { orchestrationService } from '../services/orchestration.service';
 import { sparqlService } from '../services/sparql.service';
+import { errorHandler } from '../middleware/error.middleware';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 import chainRoutes from './chain.routes';
 
 const mockExecuteChain = orchestrationService.executeChain as jest.Mock;
@@ -129,11 +132,16 @@ describe('POST /v1/chains/execute', () => {
     const res = await request(makeApp()).post('/v1/chains/execute').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({ code: 'INVALID_REQUEST', message });
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: message,
+      code: 'INVALID_REQUEST',
+    });
     expect(mockExecuteChain).not.toHaveBeenCalled();
   });
 
-  test('a failed-but-completed execution answers 500 and carries the error through', async () => {
+  test('a failed-but-completed execution answers a problem response carrying the partial result', async () => {
     mockExecuteChain.mockResolvedValue({
       success: false,
       chainId: 'chain-1',
@@ -147,8 +155,13 @@ describe('POST /v1/chains/execute', () => {
       .send({ dmnIds: ['d1', 'd2'], inputs: { bsn: '123' } });
 
     expect(res.status).toBe(500);
-    expect(res.body.success).toBe(false);
-    expect(res.body.data.error).toBe('DMN d2 returned no matching rule');
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Chain execution failed',
+      detail: 'DMN d2 returned no matching rule',
+      data: { chainId: 'chain-1', executionTime: 12, finalOutputs: {} },
+    });
+    expect(res.body).not.toHaveProperty('code');
   });
 
   test('returns 500 with an EXECUTION_ERROR code when the orchestrator throws', async () => {
@@ -160,8 +173,10 @@ describe('POST /v1/chains/execute', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'EXECUTION_ERROR', message: 'Operaton unreachable' },
+      status: 500,
+      title: 'Chain execution failed',
+      detail: 'Operaton unreachable',
+      code: 'EXECUTION_ERROR',
     });
   });
 });
@@ -222,8 +237,204 @@ describe('GET /v1/chains', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'DISCOVERY_ERROR', message: 'SPARQL endpoint unreachable' },
+      status: 500,
+      title: 'Chain discovery failed',
+      detail: 'SPARQL endpoint unreachable',
+      code: 'DISCOVERY_ERROR',
     });
+  });
+});
+
+describe('#142 endpoint check', () => {
+  test('POST /v1/chains/execute refuses an internal endpoint without executing', async () => {
+    const res = await request(makeApp())
+      .post('/v1/chains/execute')
+      .send({
+        dmnIds: ['d1'],
+        inputs: { bsn: '123' },
+        endpoint: 'https://169.254.169.254/latest',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(mockExecuteChain).not.toHaveBeenCalled();
+  });
+
+  test('POST /v1/chains/execute refuses an internal endpoint, as documented', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/chains', chainRoutes);
+    app.use(errorHandler); // app-wide in index.ts
+
+    const res = await request(app)
+      .post('/v1/chains/execute')
+      .send({
+        dmnIds: ['d1'],
+        inputs: { bsn: '123' },
+        endpoint: 'https://169.254.169.254/latest',
+      });
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/chains/execute');
+  });
+});
+
+describe('/v1/chains matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/chains', chainRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+    return app;
+  }
+
+  // Populates every ExecutionStep field this schema documents (dmnId, dmnTitle,
+  // startTime, endTime, duration, inputs, outputs), each with more than one key
+  // and more than one JSON value type, so free-form inputs/outputs are actually
+  // exercised rather than left as an empty object.
+  const FIRST_STEP = {
+    dmnId: 'SVB_LeeftijdsInformatie',
+    dmnTitle: 'SVB Leeftijdsinformatie',
+    startTime: 1_700_000_000_000,
+    endTime: 1_700_000_000_042,
+    duration: 42,
+    inputs: { bsn: '123456789', geboortedatum: '1990-01-01' },
+    outputs: { leeftijd: 35, isVolwassen: true },
+  };
+
+  const SECOND_STEP = {
+    dmnId: 'SZW_BijstandsnormInformatie',
+    dmnTitle: 'SZW Bijstandsnorm',
+    startTime: 1_700_000_000_042,
+    endTime: 1_700_000_000_090,
+    duration: 48,
+    inputs: { leeftijd: 35, isVolwassen: true },
+    outputs: { bijstandsnorm: 1200, toeslagPercentage: 0.2, opmerking: null },
+  };
+
+  test('GET / 200 with populated chains, as documented', async () => {
+    mockFindChainLinks.mockResolvedValue([
+      { from: 'A', to: 'B', variable: 'leeftijd', variableType: 'integer' },
+      { from: 'A', to: 'C', variable: 'inkomen', variableType: 'double' },
+    ]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/chains');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/chains');
+  });
+
+  test('GET / 500 DISCOVERY_ERROR, as documented', async () => {
+    mockFindChainLinks.mockRejectedValue(new Error('SPARQL endpoint unreachable'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/chains');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/chains');
+  });
+
+  test('POST /execute 200 without steps, as documented', async () => {
+    mockExecuteChain.mockResolvedValue({
+      success: true,
+      chainId: 'SVB_LeeftijdsInformatie->SZW_BijstandsnormInformatie',
+      executionTime: 90,
+      finalOutputs: { bijstandsnorm: 1200, toeslagPercentage: 0.2, isVolwassen: true },
+      steps: [FIRST_STEP, SECOND_STEP],
+    });
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/chains/execute')
+      .send({
+        dmnIds: ['SVB_LeeftijdsInformatie', 'SZW_BijstandsnormInformatie'],
+        inputs: { bsn: '123' },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).not.toHaveProperty('steps');
+    expectToMatchOperation(res, 'post', '/chains/execute');
+  });
+
+  test('POST /execute 200 with steps, as documented', async () => {
+    mockExecuteChain.mockResolvedValue({
+      success: true,
+      chainId: 'SVB_LeeftijdsInformatie->SZW_BijstandsnormInformatie',
+      executionTime: 90,
+      finalOutputs: { bijstandsnorm: 1200, toeslagPercentage: 0.2, isVolwassen: true },
+      steps: [FIRST_STEP, SECOND_STEP],
+    });
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/chains/execute')
+      .send({
+        dmnIds: ['SVB_LeeftijdsInformatie', 'SZW_BijstandsnormInformatie'],
+        inputs: { bsn: '123' },
+        options: { includeIntermediateSteps: true },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.steps).toEqual([FIRST_STEP, SECOND_STEP]);
+    expectToMatchOperation(res, 'post', '/chains/execute');
+  });
+
+  test.each([
+    ['a missing dmnIds array', { inputs: { bsn: '1' } }],
+    ['a missing inputs object', { dmnIds: ['d1'] }],
+  ])('POST /execute 400 for %s, as documented', async (_label, body) => {
+    const res = await request(makeDocumentedApp()).post('/v1/chains/execute').send(body);
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/chains/execute');
+  });
+
+  test('POST /execute 500 when the orchestrator resolves failed, as documented', async () => {
+    mockExecuteChain.mockResolvedValue({
+      success: false,
+      chainId: 'SVB_LeeftijdsInformatie->SZW_BijstandsnormInformatie',
+      executionTime: 55,
+      finalOutputs: { leeftijd: 35, isVolwassen: true },
+      steps: [FIRST_STEP],
+      error: 'DMN SZW_BijstandsnormInformatie returned no matching rule',
+    });
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/chains/execute')
+      .send({
+        dmnIds: ['SVB_LeeftijdsInformatie', 'SZW_BijstandsnormInformatie'],
+        inputs: { bsn: '123' },
+        options: { includeIntermediateSteps: true },
+      });
+
+    expect(res.status).toBe(500);
+    expect(res.body.detail).toBe('DMN SZW_BijstandsnormInformatie returned no matching rule');
+    expect(res.body.data.steps).toEqual([FIRST_STEP]);
+    expectToMatchOperation(res, 'post', '/chains/execute');
+  });
+
+  test('POST /execute 500 EXECUTION_ERROR when the orchestrator throws, as documented', async () => {
+    mockExecuteChain.mockRejectedValue(new Error('Operaton unreachable'));
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/chains/execute')
+      .send({ dmnIds: ['d1'], inputs: { bsn: '123' } });
+
+    expect(res.status).toBe(500);
+    expect(res.body.code).toBe('EXECUTION_ERROR');
+    expectToMatchOperation(res, 'post', '/chains/execute');
+  });
+
+  test('POST /execute 400 MALFORMED_BODY for a malformed JSON body, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp())
+      .post('/v1/chains/execute')
+      .set('Content-Type', 'application/json')
+      .send('{"dmnIds":');
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
+    expectToMatchOperation(res, 'post', '/chains/execute');
   });
 });

@@ -656,9 +656,9 @@ export class OperatonService {
    * within the same deployment. Splitting them across multiple deployments would
    * cause "form not found" or "process not found" errors at task execution time.
    *
-   * An optional operatonUrl/operatonUsername/operatonPassword allows deploying to a
-   * different Operaton instance than the one configured in environment variables,
-   * which is used by the BPMN Modeler when users configure a custom Operaton server.
+   * Always deploys through the shared client (`this.client`), bound to the
+   * configured Operaton and its credentials (#142) — never a per-request client
+   * built from caller-supplied host/username/password.
    */
   async deployProcess(
     bpmnXml: string,
@@ -666,9 +666,6 @@ export class OperatonService {
     forms: { id: string; schema: Record<string, unknown> }[],
     subProcesses: { filename: string; xml: string }[] = [],
     documents: { id: string; template: Record<string, unknown> }[] = [],
-    operatonUrl?: string,
-    operatonUsername?: string,
-    operatonPassword?: string,
     boardOwner?: string,
     /** Operaton's native tenant-id deployment field. Omitted entirely when unset. */
     organization?: string
@@ -688,17 +685,6 @@ export class OperatonService {
         subProcessCount: subProcesses.length,
         boardOwner: owner ?? '(none)',
       });
-
-      const client = operatonUrl
-        ? axios.create({
-            baseURL: operatonUrl,
-            timeout: config.operaton.timeout,
-            ...(operatonUsername &&
-              operatonPassword && {
-                auth: { username: operatonUsername, password: operatonPassword },
-              }),
-          })
-        : this.client;
 
       const formData = new FormData();
       formData.append('deployment-name', deploymentName);
@@ -740,7 +726,7 @@ export class OperatonService {
         });
       }
 
-      const response = await client.post('/deployment/create', formData, {
+      const response = await this.client.post('/deployment/create', formData, {
         headers: formData.getHeaders(),
       });
 

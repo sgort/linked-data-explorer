@@ -72,6 +72,16 @@ export const config = {
     apiKey: process.env.OPERATON_API_KEY,
   },
 
+  outbound: {
+    /** Admit http: and internal addresses for SPARQL endpoints. Local development only. */
+    allowLocalEndpoints: process.env.ALLOW_LOCAL_ENDPOINTS === 'true',
+    /** Hosts a TriplyDB call carrying a caller's token may go to. */
+    triplydbAllowedHosts: (process.env.TRIPLYDB_ALLOWED_HOSTS || 'api.open-regels.triply.cc')
+      .split(',')
+      .map((h) => h.trim().toLowerCase())
+      .filter(Boolean),
+  },
+
   dso: {
     catalogueBaseUrl:
       process.env.DSO_CATALOGUE_BASE_URL ||

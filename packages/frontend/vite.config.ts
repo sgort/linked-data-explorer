@@ -3,13 +3,28 @@ import path from 'path';
 import { loadEnv } from 'vite';
 import { configDefaults, defineConfig } from 'vitest/config';
 
-export default defineConfig(({ mode }) => {
+import { cspPlugin } from './vite/cspPlugin';
+
+export default defineConfig(({ mode, command }) => {
+  // Only meaningful for `vite build`: dev serves no staticwebapp.config.json,
+  // and `mode` there is always 'development' regardless of VITE_API_BASE_URL.
+  //
+  // __dirname (this file's own directory, packages/frontend), not
+  // process.cwd(): Vite's own envDir defaults to the config file's
+  // directory, and a build run from a different working directory (a root
+  // `npm run build --workspace=packages/frontend`, or any repo tooling that
+  // cd's elsewhere first) would otherwise read the wrong .env.<mode> file, or
+  // none. 'VITE_' as the prefix, not '', so only the variables the built
+  // bundle can itself see this way are read -- exactly the ones this file
+  // and cspPlugin.ts need.
+  const env = loadEnv(mode, __dirname, 'VITE_');
+
   return {
     server: {
       port: 3000,
       host: '0.0.0.0',
     },
-    plugins: [react()],
+    plugins: [react(), ...(command === 'build' ? [cspPlugin(env.VITE_API_BASE_URL)] : [])],
     build: {
       chunkSizeWarningLimit: 1000,
     },

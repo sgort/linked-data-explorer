@@ -4,6 +4,7 @@ import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
 import { ChainTemplateListResponse } from '../types/template.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
+import { sendProblem } from '../utils/problem';
 
 const router = Router();
 
@@ -58,14 +59,7 @@ router.get('/', async (req: Request, res: Response) => {
     const errorDetails = getErrorDetails(error);
     logger.error('Chain templates list error', errorDetails);
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'QUERY_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
   }
 });
 
@@ -90,14 +84,12 @@ router.get('/:id', async (req: Request, res: Response) => {
     );
 
     if (!template) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: `Template not found or not valid for endpoint: ${id}`,
-        },
-        timestamp: new Date().toISOString(),
-      } as ApiResponse);
+      sendProblem(res, req, {
+        status: 404,
+        code: 'NOT_FOUND',
+        detail: `Template not found or not valid for endpoint: ${id}`,
+      });
+      return;
     }
 
     // Increment usage count
@@ -112,14 +104,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     const errorDetails = getErrorDetails(error);
     logger.error('Chain template details error', errorDetails);
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'QUERY_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
   }
 });
 
@@ -145,14 +130,7 @@ router.get('/categories/list', async (req: Request, res: Response) => {
     const errorDetails = getErrorDetails(error);
     logger.error('Template categories error', errorDetails);
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'QUERY_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
   }
 });
 
@@ -178,14 +156,7 @@ router.get('/tags/list', async (req: Request, res: Response) => {
     const errorDetails = getErrorDetails(error);
     logger.error('Template tags error', errorDetails);
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'QUERY_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
   }
 });
 

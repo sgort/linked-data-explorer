@@ -19,6 +19,7 @@ import { BpmnService } from '@/src/services/bpmnService';
 import { DocumentService } from '../../services/documentService';
 import { FormService } from '../../services/formService';
 import { DocumentTemplate } from '../../types/document.types';
+import { getProblemDetail } from '../../utils/problem';
 import DmnTemplateSelector from './DmnTemplateSelector';
 import DocumentTemplateSelector from './DocumentTemplateSelector';
 import FormTemplateSelector from './FormTemplateSelector';
@@ -49,11 +50,24 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001
 interface BpmnCanvasProps {
   xml: string;
   endpoint: string;
+  /**
+   * The active process's own id. Used only to clear a stale save-failure
+   * banner when the selection changes (#156) — `saveResult` otherwise
+   * survives switching to an unrelated process and sits over its diagram.
+   * Not required: omitted, the banner simply never auto-clears on its own,
+   * same as before this prop existed.
+   */
+  processId?: string | null;
   /** True when the parent has pending footer (metadata) edits — enables the Save button. */
   hasFooterChanges?: boolean;
   /** Called when the canvas dirty state changes, so the parent can guard navigation. */
   onDirtyChange?: (dirty: boolean) => void;
-  onSave: (xml: string) => void;
+  /**
+   * May resolve `false` when the save reached the canvas but couldn't be
+   * persisted — the caller shows a failure banner in that case. A `void`
+   * return (or resolving `true`/`undefined`) is treated as success.
+   */
+  onSave: (xml: string) => void | boolean | Promise<void | boolean>;
   onElementSelect: (element: unknown) => void;
   onClose: () => void;
 }
@@ -98,6 +112,7 @@ const extractOrganizationFromXml = (xml: string): string | null => {
 const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   xml,
   endpoint,
+  processId,
   hasFooterChanges = false,
   onDirtyChange,
   onSave,
@@ -108,11 +123,17 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   const propertiesPanelRef = useRef<HTMLDivElement>(null);
   const modelerRef = useRef<BpmnModeler | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showDeployModal, setShowDeployModal] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
-  const [deployResult, setDeployResult] = useState<{ success: boolean; message: string } | null>(
-    null
-  );
+  // `warning` is the deploy that worked while its bundle did not get recorded
+  // (#155): a success for Operaton, but not something to show a green tick
+  // next to, since the process will not appear anywhere until it is redone.
+  const [deployResult, setDeployResult] = useState<{
+    success: boolean;
+    warning?: boolean;
+    message: string;
+  } | null>(null);
 
   // Resources preview — populated when modal opens
   const [deployResources, setDeployResources] = useState<{
@@ -130,14 +151,6 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     unmatchedForms: [],
     unmatchedDocuments: [],
   });
-
-  // To make the endpoint user-configurable we need to thread it through the
-  // full chain: modal state → request body → backend route → service method
-  const [operatonUrl, setOperatonUrl] = useState<string>(
-    import.meta.env.VITE_OPERATON_BASE_URL ?? ''
-  );
-  const [operatonUsername, setOperatonUsername] = useState<string>('');
-  const [operatonPassword, setOperatonPassword] = useState<string>('');
 
   // Board-ownership picker (deploy modal). `boardChoice` is the user's selection;
   // `boardAuto` is the auto-detected suggestion shown alongside the Auto option.
@@ -160,6 +173,14 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     setSelectedElement(element);
     onElementSelectRef.current(element);
   }, []);
+
+  // Clears a stale save-failure banner when the selected process changes
+  // (#156) — keyed on `processId`, not `xml`, since `xml` also changes after
+  // every save (success or failure) within the SAME process, which would
+  // otherwise clear the banner the instant it appeared.
+  useEffect(() => {
+    setSaveResult(null);
+  }, [processId]);
 
   useEffect(() => {
     if (!containerRef.current || !propertiesPanelRef.current) return;
@@ -408,11 +429,29 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     if (!modelerRef.current) return;
     try {
       const { xml: savedXml } = await modelerRef.current.saveXML({ format: true });
-      onSave(savedXml);
+      const saved = await onSave(savedXml);
       setHasChanges(false);
       onDirtyChange?.(false);
+      // `onSave` only ever returns `false` when it can distinguish a real
+      // storage failure (BpmnModeler's handleSaveProcess awaits
+      // BpmnService.saveProcess); anything else — void, true, undefined —
+      // is treated as success so callers that don't report an outcome keep
+      // behaving exactly as before.
+      setSaveResult(
+        saved === false
+          ? {
+              success: false,
+              message:
+                'Saved to the canvas, but could not be stored — the change will be lost on reload.',
+            }
+          : null
+      );
     } catch (err) {
       console.error('Failed to save BPMN:', err);
+      setSaveResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to save the process.',
+      });
     }
   };
 
@@ -645,7 +684,6 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           forms,
           documents,
           subProcesses: subProcessXmls,
-          operatonUrl: operatonUrl.trim() || undefined,
           boardOwner,
           organization: deployOrganization,
         }),
@@ -654,25 +692,20 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       const data = await response.json();
 
       if (data.success) {
-        setDeployResult({ success: true, message: `Deployment ID: ${data.data.deploymentId}` });
-
-        // Write deployment metadata back to the process_definitions record
-        const ldeId = BpmnService.getProcesses().find((p) => p.bpmnProcessId === processKey)?.id;
-        if (ldeId) {
-          fetch(`${API_BASE_URL}/v1/assets/bpmn/${ldeId}/deploy`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              deploymentId: data.data.deploymentId,
-              operatonUrl: operatonUrl.trim() || undefined,
-              formIds: forms.map((f) => f.id),
-              documentIds: documents.map((d) => d.id),
-              boardOwner,
-            }),
-          }).catch((err) => console.warn('[BpmnCanvas] Deploy record update failed:', err));
-        }
+        // The backend now records the bundle itself, server-side, in the same
+        // request as the Operaton deploy (#155) — there is no second write for
+        // the browser to make, and so no local-storage identifier to look one
+        // up by. `bundleRecorded` says whether that write actually landed; the
+        // deploy itself already happened either way, so it stays a success.
+        const recorded = Boolean(data.data.bundleRecorded);
+        const message = recorded
+          ? `Deployment ID: ${data.data.deploymentId}`
+          : `Deployment ID: ${data.data.deploymentId} — the process was not recorded ` +
+            `(${data.data.bundleRecordingError ?? 'unknown reason'}). It will not appear on ` +
+            'the dashboard or the public site until it is saved and deployed again.';
+        setDeployResult({ success: true, warning: !recorded, message });
       } else {
-        setDeployResult({ success: false, message: data.error?.message ?? 'Deployment failed' });
+        setDeployResult({ success: false, message: getProblemDetail(data, 'Deployment failed') });
       }
     } catch (err) {
       setDeployResult({
@@ -726,6 +759,13 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
             <Save size={16} />
             Save
           </button>
+
+          {saveResult && !saveResult.success && (
+            <span className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-700">
+              ✗ {saveResult.message}
+            </span>
+          )}
+
           <button
             onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
@@ -744,10 +784,15 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           {deployResult && (
             <span
               className={`text-xs px-3 py-1.5 rounded-lg ${
-                deployResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                !deployResult.success
+                  ? 'bg-red-50 text-red-700'
+                  : deployResult.warning
+                    ? 'bg-amber-50 text-amber-800'
+                    : 'bg-green-50 text-green-700'
               }`}
             >
-              {deployResult.success ? '✓' : '✗'} {deployResult.message}
+              {!deployResult.success ? '✗' : deployResult.warning ? '⚠' : '✓'}{' '}
+              {deployResult.message}
             </span>
           )}
           <button
@@ -975,51 +1020,13 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                 </div>
               </div>
 
-              {/* Operaton REST endpoint */}
-              <div className="mb-4">
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Operaton REST endpoint
-                </label>
-                <input
-                  type="text"
-                  value={operatonUrl}
-                  onChange={(e) => setOperatonUrl(e.target.value)}
-                  disabled={isDeploying || deployResult?.success === true}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
-                  placeholder="https://operaton.open-regels.nl/engine-rest"
-                />
-              </div>
-
-              {/* Operaton REST endpoint - Username & Password */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Username <span className="text-slate-400 font-normal">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={operatonUsername}
-                    onChange={(e) => setOperatonUsername(e.target.value)}
-                    disabled={isDeploying || deployResult?.success === true}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
-                    placeholder="demo"
-                    autoComplete="username"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Password <span className="text-slate-400 font-normal">(optional)</span>
-                  </label>
-                  <input
-                    type="password"
-                    value={operatonPassword}
-                    onChange={(e) => setOperatonPassword(e.target.value)}
-                    disabled={isDeploying || deployResult?.success === true}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                  />
-                </div>
+              {/* Operaton target — deploys always go to the backend's own
+                  configured Operaton (#142); there is nothing left to pick.
+                  Matches the modal's other status/help lines (e.g. the board
+                  auto-detection note above): mt-2 text-xs text-slate-500. */}
+              <div className="mb-4 mt-2 text-xs text-slate-500">
+                Deploys to{' '}
+                {import.meta.env.VITE_OPERATON_BASE_URL || "the backend's configured Operaton"}.
               </div>
             </div>
 
@@ -1030,12 +1037,14 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
               {deployResult && (
                 <div
                   className={`mb-4 p-3 rounded-lg text-sm ${
-                    deployResult.success
-                      ? 'bg-green-50 text-green-700 border border-green-200'
-                      : 'bg-red-50 text-red-700 border border-red-200'
+                    !deployResult.success
+                      ? 'bg-red-50 text-red-700 border border-red-200'
+                      : deployResult.warning
+                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                        : 'bg-green-50 text-green-700 border border-green-200'
                   }`}
                 >
-                  {deployResult.success ? '✓ ' : '✗ '}
+                  {!deployResult.success ? '✗ ' : deployResult.warning ? '⚠ ' : '✓ '}
                   {deployResult.message}
                 </div>
               )}

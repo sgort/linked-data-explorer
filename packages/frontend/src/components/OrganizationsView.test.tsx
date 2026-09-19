@@ -142,7 +142,7 @@ describe('OrganizationsView', () => {
 
     rerender(<OrganizationsView endpoint="second" />);
     await waitFor(() => expect(executeSparqlQuery).toHaveBeenCalledTimes(2));
-    expect(executeSparqlQuery).toHaveBeenLastCalledWith(expect.any(String), 'second');
+    expect(executeSparqlQuery).toHaveBeenLastCalledWith('second', expect.any(String));
   });
 
   test('queries for public organisations ordered by name', async () => {
@@ -150,8 +150,26 @@ describe('OrganizationsView', () => {
     render(<OrganizationsView endpoint="e" />);
     await waitFor(() => expect(executeSparqlQuery).toHaveBeenCalled());
 
-    const query = executeSparqlQuery.mock.calls[0][0] as string;
+    const query = executeSparqlQuery.mock.calls[0][1] as string;
     expect(query).toContain('cv:PublicOrganisation');
     expect(query).toContain('ORDER BY ?name');
+  });
+
+  // executeSparqlQuery's signature is (endpoint, query) -- OrganizationsView
+  // used to call it (query, endpoint), swapped. The browser calling the
+  // endpoint directly tolerated it by accident (the "endpoint" arg, actually
+  // the query text, was never a URL fetch target before #161); going through
+  // the backend's POST /v1/triplydb/query, which validates and uses each
+  // field by name, would not have.
+  test('sends the endpoint and query in the right argument order', async () => {
+    executeSparqlQuery.mockResolvedValue(response([]));
+    render(<OrganizationsView endpoint="https://example.org/sparql" />);
+
+    await waitFor(() => expect(executeSparqlQuery).toHaveBeenCalled());
+
+    expect(executeSparqlQuery).toHaveBeenCalledWith(
+      'https://example.org/sparql',
+      expect.stringContaining('cv:PublicOrganisation')
+    );
   });
 });

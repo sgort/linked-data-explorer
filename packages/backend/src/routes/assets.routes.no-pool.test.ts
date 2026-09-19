@@ -26,6 +26,8 @@ jest.mock('../services/assets.service', () => ({
 
 import * as assetsService from '../services/assets.service';
 import assetsRoutes from './assets.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 function makeApp() {
   const app = express();
@@ -35,8 +37,10 @@ function makeApp() {
 }
 
 const EXPECTED = {
-  success: false,
-  error: { code: 'DB_NOT_CONFIGURED', message: 'Asset storage not configured' },
+  status: 503,
+  title: 'Storage not configured',
+  detail: 'Asset storage not configured',
+  code: 'DB_NOT_CONFIGURED',
 };
 
 const ROUTES = [
@@ -58,7 +62,7 @@ describe('/v1/assets with no database configured', () => {
     const res = await request(makeApp())[method](path).send({});
 
     expect(res.status).toBe(503);
-    expect(res.body).toEqual(EXPECTED);
+    expect(res.body).toMatchObject(EXPECTED);
   });
 
   test('no service function is called when storage is unavailable', async () => {
@@ -75,5 +79,39 @@ describe('/v1/assets with no database configured', () => {
     for (const fn of mocks) {
       expect(fn).not.toHaveBeenCalled();
     }
+  });
+});
+
+describe('/v1/assets 503, as documented, with no database configured', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/assets', assetsRoutes);
+    return app;
+  }
+
+  test.each([
+    ['get', '/v1/assets/bpmn', 'get', '/assets/bpmn'],
+    ['post', '/v1/assets/bpmn', 'post', '/assets/bpmn'],
+    [
+      'get',
+      '/v1/assets/bpmn/by-bpmn-id/ZorgtoeslagProcess',
+      'get',
+      '/assets/bpmn/by-bpmn-id/{bpmnProcessId}',
+    ],
+    ['delete', '/v1/assets/bpmn/p1', 'delete', '/assets/bpmn/{id}'],
+    ['patch', '/v1/assets/bpmn/p1/deploy', 'patch', '/assets/bpmn/{id}/deploy'],
+    ['get', '/v1/assets/forms', 'get', '/assets/forms'],
+    ['post', '/v1/assets/forms', 'post', '/assets/forms'],
+    ['delete', '/v1/assets/forms/f1', 'delete', '/assets/forms/{id}'],
+    ['get', '/v1/assets/documents', 'get', '/assets/documents'],
+    ['post', '/v1/assets/documents', 'post', '/assets/documents'],
+    ['delete', '/v1/assets/documents/d1', 'delete', '/assets/documents/{id}'],
+  ] as const)('%s %s answers a documented 503', async (method, path, docMethod, docPath) => {
+    const res = await request(makeDocumentedApp())[method](path).send({});
+
+    expect(res.status).toBe(503);
+    expectToMatchOperation(res, docMethod, docPath);
   });
 });

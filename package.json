@@ -1,6 +1,6 @@
 {
   "name": "linked-data-explorer-monorepo",
-  "version": "2026.09.4",
+  "version": "2026.09.5",
   "private": true,
   "description": "Monorepo for Linked Data Explorer - RONL DMN Orchestration Platform",
   "workspaces": [
@@ -21,6 +21,7 @@
     "check-format": "npm run check-format --workspaces --if-present",
     "check-supply-chain": "node scripts/check-supply-chain.mjs",
     "check-mirror": "bash scripts/check-mirror.sh",
+    "authorities:generate": "node scripts/generate-dso-authorities.mjs",
     "prepare": "husky || true",
     "postinstall": "node scripts/write-deps-marker.mjs"
   },
@@ -41,12 +42,15 @@
   },
   "engines": {
     "node": ">=20.20.2",
-    "npm": ">=10.9.9"
+    "npm": ">=10.0.0"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/sgort/linked-data-explorer.git"
   },
   "author": "Regels Overheid",
-  "license": "EUPL-1.2"
+  "license": "EUPL-1.2",
+  "scarfSettings": {
+    "enabled": false
+  }
 }

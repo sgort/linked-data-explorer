@@ -6,6 +6,7 @@
 
 import type { Router } from 'express';
 import healthRoutes from './health.routes';
+import cspReportsRoutes from './cspReports.routes';
 import dmnRoutes from './dmn.routes';
 import chainRoutes from './chain.routes';
 import templateRoutes from './template.routes';
@@ -21,6 +22,7 @@ import assetsPublicRoutes from './assets.public.routes';
 import dsoRoutes from './dso.routes';
 import normsRoutes from './norms.routes';
 import shaclRoutes from './shacl.routes';
+import openapiRoutes from './openapi.routes';
 
 /** Logical grouping for the root page. New categories can be added; see
  *  CATEGORY_ORDER in utils/rootView.ts for render order. */
@@ -64,6 +66,12 @@ export const routeRegistry: ReadonlyArray<RouteDefinition> = [
     summary: 'DMN cache statistics and invalidation',
     category: 'Health & monitoring',
   },
+  {
+    mount: '/v1/csp-reports',
+    router: cspReportsRoutes,
+    summary: 'Content-Security-Policy violation report collector',
+    category: 'Health & monitoring',
+  },
 
   // Discovery
   {
@@ -83,6 +91,13 @@ export const routeRegistry: ReadonlyArray<RouteDefinition> = [
     router: normsRoutes,
     summary: 'cprmv:Rule paths and norms in publish format',
     category: 'Discovery',
+  },
+  {
+    mount: '/v1/openapi.json',
+    router: openapiRoutes,
+    summary: 'OpenAPI 3.1 description of this API',
+    category: 'Discovery',
+    publicCors: true,
   },
 
   // Validation

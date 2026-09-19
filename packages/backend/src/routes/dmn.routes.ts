@@ -8,8 +8,33 @@ import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails, isAxiosError } from '../utils/errors';
 import { operatonService } from '../services/operaton.service';
 import { dmnValidationService } from '../services/dmn-validation.service';
+import { recordDeployedBundle } from '../services/assets.service';
+import { sendProblem } from '../utils/problem';
+import { refuseOptionalEndpoint, refuseTarget, checkOperatonTarget } from '../utils/outboundUrl';
+import { config } from '../utils/config';
+import { asRecord, checkBoardOwner } from '../utils/validation';
 
 const router = Router();
+
+/**
+ * Pulls the `<process id="...">` out of raw BPMN XML, prefix-agnostic (so
+ * `<bpmn:process>` and an unprefixed `<process>` both match) — the same
+ * extraction BpmnModeler.tsx's own `extractBpmnProcessId` does client-side,
+ * kept here as a plain regex rather than a DOM parser dependency. Used only
+ * to find/create the storage row for a just-deployed bundle by its natural
+ * key; falls back to `deploymentName` (validated non-blank by the caller)
+ * when the XML has no `process` element to match.
+ */
+function extractBpmnProcessId(bpmnXml: string): string | null {
+  // Requires an actual whitespace character immediately before `id=` (not
+  // just a word boundary) so `<bpmn:process id="REAL" xsi:id="WRONG">`
+  // captures "REAL" — a bare `\b` also matches right after the `:` in
+  // `xsi:id`, since `:` is a non-word character, so it used to backtrack
+  // onto whichever `id=`-suffixed attribute came last in the tag (#156).
+  const match = bpmnXml.match(/<(?:[\w-]+:)?process\b[^>]*\sid="([^"]*)"/);
+  const id = match?.[1]?.trim();
+  return id ? id : null;
+}
 
 /**
  * GET /api/dmns
@@ -27,6 +52,7 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     // NEW: Extract optional endpoint parameter
     const requestedEndpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
     // NEW: Extract optional refresh parameter
     const refresh = req.query.refresh === 'true' || req.query.refresh === '1';
 
@@ -67,14 +93,7 @@ router.get('/', async (req: Request, res: Response) => {
     const errorDetails = getErrorDetails(error);
     logger.error('DMN list error', errorDetails);
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'QUERY_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
   }
 });
 
@@ -85,6 +104,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/semantic-equivalences', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
     const equivalences = await sparqlService.findSemanticEquivalences(endpoint);
 
     res.json({
@@ -95,11 +115,7 @@ router.get('/semantic-equivalences', async (req: Request, res: Response) => {
   } catch (error: unknown) {
     const errorDetails = getErrorDetails(error);
     logger.error('Semantic equivalences error', errorDetails);
-    res.status(500).json({
-      success: false,
-      error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
-      timestamp: new Date().toISOString(),
-    });
+    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
   }
 });
 
@@ -110,6 +126,7 @@ router.get('/semantic-equivalences', async (req: Request, res: Response) => {
 router.get('/enhanced-chain-links', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
     const links = await sparqlService.findEnhancedChainLinks(endpoint);
 
     // Standardize response format to match other endpoints
@@ -121,11 +138,7 @@ router.get('/enhanced-chain-links', async (req: Request, res: Response) => {
   } catch (error: unknown) {
     const errorDetails = getErrorDetails(error);
     logger.error('Enhanced chain links error', errorDetails);
-    res.status(500).json({
-      success: false,
-      error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
-      timestamp: new Date().toISOString(),
-    });
+    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
   }
 });
 
@@ -136,6 +149,7 @@ router.get('/enhanced-chain-links', async (req: Request, res: Response) => {
 router.get('/cycles', async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
     const cycles = await sparqlService.detectChainCycles(endpoint);
 
     res.json({
@@ -146,11 +160,7 @@ router.get('/cycles', async (req: Request, res: Response) => {
   } catch (error: unknown) {
     const errorDetails = getErrorDetails(error);
     logger.error('Cycle detection error', errorDetails);
-    res.status(500).json({
-      success: false,
-      error: { code: 'QUERY_ERROR', message: getErrorMessage(error) },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
   }
 });
 
@@ -167,22 +177,21 @@ router.post('/drd/deploy', async (req: Request, res: Response) => {
     };
 
     if (!Array.isArray(dmnIds) || dmnIds.length < 2) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_INPUT',
-          message: 'dmnIds must be an array with at least 2 entries',
-        },
-        timestamp: new Date().toISOString(),
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_INPUT',
+        detail: 'dmnIds must be an array with at least 2 entries',
       });
+      return;
     }
 
     if (!deploymentName?.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'INVALID_INPUT', message: 'deploymentName is required' },
-        timestamp: new Date().toISOString(),
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_INPUT',
+        detail: 'deploymentName is required',
       });
+      return;
     }
 
     // The last DMN in the ordered array is the entry point (the top-level decision that
@@ -206,10 +215,10 @@ router.post('/drd/deploy', async (req: Request, res: Response) => {
     });
   } catch (error: unknown) {
     logger.error('DRD deploy error', getErrorDetails(error));
-    res.status(500).json({
-      success: false,
-      error: { code: 'DRD_DEPLOY_FAILED', message: getErrorMessage(error) },
-      timestamp: new Date().toISOString(),
+    sendProblem(res, req, {
+      status: 500,
+      code: 'DRD_DEPLOY_FAILED',
+      detail: getErrorMessage(error),
     });
   }
 });
@@ -234,8 +243,6 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       subProcesses = [],
       documents = [],
       operatonUrl,
-      operatonUsername,
-      operatonPassword,
       boardOwner,
       organization,
     } = req.body as {
@@ -245,7 +252,9 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       subProcesses: { filename: string; xml: string }[];
       documents: { id: string; template: Record<string, unknown> }[];
       operatonUrl?: string;
+      /** @deprecated ignored (#142) */
       operatonUsername?: string;
+      /** @deprecated ignored (#142) */
       operatonPassword?: string;
       /** Owning board for the deployed process; auto-derived from candidate groups when omitted. */
       boardOwner?: string;
@@ -254,27 +263,50 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
     };
 
     if (!bpmnXml?.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'INVALID_INPUT', message: 'bpmnXml is required' },
-        timestamp: new Date().toISOString(),
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_INPUT',
+        detail: 'bpmnXml is required',
       });
+      return;
     }
 
     if (!deploymentName?.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'INVALID_INPUT', message: 'deploymentName is required' },
-        timestamp: new Date().toISOString(),
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_INPUT',
+        detail: 'deploymentName is required',
       });
+      return;
     }
 
     if (!organization?.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'INVALID_INPUT', message: 'organization is required' },
-        timestamp: new Date().toISOString(),
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_INPUT',
+        detail: 'organization is required',
       });
+      return;
+    }
+
+    const boardOwnerErrors: string[] = [];
+    checkBoardOwner(boardOwnerErrors, asRecord(req.body));
+    if (boardOwnerErrors.length > 0) {
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_INPUT',
+        detail: boardOwnerErrors.join('; '),
+      });
+      return;
+    }
+
+    // The deploy target is the configured Operaton, never the caller's (#142).
+    // A matching operatonUrl is still accepted so an older frontend keeps working.
+    if (
+      operatonUrl !== undefined &&
+      refuseTarget(res, req, checkOperatonTarget(operatonUrl, 'operatonUrl'))
+    ) {
+      return;
     }
 
     const result = await operatonService.deployProcess(
@@ -283,27 +315,71 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
       forms,
       subProcesses,
       documents,
-      operatonUrl,
-      operatonUsername,
-      operatonPassword,
       boardOwner,
       organization
     );
+
+    // The Operaton deploy above already happened and can't be undone, so a
+    // problem recording it in Postgres must never fail this response — it is
+    // reported alongside the (still successful) deploy instead. See #155.
+    let bundleRecorded = false;
+    let bundleRecordingError: string | undefined;
+    try {
+      const bpmnProcessId = extractBpmnProcessId(bpmnXml) ?? deploymentName;
+      const recordResult = await recordDeployedBundle({
+        bpmnProcessId,
+        bpmnXml,
+        organization,
+        deploymentId: result.deploymentId,
+        operatonUrl: config.operaton.baseUrl,
+        formIds: forms.map((f) => f.id),
+        documentIds: documents.map((d) => d.id),
+        boardOwner,
+      });
+      bundleRecorded = recordResult.recorded;
+      if (!recordResult.recorded) {
+        switch (recordResult.reason) {
+          case 'db-not-configured':
+            bundleRecordingError =
+              'Bundle storage is not configured (no database connection), so the process was not recorded.';
+            break;
+          case 'existing-row-not-stamped':
+            bundleRecordingError =
+              `A stored process for id "${bpmnProcessId}" was found, but marking it deployed ` +
+              `matched no row.`;
+            break;
+          case 'new-row-not-stamped':
+          default:
+            // Creation itself succeeded here — only the immediately
+            // following stamp-by-id matched no row (#156 fix round 1: the
+            // old wording, "...and creating one failed", named the wrong
+            // step).
+            bundleRecordingError = `A stored process was created for process id "${bpmnProcessId}", but marking it deployed matched no row.`;
+            break;
+        }
+      }
+    } catch (error: unknown) {
+      bundleRecorded = false;
+      bundleRecordingError = getErrorMessage(error);
+      logger.error('Bundle storage after deploy failed', getErrorDetails(error));
+    }
 
     res.json({
       success: true,
       data: {
         deploymentId: result.deploymentId,
         resourceCount: result.resourceCount,
+        bundleRecorded,
+        ...(bundleRecordingError !== undefined ? { bundleRecordingError } : {}),
       },
       timestamp: new Date().toISOString(),
     });
   } catch (error: unknown) {
     logger.error('Process deploy error', getErrorDetails(error));
-    res.status(500).json({
-      success: false,
-      error: { code: 'PROCESS_DEPLOY_FAILED', message: getErrorMessage(error) },
-      timestamp: new Date().toISOString(),
+    sendProblem(res, req, {
+      status: 500,
+      code: 'PROCESS_DEPLOY_FAILED',
+      detail: getErrorMessage(error),
     });
   }
 });
@@ -331,19 +407,17 @@ router.post('/deploy', async (req: Request, res: Response) => {
     };
 
     if (!xml?.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'INVALID_INPUT', message: 'xml is required' },
-        timestamp: new Date().toISOString(),
-      });
+      sendProblem(res, req, { status: 400, code: 'INVALID_INPUT', detail: 'xml is required' });
+      return;
     }
 
     if (!deploymentName?.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'INVALID_INPUT', message: 'deploymentName is required' },
-        timestamp: new Date().toISOString(),
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_INPUT',
+        detail: 'deploymentName is required',
       });
+      return;
     }
 
     const result = await operatonService.deployDrd(
@@ -359,10 +433,10 @@ router.post('/deploy', async (req: Request, res: Response) => {
     });
   } catch (error: unknown) {
     logger.error('DMN deploy error', getErrorDetails(error));
-    res.status(500).json({
-      success: false,
-      error: { code: 'DMN_DEPLOY_FAILED', message: getErrorMessage(error) },
-      timestamp: new Date().toISOString(),
+    sendProblem(res, req, {
+      status: 500,
+      code: 'DMN_DEPLOY_FAILED',
+      detail: getErrorMessage(error),
     });
   }
 });
@@ -407,11 +481,10 @@ router.post('/evaluate/:decisionKey', async (req: Request, res: Response) => {
  * GET /v1/dmns/:identifier/xml
  * Fetch the deployed DMN XML content from Operaton.
  *
- * Mirrors the handler in `dmn-xml.routes.ts` (still mounted at the legacy
- * `/api/dmns` path in `index.ts` for backward compatibility) but exposes the
- * route under the canonical `/v1/dmns` mount via the registry, and uses the
- * `:identifier` parameter name to match the convention of the surrounding
- * routes. The `identifier` value is passed verbatim as the Operaton decision
+ * Served under the canonical `/v1/dmns` mount via the registry, and at the
+ * legacy `/api/dmns` alias, which adds the `Deprecation` and successor `Link`
+ * headers (see routes/index.ts). Uses the `:identifier` parameter name to match
+ * the convention of the surrounding routes. The `identifier` value is passed verbatim as the Operaton decision
  * definition key — for RONL DMNs deployed via this platform these are
  * equivalent by convention.
  *
@@ -430,14 +503,12 @@ router.get('/:identifier/xml', async (req: Request, res: Response) => {
     const dmnXml = await operatonService.fetchDmnXml(identifier);
 
     if (!dmnXml) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'DMN_NOT_FOUND',
-          message: `DMN definition not found in Operaton: ${identifier}`,
-        },
-        timestamp: new Date().toISOString(),
-      } as ApiResponse);
+      sendProblem(res, req, {
+        status: 404,
+        code: 'DMN_NOT_FOUND',
+        detail: `DMN definition not found in Operaton: ${identifier}`,
+      });
+      return;
     }
 
     res.setHeader('Content-Type', 'application/xml');
@@ -446,14 +517,11 @@ router.get('/:identifier/xml', async (req: Request, res: Response) => {
   } catch (error: unknown) {
     const errorDetails = getErrorDetails(error);
     logger.error('DMN XML download error', errorDetails);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'DMN_FETCH_FAILED',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, {
+      status: 500,
+      code: 'DMN_FETCH_FAILED',
+      detail: getErrorMessage(error),
+    });
   }
 });
 
@@ -467,6 +535,7 @@ router.get('/:identifier', async (req: Request, res: Response) => {
   try {
     const { identifier } = req.params;
     const requestedEndpoint = req.query.endpoint as string | undefined;
+    if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
 
     logger.info('DMN details request', {
       identifier,
@@ -476,14 +545,12 @@ router.get('/:identifier', async (req: Request, res: Response) => {
     const dmn = await sparqlService.getDmnByIdentifier(identifier, requestedEndpoint);
 
     if (!dmn) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: `DMN not found: ${identifier}`,
-        },
-        timestamp: new Date().toISOString(),
-      } as ApiResponse);
+      sendProblem(res, req, {
+        status: 404,
+        code: 'NOT_FOUND',
+        detail: `DMN not found: ${identifier}`,
+      });
+      return;
     }
 
     // Enrich with the XML download link (same convention as the list endpoint).
@@ -501,14 +568,7 @@ router.get('/:identifier', async (req: Request, res: Response) => {
     const errorDetails = getErrorDetails(error);
     logger.error('DMN details error', errorDetails);
 
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'QUERY_ERROR',
-        message: getErrorMessage(error),
-      },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
   }
 });
 
@@ -555,14 +615,12 @@ router.post('/validate', async (req: Request, res: Response) => {
     const { content } = req.body as { content?: string };
 
     if (!content || typeof content !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_REQUEST',
-          message: 'Request body must contain a "content" field with the DMN XML as a string.',
-        },
-        timestamp: new Date().toISOString(),
-      } as ApiResponse);
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_REQUEST',
+        detail: 'Request body must contain a "content" field with the DMN XML as a string.',
+      });
+      return;
     }
 
     logger.info('[DMN Validate] Validation requested', { contentLength: content.length });
@@ -582,11 +640,11 @@ router.post('/validate', async (req: Request, res: Response) => {
     } as ApiResponse);
   } catch (error: unknown) {
     logger.error('[DMN Validate] Unexpected error', getErrorDetails(error));
-    res.status(500).json({
-      success: false,
-      error: { code: 'VALIDATION_ERROR', message: getErrorMessage(error) },
-      timestamp: new Date().toISOString(),
-    } as ApiResponse);
+    sendProblem(res, req, {
+      status: 500,
+      code: 'VALIDATION_ERROR',
+      detail: getErrorMessage(error),
+    });
   }
 });
 

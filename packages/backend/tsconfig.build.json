@@ -1,0 +1,8 @@
+{
+  // The production build. Identical to tsconfig.json except that it leaves out
+  // the test-only helpers under src/**/testing/**, which import dev-only
+  // packages (ajv). `npm run typecheck` still uses tsconfig.json, so the helpers
+  // stay type-checked.
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "src/**/testing/**"]
+}

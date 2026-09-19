@@ -112,7 +112,11 @@ describe('public CORS flag', () => {
   test('is set on exactly the read-only public endpoints', () => {
     const publicMounts = routeRegistry.filter((r) => r.publicCors).map((r) => r.mount);
 
-    expect(publicMounts.sort()).toEqual(['/v1/bundles/public', '/v1/ropa/public']);
+    expect(publicMounts.sort()).toEqual([
+      '/v1/bundles/public',
+      '/v1/openapi.json',
+      '/v1/ropa/public',
+    ]);
   });
 
   test('is left undefined rather than false on internal routes', () => {

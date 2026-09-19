@@ -63,6 +63,20 @@ describe('migrate', () => {
     expect(alters).toBeNull();
   });
 
+  test('makes form and document status NOT NULL, backfilling any NULL first (#151)', async () => {
+    await migrate();
+
+    const sql = mockQuery.mock.calls[0][0] as string;
+    for (const table of ['form_schemas', 'document_templates']) {
+      const backfill = sql.indexOf(`UPDATE ${table} SET status = 'wip' WHERE status IS NULL`);
+      const constrain = sql.search(
+        new RegExp(`ALTER TABLE ${table}\\s+ALTER COLUMN status SET NOT NULL`)
+      );
+      expect(backfill).toBeGreaterThan(-1);
+      expect(constrain).toBeGreaterThan(backfill);
+    }
+  });
+
   test('releases the client even when the DDL fails, so the pool is not leaked', async () => {
     mockQuery.mockRejectedValue(new Error('permission denied for schema public'));
 

@@ -163,7 +163,7 @@ async function renderCanvas(
     forms?: unknown[];
     templates?: unknown[];
     processes?: unknown[];
-    onSave?: (xml: string) => void;
+    onSave?: (xml: string) => void | boolean | Promise<void | boolean>;
     onClose?: () => void;
     onElementSelect?: (element: unknown) => void;
     onDirtyChange?: (dirty: boolean) => void;
@@ -215,6 +215,55 @@ describe('BpmnCanvas — lifecycle', () => {
     expect(onSave).toHaveBeenCalledWith(SIMPLE_XML);
     expect(onDirtyChange).toHaveBeenLastCalledWith(false);
     expect(screen.getByRole('button', { name: /Save/ })).toBeDisabled();
+  });
+
+  // The defect this covers (#155): BpmnService.saveProcess's background POST
+  // used to be unawaited and its failure swallowed, so a caller (and the
+  // user) had no way to learn the save didn't reach storage.
+  test('a save that fails to persist is shown to the user', async () => {
+    const onSave = vi.fn().mockResolvedValue(false);
+    const { modeler } = await renderCanvas({ onSave });
+    act(() => modeler.eventBus.emit('commandStack.changed'));
+    await userEvent.click(await screen.findByRole('button', { name: /Save/ }));
+
+    expect(onSave).toHaveBeenCalledWith(SIMPLE_XML);
+    expect((await screen.findAllByText(/could not be stored/)).length).toBeGreaterThan(0);
+  });
+
+  // #156: saveResult used to survive switching to another process entirely,
+  // so a stale failure banner could sit over an unrelated diagram.
+  test('clears a save-failure banner when processId changes, without needing the xml to change', async () => {
+    const onSave = vi.fn().mockResolvedValue(false);
+    const { rerender } = render(
+      <BpmnCanvas
+        xml={SIMPLE_XML}
+        endpoint="e"
+        processId="p1"
+        onSave={onSave}
+        onClose={vi.fn()}
+        onElementSelect={vi.fn()}
+      />
+    );
+    await vi.waitFor(() => expect(modelerInstances.length).toBe(1));
+    const modeler = modelerInstances[0];
+    await vi.waitFor(() => expect(modeler.xml).toBe(SIMPLE_XML));
+
+    act(() => modeler.eventBus.emit('commandStack.changed'));
+    await userEvent.click(await screen.findByRole('button', { name: /Save/ }));
+    expect((await screen.findAllByText(/could not be stored/)).length).toBeGreaterThan(0);
+
+    rerender(
+      <BpmnCanvas
+        xml={SIMPLE_XML}
+        endpoint="e"
+        processId="p2"
+        onSave={onSave}
+        onClose={vi.fn()}
+        onElementSelect={vi.fn()}
+      />
+    );
+
+    await vi.waitFor(() => expect(screen.queryByText(/could not be stored/)).toBeNull());
   });
 
   test('Export builds a .bpmn blob download', async () => {
@@ -376,6 +425,24 @@ describe('BpmnCanvas — deploy modal', () => {
     });
   });
 
+  // #142: the backend always deploys to its own configured Operaton and
+  // ignores operatonUsername/operatonPassword, and refuses any operatonUrl
+  // other than that one — so the modal no longer lets the user set any of
+  // them, and shows a read-only line instead.
+  test('renders no Operaton URL, username or password inputs', async () => {
+    await renderCanvas();
+    await userEvent.click(screen.getByText('Deploy'));
+
+    await screen.findByText('Deploy to Operaton');
+    expect(screen.queryByText('Operaton REST endpoint')).toBeNull();
+    expect(screen.queryByPlaceholderText('https://operaton.open-regels.nl/engine-rest')).toBeNull();
+    expect(screen.queryByPlaceholderText('demo')).toBeNull();
+    expect(screen.queryByPlaceholderText('••••••••')).toBeNull();
+    expect(screen.queryByText(/^Username/)).toBeNull();
+    expect(screen.queryByText(/^Password/)).toBeNull();
+    expect(document.body.textContent).toContain("Deploys to the backend's configured Operaton.");
+  });
+
   test('warns when no ronl:ropaRef is present in the process XML', async () => {
     await renderCanvas();
     await userEvent.click(screen.getByText('Deploy'));
@@ -460,7 +527,12 @@ describe('BpmnCanvas — deploy modal', () => {
 
   test('a failed deploy shows the server error message', async () => {
     global.fetch = vi.fn().mockResolvedValue({
-      json: async () => ({ success: false, error: { message: 'Operaton unreachable' } }),
+      json: async () => ({
+        type: 'about:blank',
+        status: 502,
+        title: 'Process deploy failed',
+        detail: 'Operaton unreachable',
+      }),
     });
     // organization is mandatory too — give this XML one so the scenario under
     // test (server-side failure) isn't masked by the unrelated organization block.
@@ -821,14 +893,28 @@ describe('BpmnCanvas — deploy request', () => {
     `camunda:formRef="form-1" ronl:documentRef="doc-1"/>` +
     `<bpmn:callActivity id="c1" calledElement="SubProc"/></bpmn:process></bpmn:definitions>`;
 
-  async function deploy(fetchImpl: (url: string, init?: RequestInit) => Promise<unknown>) {
+  async function deploy(
+    fetchImpl: (url: string, init?: RequestInit) => Promise<unknown>,
+    { seedDeployedProcess = false }: { seedDeployedProcess?: boolean } = {}
+  ) {
     global.fetch = vi.fn().mockImplementation(fetchImpl) as never;
     await renderCanvas({
       xml: DEPLOYABLE,
       forms: [{ id: 'f1', schema: { id: 'form-1' } }],
       templates: [{ id: 'doc-1', name: 'Beschikking' }],
+      // The called subprocess always needs a local-storage entry, because
+      // BpmnCanvas resolves calledElement -> subprocess XML from it.
+      //
+      // The process being deployed is a different matter, and the two tests
+      // below need opposite fixtures. With `seedDeployedProcess`, the entry
+      // the old code looked up is present, so that code would fire its second
+      // PATCH and the single-request assertion bites. Without it, there is no
+      // identifier to find — the case that used to skip the write silently,
+      // which is #155 itself (see BpmnCanvas.tsx handleDeploy).
       processes: [
-        { id: 'lde-1', bpmnProcessId: 'MyProcess', xml: DEPLOYABLE },
+        ...(seedDeployedProcess
+          ? [{ id: 'lde-1', bpmnProcessId: 'MyProcess', xml: DEPLOYABLE }]
+          : []),
         {
           id: 'p2',
           bpmnProcessId: 'SubProc',
@@ -841,18 +927,35 @@ describe('BpmnCanvas — deploy request', () => {
     await userEvent.click(screen.getAllByRole('button', { name: /^Deploy$/ })[1]);
   }
 
-  test('posts the whole bundle and records the deployment on success', async () => {
+  test('posts the whole bundle in a single request, with no local-storage lookup', async () => {
     const calls: { url: string; body: Record<string, unknown> }[] = [];
-    await deploy(async (url, init) => {
-      calls.push({ url, body: JSON.parse(String(init?.body)) });
-      return {
-        json: async () => ({ success: true, data: { deploymentId: 'dep-42' } }),
-      };
-    });
+    await deploy(
+      async (url, init) => {
+        // Record first, parse defensively: a stray request without a JSON
+        // body must still be counted, or the single-request assertion below
+        // would be satisfied by the recorder throwing rather than by the
+        // request not happening.
+        calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : {} });
+        return {
+          json: async () => ({
+            success: true,
+            data: { deploymentId: 'dep-42', resourceCount: 4, bundleRecorded: true },
+          }),
+        };
+      },
+      // Seeded deliberately: this is the fixture the removed code needed to
+      // fire its second request, so the count below fails if that ever
+      // returns.
+      { seedDeployedProcess: true }
+    );
 
     expect((await screen.findAllByText(/Deployment ID: dep-42/)).length).toBeGreaterThan(0);
 
-    const deployCall = calls.find((c) => c.url.includes('/api/dmns/process/deploy'))!;
+    // Exactly one request: the deploy itself. There is no second,
+    // browser-initiated write to look for anymore (#155).
+    expect(calls).toHaveLength(1);
+    const deployCall = calls[0];
+    expect(deployCall.url).toContain('/api/dmns/process/deploy');
     expect(deployCall.body.deploymentName).toBe('MyProcess');
     expect(deployCall.body.boardOwner).toBe('infra-board');
     expect(deployCall.body.organization).toBe('flevoland');
@@ -862,19 +965,48 @@ describe('BpmnCanvas — deploy request', () => {
       'SubProc.bpmn'
     );
     expect(deployCall.body.operatonUrl).toBeUndefined();
+    expect(deployCall.body.operatonUsername).toBeUndefined();
+    expect(deployCall.body.operatonPassword).toBeUndefined();
+  });
 
-    await vi.waitFor(() =>
-      expect(calls.some((c) => c.url.includes('/v1/assets/bpmn/lde-1/deploy'))).toBe(true)
-    );
-    const patch = calls.find((c) => c.url.includes('/v1/assets/bpmn/lde-1/deploy'))!;
-    expect(patch.body.deploymentId).toBe('dep-42');
-    expect(patch.body.formIds).toEqual(['form-1']);
-    expect(patch.body.documentIds).toEqual(['doc-1']);
+  // The defect this covers (#155): the storage write used to be a second,
+  // unawaited, swallowed request — a successful deploy could report success
+  // while nothing was recorded, with no way for the user to find out.
+  test('tells the user when the deploy succeeded but the bundle was not recorded', async () => {
+    await deploy(async () => ({
+      json: async () => ({
+        success: true,
+        data: {
+          deploymentId: 'dep-42',
+          resourceCount: 4,
+          bundleRecorded: false,
+          bundleRecordingError: 'no stored process matched process id "MyProcess"',
+        },
+      }),
+    }));
+
+    expect((await screen.findAllByText(/Deployment ID: dep-42/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/not recorded/)).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText(/no stored process matched process id "MyProcess"/)).length
+    ).toBeGreaterThan(0);
+
+    // Not a green tick: the deploy happened, but the outcome is not what the
+    // user wanted, and the wording says so. A ✓ beside "not recorded" would
+    // contradict the sentence next to it.
+    const banners = await screen.findAllByText(/not recorded/);
+    expect(banners.some((el) => el.textContent?.includes('⚠'))).toBe(true);
+    expect(banners.some((el) => el.textContent?.includes('✓'))).toBe(false);
   });
 
   test('reports the server message when the deploy is refused', async () => {
     await deploy(async () => ({
-      json: async () => ({ success: false, error: { message: 'engine unreachable' } }),
+      json: async () => ({
+        type: 'about:blank',
+        status: 502,
+        title: 'Process deploy failed',
+        detail: 'engine unreachable',
+      }),
     }));
 
     expect((await screen.findAllByText(/engine unreachable/)).length).toBeGreaterThan(0);

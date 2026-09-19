@@ -28,15 +28,25 @@ jest.mock('../services/sparql.service', () => ({
 jest.mock('../services/dmn-validation.service', () => ({
   dmnValidationService: { validateDmnContent: jest.fn() },
 }));
+jest.mock('../services/assets.service', () => ({
+  recordDeployedBundle: jest.fn(),
+}));
 
 import { dmnValidationService } from '../services/dmn-validation.service';
 import { operatonService } from '../services/operaton.service';
 import { sparqlService } from '../services/sparql.service';
+import * as assetsService from '../services/assets.service';
 import dmnRoutes from './dmn.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { errorHandler } from '../middleware/error.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
+import { config } from '../utils/config';
 
 const operaton = operatonService as unknown as Record<string, jest.Mock>;
 const sparql = sparqlService as unknown as Record<string, jest.Mock>;
+const assets = assetsService as unknown as Record<string, jest.Mock>;
 const mockDeployProcess = operaton.deployProcess;
+const mockRecordDeployedBundle = assets.recordDeployedBundle;
 const mockValidate = dmnValidationService.validateDmnContent as jest.Mock;
 
 function makeApp() {
@@ -47,9 +57,17 @@ function makeApp() {
 }
 
 beforeEach(() => {
-  for (const fn of [...Object.values(operaton), ...Object.values(sparql), mockValidate]) {
+  for (const fn of [
+    ...Object.values(operaton),
+    ...Object.values(sparql),
+    ...Object.values(assets),
+    mockValidate,
+  ]) {
     if (typeof fn === 'function') fn.mockReset();
   }
+  // Defaults every /process/deploy test to the "bundle recorded" happy path;
+  // tests exercising the storage-failure branch override this explicitly.
+  mockRecordDeployedBundle.mockResolvedValue({ recorded: true });
 });
 
 describe('GET /api/dmns', () => {
@@ -121,8 +139,10 @@ describe('GET /api/dmns', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'QUERY_ERROR', message: 'SPARQL endpoint unreachable' },
+      status: 500,
+      title: 'Query failed',
+      detail: 'SPARQL endpoint unreachable',
+      code: 'QUERY_ERROR',
     });
   });
 });
@@ -157,7 +177,12 @@ describe('chain analysis endpoints', () => {
     const res = await request(makeApp()).get(path);
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'QUERY_ERROR', message: 'SPARQL timeout' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Query failed',
+      detail: 'SPARQL timeout',
+      code: 'QUERY_ERROR',
+    });
   });
 
   test.each(cases)('GET %s is not captured by the /:identifier route', async (path, fn) => {
@@ -202,9 +227,11 @@ describe('POST /api/dmns/drd/deploy', () => {
     const res = await request(makeApp()).post('/api/dmns/drd/deploy').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'dmnIds must be an array with at least 2 entries',
       code: 'INVALID_INPUT',
-      message: 'dmnIds must be an array with at least 2 entries',
     });
     expect(operaton.assembleDrd).not.toHaveBeenCalled();
   });
@@ -216,9 +243,11 @@ describe('POST /api/dmns/drd/deploy', () => {
     const res = await request(makeApp()).post('/api/dmns/drd/deploy').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'deploymentName is required',
       code: 'INVALID_INPUT',
-      message: 'deploymentName is required',
     });
     expect(operaton.assembleDrd).not.toHaveBeenCalled();
   });
@@ -231,7 +260,12 @@ describe('POST /api/dmns/drd/deploy', () => {
       .send({ dmnIds: ['A', 'B'], deploymentName: 'X' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'DRD_DEPLOY_FAILED', message: 'unknown DMN B' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'DRD deploy failed',
+      detail: 'unknown DMN B',
+      code: 'DRD_DEPLOY_FAILED',
+    });
   });
 
   test('returns 500 with a DRD_DEPLOY_FAILED code when the deploy fails', async () => {
@@ -243,7 +277,7 @@ describe('POST /api/dmns/drd/deploy', () => {
       .send({ dmnIds: ['A', 'B'], deploymentName: 'X' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('DRD_DEPLOY_FAILED');
+    expect(res.body.code).toBe('DRD_DEPLOY_FAILED');
   });
 });
 
@@ -254,7 +288,7 @@ describe('POST /api/dmns/process/deploy', () => {
       .send({ bpmnXml: '<bpmn:definitions/>', deploymentName: 'RipR21Process' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_INPUT');
+    expect(res.body.code).toBe('INVALID_INPUT');
     expect(mockDeployProcess).not.toHaveBeenCalled();
   });
 
@@ -266,7 +300,7 @@ describe('POST /api/dmns/process/deploy', () => {
     });
 
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_INPUT');
+    expect(res.body.code).toBe('INVALID_INPUT');
   });
 
   test('passes organization through to deployProcess as the tenant-id tag', async () => {
@@ -279,16 +313,17 @@ describe('POST /api/dmns/process/deploy', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(res.body.data).toEqual({ deploymentId: 'dep-1', resourceCount: 3 });
+    expect(res.body.data).toEqual({
+      deploymentId: 'dep-1',
+      resourceCount: 3,
+      bundleRecorded: true,
+    });
     expect(mockDeployProcess).toHaveBeenCalledWith(
       '<bpmn:definitions/>',
       'RipR21Process',
       [],
       [],
       [],
-      undefined,
-      undefined,
-      undefined,
       undefined,
       'flevoland'
     );
@@ -301,7 +336,12 @@ describe('POST /api/dmns/process/deploy', () => {
     const res = await request(makeApp()).post('/api/dmns/process/deploy').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({ code: 'INVALID_INPUT', message: 'bpmnXml is required' });
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'bpmnXml is required',
+      code: 'INVALID_INPUT',
+    });
     expect(mockDeployProcess).not.toHaveBeenCalled();
   });
 
@@ -311,13 +351,15 @@ describe('POST /api/dmns/process/deploy', () => {
       .send({ bpmnXml: '<bpmn:definitions/>', deploymentName: '  ', organization: 'flevoland' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'deploymentName is required',
       code: 'INVALID_INPUT',
-      message: 'deploymentName is required',
     });
   });
 
-  test('forwards the full artefact bundle and Operaton credentials', async () => {
+  test('forwards the full artefact bundle, ignoring any operaton credentials in the body (#142)', async () => {
     mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 5 });
     const forms = [{ id: 'f1', schema: {} }];
     const subProcesses = [{ filename: 'sub.bpmn', xml: '<bpmn/>' }];
@@ -329,7 +371,6 @@ describe('POST /api/dmns/process/deploy', () => {
       forms,
       subProcesses,
       documents,
-      operatonUrl: 'http://localhost:8081/engine-rest',
       operatonUsername: 'demo',
       operatonPassword: 'demo',
       boardOwner: 'flevoland',
@@ -342,12 +383,234 @@ describe('POST /api/dmns/process/deploy', () => {
       forms,
       subProcesses,
       documents,
-      'http://localhost:8081/engine-rest',
-      'demo',
-      'demo',
       'flevoland',
       'flevoland'
     );
+    // bpmnXml here has no <process> element to extract an id from, so the
+    // storage lookup/create key falls back to deploymentName.
+    expect(mockRecordDeployedBundle).toHaveBeenCalledWith({
+      bpmnProcessId: 'RipR21Process',
+      bpmnXml: '<bpmn:definitions/>',
+      organization: 'flevoland',
+      deploymentId: 'dep-1',
+      operatonUrl: config.operaton.baseUrl,
+      formIds: ['f1'],
+      documentIds: ['d1'],
+      boardOwner: 'flevoland',
+    });
+  });
+
+  test('extracts the bpmn:process id from the XML for the storage lookup key, not deploymentName', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+
+    await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="RealProcessId"/></bpmn:definitions>',
+      deploymentName: 'SomeOtherDeploymentName',
+      organization: 'flevoland',
+    });
+
+    expect(mockRecordDeployedBundle).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'RealProcessId' })
+    );
+  });
+
+  // #156: a naive `\bid="` regex backtracks onto the LAST id-suffixed
+  // attribute in the tag, since `\b` also matches right after `xsi:`'s `:`.
+  test.each([
+    [
+      'a real id followed by an unrelated id-suffixed attribute',
+      '<bpmn:definitions><bpmn:process id="REAL" xsi:id="WRONG"/></bpmn:definitions>',
+      'REAL',
+    ],
+    [
+      'the id-suffixed attribute declared before the real one',
+      '<bpmn:definitions><bpmn:process xsi:id="WRONG" id="REAL"/></bpmn:definitions>',
+      'REAL',
+    ],
+    [
+      'other attributes surrounding id, in any order',
+      '<bpmn:definitions><bpmn:process name="X" id="REAL" isExecutable="true"/></bpmn:definitions>',
+      'REAL',
+    ],
+  ])('extracts the real process id — %s', async (_label, bpmnXml, expectedId) => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+
+    await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml,
+      deploymentName: 'SomeOtherDeploymentName',
+      organization: 'flevoland',
+    });
+
+    expect(mockRecordDeployedBundle).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: expectedId })
+    );
+  });
+
+  test('falls back to deploymentName when the XML has no process element', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+
+    await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:collaboration id="c"/></bpmn:definitions>',
+      deploymentName: 'FallbackName',
+      organization: 'flevoland',
+    });
+
+    expect(mockRecordDeployedBundle).toHaveBeenCalledWith(
+      expect.objectContaining({ bpmnProcessId: 'FallbackName' })
+    );
+  });
+
+  test('reports the deploy as successful but the bundle as unrecorded when storage throws', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    mockRecordDeployedBundle.mockRejectedValue(new Error('connection terminated'));
+
+    const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      success: true,
+      data: {
+        deploymentId: 'dep-1',
+        bundleRecorded: false,
+        bundleRecordingError: 'connection terminated',
+      },
+    });
+  });
+
+  // #156 fix round 1: creation itself succeeds in this case — only the
+  // immediately following stamp-by-id matches no row. The old wording,
+  // "...and creating one failed", named the wrong step.
+  test('names "created ... but marking it deployed matched no row" when recordDeployedBundle reports new-row-not-stamped', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    mockRecordDeployedBundle.mockResolvedValue({ recorded: false, reason: 'new-row-not-stamped' });
+
+    const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.bundleRecorded).toBe(false);
+    expect(res.body.data.bundleRecordingError).toEqual(expect.stringContaining('P'));
+    expect(res.body.data.bundleRecordingError).toMatch(/was created/);
+    expect(res.body.data.bundleRecordingError).toMatch(/matched no row/);
+    expect(res.body.data.bundleRecordingError).not.toMatch(/creating one failed/);
+  });
+
+  // #156: the message used to be the same regardless of cause, even when no
+  // creation was ever attempted (no database, or an existing row's stamp
+  // simply matched no rows) — now each names its own real cause.
+  test('names "no database configured" when recordDeployedBundle reports db-not-configured', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    mockRecordDeployedBundle.mockResolvedValue({ recorded: false, reason: 'db-not-configured' });
+
+    const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.bundleRecordingError).toMatch(/not configured/i);
+    expect(res.body.data.bundleRecordingError).not.toMatch(/creating one failed/);
+  });
+
+  test('names "found but not stamped" when recordDeployedBundle reports existing-row-not-stamped', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    mockRecordDeployedBundle.mockResolvedValue({
+      recorded: false,
+      reason: 'existing-row-not-stamped',
+    });
+
+    const res = await request(makeApp()).post('/api/dmns/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.bundleRecordingError).toMatch(/was found/);
+    expect(res.body.data.bundleRecordingError).not.toMatch(/creating one failed/);
+    expect(res.body.data.bundleRecordingError).toEqual(expect.stringContaining('P'));
+  });
+
+  // #156: boardOwner used to be enforced only in the browser.
+  describe('boardOwner validation', () => {
+    const body = {
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    };
+
+    test.each(['caseworker', 'infra-board'])('accepts the valid slug %s', async (boardOwner) => {
+      mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+
+      const res = await request(makeApp())
+        .post('/api/dmns/process/deploy')
+        .send({ ...body, boardOwner });
+
+      expect(res.status).toBe(200);
+      expect(mockDeployProcess).toHaveBeenCalled();
+    });
+
+    test('accepts an empty string (opts out of tagging)', async () => {
+      mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+
+      const res = await request(makeApp())
+        .post('/api/dmns/process/deploy')
+        .send({ ...body, boardOwner: '' });
+
+      expect(res.status).toBe(200);
+    });
+
+    test.each([
+      ['uppercase', 'Infra-Board'],
+      ['a space', 'infra board'],
+      ['an underscore', 'infra_board'],
+    ])('rejects a %s value with 400, and deploys nothing', async (_label, boardOwner) => {
+      const res = await request(makeApp())
+        .post('/api/dmns/process/deploy')
+        .send({ ...body, boardOwner });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ status: 400, code: 'INVALID_INPUT' });
+      expect(res.body.detail).toContain('boardOwner');
+      expect(mockDeployProcess).not.toHaveBeenCalled();
+    });
+
+    test('rejects a non-string value with 400, and deploys nothing', async () => {
+      const res = await request(makeApp())
+        .post('/api/dmns/process/deploy')
+        .send({ ...body, boardOwner: 42 });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ status: 400, code: 'INVALID_INPUT' });
+      expect(res.body.detail).toContain('boardOwner');
+      expect(mockDeployProcess).not.toHaveBeenCalled();
+    });
+
+    // #156 fix round 1: a JSON `null` used to pass as "omitted" (→ derive),
+    // but operaton.service.ts's deployProcess only derives on
+    // `=== undefined` — a `null` reaches it as `null`, which
+    // injectBoardOwner treats as falsy ("no tag"), silently contradicting
+    // "derive". OpenAPI also documents this field as `type: string`, not
+    // nullable.
+    test('rejects an explicit null with 400, and deploys nothing', async () => {
+      const res = await request(makeApp())
+        .post('/api/dmns/process/deploy')
+        .send({ ...body, boardOwner: null });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ status: 400, code: 'INVALID_INPUT' });
+      expect(res.body.detail).toContain('boardOwner');
+      expect(mockDeployProcess).not.toHaveBeenCalled();
+    });
   });
 
   test('returns 500 with a PROCESS_DEPLOY_FAILED code when the deploy throws', async () => {
@@ -360,10 +623,60 @@ describe('POST /api/dmns/process/deploy', () => {
     });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Process deploy failed',
+      detail: 'Operaton unreachable',
       code: 'PROCESS_DEPLOY_FAILED',
-      message: 'Operaton unreachable',
     });
+  });
+});
+
+describe('#142 POST /api/dmns/process/deploy target', () => {
+  const body = { bpmnXml: '<definitions/>', deploymentName: 'd', organization: 'org' };
+  // config.operaton.baseUrl may be '' under NODE_ENV=test (no OPERATON_BASE_URL set),
+  // so pin it to a known value for the duration of these tests and restore it after.
+  let originalBaseUrl: string;
+
+  beforeEach(() => {
+    originalBaseUrl = config.operaton.baseUrl;
+    config.operaton.baseUrl = 'https://operaton.example/engine-rest';
+  });
+
+  afterEach(() => {
+    config.operaton.baseUrl = originalBaseUrl;
+  });
+
+  test('a different operatonUrl answers 400 and nothing is deployed', async () => {
+    const res = await request(makeApp())
+      .post('/api/dmns/process/deploy')
+      .send({ ...body, operatonUrl: 'https://evil.example/engine-rest' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(mockDeployProcess).not.toHaveBeenCalled();
+  });
+
+  test('the configured operatonUrl is accepted, and credentials in the body are not passed on', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    const res = await request(makeApp())
+      .post('/api/dmns/process/deploy')
+      .send({
+        ...body,
+        operatonUrl: config.operaton.baseUrl,
+        operatonUsername: 'u',
+        operatonPassword: 'p',
+      });
+    expect(res.status).toBe(200);
+    expect(mockDeployProcess.mock.calls[0]).not.toContain('u');
+    expect(mockDeployProcess.mock.calls[0]).not.toContain('p');
+  });
+
+  test('the bundle record carries the configured Operaton URL', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    await request(makeApp()).post('/api/dmns/process/deploy').send(body);
+    expect(mockRecordDeployedBundle).toHaveBeenCalledWith(
+      expect.objectContaining({ operatonUrl: config.operaton.baseUrl })
+    );
   });
 });
 
@@ -374,7 +687,7 @@ describe('POST /api/dmns/deploy', () => {
       .send({ deploymentName: 'test-dmn' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_INPUT');
+    expect(res.body.code).toBe('INVALID_INPUT');
     expect(operaton.deployDrd).not.toHaveBeenCalled();
   });
 
@@ -384,7 +697,7 @@ describe('POST /api/dmns/deploy', () => {
       .send({ xml: '<dmn:definitions/>' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_INPUT');
+    expect(res.body.code).toBe('INVALID_INPUT');
     expect(operaton.deployDrd).not.toHaveBeenCalled();
   });
 
@@ -429,8 +742,8 @@ describe('POST /api/dmns/deploy', () => {
       .send({ xml: '<dmn:definitions/>', deploymentName: 'test-dmn' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('DMN_DEPLOY_FAILED');
-    expect(res.body.error.message).toBe('Operaton unreachable');
+    expect(res.body.code).toBe('DMN_DEPLOY_FAILED');
+    expect(res.body.detail).toBe('Operaton unreachable');
   });
 });
 
@@ -510,9 +823,11 @@ describe('GET /api/dmns/:identifier/xml', () => {
     const res = await request(makeApp()).get('/api/dmns/Unknown/xml');
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'DMN not found',
+      detail: 'DMN definition not found in Operaton: Unknown',
       code: 'DMN_NOT_FOUND',
-      message: 'DMN definition not found in Operaton: Unknown',
     });
   });
 
@@ -522,9 +837,11 @@ describe('GET /api/dmns/:identifier/xml', () => {
     const res = await request(makeApp()).get('/api/dmns/SVB/xml');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'DMN fetch failed',
+      detail: 'Operaton unreachable',
       code: 'DMN_FETCH_FAILED',
-      message: 'Operaton unreachable',
     });
   });
 
@@ -571,7 +888,12 @@ describe('GET /api/dmns/:identifier', () => {
     const res = await request(makeApp()).get('/api/dmns/Nope');
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toEqual({ code: 'NOT_FOUND', message: 'DMN not found: Nope' });
+    expect(res.body).toMatchObject({
+      status: 404,
+      title: 'Not found',
+      detail: 'DMN not found: Nope',
+      code: 'NOT_FOUND',
+    });
   });
 
   test('returns 500 with a QUERY_ERROR code when the lookup throws', async () => {
@@ -580,7 +902,12 @@ describe('GET /api/dmns/:identifier', () => {
     const res = await request(makeApp()).get('/api/dmns/SVB');
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({ code: 'QUERY_ERROR', message: 'SPARQL timeout' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Query failed',
+      detail: 'SPARQL timeout',
+      code: 'QUERY_ERROR',
+    });
   });
 });
 
@@ -612,9 +939,11 @@ describe('POST /api/dmns/validate', () => {
     const res = await request(makeApp()).post('/api/dmns/validate').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'Request body must contain a "content" field with the DMN XML as a string.',
       code: 'INVALID_REQUEST',
-      message: 'Request body must contain a "content" field with the DMN XML as a string.',
     });
     expect(mockValidate).not.toHaveBeenCalled();
   });
@@ -644,9 +973,457 @@ describe('POST /api/dmns/validate', () => {
       .send({ content: '<definitions/>' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Validation failed',
+      detail: 'XSD schema missing',
       code: 'VALIDATION_ERROR',
-      message: 'XSD schema missing',
     });
+  });
+});
+
+describe('#142 endpoint check', () => {
+  test.each([
+    ['/v1/dmns', 'getAllDmns'],
+    ['/v1/dmns/semantic-equivalences', 'findSemanticEquivalences'],
+    ['/v1/dmns/enhanced-chain-links', 'findEnhancedChainLinks'],
+    ['/v1/dmns/cycles', 'detectChainCycles'],
+    ['/v1/dmns/some-id', 'getDmnByIdentifier'],
+  ])('%s refuses an internal endpoint without querying it', async (path, method) => {
+    const app = express();
+    app.use('/v1/dmns', dmnRoutes);
+
+    const res = await request(app).get(`${path}?endpoint=https://169.254.169.254/latest`);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(sparql[method]).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['/v1/dmns', '/dmns'],
+    ['/v1/dmns/semantic-equivalences', '/dmns/semantic-equivalences'],
+    ['/v1/dmns/enhanced-chain-links', '/dmns/enhanced-chain-links'],
+    ['/v1/dmns/cycles', '/dmns/cycles'],
+    ['/v1/dmns/some-id', '/dmns/{identifier}'],
+  ])('%s refuses an internal endpoint, as documented', async (path, documented) => {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/dmns', dmnRoutes);
+
+    const res = await request(app).get(`${path}?endpoint=https://169.254.169.254/latest`);
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'get', documented);
+  });
+});
+
+describe('/v1/dmns reads match their OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/dmns', dmnRoutes);
+    return app;
+  }
+
+  // Shaped like sparqlService's DmnModel (sparql.service.ts:273-320): optional
+  // fields are omitted, vendorCount is always set.
+  const DMN = {
+    id: 'https://regels.example/id/dmn/SVB_LeeftijdsInformatie',
+    identifier: 'SVB_LeeftijdsInformatie',
+    title: 'Leeftijdsinformatie',
+    description: 'Bepaalt de AOW-leeftijd',
+    deploymentId: 'dep-1',
+    deployedAt: '2026-09-01T08:00:00Z',
+    testStatus: 'passed',
+    organization: 'https://regels.example/id/org/svb',
+    organizationName: 'SVB',
+    inputs: [{ identifier: 'geboortedatum', title: 'Geboortedatum', type: 'Date' }],
+    outputs: [
+      { identifier: 'aowLeeftijd', title: 'AOW-leeftijd', type: 'Integer', testValue: 67 },
+      {
+        identifier: 'toelichting',
+        title: 'Toelichting',
+        type: 'String',
+        description: 'Vrije tekst',
+      },
+    ],
+    validationStatus: 'validated',
+    vendorCount: 2,
+  };
+
+  const get = (path: string) => request(makeDocumentedApp()).get(`/v1/dmns${path}`);
+
+  test('GET /dmns 200 and 500, as documented', async () => {
+    sparql.getAllDmns.mockResolvedValue([
+      DMN,
+      { ...DMN, identifier: 'Leeg', inputs: [], outputs: [], vendorCount: 0 },
+    ]);
+    const ok = await get('?refresh=true');
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'get', '/dmns');
+
+    sparql.getAllDmns.mockRejectedValue(new Error('SPARQL endpoint unreachable'));
+    const failed = await get('');
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'get', '/dmns');
+  });
+
+  test('a non-numeric Integer test value serialises as null, and still matches', async () => {
+    sparql.getAllDmns.mockResolvedValue([
+      { ...DMN, outputs: [{ identifier: 'x', title: 'X', type: 'Integer', testValue: NaN }] },
+    ]);
+
+    const res = await get('');
+
+    expect(res.body.data.dmns[0].outputs[0].testValue).toBeNull();
+    expectToMatchOperation(res, 'get', '/dmns');
+  });
+
+  test('GET /dmns/semantic-equivalences 200, as documented', async () => {
+    const concept = (n: number) => ({
+      uri: `https://regels.example/id/concept/${n}`,
+      label: `Begrip ${n}`,
+      variable: { uri: `https://regels.example/id/var/${n}`, identifier: `var${n}`, type: 'Date' },
+    });
+    sparql.findSemanticEquivalences.mockResolvedValue([
+      {
+        sharedConcept: 'https://begrippen.example/geboortedatum',
+        concept1: { ...concept(1), notation: 'GBD' },
+        concept2: concept(2),
+        dmn1: { uri: 'https://regels.example/id/dmn/A', title: 'A' },
+        dmn2: { uri: 'https://regels.example/id/dmn/B', title: 'B' },
+      },
+    ]);
+
+    const res = await get('/semantic-equivalences');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dmns/semantic-equivalences');
+  });
+
+  test('GET /dmns/enhanced-chain-links 200, as documented', async () => {
+    sparql.findEnhancedChainLinks.mockResolvedValue([
+      {
+        dmn1: { uri: 'https://regels.example/id/dmn/A', identifier: 'A', title: 'A' },
+        dmn2: { uri: 'https://regels.example/id/dmn/B', identifier: 'B', title: 'B' },
+        outputVariable: 'leeftijd',
+        inputVariable: 'leeftijd',
+        variableType: 'Integer',
+        matchType: 'exact',
+        sharedConcept: 'https://begrippen.example/leeftijd',
+      },
+    ]);
+
+    const res = await get('/enhanced-chain-links');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dmns/enhanced-chain-links');
+  });
+
+  test('GET /dmns/cycles 200, as documented', async () => {
+    sparql.detectChainCycles.mockResolvedValue([
+      {
+        path: [
+          { uri: 'https://regels.example/id/dmn/A', title: 'A' },
+          { uri: 'https://regels.example/id/dmn/B', title: 'B' },
+          { uri: 'https://regels.example/id/dmn/C', title: 'C' },
+        ],
+        type: 'three-hop',
+      },
+    ]);
+
+    const res = await get('/cycles');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dmns/cycles');
+  });
+
+  test('GET /dmns/{identifier} 200, 404 and 500, as documented', async () => {
+    sparql.getDmnByIdentifier.mockResolvedValue(DMN);
+    const ok = await get('/SVB_LeeftijdsInformatie');
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'get', '/dmns/{identifier}');
+
+    sparql.getDmnByIdentifier.mockResolvedValue(undefined);
+    const missing = await get('/Onbekend');
+    expect(missing.status).toBe(404);
+    expectToMatchOperation(missing, 'get', '/dmns/{identifier}');
+
+    sparql.getDmnByIdentifier.mockRejectedValue(new Error('SPARQL timeout'));
+    const failed = await get('/SVB_LeeftijdsInformatie');
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'get', '/dmns/{identifier}');
+  });
+
+  test('GET /dmns/{identifier}/xml 200, 404 and 500, as documented', async () => {
+    operaton.fetchDmnXml.mockResolvedValue('<definitions id="d1"/>');
+    const ok = await get('/SVB_LeeftijdsInformatie/xml');
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'get', '/dmns/{identifier}/xml');
+
+    operaton.fetchDmnXml.mockResolvedValue(null);
+    const missing = await get('/Onbekend/xml');
+    expect(missing.status).toBe(404);
+    expectToMatchOperation(missing, 'get', '/dmns/{identifier}/xml');
+
+    operaton.fetchDmnXml.mockRejectedValue(new Error('Operaton unreachable'));
+    const failed = await get('/SVB_LeeftijdsInformatie/xml');
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'get', '/dmns/{identifier}/xml');
+  });
+});
+
+describe('/v1/dmns deploy, evaluate and validate match their OpenAPI description', () => {
+  function makeDocumentedApp(jsonLimit?: string) {
+    const app = express();
+    app.use(express.json(jsonLimit ? { limit: jsonLimit } : {}));
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/dmns', dmnRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers unparsable and oversized bodies
+    return app;
+  }
+
+  const post = (path: string) => request(makeDocumentedApp()).post(`/v1/dmns${path}`);
+
+  // Each of these parses a request body, so each documents a 400 for one it
+  // cannot parse (#143). The global error handler answers it before the route
+  // runs, so the check is that every operation's document says so.
+  test.each([
+    ['/drd/deploy', '/dmns/drd/deploy'],
+    ['/process/deploy', '/dmns/process/deploy'],
+    ['/deploy', '/dmns/deploy'],
+    ['/evaluate/zorgtoeslag', '/dmns/evaluate/{decisionKey}'],
+    ['/validate', '/dmns/validate'],
+  ])('POST %s malformed body is a 400, as documented (#143)', async (route, documented) => {
+    const res = await post(route).set('Content-Type', 'application/json').send('{"broken":');
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
+    expectToMatchOperation(res, 'post', documented);
+  });
+
+  // The production limit is 10 MB, too heavy to send in a unit test, so this
+  // app mounts the parser with a tiny limit of its own. What is under test is
+  // that the operation documents the 413 the real handler answers.
+  test('POST /dmns/validate oversized body is a 413, as documented (#143)', async () => {
+    const res = await request(makeDocumentedApp('100b'))
+      .post('/v1/dmns/validate')
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify({ content: 'x'.repeat(500) }));
+
+    expect(res.status).toBe(413);
+    expect(res.body.code).toBe('PAYLOAD_TOO_LARGE');
+    expectToMatchOperation(res, 'post', '/dmns/validate');
+  });
+
+  test('POST /dmns/evaluate/{decisionKey} passes Operaton results and errors through, as documented', async () => {
+    operaton.evaluateRaw.mockResolvedValue([{ aanspraak: { value: true, type: 'Boolean' } }]);
+    const rows = await post('/evaluate/zorgtoeslag').send({
+      variables: { inkomen: { value: 30000, type: 'Integer' } },
+    });
+    expect(rows.status).toBe(200);
+    expectToMatchOperation(rows, 'post', '/dmns/evaluate/{decisionKey}');
+
+    operaton.evaluateRaw.mockResolvedValue({ aanspraak: { value: false, type: 'Boolean' } });
+    const single = await post('/evaluate/zorgtoeslag').send({});
+    expect(single.status).toBe(200);
+    expectToMatchOperation(single, 'post', '/dmns/evaluate/{decisionKey}');
+
+    operaton.evaluateRaw.mockRejectedValue(
+      Object.assign(new Error('Request failed'), {
+        isAxiosError: true,
+        response: {
+          status: 500,
+          data: { type: 'RestException', message: 'Unknown property used in expression' },
+        },
+      })
+    );
+    const forwarded = await post('/evaluate/zorgtoeslag').send({});
+    expect(forwarded.status).toBe(500);
+    expectToMatchOperation(forwarded, 'post', '/dmns/evaluate/{decisionKey}');
+
+    operaton.evaluateRaw.mockRejectedValue(
+      Object.assign(new Error('Request failed'), {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: {
+            type: 'InvalidRequestException',
+            message: 'Cannot convert value "abc" to type Integer',
+          },
+        },
+      })
+    );
+    const rejected = await post('/evaluate/zorgtoeslag').send({});
+    expect(rejected.status).toBe(400);
+    expectToMatchOperation(rejected, 'post', '/dmns/evaluate/{decisionKey}');
+
+    operaton.evaluateRaw.mockRejectedValue(new Error('ECONNREFUSED'));
+    const proxy = await post('/evaluate/zorgtoeslag').send({});
+    expect(proxy.status).toBe(500);
+    expect(proxy.body).toEqual({ type: 'ProxyError', message: 'ECONNREFUSED' });
+    expectToMatchOperation(proxy, 'post', '/dmns/evaluate/{decisionKey}');
+  });
+
+  test('POST /dmns/validate 200, 400 and 500, as documented', async () => {
+    const layer = (label: string) => ({ label, issues: [] as unknown[] });
+    mockValidate.mockResolvedValue({
+      valid: false,
+      parseError: null,
+      layers: {
+        base: layer('Base DMN'),
+        business: {
+          label: 'Business Rules',
+          issues: [
+            {
+              severity: 'error',
+              code: 'BIZ-006',
+              message: 'Missing hit policy',
+              location: '/definitions/decision[1]',
+            },
+          ],
+        },
+        execution: layer('Execution Rules'),
+        interaction: layer('Interaction Rules'),
+        content: {
+          label: 'Content',
+          issues: [
+            {
+              severity: 'warning',
+              code: 'CON-001',
+              message: 'Untitled input',
+              line: 12,
+              column: 4,
+            },
+          ],
+        },
+      },
+      summary: { errors: 1, warnings: 1, infos: 0 },
+    });
+    const ok = await post('/validate').send({ content: '<definitions/>' });
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'post', '/dmns/validate');
+
+    const bad = await post('/validate').send({ content: 42 });
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/dmns/validate');
+
+    mockValidate.mockRejectedValue(new Error('validator crashed'));
+    const failed = await post('/validate').send({ content: '<definitions/>' });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/dmns/validate');
+  });
+
+  test('POST /dmns/deploy 400 and 500, as documented', async () => {
+    const bad = await post('/deploy').send({ deploymentName: 'Zorgtoeslag' });
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/dmns/deploy');
+
+    operaton.deployDrd.mockRejectedValue(new Error('Operaton unreachable'));
+    const failed = await post('/deploy').send({
+      xml: '<definitions/>',
+      deploymentName: 'Zorgtoeslag',
+    });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/dmns/deploy');
+  });
+
+  test('POST /dmns/drd/deploy 400 and 500, as documented', async () => {
+    const bad = await post('/drd/deploy').send({ dmnIds: ['A'], deploymentName: 'Keten' });
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/dmns/drd/deploy');
+
+    operaton.assembleDrd.mockRejectedValue(new Error('Operaton unreachable'));
+    const failed = await post('/drd/deploy').send({
+      dmnIds: ['A', 'B'],
+      deploymentName: 'Keten',
+    });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/dmns/drd/deploy');
+  });
+
+  test('POST /dmns/process/deploy 400 and 500, as documented', async () => {
+    const bad = await post('/process/deploy').send({
+      bpmnXml: '<definitions/>',
+      deploymentName: 'Proces',
+    });
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/dmns/process/deploy');
+
+    mockDeployProcess.mockRejectedValue(new Error('Operaton unreachable'));
+    const failed = await post('/process/deploy').send({
+      bpmnXml: '<bpmn:definitions/>',
+      deploymentName: 'Proces',
+      organization: 'flevoland',
+    });
+    expect(failed.status).toBe(500);
+    expectToMatchOperation(failed, 'post', '/dmns/process/deploy');
+  });
+
+  test('POST /dmns/drd/deploy 200, as documented', async () => {
+    operaton.assembleDrd.mockResolvedValue('<definitions/>');
+    operaton.deployDrd.mockResolvedValue({ deploymentId: 'dep-1' });
+
+    const res = await post('/drd/deploy').send({
+      dmnIds: ['A', 'B', 'Entry'],
+      deploymentName: 'ZorgtoeslagDRD',
+    });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dmns/drd/deploy');
+  });
+
+  test('POST /dmns/process/deploy 200, as documented', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 5 });
+    const forms = [{ id: 'f1', schema: {} }];
+    const subProcesses = [{ filename: 'sub.bpmn', xml: '<bpmn/>' }];
+    const documents = [{ id: 'd1', template: {} }];
+
+    const res = await post('/process/deploy').send({
+      bpmnXml: '<bpmn:definitions/>',
+      deploymentName: 'RipR21Process',
+      forms,
+      subProcesses,
+      documents,
+      boardOwner: 'flevoland',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dmns/process/deploy');
+  });
+
+  test('POST /dmns/process/deploy 200 with an unrecorded bundle, as documented', async () => {
+    mockDeployProcess.mockResolvedValue({ deploymentId: 'dep-1', resourceCount: 1 });
+    mockRecordDeployedBundle.mockRejectedValue(new Error('connection terminated'));
+
+    const res = await post('/process/deploy').send({
+      bpmnXml: '<bpmn:definitions><bpmn:process id="P"/></bpmn:definitions>',
+      deploymentName: 'P',
+      organization: 'flevoland',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.bundleRecorded).toBe(false);
+    expectToMatchOperation(res, 'post', '/dmns/process/deploy');
+  });
+
+  test('POST /dmns/deploy 200, as documented', async () => {
+    operaton.deployDrd.mockResolvedValue({ deploymentId: 'dep-2' });
+
+    const res = await post('/deploy').send({
+      xml: '<dmn:definitions/>',
+      deploymentName: 'test-dmn',
+      filename: 'individuele inkomenstoeslag-iknow-patched.dmn',
+    });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dmns/deploy');
   });
 });

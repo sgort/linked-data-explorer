@@ -13,6 +13,10 @@ jest.mock('../services/vendor.service', () => ({
 import { vendorService } from '../services/vendor.service';
 import vendorRoutes from './vendor.routes';
 import packageJson from '../../package.json';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { errorHandler } from '../middleware/error.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
+import type { VendorService } from '../types/vendor.types';
 
 const mockGetAll = vendorService.getAllVendorServices as jest.Mock;
 const mockGetForDmn = vendorService.getVendorServicesForDmn as jest.Mock;
@@ -80,7 +84,12 @@ describe('GET /v1/vendors', () => {
     const res = await request(makeApp()).get('/v1/vendors');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ success: false, error: 'SPARQL endpoint timed out' });
+    expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Vendor request failed',
+      detail: 'SPARQL endpoint timed out',
+    });
     expect(res.headers['api-version']).toBe(packageJson.version);
   });
 });
@@ -126,6 +135,147 @@ describe('GET /v1/vendors/dmn/:identifier', () => {
     const res = await request(makeApp()).get('/v1/vendors/dmn/Nope');
 
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ success: false, error: 'unknown DMN' });
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Vendor request failed',
+      detail: 'unknown DMN',
+    });
+  });
+});
+
+describe('#142 endpoint check', () => {
+  test.each([
+    ['/v1/vendors', 'getAllVendorServices'],
+    ['/v1/vendors/dmn/SVB_LeeftijdsInformatie', 'getVendorServicesForDmn'],
+  ])('%s refuses an internal endpoint without querying it', async (path, method) => {
+    const res = await request(makeApp()).get(`${path}?endpoint=https://169.254.169.254/latest`);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(method === 'getAllVendorServices' ? mockGetAll : mockGetForDmn).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['/v1/vendors', '/vendors'],
+    ['/v1/vendors/dmn/SVB_LeeftijdsInformatie', '/vendors/dmn/{identifier}'],
+  ])('%s refuses an internal endpoint, as documented', async (path, documented) => {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/vendors', vendorRoutes);
+    app.use(errorHandler); // app-wide in index.ts
+
+    const res = await request(app).get(`${path}?endpoint=https://169.254.169.254/latest`);
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'get', documented);
+  });
+});
+
+describe('/v1/vendors operations match their OpenAPI description', () => {
+  // vendor.routes.ts sets API-Version itself (unlike edocs.routes.ts), but the
+  // route test app above still has no global middleware stack, so a
+  // documented app adds versionMiddleware for consistency and errorHandler
+  // in case a future body-taking route needs it — matching how
+  // dso.routes.test.ts and edocs.routes.test.ts build their own.
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/vendors', vendorRoutes);
+    app.use(errorHandler); // app-wide in index.ts
+    return app;
+  }
+
+  // Built from src/types/vendor.types.ts, not from the VENDOR fixture above
+  // (which is missing the required `basedOn` field and carries stray
+  // `name`/`endpoint` fields the real type doesn't have — see the phase 5
+  // inventory). Every optional field on VendorService and VendorOrganization
+  // is filled here; VendorContact's three fields are all optional and all
+  // filled too.
+  const FULL_VENDOR: VendorService = {
+    id: 'https://data.example.org/vendor-services/svb-1',
+    basedOn: 'https://identifier.overheid.nl/dmn/SVB_LeeftijdsInformatie',
+    basedOnIdentifier: 'SVB_LeeftijdsInformatie',
+    implementedBy: 'https://data.example.org/platforms/blueriq',
+    implementedByName: 'Blueriq',
+    provider: {
+      name: 'SVB',
+      logoUrl: 'https://api.open-regels.triply.cc/datasets/acc/dataset/assets/logo/v1',
+      homepage: 'https://www.svb.nl',
+      contactPoint: {
+        name: 'SVB Support',
+        email: 'support@svb.nl',
+        telephone: '+31201234567',
+      },
+    },
+    serviceUrl: 'https://svb.example/api/leeftijd',
+    license: 'Commercial',
+    accessType: 'iam-required',
+    description: 'Leeftijdsinformatie service',
+  };
+
+  // The minimal fixture: every optional field on VendorService and
+  // VendorOrganization omitted. `provider.contactPoint` is still an object —
+  // the service always constructs one, even with every inner field
+  // undefined (which JSON serialization then drops) — so it is present here
+  // as `{}`, not omitted.
+  const MINIMAL_VENDOR: VendorService = {
+    id: 'https://data.example.org/vendor-services/gemeente-1',
+    basedOn: 'https://identifier.overheid.nl/dmn/Kapvergunning',
+    provider: {
+      name: 'Unknown Vendor',
+      contactPoint: {},
+    },
+  };
+
+  test('GET / 200, as documented', async () => {
+    mockGetAll.mockResolvedValue([FULL_VENDOR, MINIMAL_VENDOR]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/vendors');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.count).toBe(2);
+    expectToMatchOperation(res, 'get', '/vendors');
+  });
+
+  test('GET / 500, as documented', async () => {
+    mockGetAll.mockRejectedValue(new Error('SPARQL endpoint timed out'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/vendors');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/vendors');
+  });
+
+  test('GET /dmn/:identifier 200, as documented', async () => {
+    mockGetForDmn.mockResolvedValue([FULL_VENDOR]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/vendors/dmn/SVB_LeeftijdsInformatie');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/vendors/dmn/{identifier}');
+  });
+
+  test('GET /dmn/:identifier 200, as documented — an identifier matching nothing answers an empty list, not 404', async () => {
+    mockGetForDmn.mockResolvedValue([]);
+
+    const res = await request(makeDocumentedApp()).get('/v1/vendors/dmn/Nope');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ vendorServices: [], count: 0, dmnIdentifier: 'Nope' });
+    expectToMatchOperation(res, 'get', '/vendors/dmn/{identifier}');
+  });
+
+  test('GET /dmn/:identifier 500, as documented', async () => {
+    mockGetForDmn.mockRejectedValue(new Error('unknown DMN'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/vendors/dmn/Nope');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/vendors/dmn/{identifier}');
   });
 });

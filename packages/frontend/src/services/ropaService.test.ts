@@ -104,6 +104,28 @@ describe('RopaService.upsertRopa', () => {
     const { id: _id, createdAt: _c, updatedAt: _u, ...input } = ropaRecord();
     await expect(RopaService.upsertRopa(input)).rejects.toThrow('HTTP 400');
   });
+
+  // #156: surfaces the RFC 9457 `detail` when the failed response carries
+  // one, instead of always the generic "HTTP <status>".
+  test('throws the problem detail when the response provides one', async () => {
+    server.use(
+      http.post(
+        '*/v1/assets/ropa',
+        () =>
+          new HttpResponse(
+            JSON.stringify({
+              type: 'about:blank',
+              status: 400,
+              title: 'Invalid request',
+              detail: 'title is required',
+            }),
+            { status: 400 }
+          )
+      )
+    );
+    const { id: _id, createdAt: _c, updatedAt: _u, ...input } = ropaRecord();
+    await expect(RopaService.upsertRopa(input)).rejects.toThrow('title is required');
+  });
 });
 
 describe('RopaService.deleteRopa', () => {
@@ -122,5 +144,25 @@ describe('RopaService.deleteRopa', () => {
   test('throws HTTP <status> on failure', async () => {
     server.use(http.delete('*/v1/assets/ropa/:id', () => new HttpResponse(null, { status: 500 })));
     await expect(RopaService.deleteRopa('r1')).rejects.toThrow('HTTP 500');
+  });
+
+  // #156
+  test('throws the problem detail when the response provides one', async () => {
+    server.use(
+      http.delete(
+        '*/v1/assets/ropa/:id',
+        () =>
+          new HttpResponse(
+            JSON.stringify({
+              type: 'about:blank',
+              status: 409,
+              title: 'Conflict',
+              detail: 'record is referenced',
+            }),
+            { status: 409 }
+          )
+      )
+    );
+    await expect(RopaService.deleteRopa('r1')).rejects.toThrow('record is referenced');
   });
 });

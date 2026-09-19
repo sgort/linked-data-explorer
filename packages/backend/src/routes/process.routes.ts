@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { operatonService } from '../services/operaton.service';
 import logger from '../utils/logger';
 import { getErrorMessage } from '../utils/errors';
+import { sendProblem } from '../utils/problem';
 
 const router = Router();
 
@@ -22,9 +23,10 @@ router.get('/:key/variable-hints', async (req: Request, res: Response) => {
       processKey: key,
       error: getErrorMessage(error),
     });
-    res.status(500).json({
-      success: false,
-      error: { code: 'VARIABLE_HINTS_FAILED', message: 'Failed to retrieve variable hints' },
+    sendProblem(res, req, {
+      status: 500,
+      code: 'VARIABLE_HINTS_FAILED',
+      detail: 'Failed to retrieve variable hints',
     });
   }
 });

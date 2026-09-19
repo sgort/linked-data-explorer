@@ -105,8 +105,8 @@ describe('mapBpmn', () => {
       schemaVersion: 2,
       language: 'nl',
       organization: 'Flevoland',
-      createdAt: CREATED,
-      updatedAt: UPDATED,
+      createdAt: CREATED.toISOString(),
+      updatedAt: UPDATED.toISOString(),
     });
   });
 
@@ -162,6 +162,22 @@ describe('mapForm', () => {
     expect(mapped.language).toBeUndefined();
     expect(mapped.organization).toBeUndefined();
     expect(mapped.readonly).toBe(false);
+  });
+});
+
+describe('mapForm and mapDocument timestamps', () => {
+  // Every mapper serialises timestamps the same way, so the domain shape matches
+  // what the upserts receive and what res.json sends (#151).
+  test('mapForm returns ISO strings', () => {
+    const mapped = mapForm(formRow());
+    expect(mapped.createdAt).toBe(CREATED.toISOString());
+    expect(mapped.updatedAt).toBe(UPDATED.toISOString());
+  });
+
+  test('mapDocument returns ISO strings', () => {
+    const mapped = mapDocument(documentRow());
+    expect(mapped.createdAt).toBe(CREATED.toISOString());
+    expect(mapped.updatedAt).toBe(UPDATED.toISOString());
   });
 });
 

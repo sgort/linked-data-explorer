@@ -2,6 +2,815 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.09.5",
+      "status": "Released",
+      "date": "19 sep 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "a4ecbcb",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Report-only Content-Security-Policy, SPARQL queries via the backend, and a CSP report collector (#161)",
+          "details": [
+            "A Vite plugin writes staticwebapp.config.json at build time with a Content-Security-Policy-Report-Only header for the build's own backend origin, plus Reporting-Endpoints, nosniff and a referrer policy. The inline style block moves into index.css. The SPARQL editor now sends queries through POST /v1/triplydb/query instead of calling the typed endpoint and falling back to the allorigins.win proxy, so connect-src names one origin and the #142 checks apply. POST /v1/csp-reports accepts both report formats and logs each violation, storing nothing.",
+            "Also fixes the Organizations view's reversed query arguments, makes the 413 detail state the limit that applied, and handles non-JSON SPARQL error bodies."
+          ]
+        },
+        {
+          "sha": "d90bb50",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Make the entrance animations real and keep Settings closed on full-width views (#160, #76)",
+          "details": [
+            "The error banner and Settings panel used tailwindcss-animate classes, but that plugin was never installed, so both appeared instantly. Two keyframes in tailwind.config.js now provide the fade-down and slide-in-left the markup asked for, without a dependency, and motion-reduce turns them off.",
+            "Changelog, DMN Validator and SHACL Validator hide the Settings overlay because it would cover them, but its state stayed open: the gear stayed lit, clicks did nothing, and the panel reappeared on the next view. Entering those views now closes Settings, and the gear is disabled there with a tooltip saying why."
+          ]
+        },
+        {
+          "sha": "f8db363",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Refuse a blank title, id or name, and document running the ROPA site locally (#156)",
+          "details": [
+            "The #150 checks treated only an absent or null value as missing, so an empty or whitespace-only string passed and a ROPA record could be saved with no title. A new nonBlank rule refuses that for the fields that identify or name a record: the ROPA record's title and bpmnProcessId, and the id, name and bpmnProcessId of BPMN processes, forms and documents. Other text fields may still be empty, so a ROPA draft can be saved while it is written. No stored record on local, ACC or PROD has a blank value in these fields.",
+            "The root README gains a section on running the public ROPA site on localhost (npx serve . -l 5500), and the site's own README names the port."
+          ]
+        },
+        {
+          "sha": "c98732c",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Keep one identity per stored process, and stop swallowing save failures (#156)",
+          "details": [
+            "Saving a process now takes bpmnProcessId from the saved XML, so renaming the process id no longer leaves a stale value that makes the next deploy create a second row. The by-process-id lookup orders by deployed_at then updated_at, so a duplicate resolves to the deployed, most recently touched row. The process-id pattern requires whitespace before id= on both sides.",
+            "Also: the unrecorded-bundle reason names its actual cause; save and error banners clear on switching process; the API description no longer mentions an UPDATE; process create, import and rename and the ROPA delete report a failed write, naming the process; boardOwner is validated on the server as a lowercase slug. The unique constraint is left for #171."
+          ]
+        },
+        {
+          "sha": "df4084a",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Fetch DMN XML from /v1 and remove the duplicate legacy handler (#132)",
+          "details": [
+            "The frontend fetched DMN XML from /api/dmns/{key}/xml without encoding the key. A separate handler, dmn-xml.routes.ts, was mounted on the app ahead of the router, so it answered every /api/dmns/:x/xml request and the /api/dmns alias never added its Deprecation and successor Link headers there.",
+            "The export now fetches /v1/dmns/{identifier}/xml with the identifier URL-encoded. The duplicate handler, its test and its mount are removed; the legacy URL is still served by the /v1 handler through the alias, now with the deprecation headers. Nothing outside this repository used the legacy path or its 404 message."
+          ]
+        },
+        {
+          "sha": "098530e",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Choose any DSO authority by level instead of four fixed locations",
+          "details": [
+            "The Activities tab offered four hardcoded authorities (Lelystad, Flevoland, Ede, Gelderland), so no other authority's activities could be browsed. Two dropdowns replace them: Level (gemeente, provincie, waterschap, rijk) and Authority. Options show the name without the level prefix, so typing jumps to it, and sort with 's-Hertogenbosch under H.",
+            "The list is generated from the government organisations register (organisaties.overheid.nl) by scripts/generate-dso-authorities.mjs (npm run authorities:generate): 342 municipalities, 12 provinces, 21 water boards and 12 ministries, each with its OIN. Ended organisations and those without an OIN are left out. The same list names the authority when importing forms, so any authority now gets its register name instead of a code."
+          ]
+        },
+        {
+          "sha": "722a739",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "OpenAPI tidy-ups, contract scripts, and fetch every DSO activity page (#153, #148, #158)",
+          "details": [
+            "POST /dso/activiteiten/oin requested one page of 200 and presented it as the whole set; Provincie Zuid-Holland has 838 activities on DSO pre, so its Activities tab filtered a partial list. The backend now fetches every page, up to 10 (2000 activities), and returns one combined list; page.size below page.totalElements signals the cap.",
+            "Also: test:contract and test:openapi-coverage scripts and a README section on adding a route; a shared ValidationSummary schema for the DMN and SHACL results, with descriptions saying the shapes match on purpose; health checks grouped under Health & monitoring; eDocs mocks using real status values; internal source names removed from the API description; the STTR example DMN regenerated with the current extraction; and a named test for the complete: false SHACL result."
+          ]
+        },
+        {
+          "sha": "130ebe9",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Make asset status non-null and serialise every mapper's timestamps the same way (#151)",
+          "details": [
+            "form_schemas.status and document_templates.status defaulted to 'wip' but were nullable, so a row written outside the upserts could reach the API as status: null, which the OpenAPI description forbids. The migration now backfills any NULL and sets the columns NOT NULL; both steps are safe on every start, and ACC and PROD hold no NULL rows today.",
+            "mapBpmn, mapForm and mapDocument now return ISO strings for createdAt and updatedAt, as mapRopaRecord already did, and the domain types say string. The wire format is unchanged, since res.json already serialised the Date the same way; the types now also match what the upserts receive."
+          ]
+        },
+        {
+          "sha": "0e0c5f6",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Keep a local .env out of the outbound-target tests (#142)",
+          "details": [
+            "config.ts loads .env under Jest too, so a developer with ALLOW_LOCAL_ENDPOINTS=true, the setting local Jena needs, saw 46 of the #142 tests fail. A Jest setup file now pins both #142 settings to their ACC/PROD values before any module reads .env; dotenv never overrides a variable that is already set."
+          ]
+        },
+        {
+          "sha": "833d546",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Keep the outbound guard in force under an environment proxy (#142)",
+          "details": [
+            "axios reads HTTP(S)_PROXY when no proxy is configured, and for https targets swaps in its own tunnelling agent, so the connect-time lookup never ran. The guarded client now pins proxy: false and strips per-request transport, socketPath and lookup overrides. Deprecated site-local fec0::/10 and Teredo 2001::/32 are refused as internal. Also: the TriplyDB service's config parameter is renamed so it no longer shadows the module config, the chain execution endpoint description says it is checked even for DRDs, and the design spec records what the implementation found."
+          ]
+        },
+        {
+          "sha": "e0425c9",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Stop choosing the Operaton target, and hide the local endpoint preset outside development (#142)",
+          "details": [
+            "The deploy modal no longer offers an Operaton URL, username or password, and names the Operaton it deploys to instead; the request stops sending those fields. The Local Jena preset appears only in development builds, where the backend admits local endpoints. The default endpoint is now chosen by URL rather than by position, so it stays DMN Discovery in every build."
+          ]
+        },
+        {
+          "sha": "b759a63",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Deploy processes only to the configured Operaton (#142)",
+          "details": [
+            "POST /dmns/process/deploy no longer builds an Operaton client from the request. It always deploys through the shared client, which carries OPERATON_API_KEY, so Operaton credentials stay on the backend. An operatonUrl equal to the configured one is still accepted for older frontends; any other answers 400. operatonUsername and operatonPassword are ignored. All three fields are marked deprecated, and the bundle record stores the Operaton actually used."
+          ]
+        },
+        {
+          "sha": "e437f62",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Allowlist TriplyDB hosts that receive a token, and move the assets token to a header (#142)",
+          "details": [
+            "update-service, list-graphs and test-connection forward the caller's token, so their base URL must be https and a host in TRIPLYDB_ALLOWED_HOSTS; anything else answers 400 before any request. test-connection now checks its required fields. GET /triplydb/assets reads the token from an Authorization: Bearer header instead of the apiToken query parameter, which no caller used, and encodes account and dataset into the upstream path. The frontend logo resolver sends the header."
+          ]
+        },
+        {
+          "sha": "aca7429",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Answer 400 for refused SPARQL endpoints (#142)",
+          "details": [
+            "GET /norms, the five DMN reads, chain execution, both vendor reads, SHACL merged validation and POST /triplydb/query now check a caller-supplied endpoint before any request and answer 400 INVALID_INPUT when it is not https, carries credentials or points to an internal address. The API description documents the 400s and states the rule on each endpoint parameter, and the lint exceptions that assumed the endpoint was unvalidated are removed. The template routes and DELETE /cache/clear never request their endpoint and are unchanged."
+          ]
+        },
+        {
+          "sha": "7c136fc",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Send caller-chosen SPARQL and TriplyDB requests through the guard (#142)",
+          "details": [
+            "The SPARQL service's per-endpoint client and all five TriplyDB service calls now use the guarded outbound client. The TriplyDB calls move from fetch to axios so there is one mechanism to guard; their status handling, bodies and error messages are unchanged, and they now observe TRIPLYDB_TIMEOUT. The configured default endpoint keeps its plain client."
+          ]
+        },
+        {
+          "sha": "4e0fc4a",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Refuse internal addresses when connecting to caller-chosen hosts (#142)",
+          "details": [
+            "Add outboundHttp.ts: an axios client whose agents refuse a name that resolves to an internal address, whose redirects are re-checked, and whose request interceptor refuses internal IP literals and non-https URLs, which Node connects to without a DNS lookup. ALLOW_LOCAL_ENDPOINTS admits them for local development."
+          ]
+        },
+        {
+          "sha": "07aff38",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Check caller-supplied outbound URLs at the route (#142)",
+          "details": [
+            "Add outboundUrl.ts: checks for SPARQL endpoints (any public https host), TriplyDB base URLs that carry a token (https and TRIPLYDB_ALLOWED_HOSTS), and the Operaton deploy target (only the configured one), plus the helper that answers 400 problem details. Internal addresses are recognised in every textual IPv4 and IPv6 form, including the IPv6 forms that embed an IPv4 address and trailing-dot localhost names. ALLOW_LOCAL_ENDPOINTS admits http and local addresses for development."
+          ]
+        },
+        {
+          "sha": "9337d5d",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Plan outbound target validation (#142)",
+          "details": [
+            "The eight-task implementation plan for #142 that the outbound-target commits below follow."
+          ]
+        },
+        {
+          "sha": "597e0b2",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Design outbound target validation (#142)",
+          "details": [
+            "The design for issue #142: which caller-supplied targets the backend may call, checked at the route and again when the connection opens, and why the Operaton deploy target is pinned."
+          ]
+        },
+        {
+          "sha": "cb791bf",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Correct the public ROPA site's hosts and local setup",
+          "details": [
+            "The error-contract plan listed the public ROPA site as an unchecked consumer under ropa.flevoland.nl, a name taken from a stale comment in publicPaths.ts. That host does not resolve. The site is packages/ropa-site, served at ropa.open-regels.nl and acc.ropa.open-regels.nl, and it never reads an error body.",
+            "Correct the plan's known-risk section and the comment, and rewrite the site's README: its real hosts, which backend each host talks to, the two deploy workflows, and that opening index.html from disk talks to the production backend."
+          ]
+        },
+        {
+          "sha": "d087b09",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Switch the problem-details lint rules on (#131)",
+          "details": [
+            "Every error response the API produces itself is now problem details, so nlgov:use-problem-schema and nlgov:problem-schema-members gate the whole document instead of being switched off. Two responses stay exempt, each at the one response it concerns: the evaluate proxy's 500, which forwards Operaton's own body, and GET /health's 503, which is the health document itself. Removing either exemption makes exactly that response fail.",
+            "The design spec said these rules were off pending #131, that the Assets exception would disappear when #150 landed, and counted nine DSO exceptions. It now records what happened: the rules gate, the Assets exception shrank to five entries for a reason that is a design choice rather than a defect, and two DSO entries left when a malformed body became a 400."
+          ]
+        },
+        {
+          "sha": "c33a196",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Validate input on the asset and ROPA routes (#150)",
+          "details": [
+            "A missing field, an unknown status or a malformed id reached Postgres and came back as a 500, so a caller could not tell a mistake in its request from a server failure. The four upserts, the deploy mark and the ROPA delete now check their input first and answer 400 INVALID_INPUT, with a detail naming every field that failed.",
+            "The checks follow the database's own constraints: presence where a column is NOT NULL and the handler supplies no fallback, type where a value is bound, and enum where a column has a CHECK. Form and document status have no CHECK, so any string passes. XML and JSON blobs are checked for presence and type only and never parsed. DELETE /assets/ropa/{id} checks the id is a UUID before it reaches a query that would fail the cast.",
+            "In a few edge cases the checks are deliberately stricter than Postgres, which would coerce or store the string \"1\" for an integer, \"true\" for a boolean, or JSON null for a required JSON value. No client sends these and storing them would leave rows no reader expects. The frontend's own payloads were checked at every call site, sent live against a running backend, and every row in a development database and every example .form and .document file in the repository was re-shaped as the frontend re-posts it; none is rejected. Integer columns now reject a fraction, which used to pass a number check and then fail as a 500."
+          ]
+        },
+        {
+          "sha": "dbe0691",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Answer 400 and 413 for unparsable and oversized bodies (#143)",
+          "details": [
+            "The global error handler answered every body-parser failure with a 500, telling a client that sent a broken or oversized body that the server had failed. It now honours the status body-parser already gives its own errors: 400 MALFORMED_BODY for a body that does not parse, 413 PAYLOAD_TOO_LARGE for one over the 10 MB limit, whose detail names the limit, and the parser's own status as INVALID_BODY for the rest, such as an unsupported charset or a urlencoded body nested past qs's depth limit.",
+            "A body-parser error is recognised by its type, against a fixed list read from the installed body-parser and raw-body. A status property alone decides nothing, so an arbitrary thrown error carrying one still answers 500 rather than choosing its own response. The limit now lives in one constant shared by the parsers and the 413 message.",
+            "The 23 operations that take a body document both responses, and the 500 descriptions no longer claim the malformed-body case. The parser runs for every method, so a body sent to a GET or DELETE gets the same answers; that is said once in info.description rather than on the ~43 operations that take no body, since such a body is outside their contract."
+          ]
+        },
+        {
+          "sha": "9f0a8c6",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Answer errors as RFC 9457 problem details (#131)",
+          "details": [
+            "Every error the API produces itself is now application/problem+json with status, title, detail and instance, replacing five different envelopes: { success, error: { code, message } } on most routes, a bare-string error on /dso and /vendors, TriplyDB's shape with its own status, a message-only 503 on the TriplyDB connection test, and a chain failure nested under data.error.",
+            "code survives as an extension member, since the design rules allow extra members and it is what existing callers branch on. type is about:blank: there is no documentation page per kind of problem, and a URL that does not resolve would be worse than none. instance is the request path without its query string, taken from originalUrl because a nested router rewrites req.path.",
+            "A failed chain execution keeps its partial result under data, beside the problem that describes the failure, so which steps ran and the outputs so far are not lost."
+          ]
+        },
+        {
+          "sha": "d8bad3b",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Plan the error contract pass (#131, #143, #150)",
+          "details": [
+            "The plan for one pass over #131, #143 and #150, which all change what an error response looks like, so that responses are written once in the new format."
+          ]
+        },
+        {
+          "sha": "41097e5",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Generate Tailwind at build time instead of loading the CDN",
+          "details": [
+            "index.html loaded Tailwind's Play CDN on every page load, in acceptance and production. That is third-party JavaScript executing in the application's origin with full DOM access, on an unversioned URL that cannot be pinned with an integrity hash, with no Content-Security-Policy to contain it and nothing in the supply-chain pipeline covering a script tag in HTML. Tailwind documents the Play CDN as a development tool. The styling of every screen depended on it: if the CDN were slow, blocked or serving something else, the app rendered unstyled or ran someone else's code.",
+            "Tailwind now builds with the application: tailwindcss 3.4, PostCSS and autoprefixer as build dependencies, an entry stylesheet imported from main.tsx, and a content scan over index.html and the source. Staying on v3 keeps every class meaning identical to what the CDN served; v4 would have turned a supply-chain fix into a redesign.",
+            "index.html also carried an import map naming six packages on esm.sh with floating ranges. Nothing referenced it — react is bundled, and one of the named packages is used by no source file — so it was inert, but it was a supply-chain path with no lockfile behind it, waiting for the first runtime bare import to make it live. Removed."
+          ]
+        },
+        {
+          "sha": "be7e9e0",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Record the bundle when a process is deployed",
+          "details": [
+            "A deploy could report success while nothing reached Postgres. The write was a second request the browser made after the deploy, unawaited, its failure swallowed, and skipped entirely when the browser had no matching identifier in local storage. Underneath it, markDeployed reported success even when its UPDATE matched no rows. Both the caseworker dashboard and the public site list bundles by their deployment timestamp, so a process that failed to record was invisible everywhere, and nobody was told.",
+            "The deploy route now records the bundle itself. After Operaton accepts the deployment, the backend finds the stored process by the id in the BPMN, or creates a minimal row when none exists, and stamps it. The browser makes one request, and the identifier in local storage no longer decides whether a deploy is remembered.",
+            "Recording cannot fail the deploy, which already happened and cannot be undone. The response says whether the bundle was recorded and why not, and the modal tells the user in those terms: the process was not recorded, and will not appear on the dashboard or the public site until it is saved and deployed again. That result shows as a warning rather than a tick, because a green tick beside \"not recorded\" would contradict the sentence next to it."
+          ]
+        },
+        {
+          "sha": "10eea07",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Address the phase 5 OpenAPI final review (#137)",
+          "details": [
+            "- The file header pointed at the pending list this branch deleted. It now states the rule that replaced it: a served operation must appear here, and this file may not describe one that is not served. - The account of error formats named every exception except the one this phase introduced, which is now the second most common error body in the API. A client handling only the listed shapes would mis-parse every DSO and vendor failure. - The coverage test asserts that both sides loaded. Its two rules cross-check each other, but agree perfectly when both are empty, and the ceiling that used to assert a count is gone. - A vendor error example said 'unknown DMN', two lines below a sentence saying an unmatched identifier answers an empty list rather than an error."
+          ]
+        },
+        {
+          "sha": "1d43270",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Close the pending list and keep one coverage rule (#137)",
+          "details": [
+            "Every /v1 operation is described, so the list of undescribed ones has nothing left to hold. openapi/pending.json is deleted, and the coverage test keeps the rule the pending machinery was built to reach: a served operation must be documented, and a documented operation must be served. The ceiling and the four checks that only policed a shrinking list go with the file.",
+            "The spec records how the list worked while the description was written, rather than leaving the scaffolding unexplained, and adds phase 5's lint exception: twelve proxy operations forward their inputs to an upstream API unvalidated, which is how they are built, not a defect to fix."
+          ]
+        },
+        {
+          "sha": "e0194a9",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe the eDOCS and vendor operations in OpenAPI (#137)",
+          "details": [
+            "Part of OpenAPI phase 5 (#137): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "72ad9b2",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe the DSO applicable-rules operations in OpenAPI (#137)",
+          "details": [
+            "Part of OpenAPI phase 5 (#137): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "b88b32a",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe the DSO activity, concept and work-item operations in OpenAPI (#137)",
+          "details": [
+            "Part of OpenAPI phase 5 (#137): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "b993383",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Plan OpenAPI phase 5 (#137)",
+          "details": ["The implementation plan for OpenAPI phase 5 (#137)."]
+        },
+        {
+          "sha": "f86ce6f",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Address the phase 4 OpenAPI final review (#136)",
+          "details": [
+            "- A document template's bindings and assets are arrays, not objects. As published, the contract rejected every response and every request the frontend sends. Both are free-form JSON now, and the fixture uses the real arrays, so the test fails if the schema goes back. - The Assets tag covers the stored BPMN, form, document and RoPA assets, not only the two public reads it was written for. - The descriptions no longer name mappers, row types, SQL keywords or a frontend component. What they said about behaviour stays; only the mechanism a reader cannot check is gone. - Four tests use a record with every optional field absent, so a field wrongly marked required would now fail. - The deploy call's request body is optional, which is what the handler and the operation's own description already said, and a test sends none."
+          ]
+        },
+        {
+          "sha": "876e9ef",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Record the phase 4 design-rule exception (#136)",
+          "details": [
+            "Part of OpenAPI phase 4 (#136): records in the design spec where the document deliberately departs from a design rule, and why."
+          ]
+        },
+        {
+          "sha": "2622ed5",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe the ROPA asset operations in OpenAPI (#136)",
+          "details": [
+            "Part of OpenAPI phase 4 (#136): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "90c6b36",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe the form and document asset operations in OpenAPI (#136)",
+          "details": [
+            "Part of OpenAPI phase 4 (#136): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "aeada7d",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe the BPMN asset operations in OpenAPI (#136)",
+          "details": [
+            "Part of OpenAPI phase 4 (#136): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "4ddfd65",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Plan OpenAPI phase 4 (#136)",
+          "details": ["The implementation plan for OpenAPI phase 4 (#136)."]
+        },
+        {
+          "sha": "0658366",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Address the phase 3 OpenAPI final review (#135)",
+          "details": [
+            "- The info.description now names the third error shape: POST /chains/execute reports a failure as a plain string under data, with no top-level error. - That operation's 500 lists two alternatives instead of three. The two envelope causes are named in the response description, which every viewer renders, unlike a description beside a $ref. - A template's estimated time is a number, like every other duration. The Execution tag covers inspecting as well as running. The endpoint parameter says what it is, in the same words the earlier phases use. - A Turtle parse failure now has a conformance test, so the documented 200 with parseError set is checked rather than only claimed. - The SHACL handler's comment lists the layer keys the service really uses. - The plan records why the variable-hints 500 has its own schema: it pins the two fixed values, which the shared envelope cannot."
+          ]
+        },
+        {
+          "sha": "65a0f07",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Record the phase 3 design-rule exceptions and the tag rule (#135)",
+          "details": [
+            "Part of OpenAPI phase 3 (#135): records in the design spec where the document deliberately departs from a design rule, and why."
+          ]
+        },
+        {
+          "sha": "60b14ca",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe the chain discovery and execution operations in OpenAPI (#135)",
+          "details": [
+            "Part of OpenAPI phase 3 (#135): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "6c44a42",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe the chain template reads in OpenAPI (#135)",
+          "details": [
+            "Part of OpenAPI phase 3 (#135): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "9dd0b52",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe /shacl and /process in OpenAPI (#135)",
+          "details": [
+            "Part of OpenAPI phase 3 (#135): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "34db944",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Plan OpenAPI phase 3 (#135)",
+          "details": ["The implementation plan for OpenAPI phase 3 (#135)."]
+        },
+        {
+          "sha": "f8d4809",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Warn that CORS_ORIGIN app settings replace rather than append (#145)",
+          "details": [
+            "The comment added with the #145 fix showed the app-setting command with a literal \"...\" standing in for the current allowlist. That reads as an abbreviation rather than as a warning, and `az webapp config appsettings set` replaces the whole value rather than appending to it, so running the line as written -- or reconstructing the list from the local default below it -- drops every origin it does not name.",
+            "Reading the acceptance value while applying the documentation-site origins showed the hazard is worse than assumed. The deployed acceptance list held four origins, not the eight in this file, and one of them -- https://acc.cpsv-editor.open-regels.nl -- appears nowhere in the repository. It is not in .env.example, not in any workflow, and there is no Bicep, Terraform or ARM to hold it; none of the azure-*.yml workflows sets app settings at all. Each App Service application setting is therefore the only copy of its own allowlist, and this file is a local development list that was never a template for the deployed tiers.",
+            "The comment now says so, and gives the read-then-write form that cannot retype the value, with a guard refusing to write when the read comes back empty. Losing an origin this way is silent -- no error, no failing test, just a partner site whose browser calls stop working."
+          ]
+        },
+        {
+          "sha": "3a53a71",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Refuse a disallowed CORS origin without a 500 (#145)",
+          "details": [
+            "The origin callback passed an Error for any unlisted origin. The cors package treats a non-null first argument as a middleware failure and forwards it to next(err), so a request from an unrecognised origin reached the error handler and was answered with the standard INTERNAL_ERROR envelope -- a server error implying the backend had broken, when nothing had. The same options object backs app.options('*'), so preflight requests failed the same way, which is why an embedded Scalar reference on the IOU architecture documentation site could only report \"Failed to fetch\".",
+            "The conventional rejection is callback(null, false): emit no Access-Control-Allow-Origin header, let the request complete normally, and let the browser enforce the policy. The caller then sees an ordinary response it is not permitted to read.",
+            "Testing the wiring meant extracting it first. index.ts self-executes startServer() at module scope, so importing it in a test would run migrations and bind a port; the CORS configuration moves verbatim to middleware/cors.middleware.ts, nosemgrep annotation intact, before any behaviour changes. As a side effect the two cors() instances are now built once at module load rather than on every request."
+          ]
+        },
+        {
+          "sha": "884662f",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Address the phase 2 OpenAPI final review (#134)",
+          "details": [
+            "- The info.description no longer claims every error uses ErrorEnvelope. It names the triplydb and evaluate exceptions. - POST /dmns/evaluate/{decisionKey} now documents the 400 it passes through from Operaton, so its problem-invalid-input exception is gone. Its passed-through error bodies are any JSON, not only objects. - The spec and the Spectral comment state each GET /dmns read's inputs accurately. They record seven 400 exceptions, not eight. - The GET /norms 304 declares Last-Modified. The GET /triplydb/assets 500 covers an upstream 500. The /dmns/deploy filename default also applies to a blank value. - Conformance tests reach the 500 responses of /dmns/drd/deploy and /dmns/process/deploy."
+          ]
+        },
+        {
+          "sha": "b595145",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Record the phase 2 design-rule exceptions in the OpenAPI spec (#134)",
+          "details": [
+            "Part of OpenAPI phase 2 (#134): records in the design spec where the document deliberately departs from a design rule, and why."
+          ]
+        },
+        {
+          "sha": "b5d6c23",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe the /dmns deploy, evaluate and validate operations in OpenAPI (#134)",
+          "details": [
+            "Part of OpenAPI phase 2 (#134): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "0bb1d94",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe the /dmns read operations in OpenAPI (#134)",
+          "details": [
+            "Part of OpenAPI phase 2 (#134): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "e3409de",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe /triplydb in OpenAPI (#134)",
+          "details": [
+            "Part of OpenAPI phase 2 (#134): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "231cbdc",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe /cache and /norms in OpenAPI (#134)",
+          "details": [
+            "Part of OpenAPI phase 2 (#134): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "7049faa",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Plan OpenAPI phase 2 (#134)",
+          "details": ["The implementation plan for OpenAPI phase 2 (#134)."]
+        },
+        {
+          "sha": "96bb48f",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Bring RONL Business API's rows on the posture page up to 15 September",
+          "details": [
+            "The page carried RONL Business API over from the morning of 14 September. Everything below was re-read on 15 September from GitHub's API, Azure, the Semgrep CI logs on acc, and ls-remote against both remotes.",
+            "Corrected, because it was no longer true: - Heads and mirror: acc 130bfc1 -> e187086, both remotes; main 311d732. - Semgrep: 435 findings -> 25 after the first lock-file maintenance (ronl-business-api#134). Supply Chain reachable 249 -> 0, undetermined 101 -> 6, unreachable 69 -> 3; Code 16 unchanged. scan still not required. - check-supply-chain register: blocking since 12 September, 31 pinned references across 10 workflows (was \"no\", 30 across 9). - zizmor: RONL Business API's register makes the same \"manual\" claim, with 1.29.0 -> 1.30.1 queued on its dashboard. - The acceptance Static Web App is on Standard, not Free. - Formatting: checked in audit since 12 September, not by the pre-push hook alone; it caught Prettier 3.9.6 inside #134, fixed in #135. - \"Majors behind approval is what keeps a slot for lock-file maintenance\" was wrong: the concurrent count includes security pull requests.",
+            "Added: the 14 and 15 September rows for RONL Business API (#133, #134, #135, #137, #139, #142, #144, #146, #147, #148, #149, #151, #153) and linked-data-explorer#127; the pre-push lockfile check in all three; the lock-file maintenance exemption, pre-1.0 and engines rules across the three; two open-work rows; item 20 under \"Adding a fourth application\"."
+          ]
+        },
+        {
+          "sha": "d05e71c",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Record 15 September across ttl-editor and Linked Data Explorer",
+          "details": [
+            "This page is the single documented source for both repositories, and it stopped at the morning of 14 September. It now covers that evening and the day after: three findings about things no gate could see, and what changed because of them.",
+            "Orphaned preview environments (new §4 subsection). ttl-editor's two Static Web Apps held eight previews for pull requests that had long closed, and nothing reported them. On acceptance there were two causes, both checked against pull requests whose close runs were found:",
+            "- A path filter applies to `closed` too. #66 was docs-only, and its close arrived 27 seconds after #65 added paths-ignore. - GitHub starts no pull_request workflow for a pull request it cannot test-merge. #43, #45 and #123 closed with mergeability `unknown` and no run of any kind; #62 and #71, recorded mergeable, did get theirs."
+          ]
+        },
+        {
+          "sha": "d177ad4",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Address the final review of OpenAPI phase 1 (#133)",
+          "details": [
+            "Turn off Scarf install telemetry (pulled in by Spectral) with scarfSettings in the root, backend and frontend package.json, since Scarf reads the setting from the directory npm runs in and CI installs from packages/backend. Keep the test-only helpers out of the build with tsconfig.build.json, and stop runtime code importing them with a no-restricted-imports rule. Enforce that pending.json only shrinks with a ceiling test. Write the built document atomically, retry the post-deploy version check, note how to see YAML edits during development, and bring the design spec in line with what shipped."
+          ]
+        },
+        {
+          "sha": "4d8d805",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Renovate maintains zizmor's version here too",
+          "details": [
+            "SECURITY-PIPELINE.md section 4 said the `version: '1.29.0'` input to zizmor-action is \"maintained by hand\" because Renovate's github-actions manager \"does not parse action inputs\", and \"if the audit ever needs a newer zizmor, someone must edit it\". The Hand-pinned tools table listed zizmor on the same basis, and zizmor.yml carried the same comment above the input.",
+            "That is wrong. Renovate's github-actions manager maps zizmorcore/zizmor-action to the Docker image ghcr.io/zizmorcore/zizmor (lib/modules/manager/ github-actions/known-actions.ts). The Dependency Dashboard (#36) already lists `ghcr.io/zizmorcore/zizmor 1.29.0` under zizmor.yml, and its pending \"github actions\" group update names ghcr.io/zizmorcore/zizmor alongside node and zizmorcore/zizmor-action. The same correction landed in ttl-editor as sgort/ttl-editor#144.",
+            "Section 4 now says how the input is actually maintained, and records the two things nothing enforces:"
+          ]
+        },
+        {
+          "sha": "31359de",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Gate and ship the OpenAPI description (#133)",
+          "details": ["Part of OpenAPI phase 1 (#133)."]
+        },
+        {
+          "sha": "3a00ae8",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Lint the OpenAPI description against the NL API Design Rules 2.2.1 (#133)",
+          "details": ["Part of OpenAPI phase 1 (#133)."]
+        },
+        {
+          "sha": "994be46",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Describe /health and the public read-only endpoints in OpenAPI (#133)",
+          "details": [
+            "Part of OpenAPI phase 1 (#133): adds these operations to openapi.yaml, with a conformance test for every documented response, so the coverage test no longer lists them as pending."
+          ]
+        },
+        {
+          "sha": "0050ed1",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Fail when a /v1 route is neither documented nor pending (#133)",
+          "details": ["Part of OpenAPI phase 1 (#133)."]
+        },
+        {
+          "sha": "be8b734",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Lint the Node build scripts as CommonJS (#133)",
+          "details": ["Part of OpenAPI phase 1 (#133)."]
+        },
+        {
+          "sha": "e9bef34",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Serve the OpenAPI description at /v1/openapi.json (#133)",
+          "details": ["Part of OpenAPI phase 1 (#133)."]
+        },
+        {
+          "sha": "3eb3308",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Exempt lock-file maintenance, hold pre-1.0 minors, stop raising engines",
+          "details": [
+            "Three fixes ronl-business-api made on 2026-09-14, carried over, plus the engines floor they would have prevented.",
+            "Lock-file maintenance is exempt from the PR limits. Its Monday window on 2026-09-14 passed without a pull request, and on 2026-09-15 the Dependency Dashboard (#36) listed it under Rate-Limited with five Renovate pull requests open and majors already behind approval. The rule's own comment said holding majors behind approval kept a slot free; it cannot, because the concurrent count includes every open Renovate pull request, security ones included. prConcurrentLimit 0 and prHourlyLimit 0 on this rule exempt this branch only (calcLimit reads the limit from the upgrades inside the branch, and this branch holds exactly one). Same as sgort/ronl-business-api#133.",
+            "Minor updates of pre-1.0 packages wait for dashboard approval like majors. Renovate classifies 0.4 -> 0.5 as minor; this repository declares four direct pre-1.0 dependencies (libxmljs2, rdf-validate-shacl, lucide-react, eslint-plugin-react-refresh). Same as sgort/ronl-business-api#142."
+          ]
+        },
+        {
+          "sha": "b531bff",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Validate route responses against the OpenAPI document (#133)",
+          "details": ["Part of OpenAPI phase 1 (#133)."]
+        },
+        {
+          "sha": "31e7c9f",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Build the OpenAPI description from openapi.yaml (#133)",
+          "details": ["Part of OpenAPI phase 1 (#133)."]
+        },
+        {
+          "sha": "3d29f5f",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Plan OpenAPI phase 1 (#133)",
+          "details": [
+            "Adds the implementation plan for #133 and records in the design the one further Spectral exception found while planning: nlgov:semver is off, because the calendar version 2026.09.4 is not valid semver and info.version must equal the API-Version header."
+          ]
+        },
+        {
+          "sha": "6f92172",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Design the OpenAPI description for the backend (#129)",
+          "details": [
+            "The design for describing the backend API in OpenAPI 3.1 (#129): one hand-written openapi.yaml, served at /v1/openapi.json, linted against the NL API Design Rules, and checked against the routes by tests."
+          ]
+        },
+        {
+          "sha": "f6c6fdc",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Report build provenance in /v1/health and verify it after deploy",
+          "details": [
+            "/v1/health's `version` comes from package.json and names a release, so every deploy between two releases reported the same string and nothing said which commit was running.",
+            "Both backend deploy workflows now write deploy/build-info.json (sha, run, runId) into the artifact. /v1/health reads it once and reports a `build` block with the frontend's BuildInfo semantics: tracked only when both sha and run are present; a missing, unreadable or malformed file reports \"local build\" and never affects `status`. `version` and the API-Version header are unchanged (API-57).",
+            "The post-deploy verification loop now waits for build.sha to equal github.sha as well as shacl.complete, so a deploy that leaves the previous artifact serving fails instead of passing."
+          ]
+        },
+        {
+          "sha": "e231b59",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Check the install against the lockfile before every push",
+          "details": [
+            "scripts/check-deps.sh compares what is installed with a snapshot of package-lock.json taken after the last install, and stops with the fix named -- npm ci -- when they differ. Until now it ran only when a dev server started. A push does not start one, so a clone that had not been reinstalled since the lockfile moved went straight into lint and check-format on the wrong tool versions.",
+            "It now runs first in the pre-push hook. Husky runs hooks with sh -e, so a stale install stops the push there, before anything else runs.",
+            "That failure is not hypothetical. On 2026-09-14 a ronl-business-api clone still had Prettier 3.8.1 installed after the lockfile moved to 3.9.6. Its push failed check-format on seven files that were correctly formatted for the version the lockfile names, and nothing in the output said the install was the problem."
+          ]
+        },
+        {
+          "sha": "e81cf68",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Record 14 September across the three repositories in the CI posture page",
+          "details": [
+            "One day's work in all three repositories, re-verified before it was written: heads and mirror state by ls-remote against both remotes, run timings from the deploy logs, and the pre-#128 check in ronl-business-api read from git rather than recalled.",
+            "- Header and summary: the dev-start dependency check as a sixth mechanism, a revision line that says what was re-verified (heads and mirrors only), new heads, and an \"Install checked at start\" row. - \"What changed on 14 September 2026\": ronl-business-api#128, linked-data-explorer#121, #104, #123, #124, #125 and ttl-editor#142, and the three findings behind them. - §1, \"A post-deploy check has to know which build answered\": the SHACL gate's first run read the previous build; App Service kept it answering for over a minute, an HTTP 200 check passes against either, and waiting for a field is a proxy until linked-data-explorer#122 and ronl-business-api#129 assert the commit. - §2: #104 as the register habit's third exercise, and \"The tree on a workstation\" — the stale installs measured (LDE 152 wrong versions and 95 missing, TTL 53 and 86) and the four details the check depends on. - §4, \"A fix made in one environment's workflow is half a fix\": the shapes copy added to the acceptance workflow alone in 968b4a5, and #123's three points of defence. - §5: mirror table as of 14 September. - §6: rows for linked-data-explorer#122, ronl-business-api#129 and #119; #97 updated to what the Dependency Dashboard shows (lock-file maintenance still Awaiting Schedule after this Monday's window); the day's closures. - Checklist items 15-17."
+          ]
+        },
+        {
+          "sha": "0676f2b",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Give the SHACL health gate time for the new build to start",
+          "details": [
+            "The gate added in #123 failed its first run, on the ACC deploy of that merge, although the deploy was sound. \"Deploy to Azure Web App\" finished at 10:21:15, \"Health check\" passed at 10:21:36, and \"Verify v1 endpoints\" read `shacl.complete: null` three times, 10 seconds apart, giving up at 10:22:10. `null` means a response with no `shacl` block: the previous build was still answering. /v1/health at 10:25:07 reported an uptime of 163 seconds, so the new build started at 10:22:24, 14 seconds after the window closed, and reported every shape layer loaded.",
+            "\"Health check\" passes against either build, so it cannot tell the gate the new one is up. Both workflows now allow about three minutes: 12 attempts, 15 seconds apart, with a 10-second curl timeout so one hung request cannot use the window, and no sleep after the last attempt. Each failed attempt logs the value it read.",
+            "Checked by simulating the loop under `bash -e`, the shell Actions uses: it passes when the block reports true on the first or fifth attempt and exits 1 when it never does."
+          ]
+        },
+        {
+          "sha": "56c89c5",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Ship the shapes to production and never report a file valid unchecked",
+          "details": [
+            "Production's SHACL Validator reported every file \"Valid · All checks passed\" with all three shape layers \"Not loaded\". The same file against ACC is Invalid with 25 errors (CPRMV 3, CPSV-AP 22).",
+            "Two faults combined:",
+            "- azure-backend-production.yml never copied packages/backend/shapes into the deploy package. tsc emits only dist/, so the shapes were absent in Azure. The copy was added to the ACC workflow alone. - The service tolerated missing shape files, which is reasonable, but computed `valid` from errors alone. A layer that did not load reports no errors, so with nothing loaded every file passed. A unit test pinned that behaviour."
+          ]
+        },
+        {
+          "sha": "286da06",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Record zizmor-action v0.6.3 in the supply-chain register",
+          "details": [
+            "Renovate bumped zizmorcore/zizmor-action from v0.6.2 to v0.6.3 in zizmor.yml but cannot edit SECURITY-PIPELINE.md, so check-supply-chain failed the audit job with a register finding: the workflow pinned 70fb788f8489 (v0.6.3) while the register recorded only 3dc1ecc9bcb9 (v0.6.2). The pin itself verified as genuine; only the register disagreed.",
+            "The Pinned table now records 70fb788f84895a7701f5643d103d587e460b5c99 at v0.6.3. node scripts/check-supply-chain.mjs, run in full against the GitHub API, reports that digests, version comments and the register all agree. The quoted v0.6.2 finding in docs/ci-posture-across-repos.md describes an earlier pull request and is left as history."
+          ]
+        },
+        {
+          "sha": "512ac83",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Keep tolerating a missing husky in workspace-scoped installs",
+          "details": [
+            "The previous commit replaced `husky install || true` with a bare `prepare: husky`, on the claim that husky is present everywhere the root lifecycle scripts run. That claim was wrong, and this pull request's own backend check disproved it:",
+            "> linked-data-explorer-monorepo@2026.09.4 prepare > husky sh: 1: husky: not found npm error code 127",
+            "Both backend workflows run `npm ci` with `working-directory: packages/backend`. That installs the backend workspace's dependencies, not the root devDependencies, so husky is absent — yet npm still runs the root `prepare`. The `|| true` being removed was guarding exactly this. Deploy Backend to Acceptance had passed on its seven previous runs."
+          ]
+        },
+        {
+          "sha": "cd08920",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Check installed dependencies against the lockfile before starting dev servers",
+          "details": [
+            "Nothing told a developer their node_modules had fallen behind the lockfile. `git merge --ff-only` brings in lockfile changes and installs nothing, so the dev servers started on whatever tree was last installed. Measured on a workstation after a routine fast-forward of acc on 14 September: five lockfile commits arrived — lock-file maintenance and frontend and backend dependency updates, +1,903/−1,446 lines — and the install was left 152 packages at a different version and 95 missing, against what CI tests.",
+            "`npm run dev`, `dev:backend` and `dev:full` now run `deps:check` first. `dev:full` checks once and starts both workspaces directly, rather than calling `dev` and `dev:backend` and checking twice.",
+            "The check is ronl-business-api's, as corrected in ronl-business-api#128. It compares the lockfile with a snapshot taken after each install and ignores this repository's own version numbers, which every release bump rewrites; third-party versions and workspace dependency lists are still compared. When stale it says `npm ci`, not `npm install`: install exactly the committed lockfile rather than re-resolve caret ranges with no package-manager cooldown (docs/ICTU-dependencies-assessment.md, recommendations 3, 4 and 6)."
+          ]
+        },
+        {
+          "sha": "9eb0246",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Update github actions",
+          "details": ["Renovate update of the pinned GitHub Actions used by the workflows."]
+        },
+        {
+          "sha": "6538e6e",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Correct the RONL Business API's queued-majors count in the ICTU assessment",
+          "details": [
+            "The assessment said RBA had 31 majors queued behind Dependency Dashboard approval. That figure does not reproduce under either unit it could mean.",
+            "Recounted on 13 September 2026 from sgort/ronl-business-api#16, the Dependency Dashboard: its Pending Approval section holds 18 entries, every one a major, plus the \"create all pending approval PRs at once\" checkbox, which is not an update. Several entries are grouped updates -- backend, frontend, pa-demo and public-site dependencies (major) -- and unpacking them gives 41 distinct packages, 85 with the repeats across groups. Neither is 31.",
+            "The sentence now gives both counts and keeps the finding it supports unchanged: none of them has yet been assessed. The same correction is carried in #119 and on the documentation site's ICTU Dependency Guideline page."
+          ]
+        },
+        {
+          "sha": "8722bdc",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Add ICTU's dependency guideline and assess the three applications against it",
+          "details": [
+            "Two documents, side by side.",
+            "ICTU-dependencies-guideline.md is ICTU's eleven recommendations for adding, specifying, updating and monitoring dependencies. Formatted with Prettier; the wording is unchanged.",
+            "ICTU-dependencies-assessment.md scores ttl-editor, linked-data-explorer and ronl-business-api against each recommendation on a 0-5 scale: LDE 23, TTL 26, RBA 22 out of 55. Every score is derived from the repositories, their deploy logs and the GitHub API as of 13 September 2026, and the document says how each was checked and what could not be."
+          ]
+        },
+        {
+          "sha": "2b43eab",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "C1 closed — record acc's ruleset gaining the two rules main had",
+          "details": [
+            "Six passages in this page went stale within the hour, because the gap they described was closed after the page was written. C1 gave RONL Business API's acc the deletion and non_fast_forward rules its main had carried since the promotion.",
+            "What changed, and why each mattered:",
+            "- The head note and the What-changed intro both said nine of eleven closed, with one skipped. Ten, and the eleventh is out of scope rather than skipped -- a different claim, not a rounding."
+          ]
+        },
+        {
+          "sha": "68c0085",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Record RONL Business API closing nine of eleven alignment items",
+          "details": [
+            "RONL Business API spent 12 September 2026 closing the gaps this page had recorded against it. Nine of eleven landed; one was skipped and one was always out of scope, and both are named rather than left to be inferred from a table of ticks.",
+            "Rewritten rather than annotated, because three of this page's own claims had become false:",
+            "- \"RONL Business API adopted the check non-blocking and has not yet promoted it.\" It promoted it (#83). The section is rewritten around what the promotion proved -- #101 reported a real register finding while the step, the job and the checks list all read success, because continue-on-error rewrites the step's conclusion and outcome: failure is not exposed by the REST API at all."
+          ]
+        },
+        {
+          "sha": "c51c4f8",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Check the GitLab mirror at each release",
+          "details": [
+            "Every gate in docs/the-gate-has-teeth.md runs on GitHub Actions. The gitlab remote is outside all of them and is pushed by hand, so it drifts on every merge -- and a mirror nothing checks is not a backup, it is a second place for content to be. This one had drifted 114 commits behind on acc and 253 on main before its last reconciliation.",
+            "It cannot run in CI, and that is a property of the mirror rather than a shortcoming here: the gitlab remote lives in .git/config and no tracked file names the host, so an Actions runner has no such remote, no key for it and no route to it. The check runs where the push happens, called from bump-release step 7.",
+            "It never pushes. It prints the exact command and stops, because writing to a shared remote is a human's decision."
+          ]
+        },
+        {
+          "sha": "ee88a99",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Record RONL Business API's promotion in the cross-repo posture",
+          "details": [
+            "RBA promoted acc to production on 12 September, the first deploy since 17 July, which closes three of its rows here and opens four others. Build provenance is now exercised in a third repository and a fourth surface. Its main gained a promotion-gate ruleset that reported BLOCKED on the promotion pull request, answering section 4's question the opposite way to ttl-editor. Its mirror turned out to be the dull case, both branches strict ancestors, so two fast-forwards rather than ttl-editor's surgery. Adds the newline-in-secret trap beside the pinning material: a stored credential cannot be read back, so nothing in review or in a log can show it differs by one invisible byte."
+          ]
+        },
+        {
+          "sha": "6de974b",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Record ttl-editor's lockfile fix, and make this page the only copy",
+          "details": [
+            "This page is now the single documented source for ttl-editor and Linked Data Explorer. Each repository used to carry its own copy, and the two drifted in both directions; ttl-editor's is deleted in sgort/ttl-editor#136, and its README points here. The page now says so at the top.",
+            "It also still described ttl-editor as it was before today's fix there.",
+            "- \"Seven findings remain ... cannot be closed by a Renovate bump, only by an upstream release or an overrides entry\". Wrong, and now corrected: each of brace-expansion, picomatch and postcss-selector-parser had a newer version inside its declared range, and nothing had moved them because ttl-editor had no lock-file maintenance. Its first refresh, ttl-editor#135, took them to 1.1.18, 2.3.2 and 6.1.4 and the scan on acc to 0 findings. The trajectory table gains that last row, and the triage summary no longer ends at 7. - The paragraph that flagged the missing lockFileMaintenance and left it untouched now records what was checked and done: the in-range refresh and scan run in a scratch worktree first, predicting 7 to 0; ttl-editor#134 enabling it with the same two safeguards as here; and #135 delivering exactly the predicted versions, 202 packages, none within the cooldown. It also says why ttl-editor needed neither of this repository's other two fixes. - The open-work row for it is removed, and ttl-editor's verified head moves to c4a8585."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.09.4",
       "status": "Released",
       "date": "11 sep 2026",

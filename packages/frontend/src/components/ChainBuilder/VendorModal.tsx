@@ -2,6 +2,7 @@ import { Building2, ExternalLink, Mail, Phone, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 import { VendorService } from '../../types/vendor.types';
+import { getProblemDetail } from '../../utils/problem';
 
 interface VendorModalProps {
   dmnIdentifier: string;
@@ -33,7 +34,7 @@ const VendorModal: React.FC<VendorModalProps> = ({
         if (data.success) {
           setVendors(data.data.vendorServices);
         } else {
-          setError(data.error || 'Failed to fetch vendor services');
+          setError(getProblemDetail(data, 'Failed to fetch vendor services'));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');

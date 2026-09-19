@@ -12,6 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { initializeDefaultTestCases } from '../../services/defaultTestCases';
 import { ChainExecutionResult, DmnModel, DmnVariable, EnhancedChainLink } from '../../types';
 import { ChainPreset, ChainValidation, VariableMatch } from '../../types/chainBuilder.types';
+import { getProblemDetail } from '../../utils/problem';
 import ChainComposer from './ChainComposer';
 import ChainConfig from './ChainConfig';
 import DmnList from './DmnList';
@@ -87,7 +88,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
           `[SemanticLinks] ✓ Loaded ${data.data.length} links (${data.data.filter((l: EnhancedChainLink) => l.matchType === 'semantic').length} semantic)`
         );
       } else {
-        console.error('[SemanticLinks] Failed to load:', data.error);
+        console.error('[SemanticLinks] Failed to load:', getProblemDetail(data, 'Unknown error'));
         setSemanticLinks([]);
       }
     } catch (error) {
@@ -113,7 +114,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       if (data.success) {
         setAvailableDmns(data.data.dmns);
       } else {
-        console.error('Failed to load DMNs:', data.error);
+        console.error('Failed to load DMNs:', getProblemDetail(data, 'Unknown error'));
         setAvailableDmns([]);
       }
     } catch (error) {
@@ -163,7 +164,7 @@ const ChainBuilder: React.FC<ChainBuilderProps> = ({ endpoint }) => {
       if (data.success) {
         setExecutionResult(data.data);
       } else {
-        alert(`Execution failed: ${data.error?.message || 'Unknown error'}`);
+        alert(`Execution failed: ${getProblemDetail(data, 'Unknown error')}`);
       }
     } catch (error) {
       console.error('Execution error:', error);

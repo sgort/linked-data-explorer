@@ -1,76 +1,34 @@
 import express, { Express } from 'express';
-import cors from 'cors';
-import dmnXmlRoutes from './routes/dmn-xml.routes';
 import helmet from 'helmet';
 import { config } from './utils/config';
 import logger from './utils/logger';
 import routes from './routes';
-import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { corsMiddleware } from './middleware/cors.middleware';
+import { errorHandler, notFoundHandler, BODY_SIZE_LIMIT } from './middleware/error.middleware';
 import { versionMiddleware } from './middleware/version.middleware';
 import { externalTaskWorker } from './services/externalTaskWorker.service';
 import { migrate } from './db/migrate';
 import { rootHandler } from './utils/rootViews';
-import { isPublicPath } from './utils/publicPaths';
 
 const app: Express = express();
-
-type CorsCallback = (error: Error | null, allow?: boolean) => void;
-
-const allowedOrigins = config.corsOrigin.map((o) => o.trim());
-
-const corsOptions: cors.CorsOptions = {
-  origin: (origin: string | undefined, callback: CorsCallback): void => {
-    // Allow non-browser requests (curl, server-to-server)
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
-
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-      return;
-    }
-
-    callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Dso-Env'],
-};
 
 // Security middleware
 app.use(helmet());
 
 // apply CORS to both normal requests and preflight
-
-app.use((req, res, next) => {
-  if (isPublicPath(req.path)) {
-    // Wildcard by design, for the public read-only mounts only -- see utils/publicPaths.ts.
-    // nosemgrep: javascript.express.web.cors-permissive-express.cors-permissive-express
-    cors({ origin: '*', methods: ['GET', 'OPTIONS'] })(req, res, next);
-  } else {
-    cors(corsOptions)(req, res, next);
-  }
-});
-app.options('*', (req, res, next) => {
-  if (isPublicPath(req.path)) {
-    // Wildcard by design, for the public read-only mounts only -- see utils/publicPaths.ts.
-    // nosemgrep: javascript.express.web.cors-permissive-express.cors-permissive-express
-    cors({ origin: '*', methods: ['GET', 'OPTIONS'] })(req, res, next);
-  } else {
-    cors(corsOptions)(req, res, next);
-  }
-});
-
-// Register /api/dmns XML route BEFORE body-parsing middleware.
-// dmnXmlRoutes streams raw XML (Content-Type: application/xml), so it must not
-// pass through express.json(), which would attempt to parse the body as JSON.
-app.use('/api/dmns', dmnXmlRoutes);
+app.use(corsMiddleware);
+app.options('*', corsMiddleware);
 
 // Body parsing middleware — only applied to routes registered after this point.
 // The 10 MB limit accommodates large BPMN/DMN XML payloads submitted for deployment.
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// A route with its own, smaller body-size limit (e.g. the CSP report
+// collector's 64 kb, cspReports.routes.ts) still lands on the same error
+// handler; the handler reads each body-parser error's own `limit` for the
+// 413 `detail`, so BODY_SIZE_LIMIT is this app-wide default's value and the
+// handler's fallback when an error carries no `limit` of its own — see
+// middleware/error.middleware.ts.
+app.use(express.json({ limit: BODY_SIZE_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: BODY_SIZE_LIMIT }));
 
 // Request logging
 app.use((req, res, next) => {

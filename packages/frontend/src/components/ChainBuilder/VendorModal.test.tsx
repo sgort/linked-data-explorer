@@ -48,14 +48,34 @@ describe('VendorModal', () => {
     expect(await screen.findByText('No vendor implementations found')).toBeTruthy();
   });
 
-  test('shows the error message when the backend reports failure', async () => {
+  // The backend answers errors as RFC 9457 problem details (#131). This used
+  // to mock the old `{ success: false, error: <string> }` shape, which is why
+  // the component's stale read of `data.error` went unnoticed: the fixture
+  // agreed with the bug.
+  test('shows the problem detail when the backend reports failure', async () => {
     global.fetch = vi.fn().mockResolvedValue({
-      json: async () => ({ success: false, error: 'Upstream unavailable' }),
+      json: async () => ({
+        type: 'about:blank',
+        status: 500,
+        title: 'Vendor lookup failed',
+        detail: 'Upstream unavailable',
+        instance: '/v1/vendors/dmn/age-check',
+      }),
     });
     render(
       <VendorModal dmnIdentifier="age-check" dmnTitle="Age check" endpoint="e" onClose={vi.fn()} />
     );
     expect(await screen.findByText('Upstream unavailable')).toBeTruthy();
+  });
+
+  test('falls back to a generic message when the failure carries no detail', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({ status: 500, title: 'Vendor lookup failed' }),
+    });
+    render(
+      <VendorModal dmnIdentifier="age-check" dmnTitle="Age check" endpoint="e" onClose={vi.fn()} />
+    );
+    expect(await screen.findByText('Failed to fetch vendor services')).toBeTruthy();
   });
 
   test('shows the error message when the fetch itself throws', async () => {

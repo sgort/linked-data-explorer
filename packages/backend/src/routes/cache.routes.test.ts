@@ -12,6 +12,8 @@ jest.mock('../services/sparql.service', () => ({
 
 import { sparqlService } from '../services/sparql.service';
 import cacheRoutes from './cache.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const mockGetCacheStats = sparqlService.getCacheStats as jest.Mock;
 const mockClearCache = sparqlService.clearCache as jest.Mock;
@@ -29,7 +31,7 @@ beforeEach(() => {
 
 describe('GET /v1/cache/stats', () => {
   test('returns the cache statistics the SPARQL service reports', async () => {
-    const stats = [{ endpoint: 'https://triplydb.example/sparql', ageSeconds: 42, entries: 7 }];
+    const stats = { 'https://triplydb.example/sparql': { age: 42, count: 7 } };
     mockGetCacheStats.mockReturnValue(stats);
 
     const res = await request(makeApp()).get('/v1/cache/stats');
@@ -49,8 +51,10 @@ describe('GET /v1/cache/stats', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'CACHE_ERROR', message: 'cache backend unavailable' },
+      status: 500,
+      title: 'Cache operation failed',
+      detail: 'cache backend unavailable',
+      code: 'CACHE_ERROR',
     });
   });
 });
@@ -93,8 +97,84 @@ describe('DELETE /v1/cache/clear', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'CACHE_ERROR', message: 'cache is locked' },
+      status: 500,
+      title: 'Cache operation failed',
+      detail: 'cache is locked',
+      code: 'CACHE_ERROR',
     });
+  });
+});
+
+describe('/v1/cache matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/cache', cacheRoutes);
+    return app;
+  }
+
+  test('GET /cache/stats reports entries keyed by endpoint URL', async () => {
+    mockGetCacheStats.mockReturnValue({
+      'https://triplydb.example/sparql': { age: 42, count: 7 },
+      'https://other.example/sparql': { age: 0, count: 0 },
+    });
+
+    const res = await request(makeDocumentedApp()).get('/v1/cache/stats');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/cache/stats');
+  });
+
+  test('GET /cache/stats with nothing cached', async () => {
+    mockGetCacheStats.mockReturnValue({});
+
+    const res = await request(makeDocumentedApp()).get('/v1/cache/stats');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/cache/stats');
+  });
+
+  test('a stats entry in another shape does not match the description', async () => {
+    mockGetCacheStats.mockReturnValue({
+      'https://triplydb.example/sparql': { ageSeconds: 42, entries: 7 },
+    });
+
+    const res = await request(makeDocumentedApp()).get('/v1/cache/stats');
+
+    expect(() => expectToMatchOperation(res, 'get', '/cache/stats')).toThrow(
+      /must have required property 'age'/
+    );
+  });
+
+  test('GET /cache/stats 500, as documented', async () => {
+    mockGetCacheStats.mockImplementation(() => {
+      throw new Error('cache backend unavailable');
+    });
+
+    const res = await request(makeDocumentedApp()).get('/v1/cache/stats');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/cache/stats');
+  });
+
+  test.each([
+    ['for every endpoint', '/v1/cache/clear'],
+    ['for one endpoint', '/v1/cache/clear?endpoint=https%3A%2F%2Ftriplydb.example%2Fsparql'],
+  ])('DELETE /cache/clear %s, as documented', async (_label, url) => {
+    const res = await request(makeDocumentedApp()).delete(url);
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'delete', '/cache/clear');
+  });
+
+  test('DELETE /cache/clear 500, as documented', async () => {
+    mockClearCache.mockImplementation(() => {
+      throw new Error('cache is locked');
+    });
+
+    const res = await request(makeDocumentedApp()).delete('/v1/cache/clear');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'delete', '/cache/clear');
   });
 });

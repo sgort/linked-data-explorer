@@ -6,6 +6,12 @@ package-lock.json
 dist/
 build/
 *.tsbuildinfo
+# Written into the deploy artifact by the backend deploy workflows (#122)
+build-info.json
+
+# Built from openapi/openapi.yaml by scripts/build-openapi.cjs (#129)
+openapi/openapi.json
+openapi/*.tmp
 
 # Environment variables
 .env

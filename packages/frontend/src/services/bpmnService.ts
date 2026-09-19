@@ -9,15 +9,26 @@ export class BpmnService {
     return stored ? JSON.parse(stored) : [];
   }
 
-  static saveProcess(process: BpmnProcess): void {
+  /**
+   * Writes to localStorage synchronously (so a caller that doesn't await
+   * this can still rely on getProcesses() seeing it immediately after), then
+   * persists to the backend. Resolves `true` on success — including a
+   * readonly process, which never POSTs — and `false` when the write
+   * failed, rather than resolving successfully regardless as it used to
+   * (#155). Never rejects: a caller that doesn't check the result behaves
+   * exactly as before, still with a console warning on failure.
+   */
+  static async saveProcess(process: BpmnProcess): Promise<boolean> {
     const processes = this.getProcesses();
     const idx = processes.findIndex((p) => p.id === process.id);
     if (idx >= 0) processes[idx] = process;
     else processes.push(process);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(processes));
 
-    if (!process.readonly) {
-      fetch(`${API_BASE}/v1/assets/bpmn`, {
+    if (process.readonly) return true;
+
+    try {
+      const res = await fetch(`${API_BASE}/v1/assets/bpmn`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -36,7 +47,12 @@ export class BpmnService {
           createdAt: process.createdAt,
           updatedAt: process.updatedAt,
         }),
-      }).catch((err) => console.warn('[BpmnService] Background save failed:', err));
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return true;
+    } catch (err) {
+      console.warn('[BpmnService] Background save failed:', err);
+      return false;
     }
   }
 

@@ -74,16 +74,11 @@ async function fetchAssets(account: string, dataset: string, apiToken?: string):
   // Use existing Vite environment variable with fallback
   const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
-  const params = new URLSearchParams({
-    account,
-    dataset,
+  const params = new URLSearchParams({ account, dataset });
+
+  const response = await fetch(`${backendUrl}/v1/triplydb/assets?${params}`, {
+    headers: apiToken ? { Authorization: `Bearer ${apiToken}` } : undefined,
   });
-
-  if (apiToken) {
-    params.append('apiToken', apiToken);
-  }
-
-  const response = await fetch(`${backendUrl}/v1/triplydb/assets?${params}`);
 
   if (!response.ok) {
     console.warn(`[logoResolver] Failed to fetch assets: ${response.statusText}`);

@@ -437,7 +437,12 @@ describe('ChainConfig — populated chain', () => {
     getAllTemplates.mockResolvedValue([]);
     getUserTemplates.mockReturnValue([]);
     global.fetch = vi.fn().mockResolvedValue({
-      json: async () => ({ success: false, error: 'Deployment quota exceeded' }),
+      json: async () => ({
+        type: 'about:blank',
+        status: 500,
+        title: 'DRD deploy failed',
+        detail: 'Deployment quota exceeded',
+      }),
     });
 
     render(
@@ -546,21 +551,19 @@ describe('ChainConfig — populated chain', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save as DRD' }));
   }
 
-  test('a deploy failure carrying an error object surfaces its message', async () => {
-    // Camunda answers with an object here, not the string the sibling test uses.
-    await failingDrdDeploy({ success: false, error: { message: 'DMN age-check not deployed' } });
+  test('a deploy failure carrying a problem response surfaces its detail', async () => {
+    await failingDrdDeploy({
+      type: 'about:blank',
+      status: 500,
+      title: 'DRD deploy failed',
+      detail: 'DMN age-check not deployed',
+    });
 
     expect(await screen.findByText(/DMN age-check not deployed/)).toBeTruthy();
     expect(saveUserTemplate).not.toHaveBeenCalled();
   });
 
-  test('a deploy failure with an unrecognised error shape falls back to the serialised payload', async () => {
-    await failingDrdDeploy({ success: false, error: { code: 42 } });
-
-    expect(await screen.findByText(/\{"code":42\}/)).toBeTruthy();
-  });
-
-  test('a deploy failure with no error field at all falls back to a generic message', async () => {
+  test('a deploy failure with no detail at all falls back to a generic message', async () => {
     await failingDrdDeploy({ success: false });
 
     expect(await screen.findByText(/DRD deployment failed/)).toBeTruthy();

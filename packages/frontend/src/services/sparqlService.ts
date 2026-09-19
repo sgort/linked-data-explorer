@@ -1,107 +1,53 @@
 import { SparqlResponse } from '../types';
+import { getProblemDetail } from '../utils/problem';
 
 /**
- * Executes a SPARQL query against a remote endpoint.
+ * Executes a SPARQL query against a remote endpoint via the backend's
+ * `/v1/triplydb/query` proxy (#161).
  *
- * Connection strategy:
- *   1. First attempt: direct POST to the endpoint with Content-Type: application/x-www-form-urlencoded.
- *      This is the standard SPARQL protocol and works for any CORS-enabled endpoint.
- *   2. Auto-retry via CORS proxy: if the direct request fails with a network/CORS error on a
- *      remote host, the function transparently retries via the allorigins.win public proxy.
- *      This is a best-effort fallback — the proxy may introduce latency or be rate-limited.
- *      It is NOT used for localhost endpoints, where CORS issues indicate a misconfigured server.
+ * The browser never contacts a SPARQL endpoint directly any more, and the
+ * allorigins.win CORS-proxy fallback this function used to fall back to is
+ * gone with it: routing every query through the backend removes both the
+ * third-party dependency and the direct-fetch CORS failures it existed to
+ * paper over, and it is what a Content-Security-Policy's connect-src can
+ * name a single, known origin for.
  *
- * For the Orchestration view the backend proxies SPARQL queries itself (via /v1/triplydb/query)
- * so this function is only called from the SPARQL editor and graph-visualisation views.
+ * The backend spreads the endpoint's own SPARQL JSON results beside
+ * `success` (`{ success: true, head, results }` / `{ success: true, head,
+ * boolean }`) -- `success` is stripped here so this function keeps
+ * returning exactly the `SparqlResponse` shape callers already expect.
+ *
+ * On a non-OK response the backend answers RFC 9457 problem details; the
+ * `detail` member is surfaced as the thrown error's message so, for example,
+ * a refused endpoint (http:// on an environment that requires https:, #142)
+ * shows the server's real reason instead of a generic failure.
  */
 export const executeSparqlQuery = async (
   endpoint: string,
-  query: string,
-  useProxy: boolean = false
+  query: string
 ): Promise<SparqlResponse> => {
-  let targetUrl = endpoint;
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+  const response = await fetch(`${apiBaseUrl}/v1/triplydb/query`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ endpoint, query }),
+  });
 
-  // Build the allorigins proxy URL by embedding the full SPARQL GET request as a query
-  // parameter. allorigins fetches the URL server-side and returns the response body in
-  // a JSON envelope under the "contents" key.
-  if (useProxy) {
-    targetUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(endpoint + (endpoint.includes('?') ? '&' : '?') + 'query=' + encodeURIComponent(query))}`;
+  if (!response.ok) {
+    // A non-OK response is not guaranteed to be JSON -- a proxy or gateway
+    // error in front of the backend (e.g. a 502 with an HTML body) would
+    // otherwise make response.json() throw its own "Unexpected token '<'"
+    // instead of surfacing the real problem. .catch(() => null), as in
+    // ropaService.ts, falls through to the generic `Query failed (status)`
+    // message below instead.
+    const body: unknown = await response.json().catch(() => null);
+    throw new Error(getProblemDetail(body, `Query failed (${response.status}).`));
   }
 
-  try {
-    const headers: Record<string, string> = {
-      Accept: 'application/sparql-results+json',
-    };
+  const body: unknown = await response.json();
+  const { success: _success, ...result } = body as { success?: boolean } & Record<string, unknown>;
 
-    if (useProxy) {
-      const proxyResponse = await fetch(targetUrl);
-      if (!proxyResponse.ok) throw new Error('CORS Proxy failed to reach the endpoint.');
-      const proxyData = await proxyResponse.json();
-
-      if (!proxyData.contents) {
-        throw new Error('Proxy returned empty content. The endpoint might be down or unreachable.');
-      }
-
-      // The proxy wraps the result in 'contents'
-      return JSON.parse(proxyData.contents) as SparqlResponse;
-    } else {
-      const formBody = new URLSearchParams();
-      formBody.append('query', query);
-
-      const response = await fetch(targetUrl, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formBody,
-        mode: 'cors',
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        let errorMessage = text;
-        try {
-          const json = JSON.parse(text);
-          if (json.message) errorMessage = json.message;
-        } catch {
-          // If parsing fails, use text as-is
-        }
-        throw new Error(`Endpoint error (${response.status}): ${errorMessage}`);
-      }
-
-      return await response.json();
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('SPARQL Execution Failed:', errorMessage);
-
-    // A TypeError typically indicates a network-level failure (CORS preflight rejection,
-    // DNS resolution failure, or no response). For remote endpoints we attempt one retry
-    // through the CORS proxy before surfacing the error to the user. Local endpoints
-    // are excluded because a local server refusing the request is a configuration issue
-    // that the proxy cannot fix — and bypassing CORS locally hides the real problem.
-    const isRemote = !endpoint.includes('localhost') && !endpoint.includes('127.0.0.1');
-    if (
-      !useProxy &&
-      isRemote &&
-      (error instanceof TypeError || errorMessage.includes('Failed to fetch'))
-    ) {
-      console.warn('Direct fetch failed. Retrying via CORS proxy...');
-      return executeSparqlQuery(endpoint, query, true);
-    }
-
-    if (errorMessage.includes('Failed to fetch')) {
-      const isLocal = endpoint.includes('localhost') || endpoint.includes('127.0.0.1');
-      let msg = `CORS or Connection Error: Unable to reach ${endpoint}.`;
-      if (isLocal) {
-        msg += `\n\nEnsure Jena Fuseki/TripleDB is running and CORS is enabled (--cors flag).`;
-      } else {
-        msg += `\n\nThe server might be blocking browser requests or the URL is incorrect.`;
-      }
-      throw new Error(msg);
-    }
-
-    throw error;
-  }
+  return result as unknown as SparqlResponse;
 };

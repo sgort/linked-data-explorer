@@ -1,4 +1,5 @@
 import { ChainPreset } from '../types/chainBuilder.types';
+import { getProblemDetail } from '../utils/problem';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -54,7 +55,7 @@ export class TemplateService {
         return data.data.templates;
       }
 
-      console.error('Failed to fetch templates:', data.error);
+      console.error('Failed to fetch templates:', getProblemDetail(data, 'unknown error'));
       return [];
     } catch (error) {
       console.error('Error fetching templates:', error);
@@ -81,7 +82,10 @@ export class TemplateService {
         return data.data.templates;
       }
 
-      console.error('Failed to fetch templates by category:', data.error);
+      console.error(
+        'Failed to fetch templates by category:',
+        getProblemDetail(data, 'unknown error')
+      );
       return [];
     } catch (error) {
       console.error('Error fetching templates by category:', error);
@@ -107,7 +111,7 @@ export class TemplateService {
         return data.data;
       }
 
-      console.error('Failed to fetch template:', data.error);
+      console.error('Failed to fetch template:', getProblemDetail(data, 'unknown error'));
       return null;
     } catch (error) {
       console.error('Error fetching template:', error);

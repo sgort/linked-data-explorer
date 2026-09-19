@@ -42,6 +42,22 @@ function emptyResult() {
   return { items: [], page: { number: 1, size: 10 }, hasNext: false };
 }
 
+// Replaces the old location-preset chips: pick a Level, then an Authority by
+// its short (prefix-stripped) option label (e.g. "Lelystad", not "Gemeente
+// Lelystad" — the option text carries no level prefix, see dsoAuthorities.ts
+// shortName()).
+async function selectAuthority(
+  level: 'Gemeente' | 'Provincie' | 'Waterschap' | 'Rijk',
+  authorityShortName: string
+) {
+  await userEvent.selectOptions(screen.getByLabelText('Level'), level);
+  await userEvent.selectOptions(screen.getByLabelText('Authority'), authorityShortName);
+}
+
+async function clearAuthority() {
+  await userEvent.selectOptions(screen.getByLabelText('Authority'), 'Choose an authority…');
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   searchBegrippen.mockReset();
@@ -253,7 +269,7 @@ describe('DsoExplorer — Activities tab', () => {
     });
     await openActivitiesTab();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Lelystad' }));
+    await selectAuthority('Gemeente', 'Lelystad');
 
     expect(await screen.findByPlaceholderText(/Filter Lelystad activities/)).toBeTruthy();
     expect(getActiviteitenByOin).toHaveBeenCalledWith(
@@ -273,7 +289,7 @@ describe('DsoExplorer — Activities tab', () => {
       hasNext: false,
     });
     await openActivitiesTab();
-    await userEvent.click(screen.getByRole('button', { name: 'Lelystad' }));
+    await selectAuthority('Gemeente', 'Lelystad');
     await screen.findByText('Kapvergunning');
 
     await userEvent.type(screen.getByPlaceholderText(/Filter Lelystad activities/), 'Kap');
@@ -974,7 +990,7 @@ describe('DsoExplorer — Activities toolbar', () => {
   test('Load re-queries by OIN while a location preset is active', async () => {
     getActiviteitenByOin.mockResolvedValue(emptyResult());
     await openActivities();
-    await userEvent.click(screen.getByRole('button', { name: 'Flevoland' }));
+    await selectAuthority('Provincie', 'Flevoland');
     getActiviteitenByOin.mockClear();
 
     await userEvent.click(screen.getByRole('button', { name: 'Load' }));
@@ -986,10 +1002,10 @@ describe('DsoExplorer — Activities toolbar', () => {
     getActiviteitenByOin.mockResolvedValue(emptyResult());
     await openActivities();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ede' }));
+    await selectAuthority('Gemeente', 'Ede');
     expect(await screen.findByPlaceholderText(/Filter Ede activities/)).toBeTruthy();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ede' }));
+    await clearAuthority();
 
     await vi.waitFor(() =>
       expect(screen.queryByPlaceholderText(/Filter Ede activities/)).toBeNull()
@@ -1003,7 +1019,7 @@ describe('DsoExplorer — Activities toolbar', () => {
       hasNext: false,
     });
     await openActivities();
-    await userEvent.click(screen.getByRole('button', { name: 'Gelderland' }));
+    await selectAuthority('Provincie', 'Gelderland');
     await screen.findByText('Kapvergunning');
 
     await userEvent.type(screen.getByPlaceholderText(/Filter Gelderland/), 'zzz');
@@ -1021,7 +1037,7 @@ describe('DsoExplorer — Activities toolbar', () => {
     getActiviteitenByOin.mockResolvedValue(emptyResult());
     await openActivities();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Lelystad' }));
+    await selectAuthority('Gemeente', 'Lelystad');
 
     expect(
       await screen.findByText('No activities found for this authority on the selected date.')
@@ -1036,7 +1052,7 @@ describe('DsoExplorer — Activities toolbar', () => {
     });
     await openActivities();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Lelystad' }));
+    await selectAuthority('Gemeente', 'Lelystad');
 
     expect(await screen.findByText('1 activities')).toBeTruthy();
     await userEvent.type(screen.getByPlaceholderText(/Filter Lelystad/), 'Kap');
@@ -1120,5 +1136,99 @@ describe('DsoExplorer — Activities toolbar', () => {
 
     await vi.waitFor(() => expect(getActiviteiten).toHaveBeenLastCalledWith(undefined, 2, 'pre'));
     expect(screen.getByText('Page 2 · 1 items')).toBeTruthy();
+  });
+
+  test('changing Level repopulates Authority and clears the results', async () => {
+    getActiviteitenByOin.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    await openActivities();
+    await selectAuthority('Gemeente', 'Lelystad');
+    await screen.findByText('Kapvergunning');
+
+    await userEvent.selectOptions(screen.getByLabelText('Level'), 'Provincie');
+
+    // Authority resets to the placeholder and no longer offers a gemeente.
+    const authoritySelect = screen.getByLabelText('Authority') as HTMLSelectElement;
+    expect(authoritySelect.value).toBe('');
+    expect(screen.queryByRole('option', { name: 'Lelystad' })).toBeNull();
+    expect(screen.getByRole('option', { name: 'Flevoland' })).toBeTruthy();
+
+    // The previous result set is cleared, and nothing is auto-loaded.
+    expect(screen.queryByText('Kapvergunning')).toBeNull();
+  });
+
+  test('choosing an authority calls getActiviteitenByOin with its OIN', async () => {
+    getActiviteitenByOin.mockResolvedValue(emptyResult());
+    await openActivities();
+
+    await selectAuthority('Provincie', 'Zuid-Holland');
+
+    await vi.waitFor(() =>
+      expect(getActiviteitenByOin).toHaveBeenCalledWith(
+        '00000001002306608000',
+        'pre',
+        expect.any(String)
+      )
+    );
+  });
+
+  test('Authority option labels carry no level prefix, so native type-ahead works on the short name', async () => {
+    await openActivities();
+
+    await userEvent.selectOptions(screen.getByLabelText('Level'), 'Gemeente');
+    const options = screen
+      .getAllByRole('option')
+      .filter((o) => (o as HTMLOptionElement).value !== '')
+      // Scope to the Authority <select> only — the Level <select>'s own
+      // options ("Gemeente", "Provincie", …) are also <option> elements.
+      .filter((o) => o.closest('select') === screen.getByLabelText('Authority'));
+
+    expect(options.length).toBeGreaterThan(0);
+    for (const o of options) {
+      expect(o.textContent).not.toMatch(/^Gemeente\s/);
+    }
+    expect(options.some((o) => o.textContent === 'Lelystad')).toBe(true);
+
+    await userEvent.selectOptions(screen.getByLabelText('Level'), 'Provincie');
+    const provincieOptions = screen
+      .getAllByRole('option')
+      .filter((o) => o.closest('select') === screen.getByLabelText('Authority'));
+    for (const o of provincieOptions) {
+      expect(o.textContent).not.toMatch(/^Provincie\s/);
+    }
+    expect(provincieOptions.some((o) => o.textContent === 'Zuid-Holland')).toBe(true);
+  });
+});
+
+describe('DsoExplorer — authorityLabel for a non-preset (register-only) authority', () => {
+  test('an authority the register carries an OIN for, but which was never one of the old chips, is labelled by its register name', async () => {
+    fetchToepasbareRegels.mockResolvedValue({
+      items: [{ identifier: 9, begindatum: '2024-02-01', sttrVersie: 2 }],
+    });
+    getActiviteitDetail.mockResolvedValue({
+      urn: 'urn:a:zh',
+      omschrijving: 'Zuid-Hollandse activiteit',
+      verfijnbaar: false,
+      bestuursorgaan: {
+        oin: '00000001002306608000',
+        bestuurslaag: 'provincie',
+        organisatieType: 'PV',
+        organisatieCode: '28',
+      },
+      regelBeheerObjecten: [{ typering: 'conclusie', functioneleStructuurRef: 'fs-1' }],
+    });
+    getActiviteiten.mockResolvedValue(emptyResult());
+    await openTab(/Activities/);
+    await screen.findByText('Valid on');
+    await userEvent.type(
+      screen.getByPlaceholderText('Paste URN to inspect directly…'),
+      'urn:a:zh{Enter}'
+    );
+
+    const publish = await screen.findByRole('link', { name: /Publish via CPSV Editor/ });
+    expect(publish.getAttribute('href')).toContain('authority=Zuid-Holland');
   });
 });

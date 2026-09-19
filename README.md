@@ -112,18 +112,48 @@ linked-data-explorer/
 │   │   ├── .env.acceptance
 │   │   └── .env.production
 │   │
-│   └── backend/                    # Node.js/Express orchestration API
-│       ├── src/
-│       │   ├── routes/             # /v1/dmns, /v1/chains, /v1/health
-│       │   ├── services/           # SPARQL, Operaton, orchestration
-│       │   ├── middleware/
-│       │   └── utils/
-│       └── .env.example
+│   ├── backend/                    # Node.js/Express orchestration API
+│   │   ├── src/
+│   │   │   ├── routes/             # /v1/dmns, /v1/chains, /v1/health
+│   │   │   ├── services/           # SPARQL, Operaton, orchestration
+│   │   │   ├── middleware/
+│   │   │   └── utils/
+│   │   └── .env.example
+│   │
+│   └── ropa-site/                  # Public ROPA register (static, no build step)
 │
 ├── examples/ttl/                   # Test DMN data (6 models)
 ├── .github/workflows/              # CI/CD pipelines (acc + production)
 └── package.json                    # Workspace root
 ```
+
+---
+
+## Running the public ROPA site locally
+
+`packages/ropa-site` is a static page that reads `GET /v1/ropa/public` from a backend chosen by the hostname it is served on. **Serve it on localhost; do not open `index.html` as a file.** Opened from disk, the page has no hostname and talks to the **production** backend.
+
+With the LDE backend running on port 3001:
+
+```bash
+cd packages/ropa-site
+npx serve . -l 5500
+```
+
+Then open `http://localhost:5500`. The page calls `http://localhost:3001`. Port 5500 is used because the LDE frontend already takes 3000. See [`packages/ropa-site/README.md`](packages/ropa-site/README.md) for the hostname-to-backend table and deployment.
+
+---
+
+## Adding or changing a backend route
+
+The backend's API is a published contract, not just its code: `packages/backend/openapi/openapi.yaml` describes every `/v1` route, and a gate (`src/openapi/coverage.test.ts`) fails `npm test` when a served operation is undocumented or a documented one is not served. Adding or changing a route means:
+
+1. Document the operation in `packages/backend/openapi/openapi.yaml` — path, parameters, request and response bodies, and every status it can answer.
+2. Add an `expectToMatchOperation` assertion per documented status to the route's test file, so a response that drifts from its schema fails the test that touches it.
+3. If the handler genuinely cannot answer `400` (there is no invalid input for it to reject), add a narrowly scoped override to `openapi/.spectral.yaml` with a reason a reviewer can check, rather than documenting a status the handler never returns.
+4. Run `npm run test:contract --workspace=packages/backend` and `npm run lint:openapi --workspace=packages/backend` before opening a pull request.
+
+`npm run test:contract --workspace=packages/backend` runs the coverage gate together with every `expectToMatchOperation` assertion across the route tests — the one command that answers "does the code still match its description?" A narrower `npm run test:openapi-coverage --workspace=packages/backend` runs only `src/openapi` — the served-vs-documented coverage gate and the document's own tests (that the YAML parses, builds and is internally consistent); it is fast, but validates no route's actual response.
 
 ---
 

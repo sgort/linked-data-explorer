@@ -14,6 +14,9 @@ jest.mock('../services/shacl-validation.service', () => ({
 
 import { shaclValidationService } from '../services/shacl-validation.service';
 import shaclRoutes from './shacl.routes';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { errorHandler } from '../middleware/error.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const mockValidateFile = shaclValidationService.validateFile as jest.Mock;
 const mockValidateMerged = shaclValidationService.validateMerged as jest.Mock;
@@ -35,6 +38,44 @@ const RESULT = {
     cprmv: { label: 'CPRMV', loaded: false, issues: [] },
   },
   summary: { errors: 2, warnings: 1, infos: 0 },
+};
+
+// The same result with issues in a layer, so the documented ShaclIssue shape is
+// exercised: the service sets `location` only when the violation has a focus
+// node or a path (shacl-validation.service.ts:324-327).
+const RESULT_WITH_ISSUES = {
+  ...RESULT,
+  layers: {
+    ...RESULT.layers,
+    'cpsv-ap': {
+      label: 'CPSV-AP',
+      loaded: true,
+      issues: [
+        {
+          severity: 'error',
+          code: 'SHACL-MINCOUNT',
+          message: 'Public service must have a title.',
+          location: 'http://example.org/service/1 dct:title',
+        },
+        { severity: 'warning', code: 'SHACL-DATATYPE', message: 'Expected an xsd:date value.' },
+      ],
+    },
+  },
+};
+
+// A parse failure short-circuits before any layer runs, so every layer stays
+// unloaded with no issues (shacl-validation.service.ts's emptyLayers()), and
+// `complete` is false along with `valid`.
+const RESULT_PARSE_ERROR = {
+  valid: false,
+  complete: false,
+  parseError: 'Unexpected "]" on line 3',
+  layers: {
+    cprmv: { label: 'CPRMV', loaded: false, issues: [] },
+    'cpsv-ap': { label: 'CPSV-AP', loaded: false, issues: [] },
+    'ronl-custom': { label: 'RONL Custom', loaded: false, issues: [] },
+  },
+  summary: { errors: 0, warnings: 0, infos: 0 },
 };
 
 const TURTLE = '@prefix cpsv: <http://purl.org/vocab/cpsv#> . <#s> a cpsv:PublicService .';
@@ -65,9 +106,11 @@ describe('POST /v1/shacl/validate', () => {
     const res = await request(makeApp()).post('/v1/shacl/validate').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'Request body must contain a "content" field with the Turtle as a string.',
       code: 'INVALID_REQUEST',
-      message: 'Request body must contain a "content" field with the Turtle as a string.',
     });
     expect(mockValidateFile).not.toHaveBeenCalled();
   });
@@ -92,8 +135,10 @@ describe('POST /v1/shacl/validate', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'VALIDATION_ERROR', message: 'shape files missing' },
+      status: 500,
+      title: 'Validation failed',
+      detail: 'shape files missing',
+      code: 'VALIDATION_ERROR',
     });
   });
 });
@@ -127,7 +172,7 @@ describe('POST /v1/shacl/validate-merged', () => {
     const res = await request(makeApp()).post('/v1/shacl/validate-merged').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_REQUEST');
+    expect(res.body.code).toBe('INVALID_REQUEST');
     expect(mockValidateMerged).not.toHaveBeenCalled();
   });
 
@@ -139,9 +184,143 @@ describe('POST /v1/shacl/validate-merged', () => {
       .send({ content: TURTLE });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 500,
+      title: 'Validation failed',
+      detail: 'CONSTRUCT query failed',
       code: 'VALIDATION_ERROR',
-      message: 'CONSTRUCT query failed',
     });
+  });
+});
+
+describe('#142 endpoint check', () => {
+  test('POST /v1/shacl/validate-merged refuses an internal endpoint without querying it', async () => {
+    const res = await request(makeApp())
+      .post('/v1/shacl/validate-merged')
+      .send({ content: TURTLE, endpoint: 'https://169.254.169.254/latest' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(mockValidateMerged).not.toHaveBeenCalled();
+  });
+
+  test('POST /v1/shacl/validate-merged refuses an internal endpoint, as documented', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/shacl', shaclRoutes);
+    app.use(errorHandler); // app-wide in index.ts
+
+    const res = await request(app)
+      .post('/v1/shacl/validate-merged')
+      .send({ content: TURTLE, endpoint: 'https://169.254.169.254/latest' });
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/shacl/validate-merged');
+  });
+});
+
+describe('/v1/shacl matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/shacl', shaclRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+    return app;
+  }
+
+  const post = (path: string) => request(makeDocumentedApp()).post(`/v1/shacl${path}`);
+
+  test('POST /validate 200, as documented', async () => {
+    mockValidateFile.mockResolvedValue(RESULT);
+
+    const res = await post('/validate').send({ content: TURTLE });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/shacl/validate');
+  });
+
+  test('POST /validate 200 with a shape layer that failed to load (complete: false), as documented', async () => {
+    mockValidateFile.mockResolvedValue(RESULT);
+
+    const res = await post('/validate').send({ content: TURTLE });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.complete).toBe(false);
+    expect(res.body.data.layers.cprmv.loaded).toBe(false);
+    expectToMatchOperation(res, 'post', '/shacl/validate');
+  });
+
+  test('POST /validate 200 with issues, as documented', async () => {
+    mockValidateFile.mockResolvedValue(RESULT_WITH_ISSUES);
+
+    const res = await post('/validate').send({ content: TURTLE });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.layers['cpsv-ap'].issues).toHaveLength(2);
+    expectToMatchOperation(res, 'post', '/shacl/validate');
+  });
+
+  test('POST /validate 200 with a parse error, as documented', async () => {
+    mockValidateFile.mockResolvedValue(RESULT_PARSE_ERROR);
+
+    const res = await post('/validate').send({ content: 'garbage' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.parseError).toBe('Unexpected "]" on line 3');
+    expectToMatchOperation(res, 'post', '/shacl/validate');
+  });
+
+  test('POST /validate 400, as documented', async () => {
+    const res = await post('/validate').send({});
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/shacl/validate');
+  });
+
+  test('POST /validate 500, as documented', async () => {
+    mockValidateFile.mockRejectedValue(new Error('shape files missing'));
+
+    const res = await post('/validate').send({ content: TURTLE });
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'post', '/shacl/validate');
+  });
+
+  test('POST /validate-merged 200, as documented', async () => {
+    mockValidateMerged.mockResolvedValue(RESULT);
+
+    const res = await post('/validate-merged').send({ content: TURTLE });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/shacl/validate-merged');
+  });
+
+  test('POST /validate-merged 400, as documented', async () => {
+    const res = await post('/validate-merged').send({});
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/shacl/validate-merged');
+  });
+
+  test('POST /validate-merged 500, as documented', async () => {
+    mockValidateMerged.mockRejectedValue(new Error('CONSTRUCT query failed'));
+
+    const res = await post('/validate-merged').send({ content: TURTLE });
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'post', '/shacl/validate-merged');
+  });
+
+  test('a malformed JSON body is a 400 problem response, as documented (#143)', async () => {
+    const res = await post('/validate').set('Content-Type', 'application/json').send('{"content":');
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('MALFORMED_BODY');
+    expectToMatchOperation(res, 'post', '/shacl/validate');
   });
 });

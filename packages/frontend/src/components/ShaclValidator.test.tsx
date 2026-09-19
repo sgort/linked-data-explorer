@@ -391,7 +391,11 @@ describe('ShaclValidator results', () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 400,
-      json: async () => ({ success: false, error: { message: 'Turtle could not be parsed' } }),
+      json: async () => ({
+        type: 'about:blank',
+        title: 'Invalid request',
+        detail: 'Turtle could not be parsed',
+      }),
     });
 
     const { container } = render(<ShaclValidator apiBaseUrl={API} />);
@@ -415,7 +419,7 @@ describe('ShaclValidator results', () => {
     fetchMock.mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ success: false, error: { message: 'Shapes unavailable' } }),
+      json: async () => ({ success: false, detail: 'Shapes unavailable' }),
     });
 
     const { container } = render(<ShaclValidator apiBaseUrl={API} />);

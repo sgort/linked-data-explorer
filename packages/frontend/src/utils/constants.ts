@@ -1,7 +1,7 @@
 export const DEFAULT_ENDPOINT =
   'https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql';
 
-export const PRESET_ENDPOINTS = [
+const ALL_PRESET_ENDPOINTS = [
   { name: 'Local Jena', url: 'http://localhost:3030/ds/query' },
   {
     name: 'DMN Discovery',
@@ -12,6 +12,19 @@ export const PRESET_ENDPOINTS = [
     url: 'https://api.open-regels.triply.cc/datasets/stevengort/RONL/services/RONL/sparql',
   },
 ];
+
+/** The local preset only works where the backend allows local endpoints (#142). */
+export function presetEndpoints(isDev: boolean) {
+  return isDev
+    ? ALL_PRESET_ENDPOINTS
+    : ALL_PRESET_ENDPOINTS.filter((p) => p.url.startsWith('https://'));
+}
+
+export const PRESET_ENDPOINTS = presetEndpoints(import.meta.env.DEV);
+
+/** Selected on load. By URL, not by index: the preset list differs between builds. */
+export const DEFAULT_SELECTED_ENDPOINT =
+  'https://api.open-regels.triply.cc/datasets/stevengort/DMN-discovery/services/DMN-discovery/sparql';
 
 export const COMMON_PREFIXES = `
 PREFIX cv: <http://data.europa.eu/m8g/>

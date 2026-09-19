@@ -24,6 +24,8 @@ import { getAllNorms, getDatasetVersionsByRulesetid } from '../services/norms.se
 import { computeLastModified, computeNormsEtag } from '../utils/etag';
 import normsRoutes from './norms.routes';
 import packageJson from '../../package.json';
+import { versionMiddleware } from '../middleware/version.middleware';
+import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const mockGetAllNorms = getAllNorms as jest.Mock;
 const mockGetDatasetVersions = getDatasetVersionsByRulesetid as jest.Mock;
@@ -118,9 +120,11 @@ describe('GET /v1/norms parameter validation', () => {
     const res = await request(makeApp()).get('/v1/norms').query({ rulesetid: 'awb"; DROP' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'Invalid rulesetid: must match /^[A-Za-z0-9_-]+$/',
       code: 'INVALID_PARAM',
-      message: 'Invalid rulesetid: must match /^[A-Za-z0-9_-]+$/',
     });
     expect(mockGetAllNorms).not.toHaveBeenCalled();
   });
@@ -141,9 +145,11 @@ describe('GET /v1/norms parameter validation', () => {
     const res = await request(makeApp()).get('/v1/norms').query({ applicable_date: '01-01-2026' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'Invalid applicable_date: must be YYYY-MM-DD',
       code: 'INVALID_PARAM',
-      message: 'Invalid applicable_date: must be YYYY-MM-DD',
     });
     expect(mockGetAllNorms).not.toHaveBeenCalled();
   });
@@ -162,9 +168,11 @@ describe('GET /v1/norms parameter validation', () => {
     const res = await request(makeApp()).get('/v1/norms').query({ cprmv_version: '9.9.9' });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toEqual({
+    expect(res.body).toMatchObject({
+      status: 400,
+      title: 'Invalid request',
+      detail: 'Invalid cprmv_version: must be one of 0.3.0, 0.3.2, 0.4.1',
       code: 'INVALID_PARAM',
-      message: 'Invalid cprmv_version: must be one of 0.3.0, 0.3.2, 0.4.1',
     });
     expect(mockGetAllNorms).not.toHaveBeenCalled();
   });
@@ -354,8 +362,10 @@ describe('GET /v1/norms failures', () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
-      success: false,
-      error: { code: 'QUERY_ERROR', message: 'SPARQL endpoint unreachable' },
+      status: 500,
+      title: 'Query failed',
+      detail: 'SPARQL endpoint unreachable',
+      code: 'QUERY_ERROR',
     });
   });
 
@@ -365,6 +375,90 @@ describe('GET /v1/norms failures', () => {
     const res = await request(makeApp()).get('/v1/norms').query({ rulesetid: 'awb' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('QUERY_ERROR');
+    expect(res.body.code).toBe('QUERY_ERROR');
+  });
+});
+
+describe('#142 endpoint check', () => {
+  test('GET /v1/norms refuses an internal endpoint without querying it', async () => {
+    const res = await request(makeApp()).get('/v1/norms?endpoint=https://169.254.169.254/latest');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'INVALID_INPUT',
+      detail: '`endpoint` points to an internal address',
+    });
+    expect(mockGetAllNorms).not.toHaveBeenCalled();
+    expect(mockGetDatasetVersions).not.toHaveBeenCalled();
+  });
+
+  test('GET /v1/norms refuses an internal endpoint, as documented', async () => {
+    const app = express();
+    app.use(versionMiddleware);
+    app.use('/v1/norms', normsRoutes);
+
+    const res = await request(app).get('/v1/norms?endpoint=https://169.254.169.254/latest');
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'get', '/norms');
+  });
+});
+
+describe('/v1/norms matches its OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/norms', normsRoutes);
+    return app;
+  }
+
+  test('200 without filters, as documented', async () => {
+    mockGetAllNorms.mockResolvedValue(normsResult());
+
+    const res = await request(makeDocumentedApp()).get('/v1/norms');
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/norms');
+  });
+
+  test('200 with every filter, as documented', async () => {
+    mockGetAllNorms.mockResolvedValue(normsResult());
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/norms?rulesetid=awb&applicable_date=2026-01-01&cprmv_version=0.4.1'
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/norms');
+  });
+
+  test('400 for an unsupported cprmv_version, as documented', async () => {
+    const res = await request(makeDocumentedApp()).get('/v1/norms?cprmv_version=9.9.9');
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'get', '/norms');
+  });
+
+  test('500 when the rules query fails, as documented', async () => {
+    mockGetAllNorms.mockRejectedValue(new Error('SPARQL endpoint unreachable'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/norms');
+
+    expect(res.status).toBe(500);
+    expectToMatchOperation(res, 'get', '/norms');
+  });
+
+  test('304 on a matching conditional request, as documented', async () => {
+    mockGetDatasetVersions.mockResolvedValue({
+      awb: [{ version: '1.0', publishedAt: '2026-01-01T00:00:00.000Z', title: 'Awb' }],
+    });
+
+    const res = await request(makeDocumentedApp())
+      .get('/v1/norms')
+      .query({ rulesetid: 'awb' })
+      .set('If-None-Match', ETAG);
+
+    expect(res.status).toBe(304);
+    expectToMatchOperation(res, 'get', '/norms');
   });
 });

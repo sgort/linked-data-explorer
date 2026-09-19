@@ -302,6 +302,19 @@ describe('exportChain — package (ZIP)', () => {
     expect(downloads).toHaveLength(1);
   });
 
+  test('fetches each DMN from the /v1 route, with its identifier URL-encoded (#132)', async () => {
+    await exportChain(
+      ['SVB Leeftijd/2026'],
+      {},
+      [dmn({ identifier: 'SVB Leeftijd/2026' })],
+      options({ format: 'package', filename: 'encoded' })
+    );
+
+    const urls = vi.mocked(fetch).mock.calls.map(([url]) => String(url));
+    expect(urls).toHaveLength(1);
+    expect(urls[0]).toMatch(/\/v1\/dmns\/SVB%20Leeftijd%2F2026\/xml$/);
+  });
+
   test('skips a DMN whose XML cannot be fetched but still produces a package', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.stubGlobal(
