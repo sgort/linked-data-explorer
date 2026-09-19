@@ -81,6 +81,14 @@ worse-understood risk than the one it removes.
 **Four of the six deployment workflows sit behind this.** It is the single
 largest unpinned surface in the repository and it is not closeable from here.
 
+What it can reach was narrowed in #119. The two frontend workflows used to hand
+it the **build** — Oryx ran `npm install` inside this container, on a Node
+version it chose itself — so the shipped bundle came from a floating image.
+They now build on the runner from `npm ci` and pass `skip_app_build: true`, so
+the container only uploads `packages/frontend/dist`. It still runs, unpinned,
+on every deploy; it no longer decides what is in the artifact. The two
+`ropa-site` workflows are unchanged — see §5.
+
 ### 2. `npm install --production --omit=dev` in the backend deploy step
 
 Both backend workflows build with `npm ci`, then assemble a `deploy/` folder and
@@ -97,12 +105,21 @@ the workspace lockfile into `deploy/` and using `npm ci --omit=dev` would close
 it. Left alone deliberately, because the pinning work was scoped to be
 behaviour-preserving.
 
-### 3. `node-version` floats within a major
+### 3. Node — pinned now, recorded here for its history
 
-`'22'` in the backend workflows, `'20'` in the frontend. `setup-node` resolves
-these to whatever patch the runner has cached. Pinning to an exact patch would
-trade a small supply-chain surface for routine breakage as runners roll forward,
-and the Node distribution is not the threat model this policy was written for.
+This section used to record `'22'` and `'20'` as floating majors. They were
+pinned to exact literals in August 2026 — `22.23.2` for the backend, `20.20.2`
+for the frontend — which then drifted apart by hand (#113). Since #119 all four
+deploy workflows read one exact version from `.nvmrc`, maintained by Renovate's
+`nvm` manager. The frontend moved from 20 to 22 in the same change, because that
+is when its pin started to decide what ships: before, Oryx built the bundle on
+22.22.0 regardless.
+
+`zizmor.yml` keeps its own literal, `24.20.0`, deliberately: its
+`renovate-config-validator` step needs Node 24.
+
+Still floating: the App Service host runtime, `NODE|22-lts`, which is the
+platform's choice within the major.
 
 ### 4. `zizmor-action`'s `version: '1.29.0'` input
 

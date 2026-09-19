@@ -287,24 +287,26 @@ fails to resolve is worse than none — **it lies**.
 
 ### Where the three differ
 
-|                       | ttl-editor           | linked-data-explorer | ronl-business-api                         |
-| --------------------- | -------------------- | -------------------- | ----------------------------------------- |
-| language              | JavaScript           | TypeScript           | TypeScript                                |
-| monorepo              | no                   | yes                  | yes                                       |
-| changelog UI          | tab                  | full page            | lazily-loaded drawer                      |
-| **who builds**        | Oryx (SWA container) | Oryx (SWA container) | **the GitHub runner**                     |
-| **`env:` belongs on** | the deploy step      | the deploy step      | the **build** step                        |
-| string lands in       | —                    | main `index-*.js`    | a lazy `ChangelogPanelContent-*.js` chunk |
+|                       | ttl-editor           | linked-data-explorer  | ronl-business-api                         |
+| --------------------- | -------------------- | --------------------- | ----------------------------------------- |
+| language              | JavaScript           | TypeScript            | TypeScript                                |
+| monorepo              | no                   | yes                   | yes                                       |
+| changelog UI          | tab                  | full page             | lazily-loaded drawer                      |
+| **who builds**        | Oryx (SWA container) | **the GitHub runner** | **the GitHub runner**                     |
+| **`env:` belongs on** | the deploy step      | the **build** step    | the **build** step                        |
+| string lands in       | —                    | main `index-*.js`     | a lazy `ChangelogPanelContent-*.js` chunk |
 
 **The `env:` placement is the difference that matters**, and getting it wrong
 produces a change that passes every test and puts nothing in the artifact.
 
 RONL Business API builds on the runner: the workflow runs `npm run build:acc` as
 its own step and passes `skip_app_build: true`, so the variables belong on that
-step. The other two hand the build to Oryx via `app_build_command`, so there is
-no build step at all — the variables go on the **deploy** step, which is where
-the Static Web Apps action picks up the runner environment to forward into its
-container.
+step. Linked Data Explorer moved to the same shape under
+[#119](https://github.com/sgort/linked-data-explorer/issues/119), and the
+variables moved with the build. ttl-editor still hands the build to Oryx via
+`app_build_command`, so there is no build step at all — the variables go on the
+**deploy** step, which is where the Static Web Apps action picks up the runner
+environment to forward into its container.
 
 ### `github.sha` on a pull request
 
