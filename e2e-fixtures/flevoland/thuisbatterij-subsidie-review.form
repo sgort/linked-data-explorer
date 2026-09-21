@@ -1,0 +1,310 @@
+{
+  "e2eFixture": true,
+  "components": [
+    {
+      "text": "# Thuisbatterij-subsidie review\nControleer de bekende procesvariabelen op dit punt in het proces en bevestig of corrigeer de uitkomst.",
+      "id": "Field_001_tb",
+      "type": "text",
+      "layout": {
+        "row": "Row_001_tb",
+        "columns": null
+      }
+    },
+    {
+      "text": "## Bekend bij binnenkomst reviewtaak\nDeze waarden zijn gezet in `Prepareer DMN-invoer` of komen uit de DMN-stappen vóór deze user task.",
+      "id": "Field_002_tb",
+      "type": "text",
+      "layout": {
+        "row": "Row_002_tb",
+        "columns": null
+      }
+    },
+    {
+      "label": "DMN-invoer voorbereid",
+      "id": "Field_003_tb",
+      "key": "dmnInputPrepared",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_003_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "label": "Datum van aanvraag",
+      "id": "Field_004_tb",
+      "key": "datumVanAanvraag",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_004_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "label": "Aanvraag type",
+      "id": "Field_005_tb",
+      "key": "aanvraagType",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_005_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "label": "Relatie tot woning",
+      "id": "Field_006_tb",
+      "key": "relatieTotWoning",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_006_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "label": "Provincie woning",
+      "id": "Field_007_tb",
+      "key": "provincieWoning",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_007_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "label": "Gemaakte kosten",
+      "id": "Field_008_tb",
+      "key": "gemaakteKosten",
+      "type": "number",
+      "layout": {
+        "row": "Row_008_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "label": "Reeds gesubsidieerd eigenaren",
+      "id": "Field_009_tb",
+      "key": "reedsGesubsidieerdEigenaren",
+      "type": "number",
+      "layout": {
+        "row": "Row_009_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "label": "Reeds gesubsidieerd huurders",
+      "id": "Field_010_tb",
+      "key": "reedsGesubsidieerdHuurders",
+      "type": "number",
+      "layout": {
+        "row": "Row_010_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "label": "Aanvrager is failliet",
+      "id": "Field_011_tb",
+      "key": "aanvragerIsFailliet",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_011_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "label": "Toestemming eigenaar",
+      "id": "Field_012_tb",
+      "key": "toestemmingEigenaar",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_012_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "label": "Naam op energierekening komt overeen",
+      "id": "Field_013_tb",
+      "key": "naamOpEnergierekeningKomtOvereen",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_013_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "text": "## Automatische beoordeling",
+      "id": "Field_014_tb",
+      "type": "text",
+      "layout": {
+        "row": "Row_014_tb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Recht op subsidie volgens proces",
+      "id": "Field_015_tb",
+      "key": "eligible",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_015_tb",
+        "columns": null
+      },
+      "disabled": true,
+      "description": "eligible"
+    },
+    {
+      "label": "Raw DMN-resultaat recht",
+      "id": "Field_016_tb",
+      "key": "rechtOpSubsidie",
+      "type": "textarea",
+      "layout": {
+        "row": "Row_016_tb",
+        "columns": null
+      },
+      "disabled": true,
+      "description": "Bij `mapDecisionResult=singleResult` kan dit een object/map zijn; voor een nette weergave liever vóór de user task flattenen naar losse variabelen."
+    },
+    {
+      "label": "Raw DMN-resultaat hoogte",
+      "id": "Field_017_tb",
+      "key": "hoogteResult",
+      "type": "textarea",
+      "layout": {
+        "row": "Row_017_tb",
+        "columns": null
+      },
+      "disabled": true,
+      "description": "Bij `mapDecisionResult=singleEntry` is dit waarschijnlijk de directe DMN-outputwaarde."
+    },
+    {
+      "label": "Berekende hoogte subsidie",
+      "id": "Field_018_tb",
+      "key": "hoogteSubsidie",
+      "type": "number",
+      "layout": {
+        "row": "Row_018_tb",
+        "columns": null
+      },
+      "disabled": true,
+      "description": "Alleen gevuld als het proces deze vóór de reviewtaak zet; in de huidige BPMN gebeurt dit pas ná de reviewtaak."
+    },
+    {
+      "label": "Motivering recht",
+      "id": "Field_019_tb",
+      "key": "rechtMotivering",
+      "type": "textarea",
+      "layout": {
+        "row": "Row_019_tb",
+        "columns": null
+      },
+      "disabled": true
+    },
+    {
+      "text": "## Review door behandelaar",
+      "id": "Field_021_tb",
+      "type": "text",
+      "layout": {
+        "row": "Row_021_tb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Reviewactie",
+      "values": [
+        {
+          "label": "Akkoord met automatische uitkomst",
+          "value": "accept"
+        },
+        {
+          "label": "Pas uitkomst aan",
+          "value": "change"
+        }
+      ],
+      "id": "Field_022_tb",
+      "key": "reviewAction",
+      "type": "select",
+      "layout": {
+        "row": "Row_022_tb",
+        "columns": null
+      },
+      "validate": {
+        "required": true
+      },
+      "defaultValue": "accept"
+    },
+    {
+      "label": "Recht op subsidie na review",
+      "id": "Field_023_tb",
+      "key": "reviewEligible",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_023_tb",
+        "columns": null
+      },
+      "description": "Gebruik bij correctie. Zet uit voor afwijzing."
+    },
+    {
+      "label": "Subsidiebedrag na review",
+      "id": "Field_024_tb",
+      "key": "reviewSubsidyAmount",
+      "type": "number",
+      "layout": {
+        "row": "Row_024_tb",
+        "columns": null
+      },
+      "description": "Gebruik bij correctie of om het berekende bedrag expliciet vast te leggen."
+    },
+    {
+      "label": "Motivering / toelichting review",
+      "id": "Field_025_tb",
+      "key": "reviewMotivering",
+      "type": "textarea",
+      "layout": {
+        "row": "Row_025_tb",
+        "columns": null
+      },
+      "description": "Vastlegging voor wijziging of bevestiging van de beoordeling."
+    },
+    {
+      "label": "Review uitgevoerd",
+      "id": "Field_026_tb",
+      "key": "reviewChecked",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_026_tb",
+        "columns": null
+      },
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Klaar",
+      "action": "submit",
+      "id": "Field_1uji6af",
+      "type": "button",
+      "layout": {
+        "row": "Row_1qkh0ha",
+        "columns": null
+      }
+    }
+  ],
+  "id": "thuisbatterij-subsidie-review",
+  "type": "default",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.43.1"
+  },
+  "schemaVersion": 19,
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0"
+}

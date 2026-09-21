@@ -1,0 +1,269 @@
+{
+  "e2eFixture": true,
+  "components": [
+    {
+      "text": "# Recht op subsidie thuisbatterij\nVul deze gegevens in om de DMN-beslissing `RechtOpSubsidieThuisbatterij` te kunnen evalueren. Boolean velden zijn aangevinkt = ja, niet aangevinkt = nee.",
+      "id": "Field_recht_intro",
+      "type": "text",
+      "layout": {
+        "row": "Row_recht_intro",
+        "columns": null
+      }
+    },
+    {
+      "label": "Is de aanvrager failliet?",
+      "id": "Field_aanvragerFailliet",
+      "key": "aanvragerFailliet",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_recht_01",
+        "columns": null
+      },
+      "description": "Aangevinkt = ja; niet aangevinkt = nee.",
+      "defaultValue": false
+    },
+    {
+      "label": "In welke provincie ligt de woning?",
+      "values": [
+        {
+          "label": "Flevoland",
+          "value": "Flevoland"
+        },
+        {
+          "label": "Drenthe",
+          "value": "Drenthe"
+        },
+        {
+          "label": "Friesland",
+          "value": "Friesland"
+        },
+        {
+          "label": "Gelderland",
+          "value": "Gelderland"
+        },
+        {
+          "label": "Groningen",
+          "value": "Groningen"
+        },
+        {
+          "label": "Limburg",
+          "value": "Limburg"
+        },
+        {
+          "label": "Noord-Brabant",
+          "value": "Noord-Brabant"
+        },
+        {
+          "label": "Noord-Holland",
+          "value": "Noord-Holland"
+        },
+        {
+          "label": "Overijssel",
+          "value": "Overijssel"
+        },
+        {
+          "label": "Utrecht",
+          "value": "Utrecht"
+        },
+        {
+          "label": "Zeeland",
+          "value": "Zeeland"
+        },
+        {
+          "label": "Zuid-Holland",
+          "value": "Zuid-Holland"
+        }
+      ],
+      "id": "Field_provincieWoning",
+      "key": "provincieWoning",
+      "type": "select",
+      "layout": {
+        "row": "Row_recht_02",
+        "columns": null
+      },
+      "validate": {
+        "required": true
+      },
+      "defaultValue": "Flevoland"
+    },
+    {
+      "label": "Wat is de relatie van de aanvrager tot de woning?",
+      "values": [
+        {
+          "label": "Eigenaar",
+          "value": "eigenaar"
+        },
+        {
+          "label": "Huurder",
+          "value": "huurder"
+        },
+        {
+          "label": "Anders",
+          "value": "anders"
+        }
+      ],
+      "id": "Field_relatieTotWoning",
+      "key": "relatieTotWoning",
+      "type": "select",
+      "layout": {
+        "row": "Row_recht_03",
+        "columns": null
+      },
+      "validate": {
+        "required": true
+      },
+      "defaultValue": "eigenaar"
+    },
+    {
+      "label": "Heeft de huurder toestemming van de eigenaar?",
+      "id": "Field_toestemmingEigenaar",
+      "key": "toestemmingEigenaar",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_recht_04",
+        "columns": null
+      },
+      "description": "Aangevinkt = ja; niet aangevinkt = nee. B",
+      "defaultValue": false
+    },
+    {
+      "label": "Komt de naam op de energierekening overeen met de aanvrager?",
+      "id": "Field_rekeningNaamKomtOvereen",
+      "key": "rekeningNaamKomtOvereen",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_recht_05",
+        "columns": null
+      },
+      "description": "Aangevinkt = ja; niet aangevinkt = nee.",
+      "defaultValue": false
+    },
+    {
+      "text": "# Hoogte subsidie thuisbatterij\nVul deze gegevens in om de DMN-beslissing `BehaalbareHoogteSubsidie` te kunnen evalueren.",
+      "id": "Field_hoogte_intro",
+      "type": "text",
+      "layout": {
+        "row": "Row_hoogte_intro",
+        "columns": null
+      }
+    },
+    {
+      "label": "Gemaakte kosten",
+      "id": "Field_gemaakteKosten",
+      "key": "gemaakteKosten",
+      "type": "number",
+      "layout": {
+        "row": "Row_hoogte_01",
+        "columns": null
+      },
+      "validate": {
+        "min": 0,
+        "required": true
+      },
+      "description": "Bedrag in euro's.",
+      "defaultValue": 4000
+    },
+    {
+      "subtype": "date",
+      "id": "Field_aanvraagDatum",
+      "key": "aanvraagDatum",
+      "type": "datetime",
+      "label": "Datum van aanvraag",
+      "layout": {
+        "row": "Row_hoogte_02",
+        "columns": null
+      },
+      "validate": {
+        "required": true
+      },
+      "dateLabel": "Datum van aanvraag",
+      "description": "Wordt als string in ISO-formaat yyyy-MM-dd opgeslagen; dit past bij date(aanvraagDatum) in de DMN."
+    },
+    {
+      "label": "Aanvrager type",
+      "values": [
+        {
+          "label": "Eigenaar",
+          "value": "eigenaar"
+        },
+        {
+          "label": "Huurder",
+          "value": "huurder"
+        }
+      ],
+      "id": "Field_aanvragerType",
+      "key": "aanvragerType",
+      "type": "select",
+      "layout": {
+        "row": "Row_hoogte_03",
+        "columns": null
+      },
+      "validate": {
+        "required": true
+      },
+      "defaultValue": "eigenaar"
+    },
+    {
+      "text": "# Budget omwege proces variabelen",
+      "id": "Field_0c4rygr",
+      "type": "text",
+      "layout": {
+        "row": "Row_0h1ratk",
+        "columns": null
+      }
+    },
+    {
+      "label": "Reeds gesubsidieerd bedrag eigenaren",
+      "id": "Field_reedsGesubsidieerdEigenaren",
+      "key": "reedsGesubsidieerdEigenaren",
+      "type": "number",
+      "layout": {
+        "row": "Row_0786ocr",
+        "columns": null
+      },
+      "validate": {
+        "min": 0,
+        "required": true
+      },
+      "description": "Tot nu toe toegekend bedrag uit het eigenarenplafond, in euro's.",
+      "defaultValue": 300000,
+      "decimalDigits": 2
+    },
+    {
+      "label": "Reeds gesubsidieerd bedrag huurders",
+      "id": "Field_reedsGesubsidieerdHuurders",
+      "key": "reedsGesubsidieerdHuurders",
+      "type": "number",
+      "layout": {
+        "row": "Row_hoogte_05",
+        "columns": null
+      },
+      "validate": {
+        "min": 0,
+        "required": true
+      },
+      "description": "Tot nu toe toegekend bedrag uit het huurdersplafond, in euro's.",
+      "defaultValue": 300000,
+      "decimalDigits": 2
+    },
+    {
+      "label": "Vraag aan",
+      "action": "submit",
+      "id": "Field_0wz515i",
+      "type": "button",
+      "layout": {
+        "row": "Row_1wpm2kz",
+        "columns": null
+      }
+    }
+  ],
+  "id": "recht-en-hoogte-subsidie-thuisbatterij",
+  "type": "default",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.46.1"
+  },
+  "schemaVersion": 19,
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.24.0"
+}
