@@ -345,7 +345,7 @@ if (hoogteReason !== null &amp;&amp; hoogteReason !== undefined) {
 
 execution.setVariable("hoogteCalculated", java.lang.Boolean.TRUE);</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:userTask id="Sub_CaseReview" name="Case review: recht en hoogte subsidie" camunda:formRef="thuisbatterij-subsidie-review" camunda:formRefBinding="latest" camunda:candidateGroups="caseworker">
+    <bpmn:userTask id="Sub_CaseReview" name="Case review: recht en hoogte subsidie" camunda:formRef="thuisbatterij-subsidie-review" camunda:formRefBinding="deployment" camunda:candidateGroups="caseworker">
       <bpmn:incoming>Flow_Sub_Amount_Review</bpmn:incoming>
       <bpmn:incoming>Flow_Sub_Eligible_No</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Review_Resolve</bpmn:outgoing>
