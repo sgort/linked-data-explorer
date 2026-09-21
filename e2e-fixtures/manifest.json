@@ -33,7 +33,11 @@
         "rip-psu-execution.form",
         "rip-overleg-vo.form"
       ],
-      "documents": ["rip-intake-report.document", "rip-pdp.document", "rip-psu-report.document"],
+      "documents": [
+        "rip-intake-report.document",
+        "rip-pdp.document",
+        "rip-psu-report.document"
+      ],
       "source": "authored in examples/organizations/flevoland/rip-phase-21/ (BPMN + 12 forms + 3 documents); process renamed RipPhase1Process -> RipR21Process, directory renamed rip-phase1-swimlanes -> rip-phase-21 once the competing rip-phase1/ draft was deleted"
     },
     {
@@ -58,13 +62,36 @@
         "rip-hoeveelheidsbepaling.document"
       ],
       "source": "authored in examples/organizations/flevoland/rip-phase-22/ from rip-phases-left/R2 Planvoorbereiding/R2_2 - VO.pdf (rev. 21-11-2024)"
+    },
+    {
+      "processDefinitionKey": "ThuisbatterijSubsidieAanvraagProcess",
+      "bpmn": "ThuisbatterijSubsidieAanvraagProcess.bpmn",
+      "forms": [
+        "recht-en-hoogte-subsidie-thuisbatterij.form",
+        "awb-notify-applicant-thuisbatterij.form"
+      ],
+      "documents": ["thuisbatterij_subsidie_beschikking.document"],
+      "decisions": ["RechtEnHoogteSubsidieThuisbatterij.dmn"],
+      "source": "taken from the flevoland-tenant bundle deployed on operaton.open-regels.nl (deployment 8803912d, 2026-09-21), not from examples/organizations/flevoland/thuisbatterij/ — that folder's -main/-subprocess pair and its two forms have drifted behind what is actually deployed. Every businessRuleTask carries camunda:decisionRefTenantId=\"${null}\" so the tenant-scoped process resolves the SHARED, untenanted DMNs; the deployed copy pinned decisionRefTenantId=\"46\" instead, which tied it to one organisation's tenant. RechtEnHoogteSubsidieThuisbatterij.dmn holds all six decisions and MUST be deployed WITHOUT a tenant-id.",
+      "subProcesses": [
+        {
+          "processDefinitionKey": "ThuisbatterijSubsidieDecisionSubProcessE2E",
+          "bpmn": "ThuisbatterijSubsidieDecisionSubProcessE2E.bpmn",
+          "forms": ["thuisbatterij-subsidie-review.form"],
+          "documents": [],
+          "source": "based on the deployed ThuisbatterijSubsidieDecisionSubProcess.bpmn, renamed to ThuisbatterijSubsidieDecisionSubProcessE2E (id + filename) to give this fixture its own Operaton key, distinct from the deployed example — same convention as TreeFellingPermitSubProcessE2E; called via ThuisbatterijSubsidieAanvraagProcess's callActivity, deployed together with it in one LDE Modeler action."
+        }
+      ]
     }
   ],
   "toeslagen": [
     {
       "processDefinitionKey": "AwbZorgtoeslagProcess",
       "bpmn": "AwbZorgtoeslagProcess.bpmn",
-      "forms": ["zorgtoeslag-provisional-start.form", "zorgtoeslag-notify-applicant.form"],
+      "forms": [
+        "zorgtoeslag-provisional-start.form",
+        "zorgtoeslag-notify-applicant.form"
+      ],
       "documents": ["example_zorgtoeslag_provisional_beschikking.document"],
       "source": "packages/frontend/public/examples/toeslagen/AwbZorgtoeslagProcess.bpmn (seeded, unchanged)",
       "subProcesses": [

@@ -17,10 +17,10 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 5, // v5: formRefBinding=deployment (tenant-safe form resolution)
-  example_tree_felling: 8, // v8: formRefBinding=deployment (tenant-safe form resolution)
-  example_awb_zorgtoeslag: 4, // v4: formRefBinding=deployment (tenant-safe form resolution)
-  example_zorgtoeslag_provisional: 6, // v6: formRefBinding=deployment (tenant-safe form resolution)
+  example_awb_process: 6, // v6: decisionRefTenantId=${null} (shared untenanted DMNs)
+  example_tree_felling: 9, // v9: decisionRefTenantId=${null} (shared untenanted DMNs)
+  example_awb_zorgtoeslag: 5, // v5: decisionRefTenantId=${null} (shared untenanted DMNs)
+  example_zorgtoeslag_provisional: 7, // v7: decisionRefTenantId=${null} (shared untenanted DMNs)
   example_zorgtoeslag_final: 6, // v6: formRefBinding=deployment (tenant-safe form resolution)
   example_hr_capacity_nl: 2, // v2: formRefBinding=deployment (tenant-safe form resolution)
 
