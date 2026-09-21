@@ -273,6 +273,60 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         updated.push(zorgProvisionalExample);
       }
 
+      // --- Thuisbatterij Subsidie Process (shell wired for the subsidy decision) ---
+      const tbAanvraagId = 'example_thuisbatterij_aanvraag';
+      if (getStoredVersion(tbAanvraagId) < EXAMPLE_VERSIONS[tbAanvraagId]) {
+        const xml = await fetch(
+          '/examples/flevoland/ThuisbatterijSubsidieAanvraagProcess.bpmn'
+        ).then((r) => r.text());
+        const tbAanvraagExample: BpmnProcess = {
+          id: tbAanvraagId,
+          name: 'Subsidie Thuisbatterij Flevoland (Example)',
+          description:
+            'AWB shell process for the Provincie Flevoland thuisbatterij subsidy: admissibility check, decision subprocess, notification and archiving. Deployable independently from the Tree Felling Permit and Zorgtoeslag bundles.',
+          xml,
+          createdAt: '2026-06-10T00:00:00.000Z',
+          updatedAt: new Date().toISOString(),
+          linkedDmnTemplates: ['AwbCompletenessCheck', 'ArchivesActRetention'],
+          readonly: false,
+          status: 'example',
+          bpmnProcessId: 'ThuisbatterijSubsidieAanvraagProcess',
+          processRole: 'shell',
+          organization: 'flevoland',
+        };
+        BpmnService.saveProcess(tbAanvraagExample);
+        setStoredVersion(tbAanvraagId, EXAMPLE_VERSIONS[tbAanvraagId]);
+        updated.push(tbAanvraagExample);
+      }
+
+      // --- Thuisbatterij Decision Subprocess ---
+      const tbDecisionId = 'example_thuisbatterij_decision';
+      if (getStoredVersion(tbDecisionId) < EXAMPLE_VERSIONS[tbDecisionId]) {
+        const xml = await fetch(
+          '/examples/flevoland/ThuisbatterijSubsidieDecisionSubProcess.bpmn'
+        ).then((r) => r.text());
+        const tbDecisionExample: BpmnProcess = {
+          id: tbDecisionId,
+          name: 'Thuisbatterijsubsidie — Beoordeling recht en hoogte (Example)',
+          description:
+            'Evaluates the RechtEnHoogteSubsidieThuisbatterij DRD (entitlement and amount, including the budget ceiling) and routes to caseworker review. Called from the shell via a Call Activity (Phase 4+5). Its DMNs are generated from TTL and deployed separately, without a tenant.',
+          xml,
+          createdAt: '2026-06-10T00:00:00.000Z',
+          updatedAt: new Date().toISOString(),
+          linkedDmnTemplates: ['RechtOpSubsidieThuisbatterij', 'BehaalbareHoogteSubsidie'],
+          readonly: false,
+          status: 'example',
+          bpmnProcessId: 'ThuisbatterijSubsidieDecisionSubProcess',
+          processRole: 'subprocess',
+          organization: 'flevoland',
+          calledElement: 'ThuisbatterijSubsidieAanvraagProcess',
+          shellId: tbAanvraagId,
+        };
+        BpmnService.saveProcess(tbDecisionExample);
+        setStoredVersion(tbDecisionId, EXAMPLE_VERSIONS[tbDecisionId]);
+        updated.push(tbDecisionExample);
+      }
+
       // --- Zorgtoeslag Final Subprocess ---
       const zorgFinalId = 'example_zorgtoeslag_final';
       if (getStoredVersion(zorgFinalId) < EXAMPLE_VERSIONS[zorgFinalId]) {
