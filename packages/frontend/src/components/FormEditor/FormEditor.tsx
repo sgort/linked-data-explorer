@@ -40,6 +40,31 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     organization: 'flevoland',
   },
   {
+    id: 'example_thuisbatterij_start',
+    name: 'Thuisbatterij Subsidie Start (Example)',
+    description:
+      'Citizen-facing start form for the Thuisbatterij subsidy process — supplies the inputs the RechtEnHoogteSubsidieThuisbatterij DRD evaluates',
+    path: '/examples/flevoland/recht-en-hoogte-subsidie-thuisbatterij.form',
+    language: 'nl',
+    organization: 'flevoland',
+  },
+  {
+    id: 'example_thuisbatterij_review',
+    name: 'Thuisbatterij Subsidie Review (Example)',
+    description: 'Caseworker review form for the Thuisbatterij subsidy decision subprocess',
+    path: '/examples/flevoland/thuisbatterij-subsidie-review.form',
+    language: 'nl',
+    organization: 'flevoland',
+  },
+  {
+    id: 'example_thuisbatterij_notify_applicant',
+    name: 'Thuisbatterij Notify Applicant (Example)',
+    description: 'Phase 6 notification form for the Thuisbatterij subsidy process (Awb 3:6)',
+    path: '/examples/flevoland/awb-notify-applicant-thuisbatterij.form',
+    language: 'en',
+    organization: 'flevoland',
+  },
+  {
     id: 'example_zorgtoeslag_notify_applicant',
     name: 'Zorgtoeslag Notify Applicant (Example)',
     description: 'Phase 6 notification form for the AWB Zorgtoeslag process (Awb 3:6)',
