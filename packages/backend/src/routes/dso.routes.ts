@@ -3,6 +3,8 @@
 import { Router, Request, Response } from 'express';
 import * as dsoService from '../services/dso.service';
 import * as ozonService from '../services/ozon.service';
+import { buildDossier } from '../services/dossier.service';
+import { profileDossier } from '../services/quality.service';
 import { logger } from '../utils/logger';
 import { sendProblem } from '../utils/problem';
 import packageJson from '../../package.json';
@@ -62,6 +64,48 @@ router.post('/activiteiten/zoek', async (req: Request, res: Response) => {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     logger.error('[DSO Routes] POST /activiteiten/zoek failed', { error: msg });
     sendProblem(res, req, { status: 502, title: 'Upstream request failed', detail: msg });
+  }
+});
+
+/**
+ * GET /v1/dso/activiteiten/:urn/dossier
+ * The full chain: legal source, annotation, decision criteria, submission
+ * requirements, plus the quality profile.
+ *
+ * Declared before `/activiteiten/:urn` — Express matches in declaration order,
+ * and the detail route would otherwise swallow this path.
+ */
+router.get('/activiteiten/:urn/dossier', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const datum = typeof req.query['datum'] === 'string' ? req.query['datum'] : undefined;
+    const authority =
+      typeof req.query['authority'] === 'string' ? req.query['authority'] : undefined;
+
+    const data = await buildDossier({
+      urn: req.params['urn'] as string,
+      env: getEnv(req),
+      datum,
+      authority,
+    });
+
+    res
+      .status(200)
+      .json({ success: true, data: { ...data, qualityProfile: profileDossier(data) } });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    logger.error('[DSO Routes] GET /activiteiten/:urn/dossier failed', { error: msg });
+    const status = msg.includes('authority') ? 400 : msg.includes('404') ? 404 : 502;
+    sendProblem(res, req, {
+      status,
+      title:
+        status === 400
+          ? 'Invalid request'
+          : status === 404
+            ? 'Not found'
+            : 'Upstream request failed',
+      detail: msg,
+    });
   }
 });
 

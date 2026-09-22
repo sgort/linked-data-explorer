@@ -3808,6 +3808,110 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /dso/activiteiten/{urn}/dossier:
+    get:
+      operationId: getDsoActiviteitDossier
+      tags: [Integrations]
+      summary: An activity's assembled dossier and quality profile
+      description: >-
+        Joins the activity's legal source, annotation, decision criteria and
+        submission requirements across the RTR, Ozon Presenteren and
+        Uitvoeren Gegevens, and attaches a `qualityProfile` scoring how
+        legible and recoverable the chain is. `data` carries the assembled
+        dossier plus that profile.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: urn
+          in: path
+          required: true
+          description: The activity's URN.
+          schema:
+            type: string
+        - name: datum
+          in: query
+          required: false
+          description: Date as dd-MM-yyyy. Defaults to today when omitted.
+          schema:
+            type: string
+            format: dd-MM-yyyy
+            examples: ['01-01-2026']
+        - name: authority
+          in: query
+          required: false
+          description: >-
+            The authority (bevoegd gezag) code, e.g. `gm0995`, whose plan to
+            scan. Required for a national (mnre) activity, which is annotated
+            in many authorities' plans and cannot resolve one on its own;
+            optional otherwise, where it overrides the authority the activity
+            itself carries.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The assembled dossier, with its quality profile attached.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The assembled dossier, plus a qualityProfile field.
+        '400':
+          description: >-
+            A national activity was requested without an authority parameter
+            to disambiguate which plan to scan.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                missingAuthority:
+                  value:
+                    {
+                      type: 'about:blank',
+                      status: 400,
+                      title: 'Invalid request',
+                      detail: 'A national activity is annotated in many plans: pass an authority parameter for nl.imow-mnre1034.activiteit.X',
+                      instance: '/v1/dso/activiteiten/nl.imow-mnre1034.activiteit.X/dossier',
+                    }
+        '404':
+          description: No activity exists for this URN.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: >-
+            An upstream API in the chain could not be reached, or answered
+            with a failure other than "not found".
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /dso/regelingen/zoek:
     post:
       operationId: zoekDsoRegelingen

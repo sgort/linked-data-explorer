@@ -28,9 +28,19 @@ jest.mock('../services/ozon.service', () => ({
   getDocumentComponent: jest.fn(),
   toOzonPathId: (s: string) => s.replace(/\//g, '_'),
 }));
+jest.mock('../services/dossier.service', () => ({
+  __esModule: true,
+  buildDossier: jest.fn(),
+}));
+jest.mock('../services/quality.service', () => ({
+  __esModule: true,
+  profileDossier: jest.fn(),
+}));
 
 import * as dsoService from '../services/dso.service';
 import * as ozonService from '../services/ozon.service';
+import * as dossierService from '../services/dossier.service';
+import * as qualityService from '../services/quality.service';
 import dsoRoutes from './dso.routes';
 import packageJson from '../../package.json';
 import { versionMiddleware } from '../middleware/version.middleware';
@@ -39,6 +49,8 @@ import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const svc = dsoService as unknown as Record<string, jest.Mock>;
 const ozon = ozonService as unknown as Record<string, jest.Mock>;
+const dossier = dossierService as unknown as Record<string, jest.Mock>;
+const quality = qualityService as unknown as Record<string, jest.Mock>;
 
 function makeApp() {
   const app = express();
@@ -210,6 +222,76 @@ describe('GET /v1/dso/activiteiten/:urn', () => {
     svc.getActiviteit.mockRejectedValue(new Error('DSO responded 500'));
 
     const res = await request(makeApp()).get('/v1/dso/activiteiten/urn-a');
+
+    expect(res.status).toBe(502);
+  });
+});
+
+describe('GET /v1/dso/activiteiten/:urn/dossier', () => {
+  const URN = 'nl.imow-gm0995.activiteit.HoutopstandVellen';
+
+  beforeEach(() => {
+    dossier.buildDossier.mockReset();
+    quality.profileDossier.mockReset();
+    dossier.buildDossier.mockResolvedValue({ urn: URN, provenance: { env: 'prod' } });
+    quality.profileDossier.mockReturnValue({ urn: URN, activityIdentity: 'semantic' });
+  });
+
+  test('returns the dossier with its quality profile attached', async () => {
+    const res = await request(makeApp())
+      .get(`/v1/dso/activiteiten/${URN}/dossier`)
+      .set('X-Dso-Env', 'prod');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.urn).toBe(URN);
+    expect(res.body.data.qualityProfile.activityIdentity).toBe('semantic');
+    // Proves profileDossier was actually invoked with the dossier buildDossier
+    // produced, not merely that some object carrying a qualityProfile key came
+    // back — a route that hand-built `{ qualityProfile: ... }` without calling
+    // profileDossier would fail this.
+    expect(quality.profileDossier).toHaveBeenCalledWith({ urn: URN, provenance: { env: 'prod' } });
+  });
+
+  test('passes env, datum and authority through', async () => {
+    await request(makeApp())
+      .get(`/v1/dso/activiteiten/${URN}/dossier?datum=22-09-2026&authority=gm0995`)
+      .set('X-Dso-Env', 'prod');
+
+    expect(dossier.buildDossier).toHaveBeenCalledWith({
+      urn: URN,
+      env: 'prod',
+      datum: '22-09-2026',
+      authority: 'gm0995',
+    });
+  });
+
+  test('does not collide with the activity detail route', async () => {
+    svc.getActiviteit.mockResolvedValue({ urn: URN });
+
+    await request(makeApp()).get(`/v1/dso/activiteiten/${URN}/dossier`);
+
+    expect(svc.getActiviteit).not.toHaveBeenCalled();
+    expect(dossier.buildDossier).toHaveBeenCalled();
+  });
+
+  test('a missing authority for a national activity answers 400', async () => {
+    dossier.buildDossier.mockRejectedValue(
+      new Error('A national activity is annotated in many plans: pass an authority parameter')
+    );
+
+    const res = await request(makeApp()).get(
+      '/v1/dso/activiteiten/nl.imow-mnre1034.activiteit.X/dossier'
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.title).toBe('Invalid request');
+    expect(res.body.detail).toContain('authority');
+  });
+
+  test('an upstream failure answers 502', async () => {
+    dossier.buildDossier.mockRejectedValue(new Error('DSO responded 500: boom'));
+
+    const res = await request(makeApp()).get(`/v1/dso/activiteiten/${URN}/dossier`);
 
     expect(res.status).toBe(502);
   });
@@ -903,6 +985,95 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
 
     expect(res.status).toBe(502);
     expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}');
+  });
+
+  // A realistic Dossier (Task 6) and QualityProfile (Task 7) shape, not a
+  // bare-bones placeholder, so the documented `data` schema is exercised with
+  // nested objects and arrays, not just a single flat key.
+  const DOSSIER = {
+    urn: 'nl.imow-gm0995.activiteit.HoutopstandVellen',
+    omschrijving: 'Kappen van bomen',
+    bestuursorgaan: { code: 'gm0995', oin: '00000001005024249000' },
+    legalSource: {
+      available: true,
+      regelingIdentificatie: 'akn/nl/act/gm0995/2020/omgevingsplan',
+      regelingTitel: 'Omgevingsplan gemeente Lelystad',
+      juridischeRegels: [],
+    },
+    annotation: {
+      identificatie: 'act-1',
+      naam: 'Kappen van bomen',
+      groep: null,
+      symboolcode: null,
+      bovenliggendeActiviteitRef: null,
+    },
+    decisionCriteria: null,
+    submissionRequirements: null,
+    provenance: {
+      env: 'pre',
+      datum: null,
+      regelingIdentificatie: 'akn/nl/act/gm0995/2020/omgevingsplan',
+      fetchedAt: '2026-09-22T00:00:00.000Z',
+      failures: [],
+    },
+  };
+
+  const QUALITY_PROFILE = {
+    urn: DOSSIER.urn,
+    activityIdentity: 'semantic',
+    decisionNaming: null,
+    inputNaming: null,
+    labelCoverage: null,
+    refResolvability: { total: 0, resolved: 0, dangling: 0 },
+    legalTraceability: { rules: 0, withWId: 0, withArticleText: 0 },
+    crossLayerConsistency: { sharedObjects: [] },
+  };
+
+  test('GET /activiteiten/:urn/dossier 200, as documented', async () => {
+    dossier.buildDossier.mockResolvedValue(DOSSIER);
+    quality.profileDossier.mockReturnValue(QUALITY_PROFILE);
+
+    const res = await request(makeDocumentedApp()).get(
+      `/v1/dso/activiteiten/${encodeURIComponent(DOSSIER.urn)}/dossier`
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}/dossier');
+  });
+
+  test('GET /activiteiten/:urn/dossier 400, as documented', async () => {
+    dossier.buildDossier.mockRejectedValue(
+      new Error('A national activity is annotated in many plans: pass an authority parameter')
+    );
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/dso/activiteiten/nl.imow-mnre1034.activiteit.X/dossier'
+    );
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}/dossier');
+  });
+
+  test('GET /activiteiten/:urn/dossier 404, as documented', async () => {
+    dossier.buildDossier.mockRejectedValue(new Error('DSO responded 404 Not Found'));
+
+    const res = await request(makeDocumentedApp()).get(
+      `/v1/dso/activiteiten/${encodeURIComponent(DOSSIER.urn)}/dossier`
+    );
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}/dossier');
+  });
+
+  test('GET /activiteiten/:urn/dossier 502, as documented', async () => {
+    dossier.buildDossier.mockRejectedValue(new Error('DSO responded 500: boom'));
+
+    const res = await request(makeDocumentedApp()).get(
+      `/v1/dso/activiteiten/${encodeURIComponent(DOSSIER.urn)}/dossier`
+    );
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}/dossier');
   });
 
   test('GET /begrippen 200, as documented', async () => {
