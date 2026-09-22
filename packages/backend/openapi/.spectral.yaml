@@ -129,6 +129,19 @@ overrides:
     rules:
       nlgov:problem-invalid-input: 'off'
 
+  # Two Ozon (Omgevingsdocumenten Presenteren) reads, added alongside the
+  # activity dossier. Both take an opaque `id` path parameter (a regeling's
+  # identificatie, converted to Ozon's underscore-separated path id) that is
+  # never validated — any value is forwarded to the upstream API as given,
+  # and a miss maps to 404, not 400. The annotaties read's optional
+  # `geldigOp` query parameter is handled the same way, and the
+  # documentstructuur read's extra `wId` path parameter is equally opaque.
+  - files:
+      - 'openapi.json#/paths/~1dso~1regelingen~1%7Bid%7D~1annotaties/get'
+      - 'openapi.json#/paths/~1dso~1regelingen~1%7Bid%7D~1documentstructuur~1%7BwId%7D/get'
+    rules:
+      nlgov:problem-invalid-input: 'off'
+
   # Every error response is RFC 9457 problem details (#131), so
   # use-problem-schema and problem-schema-members gate everywhere except the
   # two responses below, which are not ours to reshape.

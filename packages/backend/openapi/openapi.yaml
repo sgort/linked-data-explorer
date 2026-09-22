@@ -3808,6 +3808,239 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /dso/regelingen/zoek:
+    post:
+      operationId: zoekDsoRegelingen
+      tags: [Integrations]
+      summary: Find an authority's regelingen
+      description: >-
+        Proxies the Omgevingsdocumenten Presenteren (Ozon) API's regelingen
+        search. `data` is the upstream response, unchanged.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: At least one of bevoegdGezag or typeBevoegdGezag is required.
+              properties:
+                bevoegdGezag:
+                  type: array
+                  items:
+                    type: string
+                  description: OIN or gemeentecode values to filter by authority.
+                  examples: [['gm0995']]
+                typeBevoegdGezag:
+                  type: array
+                  items:
+                    type: string
+                  description: Authority type codes to filter by.
+                size:
+                  type: integer
+                  description: Page size. Defaults to 100.
+      responses:
+        '200':
+          description: The matching regelingen.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '400':
+          description: Both bevoegdGezag and typeBevoegdGezag were absent.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                missingFilter:
+                  value:
+                    {
+                      type: 'about:blank',
+                      status: 400,
+                      title: 'Invalid request',
+                      detail: 'bevoegdGezag or typeBevoegdGezag is required',
+                      instance: '/v1/dso/regelingen/zoek',
+                    }
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dso/regelingen/{id}/annotaties:
+    get:
+      operationId: getDsoRegelingAnnotaties
+      tags: [Integrations]
+      summary: The regeltekst annotation graph for one regeling
+      description: >-
+        Proxies the Ozon API's regeltekstannotaties. `data` is the upstream
+        response, unchanged; it is not a HAL collection, but a single object
+        with sibling arrays (activiteiten, regelteksten, regelsVoorIedereen,
+        locaties).
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: The regeling's identificatie.
+          schema:
+            type: string
+        - name: geldigOp
+          in: query
+          required: false
+          description: >-
+            Validity date as YYYY-MM-dd. Left out of the upstream call when
+            omitted, rather than defaulting to today.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The regeling's annotation graph.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '404':
+          description: No regeling exists for this id.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found".
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dso/regelingen/{id}/documentstructuur/{wId}:
+    get:
+      operationId: getDsoDocumentComponent
+      tags: [Integrations]
+      summary: One document component (article or lid) of a regeling
+      description: >-
+        Proxies the Ozon API's documentstructuur read for a single component,
+        carrying its STOP/IMOP content. `data` is the upstream response,
+        unchanged.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: The regeling's identificatie.
+          schema:
+            type: string
+        - name: wId
+          in: path
+          required: true
+          description: The document component's wId.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The document component.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '404':
+          description: No document component exists for this id and wId.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found".
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /dso/begrippen:
     get:
       operationId: listDsoBegrippen

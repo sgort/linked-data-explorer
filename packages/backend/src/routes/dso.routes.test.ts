@@ -21,8 +21,16 @@ jest.mock('../services/dso.service', () => ({
   extractDmnFromSttr: jest.fn(),
   extractFormScaffoldFromSttr: jest.fn(),
 }));
+jest.mock('../services/ozon.service', () => ({
+  __esModule: true,
+  zoekRegelingen: jest.fn(),
+  getRegeltekstAnnotaties: jest.fn(),
+  getDocumentComponent: jest.fn(),
+  toOzonPathId: (s: string) => s.replace(/\//g, '_'),
+}));
 
 import * as dsoService from '../services/dso.service';
+import * as ozonService from '../services/ozon.service';
 import dsoRoutes from './dso.routes';
 import packageJson from '../../package.json';
 import { versionMiddleware } from '../middleware/version.middleware';
@@ -30,6 +38,7 @@ import { errorHandler } from '../middleware/error.middleware';
 import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const svc = dsoService as unknown as Record<string, jest.Mock>;
+const ozon = ozonService as unknown as Record<string, jest.Mock>;
 
 function makeApp() {
   const app = express();
@@ -41,6 +50,9 @@ function makeApp() {
 beforeEach(() => {
   for (const fn of Object.values(svc)) {
     if (typeof fn === 'function') fn.mockReset();
+  }
+  for (const fn of Object.values(ozon)) {
+    if (typeof fn === 'function' && 'mockReset' in fn) fn.mockReset();
   }
 });
 
@@ -1163,5 +1175,84 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
 
     expect(res.status).toBe(502);
     expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/form-scaffold');
+  });
+});
+
+describe('POST /v1/dso/regelingen/zoek', () => {
+  test('passes the body and env through and returns the envelope', async () => {
+    ozon.zoekRegelingen.mockResolvedValue({ _embedded: { regelingen: [] } });
+
+    const res = await request(makeApp())
+      .post('/v1/dso/regelingen/zoek')
+      .set('X-Dso-Env', 'prod')
+      .send({ bevoegdGezag: ['gm0995'] });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, data: { _embedded: { regelingen: [] } } });
+    expect(ozon.zoekRegelingen).toHaveBeenCalledWith(
+      { bevoegdGezag: ['gm0995'] },
+      'prod',
+      expect.anything()
+    );
+  });
+
+  test('400 when bevoegdGezag and typeBevoegdGezag are both absent', async () => {
+    const res = await request(makeApp()).post('/v1/dso/regelingen/zoek').send({});
+
+    expect(res.status).toBe(400);
+    expect(ozon.zoekRegelingen).not.toHaveBeenCalled();
+  });
+
+  test('502 carries the upstream message', async () => {
+    ozon.zoekRegelingen.mockRejectedValue(new Error('DSO responded 500: boom'));
+
+    const res = await request(makeApp())
+      .post('/v1/dso/regelingen/zoek')
+      .send({ bevoegdGezag: ['gm0995'] });
+
+    expect(res.status).toBe(502);
+  });
+});
+
+describe('GET /v1/dso/regelingen/:id/annotaties', () => {
+  test('returns the annotation graph', async () => {
+    ozon.getRegeltekstAnnotaties.mockResolvedValue({
+      activiteiten: [],
+      regelteksten: [],
+      regelsVoorIedereen: [],
+      locaties: [],
+    });
+
+    const res = await request(makeApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/annotaties'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('an upstream 404 passes through as 404', async () => {
+    ozon.getRegeltekstAnnotaties.mockRejectedValue(new Error('DSO responded 404: not found'));
+
+    const res = await request(makeApp()).get('/v1/dso/regelingen/_absent/annotaties');
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /v1/dso/regelingen/:id/documentstructuur/:wId', () => {
+  test('returns the document component', async () => {
+    ozon.getDocumentComponent.mockResolvedValue({ _embedded: { documentComponenten: [] } });
+
+    const res = await request(makeApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/gm0995_x__art_15.2'
+    );
+
+    expect(res.status).toBe(200);
+    expect(ozon.getDocumentComponent).toHaveBeenCalledWith(
+      '_akn_nl_act_gm0995_2020_omgevingsplan',
+      'gm0995_x__art_15.2',
+      'pre'
+    );
   });
 });
