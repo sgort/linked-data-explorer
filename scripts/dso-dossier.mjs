@@ -10,10 +10,20 @@ import fs from 'node:fs';
 
 const BASE = process.env.LDE_API_BASE_URL ?? 'http://localhost:3001';
 
-/** STOP/IMOP content to readable text. */
+/**
+ * STOP/IMOP content to readable text.
+ *
+ * CDATA is unwrapped *before* the generic tag strip: `<![CDATA[...]]>`
+ * contains no `>` until its own terminator, so a naive `/<[^>]+>/g` treats
+ * the whole span as one tag and deletes the payload along with it. Article
+ * text comes from the same STOP/IMOP pipeline as the DMN `vraagTekst` and
+ * `inputExpression` content that `quality.service.ts` and `dso.service.ts`
+ * already have to handle this way — see those for the same anti-pattern.
+ */
 function plainText(xml) {
   if (!xml) return '';
   return xml
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/<LiNummer>([\s\S]*?)<\/LiNummer>/g, '$1 ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')

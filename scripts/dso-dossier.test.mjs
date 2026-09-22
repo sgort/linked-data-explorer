@@ -1,7 +1,25 @@
 // scripts/dso-dossier.test.mjs
 import { renderDossier } from './dso-dossier.mjs';
 
-const data = {
+const checks = [];
+
+/**
+ * Renders `data` and reports a crash as a named, uniform failure instead of
+ * an uncaught exception that would suppress every other check's output.
+ * Returns the rendered Markdown, or null if rendering threw.
+ */
+function render(data, label) {
+  try {
+    return renderDossier(data);
+  } catch (err) {
+    checks.push([`${label}: renderDossier threw: ${err.message}`, false]);
+    return null;
+  }
+}
+
+// --- Base fixture: a fully-populated activity -----------------------------
+
+const baseData = {
   urn: 'nl.imow-gm0995.activiteit.HoutopstandVellen',
   omschrijving: 'Boom kappen of houtopstand vellen',
   bestuursorgaan: { code: 'gm0995', oin: '00000001005024249000' },
@@ -14,7 +32,8 @@ const data = {
         kwalificatie: 'vergunningplicht',
         wId: 'gm0995_x__art_15.2__para_5',
         locaties: [{ identificatie: 'nl.imow-gm0995.gebiedengroep.180a', naam: 'bebouwingscontour, houtkap' }],
-        articleText: '<Inhoud><Al>Het is verboden zonder omgevingsvergunning…</Al></Inhoud>',
+        articleText:
+          '<Inhoud><Al>Het is verboden zonder omgevingsvergunning<![CDATA[ met bijzondere tekens]]>…</Al></Inhoud>',
       },
     ],
   },
@@ -37,18 +56,67 @@ const data = {
   provenance: { env: 'prod', datum: '22-09-2026', fetchedAt: '2026-09-22T14:00:00Z', failures: [] },
 };
 
-const md = renderDossier(data);
+const md = render(baseData, 'base');
 
-const checks = [
-  ['stamps the environment', md.includes('**Environment:** prod')],
-  ['stamps the date', md.includes('22-09-2026')],
-  ['names the activity', md.includes('Boom kappen of houtopstand vellen')],
-  ['renders article text without XML tags', md.includes('Het is verboden zonder omgevingsvergunning') && !md.includes('<Al>')],
-  ['shows the viewer link', md.includes('registratie-toepasbare-regels')],
-  ['reports the naming split', md.includes('3') && md.includes('4')],
-  ['marks an absent rule set', md.includes('Not present')],
-  ['resolves the locatie name', md.includes('bebouwingscontour, houtkap')],
-];
+if (md !== null) {
+  checks.push(
+    ['stamps the environment', md.includes('**Environment:** prod')],
+    ['stamps the date', md.includes('22-09-2026')],
+    ['names the activity', md.includes('Boom kappen of houtopstand vellen')],
+    ['renders article text without XML tags', md.includes('Het is verboden zonder omgevingsvergunning') && !md.includes('<Al>')],
+    // FINDING 1: CDATA payload must survive the tag strip, not just plain text
+    // alongside it — a naive `/<[^>]+>/g` swallows the whole CDATA span.
+    ['preserves CDATA payload text', md.includes('met bijzondere tekens') && !md.includes('CDATA')],
+    ['shows the viewer link', md.includes('registratie-toepasbare-regels')],
+    // FINDING 2: assert the actual rendered split, not incidental digits that
+    // also appear in the rule identifier, OIN or date. Must fail if
+    // `decisionNaming` is removed from the fixture (verified below).
+    ['reports the naming split', md.includes('3/7 semantic') && md.includes('4 opaque')],
+    ['marks an absent rule set', md.includes('Not present')],
+    ['resolves the locatie name', md.includes('bebouwingscontour, houtkap')]
+  );
+}
+
+// --- FINDING 3a: provenance.failures -> "Incomplete legs" section ---------
+
+const failuresData = {
+  ...baseData,
+  provenance: {
+    ...baseData.provenance,
+    failures: [{ step: 'annotaties', detail: 'Ozon annotaties timed out after 5000ms' }],
+  },
+};
+
+const mdFailures = render(failuresData, 'failures');
+
+if (mdFailures !== null) {
+  checks.push([
+    'renders an Incomplete legs section with the failing step and detail',
+    mdFailures.includes('## Incomplete legs') &&
+      mdFailures.includes('**annotaties:**') &&
+      mdFailures.includes('Ozon annotaties timed out after 5000ms'),
+  ]);
+}
+
+// --- FINDING 3b: legalSource.available === false ---------------------------
+
+const noPlanData = {
+  ...baseData,
+  legalSource: { available: false, regelingTitel: null, juridischeRegels: [] },
+};
+
+const mdNoPlan = render(noPlanData, 'no-plan');
+
+if (mdNoPlan !== null) {
+  checks.push([
+    'renders the no-omgevingsplan message and omits the juridische-regel sections',
+    mdNoPlan.includes('No omgevingsplan was found for this authority.') &&
+      !mdNoPlan.includes('Regeling: **Omgevingsplan gemeente Lelystad**') &&
+      !mdNoPlan.includes('#### gm0995_x__art_15.2__para_5'),
+  ]);
+}
+
+// ---------------------------------------------------------------------------
 
 let failed = 0;
 for (const [name, ok] of checks) {
