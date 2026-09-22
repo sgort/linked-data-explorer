@@ -11,6 +11,7 @@ const getActiviteiten = vi.fn();
 const getActiviteitenByOin = vi.fn();
 const getActiviteitDetail = vi.fn();
 const getActiviteitDossier = vi.fn();
+const getCachedActiviteitDossier = vi.fn();
 const fetchToepasbareRegels = vi.fn();
 const fetchFormScaffold = vi.fn();
 const saveForm = vi.fn();
@@ -29,6 +30,7 @@ vi.mock('../../services/dsoService', async () => {
     getActiviteitenByOin: (...args: unknown[]) => getActiviteitenByOin(...args),
     getActiviteitDetail: (...args: unknown[]) => getActiviteitDetail(...args),
     getActiviteitDossier: (...args: unknown[]) => getActiviteitDossier(...args),
+    getCachedActiviteitDossier: (...args: unknown[]) => getCachedActiviteitDossier(...args),
     fetchToepasbareRegels: (...args: unknown[]) => fetchToepasbareRegels(...args),
     fetchFormScaffold: (...args: unknown[]) => fetchFormScaffold(...args),
   };
@@ -70,6 +72,7 @@ afterEach(() => {
   getActiviteitenByOin.mockReset();
   getActiviteitDetail.mockReset();
   getActiviteitDossier.mockReset();
+  getCachedActiviteitDossier.mockReset();
   fetchToepasbareRegels.mockReset();
   fetchFormScaffold.mockReset();
   saveForm.mockReset();
@@ -1357,5 +1360,142 @@ describe('DsoExplorer — Quality Profile tab', () => {
     await selectAuthority('Gemeente', 'Lelystad');
 
     await vi.waitFor(() => expect(screen.queryByText('Activity detail')).toBeNull());
+  });
+});
+
+// ─── Activities detail panel: Quality profile teaser (README §2) ───────────
+//
+// The dossier call is expensive (it fans out across three upstream APIs
+// including Ozon), so per design_handoff_dso_quality_profile/README.md §2
+// and the "Interactions and behaviour" section, selecting an activity must
+// never trigger it — the teaser reads the cache only, via the synchronous
+// getCachedActiviteitDossier, and otherwise offers a "Load quality profile"
+// link. getCachedActiviteitDossier is mocked directly here (rather than
+// relying on dsoService's real in-memory cache, which getActiviteitDossier's
+// own mock never populates) so each test controls exactly what is "cached".
+
+/** counts of items by naming class, built for the teaser's stacked bar/sum. */
+function decisionItems(semanticCount: number, opaqueCount: number) {
+  return [
+    ...Array.from({ length: semanticCount }, (_, i) => ({ name: `d-sem-${i}`, class: 'semantic' })),
+    ...Array.from({ length: opaqueCount }, (_, i) => ({
+      name: `d-opq-${i}`,
+      class: 'opaque-dangling',
+    })),
+  ];
+}
+
+function inputItems(semanticCount: number, opaqueCount: number) {
+  return [
+    ...Array.from({ length: semanticCount }, (_, i) => ({
+      name: `i-sem-${i}`,
+      class: 'semantic',
+      question: 'Q?',
+    })),
+    ...Array.from({ length: opaqueCount }, (_, i) => ({
+      name: `i-opq-${i}`,
+      class: 'opaque-dangling',
+      question: null,
+    })),
+  ];
+}
+
+// The gm0995 (Lelystad) reference dossier's figures — same ones asserted in
+// QualityProfileTab.test.tsx's own Scorecard tests: Conclusie 3/7 decisions,
+// 0/5 inputs semantic; Indieningsvereisten 1/21 decisions, 0/10 inputs
+// semantic. Summed across both rule sets (this teaser is the one place that
+// happens): decisions 3+1=4 semantic of 7+21=28; inputs 0+0=0 semantic of
+// 5+10=15.
+function gm0995TeaserRuleSets() {
+  return {
+    conclusie: {
+      decisionNaming: { total: 7, semantic: 3, opaque: 4, items: decisionItems(3, 4) },
+      inputNaming: { total: 5, semantic: 0, opaque: 5, items: inputItems(0, 5) },
+      labelCoverage: { inputs: 5, withQuestion: 5 },
+      refResolvability: { total: 1, resolved: 1, dangling: 0 },
+    },
+    indieningsvereisten: {
+      decisionNaming: { total: 21, semantic: 1, opaque: 20, items: decisionItems(1, 20) },
+      inputNaming: { total: 10, semantic: 0, opaque: 10, items: inputItems(0, 10) },
+      labelCoverage: { inputs: 10, withQuestion: 7 },
+      refResolvability: { total: 0, resolved: 0, dangling: 0 },
+    },
+  };
+}
+
+function gm0995TeaserDossier() {
+  return minimalDossier({
+    urn: 'a1',
+    qualityProfile: {
+      urn: 'a1',
+      activityIdentity: 'semantic',
+      legalTraceability: { rules: 10, withWId: 10, withArticleText: 10 },
+      crossLayerConsistency: { sharedObjects: [] },
+      ruleSets: gm0995TeaserRuleSets(),
+    },
+  });
+}
+
+describe('DsoExplorer — Activities detail panel: Quality profile teaser', () => {
+  async function selectActivity() {
+    getActiviteiten.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    getActiviteitDetail.mockResolvedValue({
+      urn: 'a1',
+      omschrijving: 'Kapvergunning',
+      verfijnbaar: true,
+    });
+    searchBegrippen.mockResolvedValue(emptyResult());
+    render(<DsoExplorer />);
+    await screen.findByPlaceholderText('Search concepts…');
+    await userEvent.click(screen.getByRole('button', { name: /Activities/ }));
+    await userEvent.click(await screen.findByText('Kapvergunning'));
+    await screen.findByText('Activity detail');
+  }
+
+  test('selecting an activity does not call getActiviteitDossier, and offers "Load quality profile" instead', async () => {
+    await selectActivity();
+
+    await screen.findByText('Quality profile');
+    expect(screen.getByRole('button', { name: 'Load quality profile' })).toBeTruthy();
+    expect(getActiviteitDossier).not.toHaveBeenCalled();
+  });
+
+  test('a cached dossier renders the teaser with figures summed across both rule sets', async () => {
+    getCachedActiviteitDossier.mockReturnValue(gm0995TeaserDossier());
+    await selectActivity();
+
+    expect(await screen.findByText('4/28 semantic')).toBeTruthy(); // Decision naming
+    expect(screen.getByText('0/15 semantic')).toBeTruthy(); // Input naming
+    expect(screen.getByText('Decision naming')).toBeTruthy();
+    expect(screen.getByText('Input naming')).toBeTruthy();
+    // Cached, so still no fetch.
+    expect(getActiviteitDossier).not.toHaveBeenCalled();
+  });
+
+  test('"Open in Quality Profile ›" switches to the Quality Profile tab for the same activity', async () => {
+    getCachedActiviteitDossier.mockReturnValue(gm0995TeaserDossier());
+    getActiviteitDossier.mockResolvedValue(gm0995TeaserDossier());
+    await selectActivity();
+    await screen.findByText('4/28 semantic');
+
+    await userEvent.click(screen.getByRole('button', { name: /Open in Quality Profile/ }));
+
+    // Unique to the Quality Profile tab's context toolbar.
+    expect(await screen.findByText('Compare with')).toBeTruthy();
+  });
+
+  test('clicking "Load quality profile" fetches once and then renders the teaser', async () => {
+    getActiviteitDossier.mockResolvedValue(gm0995TeaserDossier());
+    await selectActivity();
+    await screen.findByText('Quality profile');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Load quality profile' }));
+
+    expect(await screen.findByText('4/28 semantic')).toBeTruthy();
+    expect(getActiviteitDossier).toHaveBeenCalledTimes(1);
   });
 });

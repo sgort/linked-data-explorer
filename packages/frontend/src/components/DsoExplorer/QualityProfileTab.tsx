@@ -9,6 +9,13 @@
 import { Download, Gauge, Loader2 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 
+// The dossier Markdown renderer lives in scripts/dossier-render.mjs — a
+// plain JS module, dependency-free and with no build step, so the CLI
+// (scripts/dso-dossier.mjs, run directly by `node`) and this download button
+// import the exact same function rather than each carrying its own port that
+// could drift out of sync. See dossier-render.d.ts for the type this import
+// resolves to.
+import { renderDossier } from '../../../../../scripts/dossier-render.mjs';
 import { authoritiesByLevel, findAuthorityByOin, shortName } from '../../data/dsoAuthorities';
 import {
   DecisionNamingItem,
@@ -20,35 +27,22 @@ import {
   RuleSet,
   RuleSetQuality,
 } from '../../services/dsoService';
-import { Section, TYPERING_META } from './shared';
+import {
+  NAMING_META,
+  NAMING_ORDER,
+  Section,
+  Tone,
+  TONE_TEXT,
+  toneForRatio,
+  TYPERING_META,
+} from './shared';
 
 // ── Design tokens local to this tab (README "Design tokens") ────────────────
-
-/**
- * The share of "good" items, used for matrix cell backgrounds and value
- * text. A DESIGN choice, not derived from the data — kept in one named
- * constant per the task brief so it is easy to change or drop.
- */
-const TONE_THRESHOLDS = { green: 0.8, amber: 0.4 } as const;
-
-type Tone = 'green' | 'amber' | 'red' | 'none';
-
-function toneForRatio(ratio: number | null): Tone {
-  // `ratio` is only ever a finite fraction or null (every caller guards the
-  // division by a `total` truthiness check first), so there is no NaN case
-  // to special-case here.
-  if (ratio === null) return 'none';
-  if (ratio >= TONE_THRESHOLDS.green) return 'green';
-  if (ratio >= TONE_THRESHOLDS.amber) return 'amber';
-  return 'red';
-}
-
-const TONE_TEXT: Record<Tone, string> = {
-  green: 'text-green-700',
-  amber: 'text-amber-700',
-  red: 'text-red-700',
-  none: 'text-slate-400',
-};
+//
+// Tone/NAMING_META/NAMING_ORDER themselves live in ./shared — the Activities
+// tab's detail-panel teaser needs the identical class colours and "share of
+// good items" tone. TONE_BG/TONE_BAR stay here: only the Matrix layout below
+// uses them.
 
 const TONE_BG: Record<Tone, string> = {
   green: 'bg-green-50',
@@ -63,29 +57,6 @@ const TONE_BAR: Record<Tone, string> = {
   red: 'bg-red-400',
   none: 'bg-slate-200',
 };
-
-const NAMING_META: Record<IdClass, { chip: string; bar: string; label: string; legend: string }> = {
-  semantic: {
-    chip: 'bg-green-100 text-green-700 border-green-200',
-    bar: 'bg-green-500',
-    label: 'semantic',
-    legend: 'semantic — readable as-is',
-  },
-  'opaque-resolvable': {
-    chip: 'bg-amber-100 text-amber-700 border-amber-200',
-    bar: 'bg-amber-400',
-    label: 'opaque · resolvable',
-    legend: 'opaque, resolvable — recovered via its question',
-  },
-  'opaque-dangling': {
-    chip: 'bg-red-50 text-red-700 border-red-200',
-    bar: 'bg-red-400',
-    label: 'opaque · dangling',
-    legend: 'opaque, dangling — nothing to recover from',
-  },
-};
-
-const NAMING_ORDER: IdClass[] = ['semantic', 'opaque-resolvable', 'opaque-dangling'];
 
 type RuleSetKey = 'conclusie' | 'indieningsvereisten';
 const RULE_SET_ORDER: RuleSetKey[] = ['conclusie', 'indieningsvereisten'];
@@ -140,6 +111,28 @@ function buildCompareUrn(urn: string, code: string): string | null {
   const m = urn.match(/^(nl\.imow-)[a-z0-9]+(\.activiteit\..+)$/i);
   if (!m) return null;
   return `${m[1]}${code}${m[2]}`;
+}
+
+/** Strips characters a filesystem (notably Windows) would reject from a download filename. */
+function sanitizeFilename(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, '-');
+}
+
+/**
+ * Downloads `renderDossier(dossier)` as a `.md` file via a Blob + object URL,
+ * revoked once the download has been handed off to the browser. Renders the
+ * exact same Markdown as `npm run dso:dossier` for the same dossier — both
+ * call the one shared `renderDossier` (scripts/dossier-render.mjs).
+ */
+function downloadDossierMarkdown(dossier: DsoDossier): void {
+  const md = renderDossier(dossier);
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dossier-${sanitizeFilename(dossier.urn)}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 interface Metric {
@@ -765,9 +758,7 @@ const ContextToolbar: React.FC<{
             ))}
           </select>
           <button
-            onClick={() => {
-              // TODO: wire to renderDossier() Markdown export — the next task.
-            }}
+            onClick={() => downloadDossierMarkdown(dossier)}
             className="px-2 py-1 text-[10px] bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-colors inline-flex items-center gap-1"
           >
             <Download size={11} /> Dossier .md

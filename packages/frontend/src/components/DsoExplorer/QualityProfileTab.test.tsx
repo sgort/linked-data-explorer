@@ -986,3 +986,65 @@ describe('QualityProfileTab — Compare edge cases', () => {
     expect(await screen.findByText('This rule set carries no cross-references.')).toBeTruthy();
   });
 });
+
+// ─── "Dossier .md" — shares scripts/dso-dossier.mjs#renderDossier ──────────
+//
+// The CLI (`npm run dso:dossier`, scripts/dso-dossier.mjs) and this button
+// must produce IDENTICAL Markdown for the same dossier. Rather than porting
+// renderDossier twice — a port would drift — both import the one copy in
+// scripts/dossier-render.mjs. These tests prove that sharing, not just that
+// each side happens to render something.
+
+describe('renderDossier — shared between the CLI and the frontend', () => {
+  test('the frontend import and the CLI script import the exact same function', async () => {
+    const shared = await import('../../../../../scripts/dossier-render.mjs');
+    const cli = await import('../../../../../scripts/dso-dossier.mjs');
+
+    // Not "produces the same output" (which two independent ports could also
+    // achieve by coincidence) but IS the same function object — the CLI
+    // module re-exports it rather than defining its own, so drift between
+    // the two is structurally impossible, not just untested.
+    expect(cli.renderDossier).toBe(shared.renderDossier);
+  });
+
+  test('renders Markdown carrying the reference dossier’s figures, byte-identical to what the CLI would produce', async () => {
+    const { renderDossier } = await import('../../../../../scripts/dossier-render.mjs');
+
+    const md = renderDossier(gm0995Dossier());
+
+    expect(md).toContain('# Boom kappen of houtopstand vellen');
+    expect(md).toContain('**Authority:** gm0995');
+    expect(md).toContain('**Environment:** prod');
+    expect(md).toContain('## Quality profile');
+    expect(md).toContain('| Decision naming | 3/7 semantic, 4 opaque (57%) |');
+    expect(md).toContain('| Decision naming | 1/21 semantic, 20 opaque (95%) |');
+    expect(md).toContain('| Label coverage | 5/5 inputs carry a question |');
+    expect(md).toContain('| Label coverage | 7/10 inputs carry a question |');
+  });
+});
+
+describe('QualityProfileTab — "Dossier .md" button', () => {
+  test('downloads Markdown identical to renderDossier(dossier), named dossier-{urn}.md', async () => {
+    const { renderDossier } = await import('../../../../../scripts/dossier-render.mjs');
+    const createObjectURL = vi.fn().mockReturnValue('blob:mock');
+    global.URL.createObjectURL = createObjectURL;
+    global.URL.revokeObjectURL = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    const dossier = gm0995Dossier();
+    getActiviteitDossier.mockResolvedValue(dossier);
+    renderTab();
+    await screen.findByText('3/7 semantic');
+
+    await userEvent.click(screen.getByRole('button', { name: /Dossier \.md/ }));
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    expect(blob.type).toContain('text/markdown');
+    expect(await blob.text()).toBe(renderDossier(dossier));
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement;
+    expect(anchor.download).toBe(`dossier-${GM0995_URN}.md`);
+  });
+});

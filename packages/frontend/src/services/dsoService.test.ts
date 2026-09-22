@@ -12,6 +12,7 @@ import {
   getActiviteitDossier,
   getActiviteiten,
   getActiviteitenByOin,
+  getCachedActiviteitDossier,
   getWerkzaamheidDetail,
   searchBegrippen,
   sttrDownloadUrl,
@@ -692,5 +693,56 @@ describe('getActiviteitDossier', () => {
       )
     );
     await expect(getActiviteitDossier('urn:fail', 'pre')).rejects.toThrow('DSO request failed');
+  });
+
+  describe('getCachedActiviteitDossier — synchronous, never fetches', () => {
+    test('is undefined before anything has resolved this env/datum/urn', () => {
+      expect(getCachedActiviteitDossier('urn:never-fetched', 'pre')).toBeUndefined();
+    });
+
+    test('reads the value back once getActiviteitDossier has resolved, for the same key', async () => {
+      server.use(
+        http.get('*/v1/dso/activiteiten/:urn/dossier', () =>
+          HttpResponse.json({ success: true, data: dossierFixture })
+        )
+      );
+
+      expect(getCachedActiviteitDossier('urn:cached-sync', 'pre', '30-07-2026')).toBeUndefined();
+
+      const resolved = await getActiviteitDossier('urn:cached-sync', 'pre', '30-07-2026');
+
+      expect(getCachedActiviteitDossier('urn:cached-sync', 'pre', '30-07-2026')).toEqual(resolved);
+      // A different env, datum or urn is a different cache key.
+      expect(getCachedActiviteitDossier('urn:cached-sync', 'prod', '30-07-2026')).toBeUndefined();
+      expect(getCachedActiviteitDossier('urn:cached-sync', 'pre', '01-01-2026')).toBeUndefined();
+      expect(getCachedActiviteitDossier('urn:other', 'pre', '30-07-2026')).toBeUndefined();
+    });
+
+    test('stays undefined for a fetch that fails', async () => {
+      server.use(
+        http.get(
+          '*/v1/dso/activiteiten/:urn/dossier',
+          () => new HttpResponse(null, { status: 502 })
+        )
+      );
+
+      await expect(getActiviteitDossier('urn:cached-fail', 'pre')).rejects.toThrow('HTTP 502');
+
+      expect(getCachedActiviteitDossier('urn:cached-fail', 'pre')).toBeUndefined();
+    });
+
+    test('clearActiviteitDossierCache clears the resolved cache too', async () => {
+      server.use(
+        http.get('*/v1/dso/activiteiten/:urn/dossier', () =>
+          HttpResponse.json({ success: true, data: dossierFixture })
+        )
+      );
+      await getActiviteitDossier('urn:cached-clear', 'pre');
+      expect(getCachedActiviteitDossier('urn:cached-clear', 'pre')).toBeTruthy();
+
+      clearActiviteitDossierCache();
+
+      expect(getCachedActiviteitDossier('urn:cached-clear', 'pre')).toBeUndefined();
+    });
   });
 });

@@ -27,6 +27,7 @@ import {
   DsoActiviteit,
   DsoActiviteitDetail,
   DsoBegrip,
+  DsoDossier,
   DsoEnv,
   DsoRegelbeheerobject,
   DsoToepasbareRegel,
@@ -34,9 +35,12 @@ import {
   fetchFormScaffold,
   fetchToepasbareRegels,
   getActiviteitDetail,
+  getActiviteitDossier,
   getActiviteiten,
   getActiviteitenByOin,
+  getCachedActiviteitDossier,
   getWerkzaamheidDetail,
+  IdClass,
   searchBegrippen,
   sttrDownloadUrl,
   suggereerWerkzaamheden,
@@ -48,7 +52,14 @@ import {
 import { FormService } from '../../services/formService';
 import { FormSchema } from '../../types';
 import QualityProfileTab from './QualityProfileTab';
-import { Section, TYPERING_META } from './shared';
+import {
+  NAMING_META,
+  NAMING_ORDER,
+  Section,
+  TONE_TEXT,
+  toneForRatio,
+  TYPERING_META,
+} from './shared';
 
 type Tab = 'begrippen' | 'werkzaamheden' | 'activiteiten' | 'quality';
 
@@ -813,18 +824,161 @@ const ApplicableRulesSection: React.FC<{
   );
 };
 
+// ── Quality profile teaser (README §2) ──────────────────────────────────────
+//
+// A preview of the Quality Profile tab's figures, inside the Activities
+// detail panel. Unlike the tab itself, this ONE place sums both rule sets'
+// items into a single figure per row — it is a teaser, not a score, and the
+// tab it links to still never blends Conclusie and Indieningsvereisten.
+
+type TeaserDim = 'decisionNaming' | 'inputNaming';
+const TEASER_ROWS: { key: TeaserDim; label: string }[] = [
+  { key: 'decisionNaming', label: 'Decision naming' },
+  { key: 'inputNaming', label: 'Input naming' },
+];
+
+/** Both rule sets' naming items for one dimension, combined — see the note above. */
+function combinedNamingItems(
+  ruleSets: DsoDossier['qualityProfile']['ruleSets'],
+  dim: TeaserDim
+): { class: IdClass }[] {
+  const items: { class: IdClass }[] = [];
+  for (const rsq of [ruleSets.conclusie, ruleSets.indieningsvereisten]) {
+    if (rsq) items.push(...rsq[dim].items);
+  }
+  return items;
+}
+
+const TeaserRow: React.FC<{ label: string; items: { class: IdClass }[] }> = ({ label, items }) => {
+  const total = items.length;
+  const semantic = items.filter((i) => i.class === 'semantic').length;
+  const ratio = total ? semantic / total : null;
+  const tone = toneForRatio(ratio);
+  return (
+    <div className="grid grid-cols-[120px_1fr_auto] gap-2.5 items-center text-xs">
+      <span className="text-slate-400">{label}</span>
+      <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden flex">
+        {total > 0 &&
+          NAMING_ORDER.map((cls) => {
+            const count = items.filter((i) => i.class === cls).length;
+            if (count === 0) return null;
+            return (
+              <div
+                key={cls}
+                className={NAMING_META[cls].bar}
+                style={{ width: `${(count / total) * 100}%` }}
+              />
+            );
+          })}
+      </div>
+      <span className={`font-medium ${TONE_TEXT[tone]}`}>
+        {semantic}/{total} semantic
+      </span>
+    </div>
+  );
+};
+
+const QualityProfileTeaser: React.FC<{ dossier: DsoDossier; onOpenQualityProfile: () => void }> = ({
+  dossier,
+  onOpenQualityProfile,
+}) => (
+  <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
+    {TEASER_ROWS.map(({ key, label }) => (
+      <TeaserRow
+        key={key}
+        label={label}
+        items={combinedNamingItems(dossier.qualityProfile.ruleSets, key)}
+      />
+    ))}
+    <button
+      onClick={onOpenQualityProfile}
+      className="text-xs text-blue-600 hover:underline inline-flex items-center gap-0.5"
+    >
+      Open in Quality Profile <ChevronRight size={12} />
+    </button>
+  </div>
+);
+
+/**
+ * The "Quality profile" section of the Activities detail panel (README §2).
+ *
+ * Reads the dossier cache only — never calls `getActiviteitDossier` just
+ * because an activity was selected, since that call fans out across three
+ * upstream APIs including Ozon. If nothing is cached yet (the Quality
+ * Profile tab was never opened for this activity), this offers a "Load
+ * quality profile" affordance instead; only clicking it fetches.
+ */
+const QualityProfileSection: React.FC<{
+  urn: string;
+  datum?: string;
+  env: DsoEnv;
+  authorityCode?: string;
+  onOpenQualityProfile: () => void;
+}> = ({ urn, datum, env, authorityCode, onOpenQualityProfile }) => {
+  const [dossier, setDossier] = useState<DsoDossier | undefined>(() =>
+    getCachedActiviteitDossier(urn, env, datum)
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // A new activity (or a different env/datum) may already have its own
+  // cached dossier — re-check the cache rather than carrying over the
+  // previous activity's state or an in-flight load's result.
+  useEffect(() => {
+    setDossier(getCachedActiviteitDossier(urn, env, datum));
+    setLoading(false);
+    setError(null);
+  }, [urn, env, datum]);
+
+  const handleLoad = () => {
+    setLoading(true);
+    setError(null);
+    getActiviteitDossier(urn, env, datum, authorityCode)
+      .then(setDossier)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .finally(() => setLoading(false));
+  };
+
+  return (
+    <Section title="Quality profile">
+      {dossier ? (
+        <QualityProfileTeaser dossier={dossier} onOpenQualityProfile={onOpenQualityProfile} />
+      ) : loading ? (
+        <p className="text-xs text-slate-400 flex items-center gap-1.5">
+          <Loader2 size={12} className="animate-spin" /> Loading…
+        </p>
+      ) : (
+        <div className="space-y-1">
+          <button onClick={handleLoad} className="text-xs text-blue-600 hover:underline">
+            Load quality profile
+          </button>
+          {error && <p className="text-[10px] text-red-600">{error}</p>}
+        </div>
+      )}
+    </Section>
+  );
+};
+
 const ActivityDetailPanel: React.FC<{
   urn: string;
   datum?: string;
   env: DsoEnv;
+  authorityOin?: string;
   onClose: () => void;
   onNavigate: (urn: string) => void;
   onLoaded?: (name: string) => void;
-}> = ({ urn, datum, env, onClose, onNavigate, onLoaded }) => {
+  onOpenQualityProfile: () => void;
+}> = ({ urn, datum, env, authorityOin, onClose, onNavigate, onLoaded, onOpenQualityProfile }) => {
   const [detail, setDetail] = useState<DsoActiviteitDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [childNames, setChildNames] = useState<Record<string, string>>({});
+
+  // The dossier route's `authority` query param is a bevoegd-gezag CODE
+  // (e.g. "gm0995"), never an OIN — see the identical resolution in
+  // QualityProfileTab. `authorityOin` is the Activities tab's Authority
+  // <select> value, keyed by OIN.
+  const authorityCode = authorityOin ? findAuthorityByOin(authorityOin)?.code : undefined;
 
   useEffect(() => {
     setLoading(true);
@@ -959,6 +1113,15 @@ const ActivityDetailPanel: React.FC<{
               </p>
             </Section>
 
+            {/* Quality profile teaser (README §2) */}
+            <QualityProfileSection
+              urn={detail.urn}
+              datum={datum}
+              env={env}
+              authorityCode={authorityCode}
+              onOpenQualityProfile={onOpenQualityProfile}
+            />
+
             {/* Rule objects */}
             {detail.regelBeheerObjecten && detail.regelBeheerObjecten.length > 0 ? (
               <Section title="Rule types present">
@@ -1088,6 +1251,7 @@ const ActiviteitenTab: React.FC<{
   authorityOin: string;
   onAuthorityOinChange: (oin: string) => void;
   onSelectedNameChange: (name: string | undefined) => void;
+  onOpenQualityProfile: () => void;
 }> = ({
   env,
   selectedUrn,
@@ -1097,6 +1261,7 @@ const ActiviteitenTab: React.FC<{
   authorityOin,
   onAuthorityOinChange,
   onSelectedNameChange,
+  onOpenQualityProfile,
 }) => {
   const [datum, setDatum] = useState('');
   const [result, setResult] = useState<ActiviteitenResult | null>(null);
@@ -1376,9 +1541,11 @@ const ActiviteitenTab: React.FC<{
             urn={selectedUrn}
             datum={selectedDatum}
             env={env}
+            authorityOin={authorityOin}
             onClose={() => onSelectUrn(null)}
             onNavigate={(urn) => onSelectUrn(urn)}
             onLoaded={onSelectedNameChange}
+            onOpenQualityProfile={onOpenQualityProfile}
           />
         )}
       </div>
@@ -1505,6 +1672,7 @@ const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
             authorityOin={authorityOin}
             onAuthorityOinChange={setAuthorityOin}
             onSelectedNameChange={setSelectedName}
+            onOpenQualityProfile={() => setTab('quality')}
           />
         )}
         {tab === 'quality' && (

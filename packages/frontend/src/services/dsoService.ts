@@ -469,6 +469,14 @@ export interface DsoDossier extends Dossier {
  */
 const dossierCache = new Map<string, Promise<DsoDossier>>();
 
+/**
+ * Mirrors `dossierCache`, but holds the resolved value rather than the
+ * in-flight promise — so a caller that must never trigger the (expensive,
+ * Ozon-fanning-out) dossier fetch itself can still read an already-cached
+ * result synchronously. See `getCachedActiviteitDossier`.
+ */
+const dossierResolvedCache = new Map<string, DsoDossier>();
+
 function dossierCacheKey(env: DsoEnv, datum: string | undefined, urn: string): string {
   return `${env}|${datum ?? ''}|${urn}`;
 }
@@ -476,6 +484,26 @@ function dossierCacheKey(env: DsoEnv, datum: string | undefined, urn: string): s
 /** Clears the in-memory dossier cache. For tests, and for a future refresh affordance. */
 export function clearActiviteitDossierCache(): void {
   dossierCache.clear();
+  dossierResolvedCache.clear();
+}
+
+/**
+ * Synchronous "is it cached?" read of the dossier cache — never fetches.
+ *
+ * For UI that must not trigger `getActiviteitDossier`'s call just by
+ * rendering (e.g. the Activities detail panel's Quality profile teaser,
+ * which would otherwise fan out across three upstream APIs including Ozon
+ * merely because the user selected an activity). Returns `undefined` until
+ * something else — the Quality Profile tab, or an explicit "Load quality
+ * profile" click — has actually fetched and resolved this exact
+ * env/datum/urn.
+ */
+export function getCachedActiviteitDossier(
+  urn: string,
+  env: DsoEnv = 'pre',
+  datum?: string
+): DsoDossier | undefined {
+  return dossierResolvedCache.get(dossierCacheKey(env, datum, urn));
 }
 
 export async function getActiviteitDossier(
@@ -497,9 +525,13 @@ export async function getActiviteitDossier(
     env
   );
   dossierCache.set(key, promise);
-  // A failed fetch must not poison the cache — drop it so the next call retries.
-  promise.catch(() => {
-    dossierCache.delete(key);
-  });
+  promise
+    .then((d) => {
+      dossierResolvedCache.set(key, d);
+    })
+    .catch(() => {
+      // A failed fetch must not poison the cache — drop it so the next call retries.
+      dossierCache.delete(key);
+    });
   return promise;
 }
