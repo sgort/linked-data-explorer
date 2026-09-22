@@ -130,4 +130,26 @@ describe('profileDossier', () => {
     } as Dossier;
     expect(profileDossier(opaque).activityIdentity).not.toBe('semantic');
   });
+
+  // The `resolvable` flag must be earned from a real readable name, not
+  // assumed true — otherwise every opaque activity looks recoverable even
+  // when nothing on the dossier actually recovers it.
+  test('an opaque URN with no readable name anywhere is opaque-dangling', () => {
+    const dangling = {
+      ...dossier,
+      urn: 'nl.imow-gm0995.activiteit.180a63f7-95be-43bf-8683-a480e75deb84',
+      omschrijving: null,
+      annotation: { groep: 'kapactiviteit' },
+    } as unknown as Dossier;
+    expect(profileDossier(dangling).activityIdentity).toBe('opaque-dangling');
+  });
+
+  test('an opaque URN with a readable omschrijving is opaque-resolvable', () => {
+    const resolvable = {
+      ...dossier,
+      urn: 'nl.imow-gm0995.activiteit.180a63f7-95be-43bf-8683-a480e75deb84',
+      omschrijving: 'Boom kappen of houtopstand vellen',
+    } as unknown as Dossier;
+    expect(profileDossier(resolvable).activityIdentity).toBe('opaque-resolvable');
+  });
 });

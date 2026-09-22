@@ -97,7 +97,13 @@ export interface QualityProfile {
 
 export function profileDossier(d: Dossier): QualityProfile {
   const localName = d.urn.split('.').slice(3).join('.') || d.urn;
-  const activityIdentity = classifyName(localName, true);
+  // Resolvability must be earned, not assumed: an opaque URN is only
+  // "opaque-resolvable" if a readable name actually exists elsewhere on the
+  // dossier (RTR omschrijving or the annotation's naam). A hardcoded `true`
+  // here would make every opaque activity look recoverable even when nothing
+  // recovers it — do not revert this to `true`.
+  const hasReadableName = Boolean(d.omschrijving ?? d.annotation?.naam);
+  const activityIdentity = classifyName(localName, hasReadableName);
 
   const dmn = d.decisionCriteria?.dmn ?? null;
   const measured = dmn ? measureDmn(dmn) : null;
