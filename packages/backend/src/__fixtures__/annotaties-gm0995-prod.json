@@ -1,0 +1,420 @@
+{
+  "activiteiten": [
+    {
+      "identificatie": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+      "naam": "Boom kappen of houtopstand vellen",
+      "groep": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/activiteit/id/concept/Kapactiviteit",
+        "waarde": "kapactiviteit"
+      },
+      "symboolcodes": {
+        "vlak": "vag104"
+      },
+      "bovenliggendeActiviteitRef": "nl.imow-gm0995.activiteit.OverigeAct"
+    }
+  ],
+  "regelteksten": [
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.50912c2af1014b7f93bbed1319b075b4",
+      "wId": "gm0995_b49d3eda196b498591c40c575644b831__chp_15__subchp_15.4__art_15.6"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.6fa152844c78425588ca8492a64696c3",
+      "wId": "gm0995_d7034ba59279448593d76d96f015599f__chp_15__subchp_15.4__art_15.3__para_2"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.4296ab3cee4d4bdc9d11f580b48b6822",
+      "wId": "gm0995_d4a634c07f6f400aa04e77509126d678__chp_15__subchp_15.4__art_15.2__para_2"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.2020000593",
+      "wId": "gm0995_1-0__chp_22__subchp_22.5__subsec_22.5.2__subsec_22.5.2.4__art_22.299__para_1"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.c622afab2f2140898c62ff68e4488be3",
+      "wId": "gm0995_f925519614564fb2ad7d126edc6167b3__chp_15__subchp_15.1__subsec_15.1.3__art_15.10"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.85935fb2098046aa916712929739eae9",
+      "wId": "gm0995_ae571aa1019b4484add0836cda95c717__chp_15__subchp_15.4__art_15.15"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.16f109549f344d7ba1c1013e9b6df2d1",
+      "wId": "gm0995_5e613b8efac0433cb977d3445e057208__chp_15__subchp_15.4__art_15.2__para_5"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.18e75b51a7614773809786b3235bb7c8",
+      "wId": "gm0995_db881f056d804d4c9755699044d47aee__chp_15__subchp_15.4__art_15.5"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.2020000594",
+      "wId": "gm0995_1-0__chp_22__subchp_22.5__subsec_22.5.2__subsec_22.5.2.4__art_22.299__para_2"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.e7c6d0d603aa4af096129e2bb36a1310",
+      "wId": "gm0995_9fa25368e58f4fa697db3c85572e3dbf__chp_15__subchp_15.4__art_15.3__para_1"
+    }
+  ],
+  "regelsVoorIedereen": [
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.2020000593",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.2020000593",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.6730ff97b298442f9202fffca1b69300",
+          "activiteitRef": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/AndersGeduid",
+            "waarde": "anders geduid"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag104"
+          }
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.e7c6d0d603aa4af096129e2bb36a1310",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.e7c6d0d603aa4af096129e2bb36a1310",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.4915fa0d07ee42f680ae636371ea2427",
+          "activiteitRef": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/AndersGeduid",
+            "waarde": "anders geduid"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag104"
+          }
+        }
+      ],
+      "themas": [
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Natuur",
+          "waarde": "natuur"
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.6fa152844c78425588ca8492a64696c3",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.6fa152844c78425588ca8492a64696c3",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.cc69b75b76ee4a139535b577a56e1b7c",
+          "activiteitRef": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/AndersGeduid",
+            "waarde": "anders geduid"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag104"
+          }
+        }
+      ],
+      "themas": [
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Natuur",
+          "waarde": "natuur"
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.c622afab2f2140898c62ff68e4488be3",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.c622afab2f2140898c62ff68e4488be3",
+      "locatieRefs": [
+        "nl.imow-gm0995.gebiedengroep.180a63f795be43bf8683a480e75deb84"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.9c70927d8ff54eefa70a05853fec4d70",
+          "activiteitRef": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/AndersGeduid",
+            "waarde": "anders geduid"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.180a63f795be43bf8683a480e75deb84"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag104"
+          }
+        }
+      ],
+      "gebiedsaanwijzingRefs": [
+        "nl.imow-gm0995.gebiedsaanwijzing.fb46324b780342f8b5065790dbe0e272"
+      ],
+      "themas": [
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Natuur",
+          "waarde": "natuur"
+        },
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Landschap",
+          "waarde": "landschap"
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.16f109549f344d7ba1c1013e9b6df2d1",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.16f109549f344d7ba1c1013e9b6df2d1",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.34ba28b1b12b498c9881e073bccec86e",
+          "activiteitRef": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Vergunningplicht",
+            "waarde": "vergunningplicht"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag104"
+          }
+        }
+      ],
+      "gebiedsaanwijzingRefs": [
+        "nl.imow-gm0995.gebiedsaanwijzing.fb46324b780342f8b5065790dbe0e272"
+      ],
+      "themas": [
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Natuur",
+          "waarde": "natuur"
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.50912c2af1014b7f93bbed1319b075b4",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.50912c2af1014b7f93bbed1319b075b4",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.74266d10ad3449438a065a17269ca94d",
+          "activiteitRef": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Vergunningplicht",
+            "waarde": "vergunningplicht"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag104"
+          }
+        }
+      ],
+      "themas": [
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Natuur",
+          "waarde": "natuur"
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.4296ab3cee4d4bdc9d11f580b48b6822",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.4296ab3cee4d4bdc9d11f580b48b6822",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.0c62e3102b434641931f42580b8e13d8",
+          "activiteitRef": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Vergunningplicht",
+            "waarde": "vergunningplicht"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag104"
+          }
+        }
+      ],
+      "themas": [
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Natuur",
+          "waarde": "natuur"
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.2020000594",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.2020000594",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.ea875fd068cc4223a42aea096be4d202",
+          "activiteitRef": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/AndersGeduid",
+            "waarde": "anders geduid"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag104"
+          }
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.18e75b51a7614773809786b3235bb7c8",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.18e75b51a7614773809786b3235bb7c8",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.9b41c82c316045b1890b53e9a15cca6d",
+          "activiteitRef": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Vergunningplicht",
+            "waarde": "vergunningplicht"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag104"
+          }
+        }
+      ],
+      "themas": [
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Natuur",
+          "waarde": "natuur"
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.85935fb2098046aa916712929739eae9",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.85935fb2098046aa916712929739eae9",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.f71af2da4caf49e38e282157a7e58b33",
+          "activiteitRef": "nl.imow-gm0995.activiteit.HoutopstandVellen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Vergunningplicht",
+            "waarde": "vergunningplicht"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag104"
+          }
+        }
+      ],
+      "themas": [
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Natuur",
+          "waarde": "natuur"
+        }
+      ]
+    }
+  ],
+  "locaties": [
+    {
+      "identificatie": "nl.imow-gm0995.gebiedengroep.180a63f795be43bf8683a480e75deb84",
+      "locatieType": "Gebiedengroep",
+      "locatieRefs": [
+        "nl.imow-gm0995.gebied.6fc8dfb184ce4c55ac4bcc656618fa81"
+      ],
+      "noemer": "bebouwingscontour, houtkap"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.ambtsgebied.9999999999",
+      "locatieType": "Ambtsgebied",
+      "geometrieIdentificatie": "GM0995_20230101",
+      "noemer": "Ambtsgebied Gemeente Lelystad"
+    }
+  ],
+  "gebiedsaanwijzingen": [],
+  "omgevingsnormen": [],
+  "_source": {
+    "env": "prod",
+    "geldigOp": "2026-09-22"
+  }
+}
