@@ -891,3 +891,54 @@ describe('extractFormScaffoldFromSttr', () => {
     expect(extractFormScaffoldFromSttr(sttr(''), 'kapvergunning').id).toBe('kapvergunning');
   });
 });
+
+import { clearNamedCaches } from '../utils/ttl-cache';
+
+describe('getActiviteit caching', () => {
+  const urn = 'nl.imow-gm0995.activiteit.HoutopstandVellen';
+
+  beforeEach(() => {
+    clearNamedCaches('dso-activiteit');
+    (global.fetch as jest.Mock).mockReset();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ urn, omschrijving: 'Boom kappen of houtopstand vellen' }),
+    });
+  });
+
+  test('a repeated lookup makes no second upstream request', async () => {
+    await getActiviteit(urn, '22-09-2026', 'prod');
+    await getActiviteit(urn, '22-09-2026', 'prod');
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('the cached response is identical to the uncached one', async () => {
+    const first = await getActiviteit(urn, '22-09-2026', 'prod');
+    const second = await getActiviteit(urn, '22-09-2026', 'prod');
+
+    expect(second).toEqual(first);
+  });
+
+  test('a different env is a different cache key', async () => {
+    await getActiviteit(urn, '22-09-2026', 'prod');
+    await getActiviteit(urn, '22-09-2026', 'pre');
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('a different datum is a different cache key', async () => {
+    await getActiviteit(urn, '22-09-2026', 'prod');
+    await getActiviteit(urn, '01-01-2024', 'prod');
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('clearing the named cache forces a refetch', async () => {
+    await getActiviteit(urn, '22-09-2026', 'prod');
+    clearNamedCaches('dso-activiteit');
+    await getActiviteit(urn, '22-09-2026', 'prod');
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+});

@@ -3,8 +3,19 @@
 import { XMLParser } from 'fast-xml-parser';
 import { config } from '../utils/config';
 import { logger } from '../utils/logger';
+import { createTtlCache } from '../utils/ttl-cache';
 
 const DEFAULT_PAGE_SIZE = 20;
+
+/**
+ * Activity detail is the hottest DSO read: the DSO Explorer's child-activity
+ * fan-out calls it once per child and discards the names on every re-render.
+ * Five minutes matches the house default in `sparql.service.ts`.
+ *
+ * Staleness is accepted deliberately — DSO activity data does change, so
+ * `DELETE /v1/cache/clear` is the escape hatch.
+ */
+const activiteitCache = createTtlCache<unknown>({ name: 'dso-activiteit', ttlMs: 5 * 60 * 1000 });
 
 export type DsoEnv = 'pre' | 'prod';
 
@@ -278,13 +289,23 @@ export async function getActiviteit(
 ): Promise<unknown> {
   const d = new Date();
   const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+  const effectiveDatum = datum ?? today;
+
+  const cacheKey = `${env}|${urn}|${effectiveDatum}`;
+  const cached = activiteitCache.get(cacheKey);
+  if (cached !== undefined) {
+    logger.info('[DSO] activiteit detail from cache', { env, urn, datum: effectiveDatum });
+    return cached;
+  }
 
   const params = new URLSearchParams();
-  params.set('datum', datum ?? today);
+  params.set('datum', effectiveDatum);
 
   const url = `${getDsoConfig(env).rtrBaseUrl}/activiteiten/${encodeURIComponent(urn)}?${params}`;
-  logger.info('[DSO] GET activiteit detail', { env, urn, datum: datum ?? today });
-  return dsoFetch(url, env);
+  logger.info('[DSO] GET activiteit detail', { env, urn, datum: effectiveDatum });
+  const data = await dsoFetch(url, env);
+  activiteitCache.set(cacheKey, data);
+  return data;
 }
 
 /**
