@@ -47,7 +47,7 @@ export async function dsoFetch(
 
   try {
     const response = await fetch(url, {
-      method: init.method ?? 'GET',
+      method: init.method ?? (init.body !== undefined ? 'POST' : 'GET'),
       headers: {
         'x-api-key': dsoConfig.apiKey,
         Accept: 'application/hal+json',

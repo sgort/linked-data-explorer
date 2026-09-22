@@ -974,4 +974,24 @@ describe('dsoFetch request options', () => {
     expect(init.headers['Content-Crs']).toBe('http://www.opengis.net/def/crs/EPSG/0/28992');
     expect(JSON.parse(init.body)).toEqual({ bevoegdGezag: ['gm0995'] });
   });
+
+  test('defaults to POST when a body is supplied without an explicit method', async () => {
+    await dsoService.dsoFetch('https://example.test/x', 'pre', {
+      body: { bevoegdGezag: ['gm0995'] },
+    });
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.method).toBe('POST');
+    expect(init.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(init.body)).toEqual({ bevoegdGezag: ['gm0995'] });
+  });
+
+  test('an explicit GET with no body stays a bodyless GET', async () => {
+    await dsoService.dsoFetch('https://example.test/x', 'pre', { method: 'GET' });
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.method).toBe('GET');
+    expect(init.body).toBeUndefined();
+    expect(init.headers['Content-Type']).toBeUndefined();
+  });
 });
