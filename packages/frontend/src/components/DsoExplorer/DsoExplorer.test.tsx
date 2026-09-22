@@ -311,7 +311,7 @@ describe('DsoExplorer — Activities tab', () => {
       'urn:manual{Enter}'
     );
 
-    expect(await screen.findByText('Manual activity')).toBeTruthy();
+    expect(await screen.findByText('Manual activity', { selector: 'p' })).toBeTruthy();
     expect(getActiviteitDetail).toHaveBeenCalledWith('urn:manual', undefined, 'pre');
   });
 
@@ -1073,7 +1073,7 @@ describe('DsoExplorer — Activities toolbar', () => {
     await userEvent.type(field, 'urn:manual');
     await userEvent.click(screen.getByRole('button', { name: 'Inspect' }));
 
-    expect(await screen.findByText('Manual activity')).toBeTruthy();
+    expect(await screen.findByText('Manual activity', { selector: 'p' })).toBeTruthy();
   });
 
   test('pressing Enter on a blank URN field does nothing', async () => {
@@ -1230,5 +1230,84 @@ describe('DsoExplorer — authorityLabel for a non-preset (register-only) author
 
     const publish = await screen.findByRole('link', { name: /Publish via CPSV Editor/ });
     expect(publish.getAttribute('href')).toContain('authority=Zuid-Holland');
+  });
+});
+
+describe('DsoExplorer — Quality Profile tab', () => {
+  async function selectActivity() {
+    getActiviteiten.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    getActiviteitDetail.mockResolvedValue({
+      urn: 'a1',
+      omschrijving: 'Kapvergunning',
+      verfijnbaar: true,
+    });
+    searchBegrippen.mockResolvedValue(emptyResult());
+    render(<DsoExplorer />);
+    await screen.findByPlaceholderText('Search concepts…');
+    await userEvent.click(screen.getByRole('button', { name: /Activities/ }));
+    await userEvent.click(await screen.findByText('Kapvergunning'));
+    await screen.findByText('Activity detail');
+  }
+
+  test('the tab button renders and switches tabs when clicked', async () => {
+    searchBegrippen.mockResolvedValue(emptyResult());
+    render(<DsoExplorer />);
+    await screen.findByPlaceholderText('Search concepts…');
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+
+    expect(await screen.findByText('No activity selected')).toBeTruthy();
+  });
+
+  test('with no selection, shows the empty state, and Go to Activities switches to the Activities tab', async () => {
+    searchBegrippen.mockResolvedValue(emptyResult());
+    getActiviteiten.mockResolvedValue(emptyResult());
+    render(<DsoExplorer />);
+    await screen.findByPlaceholderText('Search concepts…');
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+    await screen.findByText('No activity selected');
+    expect(
+      screen.getByText('Select an activity in the Activities tab — its quality profile opens here.')
+    ).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Go to Activities' }));
+
+    expect(await screen.findByText('Valid on')).toBeTruthy();
+  });
+
+  test('selection survives a tab switch', async () => {
+    await selectActivity();
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+    expect(await screen.findByText('Kapvergunning')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activities' }));
+
+    expect(await screen.findByText('Activity detail')).toBeTruthy();
+  });
+
+  test('the selection-hint pill appears on the tab button elsewhere, and not while Quality Profile itself is active', async () => {
+    await selectActivity();
+
+    const qualityTabButton = screen.getByRole('button', { name: /Quality Profile/ });
+    expect(within(qualityTabButton).getByText('Kapvergunning')).toBeTruthy();
+
+    await userEvent.click(qualityTabButton);
+
+    expect(within(qualityTabButton).queryByText('Kapvergunning')).toBeNull();
+  });
+
+  test('changing Authority still clears the selection', async () => {
+    getActiviteitenByOin.mockResolvedValue(emptyResult());
+    await selectActivity();
+
+    await selectAuthority('Gemeente', 'Lelystad');
+
+    await vi.waitFor(() => expect(screen.queryByText('Activity detail')).toBeNull());
   });
 });

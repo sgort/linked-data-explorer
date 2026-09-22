@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Download,
   ExternalLink,
+  Gauge,
   Loader2,
   Search,
   TreePine,
@@ -47,7 +48,7 @@ import {
 import { FormService } from '../../services/formService';
 import { FormSchema } from '../../types';
 
-type Tab = 'begrippen' | 'werkzaamheden' | 'activiteiten';
+type Tab = 'begrippen' | 'werkzaamheden' | 'activiteiten' | 'quality';
 
 // ── Concepts tab ────────────────────────────────────────────────────────────
 
@@ -846,7 +847,8 @@ const ActivityDetailPanel: React.FC<{
   env: DsoEnv;
   onClose: () => void;
   onNavigate: (urn: string) => void;
-}> = ({ urn, datum, env, onClose, onNavigate }) => {
+  onLoaded?: (name: string) => void;
+}> = ({ urn, datum, env, onClose, onNavigate, onLoaded }) => {
   const [detail, setDetail] = useState<DsoActiviteitDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -860,6 +862,7 @@ const ActivityDetailPanel: React.FC<{
     getActiviteitDetail(urn, datum, env)
       .then((d) => {
         setDetail(d as DsoActiviteitDetail);
+        onLoaded?.(d.omschrijving ?? d.urn);
         // Fetch child names in parallel after parent loads
         const children = d._links?.onderliggendeActiviteiten ?? [];
         if (children.length > 0) {
@@ -890,7 +893,7 @@ const ActivityDetailPanel: React.FC<{
         );
       })
       .finally(() => setLoading(false));
-  }, [urn, datum, env]);
+  }, [urn, datum, env, onLoaded]);
 
   return (
     <div className="flex flex-col h-full border-l border-slate-200 bg-white w-1/3 flex-shrink-0">
@@ -1101,18 +1104,36 @@ const ActiviteitRow: React.FC<{
   </button>
 );
 
-const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
+const ActiviteitenTab: React.FC<{
+  env: DsoEnv;
+  // Selection is lifted into DsoExplorer so the Quality Profile tab can read
+  // the same activity, validity date and authority without ActiviteitenTab
+  // being mounted. Switching tabs must not clear this state.
+  selectedUrn: string | null;
+  onSelectUrn: (urn: string | null) => void;
+  selectedDatum: string | undefined;
+  onSelectedDatumChange: (datum: string | undefined) => void;
+  authorityOin: string;
+  onAuthorityOinChange: (oin: string) => void;
+  onSelectedNameChange: (name: string | undefined) => void;
+}> = ({
+  env,
+  selectedUrn,
+  onSelectUrn,
+  selectedDatum,
+  onSelectedDatumChange,
+  authorityOin,
+  onAuthorityOinChange,
+  onSelectedNameChange,
+}) => {
   const [datum, setDatum] = useState('');
-  const [activeDatum, setActiveDatum] = useState<string | undefined>(undefined);
   const [result, setResult] = useState<ActiviteitenResult | null>(null);
   const [oinMode, setOinMode] = useState(false);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedUrn, setSelectedUrn] = useState<string | null>(null);
   const [urnInput, setUrnInput] = useState('');
   const [level, setLevel] = useState<AuthorityLevel>('gemeente');
-  const [authorityOin, setAuthorityOin] = useState('');
   // Client-side name filter — only meaningful when an authority is fixed,
   // since OIN mode loads the authority's full activity set in one call.
   const [nameFilter, setNameFilter] = useState('');
@@ -1136,14 +1157,14 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
         const dsoDate = toDsoDate(d);
         const res = await getActiviteiten(dsoDate, p, env);
         setResult(res);
-        setActiveDatum(dsoDate);
+        onSelectedDatumChange(dsoDate);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load');
       } finally {
         setLoading(false);
       }
     },
-    [env]
+    [env, onSelectedDatumChange]
   );
 
   const loadByOin = useCallback(
@@ -1153,7 +1174,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
       try {
         const res = await getActiviteitenByOin(oin, env, dsoDate);
         setResult(res);
-        setActiveDatum(dsoDate);
+        onSelectedDatumChange(dsoDate);
         setOinMode(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load');
@@ -1161,19 +1182,23 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
         setLoading(false);
       }
     },
-    [env]
+    [env, onSelectedDatumChange]
   );
 
   useEffect(() => {
-    setSelectedUrn(null);
-    setAuthorityOin('');
+    // Note: selectedUrn is intentionally left alone here. It is owned by
+    // DsoExplorer now, and this effect re-runs every time this tab is
+    // remounted (including on a tab switch back to Activities) — clearing
+    // it here would defeat the point of lifting it.
+    onAuthorityOinChange('');
     setOinMode(false);
     load('', 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
   const handleLoad = () => {
     setPage(1);
-    setSelectedUrn(null);
+    onSelectUrn(null);
     if (authorityOin) {
       loadByOin(authorityOin, toDsoDate(datum));
     } else {
@@ -1185,8 +1210,8 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   const handleLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newLevel = e.target.value as AuthorityLevel;
     setLevel(newLevel);
-    setAuthorityOin('');
-    setSelectedUrn(null);
+    onAuthorityOinChange('');
+    onSelectUrn(null);
     setNameFilter('');
     setOinMode(false);
     setResult(null);
@@ -1194,8 +1219,8 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 
   const handleAuthorityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const oin = e.target.value;
-    setAuthorityOin(oin);
-    setSelectedUrn(null);
+    onAuthorityOinChange(oin);
+    onSelectUrn(null);
     setNameFilter('');
     if (!oin) {
       setOinMode(false);
@@ -1213,7 +1238,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 
   const goPage = (p: number) => {
     setPage(p);
-    setSelectedUrn(null);
+    onSelectUrn(null);
     load(datum, p);
   };
 
@@ -1298,7 +1323,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
                 value={nameFilter}
                 onChange={(e) => {
                   setNameFilter(e.target.value);
-                  setSelectedUrn(null);
+                  onSelectUrn(null);
                 }}
                 placeholder={`Filter ${selectedAuthority ? shortName(selectedAuthority) : 'location'} activities by name…`}
                 className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -1320,14 +1345,14 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
             value={urnInput}
             onChange={(e) => setUrnInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && urnInput.trim()) setSelectedUrn(urnInput.trim());
+              if (e.key === 'Enter' && urnInput.trim()) onSelectUrn(urnInput.trim());
             }}
             placeholder="Paste URN to inspect directly…"
             className="flex-1 px-2.5 py-1.5 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
           <button
             onClick={() => {
-              if (urnInput.trim()) setSelectedUrn(urnInput.trim());
+              if (urnInput.trim()) onSelectUrn(urnInput.trim());
             }}
             disabled={!urnInput.trim()}
             className="px-3 py-1.5 bg-slate-700 text-white text-xs rounded-lg hover:bg-slate-800 disabled:opacity-40 transition-colors"
@@ -1368,7 +1393,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
                 key={a.urn}
                 act={a}
                 selected={selectedUrn === a.urn}
-                onClick={() => setSelectedUrn(a.urn === selectedUrn ? null : a.urn)}
+                onClick={() => onSelectUrn(a.urn === selectedUrn ? null : a.urn)}
               />
             ))}
         </div>
@@ -1377,10 +1402,11 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
         {selectedUrn && (
           <ActivityDetailPanel
             urn={selectedUrn}
-            datum={activeDatum}
+            datum={selectedDatum}
             env={env}
-            onClose={() => setSelectedUrn(null)}
-            onNavigate={(urn) => setSelectedUrn(urn)}
+            onClose={() => onSelectUrn(null)}
+            onNavigate={(urn) => onSelectUrn(urn)}
+            onLoaded={onSelectedNameChange}
           />
         )}
       </div>
@@ -1420,6 +1446,45 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
   );
 };
 
+// ── Quality Profile tab ──────────────────────────────────────────────────────
+// Placeholder only — the real content (context toolbar, scorecard/matrix,
+// legal source card, footer) is a later task. This just proves the shared
+// selection is visible here.
+
+const QualityProfileTab: React.FC<{
+  selectedUrn: string | null;
+  selectedName?: string;
+  onGoToActivities: () => void;
+}> = ({ selectedUrn, selectedName, onGoToActivities }) => {
+  if (!selectedUrn) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
+        <Gauge size={28} className="text-slate-300" />
+        <p className="text-sm font-medium text-slate-600">No activity selected</p>
+        <p className="text-xs text-slate-400 max-w-[420px]">
+          Select an activity in the Activities tab — its quality profile opens here.
+        </p>
+        <button
+          onClick={onGoToActivities}
+          className="bg-slate-700 text-white text-xs rounded-lg px-3 py-1.5 hover:bg-slate-800 transition-colors"
+        >
+          Go to Activities
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
+      <Gauge size={28} className="text-slate-300" />
+      <p className="text-sm font-medium text-slate-600">{selectedName ?? selectedUrn}</p>
+      <p className="text-xs text-slate-400 max-w-[420px]">
+        The quality profile for this activity is not built yet.
+      </p>
+    </div>
+  );
+};
+
 // ── Panel shell ──────────────────────────────────────────────────────────────
 
 interface DsoExplorerProps {
@@ -1428,6 +1493,19 @@ interface DsoExplorerProps {
 
 const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
   const [tab, setTab] = useState<Tab>('begrippen');
+
+  // Selection shared across tabs — see ActiviteitenTab's props. Lifted here so
+  // the Quality Profile tab can read the activity selected in Activities
+  // without either tab needing to know about the other.
+  const [selectedUrn, setSelectedUrn] = useState<string | null>(null);
+  const [selectedDatum, setSelectedDatum] = useState<string | undefined>(undefined);
+  const [authorityOin, setAuthorityOin] = useState('');
+  const [selectedName, setSelectedName] = useState<string | undefined>(undefined);
+
+  const handleSelectUrn = useCallback((urn: string | null) => {
+    setSelectedUrn(urn);
+    if (urn === null) setSelectedName(undefined);
+  }, []);
 
   const tabCls = (t: Tab) =>
     `flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
@@ -1469,13 +1547,40 @@ const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
           <TreePine size={14} />
           Activities
         </button>
+        <button className={tabCls('quality')} onClick={() => setTab('quality')}>
+          <Gauge size={14} />
+          Quality Profile
+          {selectedUrn && tab !== 'quality' && (
+            <span className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded px-1.5 py-px max-w-[220px] truncate">
+              {selectedName ?? selectedUrn}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
         {tab === 'begrippen' && <BegrippenTab env={env} />}
         {tab === 'werkzaamheden' && <WerkzaamhedenTab env={env} />}
-        {tab === 'activiteiten' && <ActiviteitenTab env={env} />}
+        {tab === 'activiteiten' && (
+          <ActiviteitenTab
+            env={env}
+            selectedUrn={selectedUrn}
+            onSelectUrn={handleSelectUrn}
+            selectedDatum={selectedDatum}
+            onSelectedDatumChange={setSelectedDatum}
+            authorityOin={authorityOin}
+            onAuthorityOinChange={setAuthorityOin}
+            onSelectedNameChange={setSelectedName}
+          />
+        )}
+        {tab === 'quality' && (
+          <QualityProfileTab
+            selectedUrn={selectedUrn}
+            selectedName={selectedName}
+            onGoToActivities={() => setTab('activiteiten')}
+          />
+        )}
       </div>
     </div>
   );
