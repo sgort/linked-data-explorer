@@ -47,6 +47,8 @@ import {
 } from '../../services/dsoService';
 import { FormService } from '../../services/formService';
 import { FormSchema } from '../../types';
+import QualityProfileTab from './QualityProfileTab';
+import { Section, TYPERING_META } from './shared';
 
 type Tab = 'begrippen' | 'werkzaamheden' | 'activiteiten' | 'quality';
 
@@ -570,36 +572,6 @@ function buildCpsvEditorImportUrl(params: {
   if (params.functioneleStructuurRef) q.set('fsRef', params.functioneleStructuurRef);
   return `${CPSV_EDITOR_URL.replace(/\/$/, '')}/?${q.toString()}`;
 }
-
-const TYPERING_META: Record<string, { label: string; color: string }> = {
-  indieningsvereisten: {
-    label: 'Submission requirements',
-    color: 'bg-blue-100 text-blue-700 border-blue-200',
-  },
-  Indieningsvereisten: {
-    label: 'Submission requirements',
-    color: 'bg-blue-100 text-blue-700 border-blue-200',
-  },
-  conclusie: {
-    label: 'Decision criteria',
-    color: 'bg-purple-100 text-purple-700 border-purple-200',
-  },
-  Conclusie: {
-    label: 'Decision criteria',
-    color: 'bg-purple-100 text-purple-700 border-purple-200',
-  },
-  maatregelen: { label: 'Measures', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  Maatregelen: { label: 'Measures', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-};
-
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div>
-    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-      {title}
-    </p>
-    {children}
-  </div>
-);
 
 // ── Applicable Rules (STTR) ──────────────────────────────────────────────────
 
@@ -1446,45 +1418,6 @@ const ActiviteitenTab: React.FC<{
   );
 };
 
-// ── Quality Profile tab ──────────────────────────────────────────────────────
-// Placeholder only — the real content (context toolbar, scorecard/matrix,
-// legal source card, footer) is a later task. This just proves the shared
-// selection is visible here.
-
-const QualityProfileTab: React.FC<{
-  selectedUrn: string | null;
-  selectedName?: string;
-  onGoToActivities: () => void;
-}> = ({ selectedUrn, selectedName, onGoToActivities }) => {
-  if (!selectedUrn) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
-        <Gauge size={28} className="text-slate-300" />
-        <p className="text-sm font-medium text-slate-600">No activity selected</p>
-        <p className="text-xs text-slate-400 max-w-[420px]">
-          Select an activity in the Activities tab — its quality profile opens here.
-        </p>
-        <button
-          onClick={onGoToActivities}
-          className="bg-slate-700 text-white text-xs rounded-lg px-3 py-1.5 hover:bg-slate-800 transition-colors"
-        >
-          Go to Activities
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-full flex flex-col items-center justify-center gap-2 text-center p-6">
-      <Gauge size={28} className="text-slate-300" />
-      <p className="text-sm font-medium text-slate-600">{selectedName ?? selectedUrn}</p>
-      <p className="text-xs text-slate-400 max-w-[420px]">
-        The quality profile for this activity is not built yet.
-      </p>
-    </div>
-  );
-};
-
 // ── Panel shell ──────────────────────────────────────────────────────────────
 
 interface DsoExplorerProps {
@@ -1577,7 +1510,9 @@ const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
         {tab === 'quality' && (
           <QualityProfileTab
             selectedUrn={selectedUrn}
-            selectedName={selectedName}
+            selectedDatum={selectedDatum}
+            authorityOin={authorityOin}
+            env={env}
             onGoToActivities={() => setTab('activiteiten')}
           />
         )}

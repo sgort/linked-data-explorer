@@ -10,6 +10,7 @@ const getWerkzaamheidDetail = vi.fn();
 const getActiviteiten = vi.fn();
 const getActiviteitenByOin = vi.fn();
 const getActiviteitDetail = vi.fn();
+const getActiviteitDossier = vi.fn();
 const fetchToepasbareRegels = vi.fn();
 const fetchFormScaffold = vi.fn();
 const saveForm = vi.fn();
@@ -27,6 +28,7 @@ vi.mock('../../services/dsoService', async () => {
     getActiviteiten: (...args: unknown[]) => getActiviteiten(...args),
     getActiviteitenByOin: (...args: unknown[]) => getActiviteitenByOin(...args),
     getActiviteitDetail: (...args: unknown[]) => getActiviteitDetail(...args),
+    getActiviteitDossier: (...args: unknown[]) => getActiviteitDossier(...args),
     fetchToepasbareRegels: (...args: unknown[]) => fetchToepasbareRegels(...args),
     fetchFormScaffold: (...args: unknown[]) => fetchFormScaffold(...args),
   };
@@ -67,6 +69,7 @@ afterEach(() => {
   getActiviteiten.mockReset();
   getActiviteitenByOin.mockReset();
   getActiviteitDetail.mockReset();
+  getActiviteitDossier.mockReset();
   fetchToepasbareRegels.mockReset();
   fetchFormScaffold.mockReset();
   saveForm.mockReset();
@@ -1110,7 +1113,12 @@ describe('DsoExplorer — Activities toolbar', () => {
     await userEvent.click(screen.getByText('Kind'));
     await screen.findByText('Activity detail');
 
-    await userEvent.click(screen.getAllByText('Kind')[0]);
+    // Scoped to <p> elements and taking the first (DOM order: list row, then
+    // the detail panel's own header) — once selected, selectedName also
+    // shows as a same-text pill on the Quality Profile tab button (README
+    // §1's selection hint, a <span>), so an unscoped getAllByText('Kind')[0]
+    // would now hit that pill instead of the list row.
+    await userEvent.click(screen.getAllByText('Kind', { selector: 'p' })[0]);
     await vi.waitFor(() => expect(screen.queryByText('Activity detail')).toBeNull());
   });
 
@@ -1233,6 +1241,45 @@ describe('DsoExplorer — authorityLabel for a non-preset (register-only) author
   });
 });
 
+function minimalDossier(overrides: Record<string, unknown> = {}) {
+  return {
+    urn: 'a1',
+    omschrijving: 'Kapvergunning',
+    bestuursorgaan: null,
+    legalSource: {
+      available: true,
+      regelingIdentificatie: null,
+      regelingTitel: null,
+      juridischeRegels: [],
+    },
+    annotation: {
+      identificatie: null,
+      naam: null,
+      groep: null,
+      symboolcode: null,
+      bovenliggendeActiviteitRef: null,
+    },
+    rtrLocaties: [],
+    decisionCriteria: null,
+    submissionRequirements: null,
+    provenance: {
+      env: 'pre',
+      datum: null,
+      regelingIdentificatie: null,
+      fetchedAt: '2026-09-22T00:00:00.000Z',
+      failures: [],
+    },
+    qualityProfile: {
+      urn: 'a1',
+      activityIdentity: 'semantic',
+      legalTraceability: { rules: 0, withWId: 0, withArticleText: 0 },
+      crossLayerConsistency: { sharedObjects: [] },
+      ruleSets: { conclusie: null, indieningsvereisten: null },
+    },
+    ...overrides,
+  };
+}
+
 describe('DsoExplorer — Quality Profile tab', () => {
   async function selectActivity() {
     getActiviteiten.mockResolvedValue({
@@ -1245,6 +1292,7 @@ describe('DsoExplorer — Quality Profile tab', () => {
       omschrijving: 'Kapvergunning',
       verfijnbaar: true,
     });
+    getActiviteitDossier.mockResolvedValue(minimalDossier());
     searchBegrippen.mockResolvedValue(emptyResult());
     render(<DsoExplorer />);
     await screen.findByPlaceholderText('Search concepts…');
