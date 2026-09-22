@@ -22,6 +22,7 @@
     "check-supply-chain": "node scripts/check-supply-chain.mjs",
     "check-mirror": "bash scripts/check-mirror.sh",
     "authorities:generate": "node scripts/generate-dso-authorities.mjs",
+    "dso:dossier": "node scripts/dso-dossier.mjs",
     "prepare": "husky || true",
     "postinstall": "node scripts/write-deps-marker.mjs"
   },
