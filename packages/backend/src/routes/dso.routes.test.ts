@@ -1255,4 +1255,124 @@ describe('GET /v1/dso/regelingen/:id/documentstructuur/:wId', () => {
       'pre'
     );
   });
+
+  test('an upstream 404 passes through as 404', async () => {
+    ozon.getDocumentComponent.mockRejectedValue(new Error('DSO responded 404: not found'));
+
+    const res = await request(makeApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/_absent'
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  test('502 carries the upstream message', async () => {
+    ozon.getDocumentComponent.mockRejectedValue(new Error('DSO responded 500: boom'));
+
+    const res = await request(makeApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/gm0995_x__art_15.2'
+    );
+
+    expect(res.status).toBe(502);
+  });
+});
+
+describe('/v1/dso regelingen operations match their OpenAPI description', () => {
+  function makeDocumentedApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(versionMiddleware); // app-wide in index.ts
+    app.use('/v1/dso', dsoRoutes);
+    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+    return app;
+  }
+
+  const REGELINGEN_ZOEK_RESULT = {
+    _embedded: {
+      regelingen: [
+        {
+          identificatie: 'akn/nl/act/gm0995/2020/omgevingsplan',
+          naam: 'Omgevingsplan gemeente Lelystad',
+        },
+      ],
+    },
+    _links: { self: { href: '/regelingen/_zoek?size=100' } },
+  };
+
+  const REGELING_ANNOTATIES = {
+    activiteiten: [{ identificatie: 'act-1', naam: 'Kappen van bomen' }],
+    regelteksten: [{ identificatie: 'regeltekst-1', wId: 'gm0995_x__art_15.2' }],
+    regelsVoorIedereen: [],
+    locaties: [],
+  };
+
+  const REGELING_DOCUMENT_COMPONENT = {
+    _links: {
+      self: {
+        href: '/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/gm0995_x__art_15.2',
+      },
+    },
+    identificatie: 'gm0995_x__art_15.2',
+    tekst: '<al>Artikel 15.2 tekst</al>',
+  };
+
+  test('POST /regelingen/zoek 200, as documented', async () => {
+    ozon.zoekRegelingen.mockResolvedValue(REGELINGEN_ZOEK_RESULT);
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/regelingen/zoek')
+      .send({ bevoegdGezag: ['gm0995'] });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dso/regelingen/zoek');
+  });
+
+  test('POST /regelingen/zoek 400, as documented', async () => {
+    const res = await request(makeDocumentedApp()).post('/v1/dso/regelingen/zoek').send({});
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/dso/regelingen/zoek');
+  });
+
+  test('GET /regelingen/:id/annotaties 200, as documented', async () => {
+    ozon.getRegeltekstAnnotaties.mockResolvedValue(REGELING_ANNOTATIES);
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/annotaties'
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/regelingen/{id}/annotaties');
+  });
+
+  test('GET /regelingen/:id/annotaties 404, as documented', async () => {
+    ozon.getRegeltekstAnnotaties.mockRejectedValue(new Error('DSO responded 404: not found'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/regelingen/_absent/annotaties');
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/regelingen/{id}/annotaties');
+  });
+
+  test('GET /regelingen/:id/documentstructuur/:wId 200, as documented', async () => {
+    ozon.getDocumentComponent.mockResolvedValue(REGELING_DOCUMENT_COMPONENT);
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/gm0995_x__art_15.2'
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/regelingen/{id}/documentstructuur/{wId}');
+  });
+
+  test('GET /regelingen/:id/documentstructuur/:wId 404, as documented', async () => {
+    ozon.getDocumentComponent.mockRejectedValue(new Error('DSO responded 404: not found'));
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/_absent'
+    );
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/regelingen/{id}/documentstructuur/{wId}');
+  });
 });

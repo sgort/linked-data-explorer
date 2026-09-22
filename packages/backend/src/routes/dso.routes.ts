@@ -393,13 +393,9 @@ router.get('/regelingen/:id/annotaties', async (req: Request, res: Response) => 
   res.set('API-Version', packageJson.version);
   try {
     const geldigOp = typeof req.query['geldigOp'] === 'string' ? req.query['geldigOp'] : undefined;
-    const data = await ozonService.getRegeltekstAnnotaties(
-      req.params['id'] as string,
-      getEnv(req),
-      {
-        geldigOp,
-      }
-    );
+    const data = await ozonService.getRegeltekstAnnotaties(req.params.id, getEnv(req), {
+      geldigOp,
+    });
     res.status(200).json({ success: true, data });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
@@ -420,11 +416,7 @@ router.get('/regelingen/:id/annotaties', async (req: Request, res: Response) => 
 router.get('/regelingen/:id/documentstructuur/:wId', async (req: Request, res: Response) => {
   res.set('API-Version', packageJson.version);
   try {
-    const data = await ozonService.getDocumentComponent(
-      req.params['id'] as string,
-      req.params['wId'] as string,
-      getEnv(req)
-    );
+    const data = await ozonService.getDocumentComponent(req.params.id, req.params.wId, getEnv(req));
     res.status(200).json({ success: true, data });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
