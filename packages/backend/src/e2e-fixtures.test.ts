@@ -20,6 +20,21 @@ function readManifest(): Manifest {
   return JSON.parse(raw) as Manifest;
 }
 
+/**
+ * The tenant-keyed entries, excluding the manifest's non-tenant sections.
+ *
+ * `sharedDecisions` describes the DMNs the whole bundle depends on — deployed
+ * once, without an Organization — so it is keyed at the top level rather than
+ * duplicated under each tenant that calls them. It is not a tenant, and
+ * iterating it as one treats its `files` object as a list of fixture entries.
+ * See e2e-fixture-decisions.test.ts, which asserts its contents.
+ */
+const NON_TENANT_KEYS = new Set(['sharedDecisions']);
+
+function tenantsOf(manifest: Manifest): Array<[string, FixtureEntry[]]> {
+  return Object.entries(manifest).filter(([key]) => !NON_TENANT_KEYS.has(key));
+}
+
 function allEntries(entries: FixtureEntry[]): FixtureEntry[] {
   return entries.flatMap((entry) => [entry, ...(entry.subProcesses ?? [])]);
 }
@@ -31,7 +46,7 @@ describe('e2e-fixtures/manifest.json', () => {
 
   it('every declared file exists under its tenant directory', () => {
     const manifest = readManifest();
-    for (const [tenant, entries] of Object.entries(manifest)) {
+    for (const [tenant, entries] of tenantsOf(manifest)) {
       for (const entry of allEntries(entries)) {
         for (const file of [entry.bpmn, ...entry.forms, ...entry.documents]) {
           const filePath = path.join(FIXTURES_ROOT, tenant, file);
@@ -43,7 +58,7 @@ describe('e2e-fixtures/manifest.json', () => {
 
   it("every entry's BPMN id matches its declared processDefinitionKey", () => {
     const manifest = readManifest();
-    for (const [tenant, entries] of Object.entries(manifest)) {
+    for (const [tenant, entries] of tenantsOf(manifest)) {
       for (const entry of allEntries(entries)) {
         const bpmnPath = path.join(FIXTURES_ROOT, tenant, entry.bpmn);
         const xml = fs.readFileSync(bpmnPath, 'utf8');
@@ -76,7 +91,7 @@ describe('e2e-fixtures/manifest.json', () => {
     ]);
 
     const manifest = readManifest();
-    for (const [tenant, entries] of Object.entries(manifest)) {
+    for (const [tenant, entries] of tenantsOf(manifest)) {
       for (const entry of allEntries(entries)) {
         const bpmnPath = path.join(FIXTURES_ROOT, tenant, entry.bpmn);
         const doc = libxmljs.parseXml(fs.readFileSync(bpmnPath, 'utf8'));
@@ -110,7 +125,7 @@ describe('e2e-fixtures/manifest.json', () => {
 
   it("a shell's calledElement references match its nested subProcess keys", () => {
     const manifest = readManifest();
-    for (const [tenant, entries] of Object.entries(manifest)) {
+    for (const [tenant, entries] of tenantsOf(manifest)) {
       for (const shell of entries) {
         if (!shell.subProcesses?.length) continue;
         const bpmnPath = path.join(FIXTURES_ROOT, tenant, shell.bpmn);
