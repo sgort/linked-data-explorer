@@ -245,28 +245,82 @@ headline grade. Its purpose is comparison — the same activity across
 municipalities, or different activities within one — and a single number
 would flatten precisely the differences a comparison needs to see.
 
-The worked example makes the distinction concrete. Its Conclusie DMN has 7
-decisions, of which only 3 are semantically named — 4 are opaque, such as
-`_6d45be8c-8010-4d11-8775-487a28b88087_Niet van toepassing`, where only the
-trailing suffix carries meaning. Its 5 decision inputs are opaque *without
-exception* — all 5 follow the `uitv__<guid>` pattern with no semantic
-naming at all. Read as bare XML, that decision layer looks close to
-unreadable. But label coverage is 5 of 5: every one of those opaque inputs
-carries a `uitv:vraagTekst` that spells out what it asks — "Gaat het om een
-boom of houtopstand binnen de bebouwingscontour houtkap?" and similar — so
-the *meaning* is fully recoverable even though the *identifier* is not. One
-IMOW reference embedded in the DMN — the `gebiedengroep` for "bebouwingscontour,
-houtkap" — resolves against the annotation layer with zero left dangling;
-it is the same object the RTR lists under the activity's own `locaties`,
-provably the same rule reached two different ways, which nothing in either
-artefact says on its own. And legal traceability is 10 of 10: every one of
-the 10 juridische regels traces through its `wId` to retrievable article
-text — the legal half of the chain, unlike the executable half, is fully
-legible on its own terms and needs no recovery at all.
+**The profile is measured per rule set, not once per activity.** An activity
+can carry two DMNs — Conclusie (decision criteria) and Indieningsvereisten
+(submission requirements) — and they are measured independently:
+`qualityProfile.ruleSets.conclusie` and `.indieningsvereisten`, each either
+`null` (that rule set, or its DMN, is absent) or an object carrying that
+DMN's own `decisionNaming`, `inputNaming`, `labelCoverage` and
+`refResolvability`. Only `activityIdentity`, `legalTraceability` and
+`crossLayerConsistency` stay activity-level — the last of these because a
+shared IMOW reference can equally well be embedded in either rule set's
+decision logic, so cross-layer consistency considers refs from **both**
+DMNs, unioned, while still requiring the same ref to appear in all three
+layers (DMN, annotation-resolved, RTR `locaties`).
 
-That asymmetry — a legal source that is completely traceable sitting next to
-a decision layer that is completely opaque and only readable through its
-question labels — is exactly the kind of thing a single grade would hide.
-Two activities could score identically on a blended number while meaning
-completely different things about where their readability actually lives,
-and where an authority publishing this data would need to improve it.
+**The naming-split counts are evidence, not just totals.** Reporting "3/7
+semantic, 4 opaque" says how much of a DMN is readable but not *which* items
+scored how — for a municipality being shown this about its own data, that is
+exactly the part that needs to be auditable. `decisionNaming.items` and
+`inputNaming.items` carry one entry per decision/input: its `name`, its
+`class` (`semantic` / `opaque-resolvable` / `opaque-dangling`), and — for
+inputs — the `question` it resolved, or `null`. A question resolves through
+the DMN's own structure: an `<dmn:inputData>` carries a
+`<uitv:uitvoeringsregelRef href="#UitvIdxxxx"/>` inside its
+`<dmn:extensionElements>`, and the matching `<uitv:uitvoeringsregel
+id="UitvIdxxxx">` elsewhere in the document contains the `<uitv:vraagTekst>`.
+This is also what fixed a defect in `labelCoverage`: it used to count every
+`vraagTekst` found anywhere in the document against `inputs.total`, which
+could exceed it — a DMN's questionnaire can carry more entries than the
+current inputs actually reference, so the old count could read, say, 7
+questions against 5 inputs. `labelCoverage.withQuestion` now counts inputs
+that resolved *their own* question through `uitvoeringsregelRef`, which by
+construction can never exceed `labelCoverage.inputs`.
+
+The two worked examples make the distinction concrete, and were chosen
+because they contrast rather than agree.
+
+**`docs/examples/dossier-houtopstandvellen-gm0995.md`** (Lelystad). Its
+Conclusie DMN has 7 decisions, of which only 3 are semantically named — 4 are
+opaque, such as `_6d45be8c-8010-4d11-8775-487a28b88087_Niet van
+toepassing`, where only the trailing suffix carries meaning. Its 5 decision
+inputs are opaque *without exception* — all 5 follow the `uitv__<guid>`
+pattern with no semantic naming at all, e.g.
+`uitv__864933e7-4ea9-45a2-ae17-d8b1a4df34d7`. Read as bare XML, that
+decision layer looks close to unreadable. But label coverage is 5 of 5:
+every one of those opaque inputs resolves a `uitv:vraagTekst` that spells
+out what it asks — `uitv__864933e7-…` resolves to "Gaat het om een
+aangewezen bijzondere boom of plant?", and the other four resolve four
+different questions in turn — so the *meaning* is fully recoverable even
+though the *identifier* is not. One IMOW reference embedded in the Conclusie
+DMN — the `gebiedengroep` for "bebouwingscontour, houtkap" — resolves
+against the annotation layer with zero left dangling; it is the same object
+the RTR lists under the activity's own `locaties`, provably the same rule
+reached two different ways, which nothing in either artefact says on its
+own. And legal traceability is 10 of 10: every one of the 10 juridische
+regels traces through its `wId` to retrievable article text — the legal half
+of the chain, unlike the executable half, is fully legible on its own terms
+and needs no recovery at all.
+
+**`docs/examples/dossier-houtopstandvellen-gm1708.md`** (Steenwijkerland),
+the same activity type, on the same axes, scores the opposite way. Its
+Conclusie DMN has 4 decisions and 8 inputs, and every single one of them is
+semantically named — `situatie boom`, `omtrek boom kappen`, `beschermd stads
+dorpgezicht` and the rest — with `situatie boom` itself resolving to "Staat
+de boom die u gaat kappen in een houtwal, houtsingel, laanbeplanting of
+bosperceel?". Nothing here needs recovering: the identifiers already carry
+the meaning the Lelystad DMN had to recover through label coverage. Its
+Indieningsvereisten rule set tells a third story on its own axis: 2
+decisions and 6 inputs, all semantically named, but label coverage is only 3
+of 6 — three of those inputs (all `BIJLAGEN - …` attachment requirements)
+carry no question at all, which is not a defect; an attachment requirement
+has nothing to ask.
+
+That range — a Conclusie that is completely opaque and only readable through
+its question labels, sitting next to one that needed no recovery at all, and
+an Indieningsvereisten whose semantic names still leave a third of its
+inputs' *purpose* unstated — is exactly the kind of thing a single grade, or
+a single activity-wide number, would hide. Two activities could score
+identically on a blended figure while meaning completely different things
+about where their readability actually lives, and where an authority
+publishing this data would need to improve it.

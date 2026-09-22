@@ -1,4 +1,3 @@
-// scripts/dso-dossier.test.mjs
 import { renderDossier } from './dso-dossier.mjs';
 import { execFileSync } from 'node:child_process';
 
@@ -37,7 +36,44 @@ function render(data, label) {
   }
 }
 
-// --- Base fixture: a fully-populated activity -----------------------------
+// --- Base fixture: a fully-populated activity, BOTH rule sets present ------
+//
+// decisionNaming/inputNaming/labelCoverage/refResolvability now live under
+// `qualityProfile.ruleSets.conclusie` / `.indieningsvereisten`, each carrying
+// the item lists that are the evidence behind the counts. One decision name
+// and one input name contain a literal `|`, so the table-escaping check has
+// something to escape rather than something incidentally safe.
+
+const conclusieRuleSetQuality = {
+  decisionNaming: {
+    total: 2,
+    semantic: 1,
+    opaque: 1,
+    items: [
+      { name: 'Boom kappen of houtopstand vellen', class: 'semantic' },
+      { name: '_6d45be8c-8010-4d11-8775-487a28b88087_Vergunningplicht', class: 'opaque-dangling' },
+    ],
+  },
+  inputNaming: {
+    total: 2,
+    semantic: 0,
+    opaque: 2,
+    items: [
+      {
+        name: 'uitv__864933e7-4ea9-45a2-ae17-d8b1a4df34d7',
+        class: 'opaque-resolvable',
+        question: 'Gaat het om een boom of houtopstand | bijzonder object binnen de contour?',
+      },
+      {
+        name: 'onderwerp_c7ef02b1_0f07_4ec7_a91e_6a6c35dd3922',
+        class: 'opaque-dangling',
+        question: null,
+      },
+    ],
+  },
+  labelCoverage: { inputs: 2, withQuestion: 1 },
+  refResolvability: { total: 1, resolved: 1, dangling: 0 },
+};
 
 const baseData = {
   urn: 'nl.imow-gm0995.activiteit.HoutopstandVellen',
@@ -67,11 +103,12 @@ const baseData = {
   submissionRequirements: null,
   qualityProfile: {
     activityIdentity: 'semantic',
-    decisionNaming: { total: 7, semantic: 3, opaque: 4 },
-    inputNaming: { total: 5, semantic: 0, opaque: 5 },
-    labelCoverage: { inputs: 5, withQuestion: 5 },
-    refResolvability: { total: 1, resolved: 1, dangling: 0 },
     legalTraceability: { rules: 10, withWId: 10, withArticleText: 10 },
+    crossLayerConsistency: { sharedObjects: [] },
+    ruleSets: {
+      conclusie: conclusieRuleSetQuality,
+      indieningsvereisten: null,
+    },
   },
   provenance: { env: 'prod', datum: '22-09-2026', fetchedAt: '2026-09-22T14:00:00Z', failures: [] },
 };
@@ -88,13 +125,107 @@ if (md !== null) {
     // alongside it — a naive `/<[^>]+>/g` swallows the whole CDATA span.
     ['preserves CDATA payload text', md.includes('met bijzondere tekens') && !md.includes('CDATA')],
     ['shows the viewer link', md.includes('registratie-toepasbare-regels')],
-    // FINDING 2: assert the actual rendered split, not incidental digits that
-    // also appear in the rule identifier, OIN or date. Must fail if
-    // `decisionNaming` is removed from the fixture (verified below).
-    ['reports the naming split', md.includes('3/7 semantic') && md.includes('4 opaque')],
-    ['marks an absent rule set', md.includes('Not present')],
+    // The evidence heading states counts per rule set.
+    ['renders the evidence heading with counts', md.includes('### Conclusie — 2 decisions, 2 inputs')],
     ['resolves the locatie name', md.includes('bebouwingscontour, houtkap')]
   );
+
+  // --- Decisions table -------------------------------------------------
+  checks.push(
+    ['decisions table header present', md.includes('| Decision | Naming |')],
+    [
+      'renders a semantic decision row',
+      md.includes('| Boom kappen of houtopstand vellen | semantic |'),
+    ],
+    [
+      'renders an opaque-dangling decision row',
+      md.includes(
+        '| _6d45be8c-8010-4d11-8775-487a28b88087_Vergunningplicht | opaque-dangling |'
+      ),
+    ]
+  );
+
+  // --- Inputs table, including the escaped `|` -------------------------
+  checks.push(
+    ['inputs table header present', md.includes('| Input | Naming | Question |')],
+    [
+      "an input's own question is rendered next to it, with the literal `|` escaped",
+      md.includes(
+        '| uitv__864933e7-4ea9-45a2-ae17-d8b1a4df34d7 | opaque-resolvable | Gaat het om een boom of houtopstand \\| bijzonder object binnen de contour? |'
+      ),
+    ],
+    [
+      // Verifies the escaping did NOT bleed into an unrelated row, i.e. the
+      // table's column count still lines up for the row with no question.
+      'an input with no resolved question renders an em dash, not a blank cell',
+      md.includes('| onderwerp_c7ef02b1_0f07_4ec7_a91e_6a6c35dd3922 | opaque-dangling | — |')
+    ],
+    [
+      // Sanity check that escaping actually changed something: if this raw,
+      // un-escaped `|`-containing question text appeared verbatim, the table
+      // would be broken (extra column) rather than merely rendered as text.
+      'the raw un-escaped question text (with a bare `|`) does not appear anywhere',
+      !md.includes('Gaat het om een boom of houtopstand | bijzonder object')
+    ]
+  );
+
+  // --- Quality profile is now per rule set ------------------------------
+  checks.push(
+    ['Conclusie quality sub-table present', md.includes('**Conclusie**')],
+    ['reports the Conclusie naming split', md.includes('1/2 semantic') && md.includes('1 opaque')],
+    ['marks the absent Indieningsvereisten rule set as Not present (evidence)', md.includes('Not present for this activity.')],
+    ['marks the absent Indieningsvereisten quality as Not present', md.includes('**Indieningsvereisten:** Not present.')]
+  );
+}
+
+// --- An absent rule set must not crash, and must render "Not present" -----
+
+const noIndieningsvereistenData = {
+  ...baseData,
+  submissionRequirements: null,
+  qualityProfile: {
+    ...baseData.qualityProfile,
+    ruleSets: { conclusie: conclusieRuleSetQuality, indieningsvereisten: null },
+  },
+};
+
+const mdNoIndiening = render(noIndieningsvereistenData, 'no-indieningsvereisten');
+
+if (mdNoIndiening !== null) {
+  checks.push([
+    'an absent rule set renders "Not present" for both its metadata and its evidence, without crashing',
+    mdNoIndiening.includes('### Indieningsvereisten') &&
+      mdNoIndiening.includes('Not present for this activity.') &&
+      mdNoIndiening.includes('**Indieningsvereisten:** Not present.'),
+  ]);
+}
+
+// --- A rule set present as metadata but with no measured quality (DMN ------
+// --- extraction failed) must not crash, and must render no evidence table --
+
+const dmnFailedData = {
+  ...baseData,
+  submissionRequirements: {
+    identifier: 105947,
+    sttrVersie: 1,
+    begindatum: '12-12-2025',
+    viewerUrl: 'https://omgevingswet.overheid.nl/registratie-toepasbare-regels/id/IndieningsvereistenVergunning',
+  },
+  qualityProfile: {
+    ...baseData.qualityProfile,
+    ruleSets: { conclusie: conclusieRuleSetQuality, indieningsvereisten: null },
+  },
+};
+
+const mdDmnFailed = render(dmnFailedData, 'dmn-failed');
+
+if (mdDmnFailed !== null) {
+  checks.push([
+    'a present rule set whose DMN could not be measured renders its metadata, no evidence table, and does not crash',
+    mdDmnFailed.includes('### Indieningsvereisten') &&
+      mdDmnFailed.includes('registratie-toepasbare-regels/id/IndieningsvereistenVergunning') &&
+      !mdDmnFailed.includes('### Indieningsvereisten — '),
+  ]);
 }
 
 // --- FINDING 3a: provenance.failures -> "Incomplete legs" section ---------

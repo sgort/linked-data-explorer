@@ -1021,12 +1021,9 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
   const QUALITY_PROFILE = {
     urn: DOSSIER.urn,
     activityIdentity: 'semantic',
-    decisionNaming: null,
-    inputNaming: null,
-    labelCoverage: null,
-    refResolvability: { total: 0, resolved: 0, dangling: 0 },
     legalTraceability: { rules: 0, withWId: 0, withArticleText: 0 },
     crossLayerConsistency: { sharedObjects: [] },
+    ruleSets: { conclusie: null, indieningsvereisten: null },
   };
 
   test('GET /activiteiten/:urn/dossier 200, as documented', async () => {

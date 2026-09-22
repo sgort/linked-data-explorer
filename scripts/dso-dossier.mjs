@@ -35,18 +35,83 @@ function pct(part, total) {
   return total ? `${Math.round((100 * part) / total)}%` : 'n/a';
 }
 
-function renderRuleSet(title, set) {
+/**
+ * A table cell must not contain a raw `|` (it would end the cell early and
+ * shift every following column) or a newline (it would end the row). Both are
+ * plausible in a decision/input name or a vraagTekst question, so every value
+ * that reaches a table goes through this first.
+ */
+function escapeCell(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  return String(value)
+    .replace(/\|/g, '\\|')
+    .replace(/\r?\n/g, ' ');
+}
+
+/**
+ * The evidence behind the naming-split counts: one row per decision and per
+ * input, so a municipality can see WHICH item scored how, not just how many.
+ * `rsq` is the rule set's slice of the quality profile (`ruleSets.conclusie`
+ * or `ruleSets.indieningsvereisten`); `null` when the DMN itself could not be
+ * measured (e.g. it failed to extract), in which case this renders nothing
+ * rather than crashing on missing fields.
+ */
+function renderEvidence(rsq) {
+  if (!rsq) return [];
+  const { decisionNaming, inputNaming } = rsq;
+  const lines = [
+    '',
+    '**Decisions**',
+    '',
+    '| Decision | Naming |',
+    '|---|---|',
+  ];
+  for (const item of decisionNaming.items) {
+    lines.push(`| ${escapeCell(item.name)} | ${item.class} |`);
+  }
+  lines.push('', '**Inputs**', '', '| Input | Naming | Question |', '|---|---|---|');
+  for (const item of inputNaming.items) {
+    lines.push(`| ${escapeCell(item.name)} | ${item.class} | ${escapeCell(item.question)} |`);
+  }
+  lines.push('');
+  return lines;
+}
+
+function renderRuleSet(title, set, rsq) {
   if (!set) return `### ${title}\n\nNot present for this activity.\n`;
-  return [
-    `### ${title}`,
+  const lines = [
+    rsq
+      ? `### ${title} — ${rsq.decisionNaming.total} decisions, ${rsq.inputNaming.total} inputs`
+      : `### ${title}`,
     '',
     `- **Toepasbare regel:** \`${set.identifier}\` (STTR v${set.sttrVersie ?? '?'}, vanaf ${set.begindatum ?? '?'})`,
     set.toestemming ? `- **Toestemming:** ${set.toestemming}` : null,
     `- **Viewer:** ${set.viewerUrl}`,
     '',
-  ]
-    .filter(Boolean)
-    .join('\n');
+  ].filter(Boolean);
+  return [...lines, ...renderEvidence(rsq)].join('\n');
+}
+
+/**
+ * The Quality profile's per-rule-set figures: since a dossier can carry two
+ * DMNs (Conclusie, Indieningsvereisten) with different naming and coverage,
+ * a single blended table would hide exactly the comparison it exists to
+ * show. `Not present.` for a rule set whose DMN was never measured.
+ */
+function renderRuleSetQualityTable(title, rsq) {
+  if (!rsq) return [`**${title}:** Not present.`, ''];
+  const { decisionNaming: dn, inputNaming: inp, labelCoverage: lc, refResolvability: rr } = rsq;
+  return [
+    `**${title}**`,
+    '',
+    '| Dimension | Value |',
+    '|---|---|',
+    `| Decision naming | ${dn.semantic}/${dn.total} semantic, ${dn.opaque} opaque (${pct(dn.opaque, dn.total)}) |`,
+    `| Input naming | ${inp.semantic}/${inp.total} semantic, ${inp.opaque} opaque (${pct(inp.opaque, inp.total)}) |`,
+    `| Label coverage | ${lc.withQuestion}/${lc.inputs} inputs carry a question |`,
+    `| Ref resolvability | ${rr.resolved} resolved, ${rr.dangling} dangling |`,
+    '',
+  ];
 }
 
 export function renderDossier(d) {
@@ -89,32 +154,28 @@ export function renderDossier(d) {
   lines.push(`- **Parent activity:** \`${d.annotation?.bovenliggendeActiviteitRef ?? '—'}\``);
   lines.push('');
 
+  const ruleSets = q.ruleSets ?? {};
+
   lines.push('## 3. Decision criteria', '');
-  lines.push(renderRuleSet('Conclusie', d.decisionCriteria));
+  lines.push(renderRuleSet('Conclusie', d.decisionCriteria, ruleSets.conclusie));
   lines.push('## 4. Submission requirements', '');
-  lines.push(renderRuleSet('Indieningsvereisten', d.submissionRequirements));
+  lines.push(renderRuleSet('Indieningsvereisten', d.submissionRequirements, ruleSets.indieningsvereisten));
 
   lines.push('## Quality profile', '');
   lines.push('Two axes: how much is readable as it stands, and how much the dossier had to recover.', '');
   lines.push('| Dimension | Value |', '|---|---|');
   lines.push(`| Activity identity | ${q.activityIdentity ?? '—'} |`);
-  if (q.decisionNaming)
-    lines.push(
-      `| Decision naming | ${q.decisionNaming.semantic}/${q.decisionNaming.total} semantic, ${q.decisionNaming.opaque} opaque (${pct(q.decisionNaming.opaque, q.decisionNaming.total)}) |`
-    );
-  if (q.inputNaming)
-    lines.push(
-      `| Input naming | ${q.inputNaming.semantic}/${q.inputNaming.total} semantic, ${q.inputNaming.opaque} opaque (${pct(q.inputNaming.opaque, q.inputNaming.total)}) |`
-    );
-  if (q.labelCoverage)
-    lines.push(`| Label coverage | ${q.labelCoverage.withQuestion}/${q.labelCoverage.inputs} inputs carry a question |`);
-  if (q.refResolvability)
-    lines.push(`| Ref resolvability | ${q.refResolvability.resolved} resolved, ${q.refResolvability.dangling} dangling |`);
   if (q.legalTraceability)
     lines.push(
       `| Legal traceability | ${q.legalTraceability.withArticleText}/${q.legalTraceability.rules} rules traced to article text |`
     );
   lines.push('');
+  // The naming-split, label-coverage and ref-resolvability figures live per
+  // rule set now — a blended table would average away exactly the contrast
+  // (e.g. an opaque-but-labelled Conclusie next to a fully semantic
+  // Indieningsvereisten) that the profile exists to surface.
+  lines.push(...renderRuleSetQualityTable('Conclusie', ruleSets.conclusie));
+  lines.push(...renderRuleSetQualityTable('Indieningsvereisten', ruleSets.indieningsvereisten));
 
   const failures = d.provenance?.failures ?? [];
   if (failures.length) {
