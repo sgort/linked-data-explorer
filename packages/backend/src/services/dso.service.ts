@@ -23,21 +23,38 @@ function getDsoConfig(env: DsoEnv = 'pre') {
   return env === 'prod' ? config.dsoProd : config.dso;
 }
 
+export interface DsoFetchInit {
+  method?: 'GET' | 'POST';
+  body?: unknown;
+  headers?: Record<string, string>;
+}
+
 /**
  * Internal fetch helper for all DSO API calls.
  * Attaches the x-api-key header and enforces the configured timeout.
+ *
+ * Exported so `ozon.service.ts` shares one timeout, key-attachment and error
+ * contract with the five original APIs.
  */
-async function dsoFetch(url: string, env: DsoEnv = 'pre'): Promise<unknown> {
+export async function dsoFetch(
+  url: string,
+  env: DsoEnv = 'pre',
+  init: DsoFetchInit = {}
+): Promise<unknown> {
   const dsoConfig = getDsoConfig(env);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
 
   try {
     const response = await fetch(url, {
+      method: init.method ?? 'GET',
       headers: {
         'x-api-key': dsoConfig.apiKey,
         Accept: 'application/hal+json',
+        ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...init.headers,
       },
+      ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
       signal: controller.signal,
     });
 

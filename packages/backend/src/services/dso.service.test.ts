@@ -11,6 +11,7 @@ const configMock = {
     zoekinterfaceBaseUrl: 'https://pre.example/zoek',
     opvragenWerkzaamhedenBaseUrl: 'https://pre.example/werkzaamheden',
     uitvoerenGegevensBaseUrl: 'https://pre.example/uitvoeren',
+    ozonBaseUrl: 'https://pre.example/ozon',
     apiKey: 'pre-key',
     timeout: 15000,
   },
@@ -20,6 +21,7 @@ const configMock = {
     zoekinterfaceBaseUrl: 'https://prod.example/zoek',
     opvragenWerkzaamhedenBaseUrl: 'https://prod.example/werkzaamheden',
     uitvoerenGegevensBaseUrl: 'https://prod.example/uitvoeren',
+    ozonBaseUrl: 'https://prod.example/ozon',
     apiKey: 'prod-key',
   },
 };
@@ -30,6 +32,7 @@ jest.mock('../utils/config', () => ({
 }));
 
 import { logger } from '../utils/logger';
+import * as dsoService from './dso.service';
 import {
   extractDmnFromSttr,
   extractFormScaffoldFromSttr,
@@ -940,5 +943,35 @@ describe('getActiviteit caching', () => {
     await getActiviteit(urn, '22-09-2026', 'prod');
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('dsoFetch request options', () => {
+  beforeEach(() => {
+    (global.fetch as jest.Mock).mockReset();
+    (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+  });
+
+  test('defaults to GET with hal+json and no body', async () => {
+    await dsoService.getActiviteiten({ datum: '22-09-2026' }, 'pre');
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.method ?? 'GET').toBe('GET');
+    expect(init.headers.Accept).toBe('application/hal+json');
+    expect(init.body).toBeUndefined();
+  });
+
+  test('sends a JSON body and extra headers when asked', async () => {
+    await dsoService.dsoFetch('https://example.test/x', 'pre', {
+      method: 'POST',
+      body: { bevoegdGezag: ['gm0995'] },
+      headers: { 'Content-Crs': 'http://www.opengis.net/def/crs/EPSG/0/28992' },
+    });
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.method).toBe('POST');
+    expect(init.headers['Content-Type']).toBe('application/json');
+    expect(init.headers['Content-Crs']).toBe('http://www.opengis.net/def/crs/EPSG/0/28992');
+    expect(JSON.parse(init.body)).toEqual({ bevoegdGezag: ['gm0995'] });
   });
 });
