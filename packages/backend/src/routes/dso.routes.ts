@@ -72,8 +72,11 @@ router.post('/activiteiten/zoek', async (req: Request, res: Response) => {
  * The full chain: legal source, annotation, decision criteria, submission
  * requirements, plus the quality profile.
  *
- * Declared before `/activiteiten/:urn` — Express matches in declaration order,
- * and the detail route would otherwise swallow this path.
+ * Declared before `/activiteiten/:urn` by convention, grouping the two
+ * `/activiteiten/:urn*` routes together — not because ordering is
+ * load-bearing here. A 2-segment route (`/activiteiten/:urn`) cannot match
+ * this route's 3-segment path (`/activiteiten/:urn/dossier`) regardless of
+ * declaration order, so the routes would resolve identically either way.
  */
 router.get('/activiteiten/:urn/dossier', async (req: Request, res: Response) => {
   res.set('API-Version', packageJson.version);

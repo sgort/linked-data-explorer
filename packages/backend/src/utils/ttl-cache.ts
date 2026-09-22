@@ -48,7 +48,17 @@ export function createTtlCache<T>(opts: {
       return hit.value;
     },
     set(key, value) {
-      entries.set(key, { value, storedAt: now() });
+      // Expiry is otherwise only checked lazily, inside `get(key)`, for that
+      // one key. With no sweeper and no max size, an entry nobody reads
+      // again — such as an annotation graph for a municipality visited once
+      // — stays resident for the process lifetime; one such entry is ~8.7MB.
+      // O(n) over entries, run on every write, keeps this simple without an
+      // API change (no timer, nothing to tear down).
+      const t = now();
+      for (const [k, entry] of entries) {
+        if (t - entry.storedAt > ttlMs) entries.delete(k);
+      }
+      entries.set(key, { value, storedAt: t });
     },
     clear(key) {
       if (key === undefined) entries.clear();

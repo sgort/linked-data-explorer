@@ -16,12 +16,20 @@
 import type { Dossier } from './dossier.service';
 
 /**
- * A GUID with EITHER separator. `normalizeDmnForOperaton` rewrites hyphens to
- * underscores to make names FEEL-safe, so a hyphen-only detector reports 0%
- * opacity on a DMN that is in fact mostly opaque.
+ * A GUID with EITHER separator, or with no separator at all.
+ * `normalizeDmnForOperaton` rewrites hyphens to underscores to make names
+ * FEEL-safe, so a hyphen-only detector reports 0% opacity on a DMN that is
+ * in fact mostly opaque. Separately, IMOW URN local names are 32 contiguous
+ * hex characters with no separator at all (e.g.
+ * `180a63f795be43bf8683a480e75deb84`) — the same form the `imowRefs` regex
+ * below already has to handle — so a separator-only pattern misses exactly
+ * the GUID-named activities this profile exists to flag.
  */
 const H = '[0-9a-f]';
-export const GUID_RE = new RegExp(`${H}{8}[-_]${H}{4}[-_]${H}{4}[-_]${H}{4}[-_]${H}{12}`, 'i');
+export const GUID_RE = new RegExp(
+  `(?:${H}{8}[-_]${H}{4}[-_]${H}{4}[-_]${H}{4}[-_]${H}{12}|${H}{32})`,
+  'i'
+);
 
 export type IdClass = 'semantic' | 'opaque-resolvable' | 'opaque-dangling';
 
@@ -43,16 +51,29 @@ export interface DmnNamingStats {
   imowRefs: string[];
 }
 
+/**
+ * The rest of this codebase deliberately treats the `dmn:` prefix as
+ * optional (see `dso.service.ts`'s `/<(?:dmn:)?definitions/` and the
+ * `(?:\w+:)?` matches throughout `normalizeDmnForOperaton`) — an
+ * un-prefixed DMN is not itself an error, `normalizeDmnForOperaton` never
+ * adds the prefix, and a hardcoded `dmn:` here silently measured such a DMN
+ * as `decisions: {total: 0, ...}`, reporting nothing opaque rather than
+ * reporting the truth.
+ */
 function openTags(xml: string, tag: string): string[] {
   const out: string[] = [];
-  const re = new RegExp(`<dmn:${tag}\\s`, 'g');
+  const re = new RegExp(`<(?:\\w+:)?${tag}\\s`, 'g');
   let m: RegExpExecArray | null;
   while ((m = re.exec(xml))) {
     const end = xml.indexOf('>', m.index);
     if (end === -1) continue;
     const open = xml.slice(m.index, end + 1);
-    // `<dmn:decisionTable` also starts with `<dmn:decision`
-    if (open.slice(1).split(/[\s>]/)[0] !== `dmn:${tag}`) continue;
+    // `<decisionTable`/`<dmn:decisionTable` also starts with `<decision`/
+    // `<dmn:decision`; compare the qualified name with any namespace prefix
+    // stripped against the exact tag being measured.
+    const qualifiedName = open.slice(1).split(/[\s>]/)[0] ?? '';
+    const localName = qualifiedName.includes(':') ? qualifiedName.split(':')[1] : qualifiedName;
+    if (localName !== tag) continue;
     out.push(open);
   }
   return out;
@@ -68,10 +89,11 @@ export function measureDmn(xml: string): DmnNamingStats {
   const decisions = openTags(xml, 'decision').map(nameOf);
   const inputs = openTags(xml, 'inputData').map(nameOf);
 
-  // vraagTekst content is CDATA — a `<[^>]+>` strip would eat it.
+  // vraagTekst content is CDATA — a `<[^>]+>` strip would eat it. The `uitv:`
+  // prefix is optional too, for the same reason as `openTags` above.
   const questions = [
     ...xml.matchAll(
-      /<uitv:vraagTekst[^>]*>\s*(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?\s*<\/uitv:vraagTekst>/g
+      /<(?:\w+:)?vraagTekst[^>]*>\s*(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?\s*<\/(?:\w+:)?vraagTekst>/g
     ),
   ]
     .map((m) => m[1]?.trim() ?? '')
@@ -120,6 +142,14 @@ export function profileDossier(d: Dossier): QualityProfile {
   const resolved = dmnRefs.filter((ref) => resolvedRefs.has(ref));
   const dangling = dmnRefs.filter((ref) => !resolvedRefs.has(ref));
 
+  // Cross-layer consistency is a THREE-layer check — RTR, annotations and
+  // DMN — not the two `resolved` above already covers. A ref resolved only
+  // via the annotation layer (RTR never listed it under the activity's own
+  // `locaties`) is not "the same object reached two different ways"; it is
+  // one layer's claim, unconfirmed by the third.
+  const rtrLocatieSet = new Set(d.rtrLocaties ?? []);
+  const sharedObjects = resolved.filter((ref) => rtrLocatieSet.has(ref));
+
   const rules = d.legalSource?.juridischeRegels ?? [];
 
   return {
@@ -140,6 +170,6 @@ export function profileDossier(d: Dossier): QualityProfile {
       withWId: rules.filter((r) => r.wId !== null).length,
       withArticleText: rules.filter((r) => r.articleText !== null).length,
     },
-    crossLayerConsistency: { sharedObjects: resolved },
+    crossLayerConsistency: { sharedObjects },
   };
 }

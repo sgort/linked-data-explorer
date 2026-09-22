@@ -83,10 +83,18 @@ beforeEach(() => {
   ozon.getDocumentComponent.mockImplementation((_regelingId: string, wId: string) => ({
     _embedded: { documentComponenten: [{ inhoud: `<Inhoud><Al>TEXT FOR ${wId}</Al></Inhoud>` }] },
   }));
-  dso.getToepasbareRegels.mockResolvedValue({
-    _embedded: {
-      toepasbareRegels: [{ identifier: 114233, sttrVersie: 2, begindatum: '30-07-2026' }],
-    },
+  // A DIFFERENT identifier per functioneleStructuurRef — this is the hop
+  // that decides which DMN is labelled Conclusie vs Indieningsvereisten. A
+  // single shared identifier across both would pass even a broken
+  // implementation that always picked the first (or last) rbo's result for
+  // both rule sets.
+  dso.getToepasbareRegels.mockImplementation((functioneleStructuurRef: string) => {
+    const identifier = functioneleStructuurRef.includes('IndieningsvereistenVergunning')
+      ? 105947
+      : 114233;
+    return Promise.resolve({
+      _embedded: { toepasbareRegels: [{ identifier, sttrVersie: 2, begindatum: '30-07-2026' }] },
+    });
   });
   dso.getSttrBestand.mockResolvedValue('<sttr/>');
   dso.extractDmnFromSttr.mockReturnValue('<dmn:definitions/>'); // synchronous
@@ -107,6 +115,21 @@ describe('buildDossier', () => {
       'prod',
       expect.anything()
     );
+  });
+
+  // Only the mnre-rejection path exercised `authority` before this: it
+  // proved a MISSING authority is rejected, not that a SUPPLIED one actually
+  // reaches the regelingen search rather than being silently ignored in
+  // favour of the derived code.
+  test('a supplied authority reaches zoekRegelingen, overriding the derived code', async () => {
+    const d = await buildDossier({ urn: URN, env: 'prod', authority: 'gm9999' });
+
+    expect(ozon.zoekRegelingen).toHaveBeenCalledWith(
+      { bevoegdGezag: ['gm9999'] },
+      'prod',
+      expect.anything()
+    );
+    expect(d.bestuursorgaan?.code).toBe('gm9999');
   });
 
   test('joins the activity to its 10 juridische regels', async () => {
@@ -168,7 +191,7 @@ describe('buildDossier', () => {
     const d = await buildDossier({ urn: URN, env: 'prod' });
 
     expect(d.decisionCriteria?.identifier).toBe(114233);
-    expect(d.submissionRequirements?.identifier).toBe(114233);
+    expect(d.submissionRequirements?.identifier).toBe(105947);
     expect(d.submissionRequirements?.toestemming).toBe('Aanvraag vergunning');
   });
 
@@ -205,19 +228,42 @@ describe('buildDossier', () => {
     expect(ozon.getRegeltekstAnnotaties).not.toHaveBeenCalled();
   });
 
-  test('a rejected annotaties fetch records the reason and leaves the legal source available with no rules', async () => {
+  // C1 (secondary): a failed annotations leg must NOT leave legalSource
+  // marked available — a real regelingIdentificatie/regelingTitel above an
+  // empty juridischeRegels list, with `available: true`, reads as "this
+  // activity genuinely has zero rules" when the truth is "the fetch that
+  // would have found them failed".
+  test('a rejected annotaties fetch records the reason and marks the legal source unavailable', async () => {
     ozon.getRegeltekstAnnotaties.mockRejectedValue(
       new Error('Ozon responded 500: annotaties down')
     );
 
     const d = await buildDossier({ urn: URN, env: 'prod' });
 
-    expect(d.legalSource.available).toBe(true);
+    expect(d.legalSource.available).toBe(false);
     expect(d.legalSource.juridischeRegels).toHaveLength(0);
     expect(d.provenance.failures).toContainEqual({
       step: 'annotaties',
       detail: 'Ozon responded 500: annotaties down',
     });
+  });
+
+  // The other half of the same fix: a SUCCESSFUL annotations fetch that
+  // simply contains no rule for this activity is a genuine empty result,
+  // not a failure, so legalSource must stay available.
+  test('a successful annotaties fetch with no matching rules leaves the legal source available', async () => {
+    ozon.getRegeltekstAnnotaties.mockResolvedValue({
+      activiteiten: [],
+      regelteksten: [],
+      locaties: [],
+      regelsVoorIedereen: [],
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(true);
+    expect(d.legalSource.juridischeRegels).toHaveLength(0);
+    expect(d.provenance.failures.some((f) => f.step === 'annotaties')).toBe(false);
   });
 
   test('a failing DMN extraction records the reason but still returns the rule set', async () => {
@@ -271,6 +317,22 @@ describe('buildDossier', () => {
 
     expect(d.provenance.env).toBe('prod');
     expect(d.provenance.datum).toBe('22-09-2026');
+  });
+
+  // C1: the route's wire format is dd-MM-yyyy throughout — RTR (getActiviteit)
+  // expects exactly that. Ozon (getRegeltekstAnnotaties's geldigOp) expects
+  // ISO YYYY-MM-dd instead. Forwarding the same string to both is wrong for
+  // one of them; this must fail if the dossier service stops converting
+  // before calling Ozon.
+  test('forwards datum as dd-MM-yyyy to RTR and as ISO geldigOp to Ozon', async () => {
+    await buildDossier({ urn: URN, env: 'prod', datum: '22-09-2026' });
+
+    expect(dso.getActiviteit).toHaveBeenCalledWith(URN, '22-09-2026', 'prod');
+    expect(ozon.getRegeltekstAnnotaties).toHaveBeenCalledWith(
+      '/akn/nl/act/gm0995/2020/omgevingsplan',
+      'prod',
+      { geldigOp: '2026-09-22' }
+    );
   });
 
   test('an activiteit missing bestuursorgaan, omschrijving and regelBeheerObjecten defaults every optional field rather than crashing', async () => {

@@ -83,14 +83,14 @@ for these APIs; each was found by reading a real payload.
 ## 3. Running it
 
 ```
-npm run dso:dossier -- --urn=<urn> [--env=prod] [--date=YYYY-MM-DD] [--authority=<code>] [--out=<path>]
+npm run dso:dossier -- --urn=<urn> [--env=prod] [--date=dd-MM-yyyy] [--authority=<code>] [--out=<path>]
 ```
 
 | Flag | Meaning |
 |---|---|
 | `--urn` | Required. The IMOW activity URN, e.g. `nl.imow-gm0995.activiteit.HoutopstandVellen`. |
 | `--env` | `pre` (default) or `prod`. Selects which DSO environment answers every call in the chain. |
-| `--date` | Validity date, `YYYY-MM-DD`. Omitted means "today" on both the RTR call and the rendered report. |
+| `--date` | Validity date, `dd-MM-yyyy` — the same wire format as every other DSO route's `datum` parameter. Omitted means "today" on both the RTR call and the rendered report. The dossier service converts internally to the ISO form Ozon's `geldigOp` expects; the CLI flag itself always takes dd-MM-yyyy. |
 | `--authority` | Required only for a national (`mnre`) activity — see §6. The bevoegd-gezag code (e.g. `gm0995`) of the plan to scan for annotations. |
 | `--out` | Write the rendered Markdown to a file instead of stdout. |
 

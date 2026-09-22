@@ -32,6 +32,7 @@ jest.mock('../utils/config', () => ({
 }));
 
 import { logger } from '../utils/logger';
+import { clearNamedCaches } from '../utils/ttl-cache';
 import * as dsoService from './dso.service';
 import {
   extractDmnFromSttr,
@@ -92,6 +93,11 @@ beforeEach(() => {
   mockFetch.mockReset().mockResolvedValue(response());
   mockLogWarn.mockReset();
   global.fetch = mockFetch as unknown as typeof fetch;
+  // File-scope, so the pre-existing `describe('getActiviteit')` block (which
+  // has no cache-clearing of its own) cannot pass only by luck of its cases
+  // not colliding on a cache key — it shares the module-level
+  // `dso-activiteit` cache with every other test in this file.
+  clearNamedCaches('dso-activiteit');
 });
 
 afterEach(() => {
@@ -894,8 +900,6 @@ describe('extractFormScaffoldFromSttr', () => {
     expect(extractFormScaffoldFromSttr(sttr(''), 'kapvergunning').id).toBe('kapvergunning');
   });
 });
-
-import { clearNamedCaches } from '../utils/ttl-cache';
 
 describe('getActiviteit caching', () => {
   const urn = 'nl.imow-gm0995.activiteit.HoutopstandVellen';

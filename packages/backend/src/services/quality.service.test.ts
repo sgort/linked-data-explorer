@@ -15,6 +15,16 @@ describe('GUID detection', () => {
   test('does not match an ordinary name', () => {
     expect(GUID_RE.test('Boom kappen of houtopstand vellen')).toBe(false);
   });
+
+  // §I1: IMOW URN local names are 32 contiguous hex characters with NO
+  // separator at all — a real example from a GM0995 activity URN. The
+  // `imowRefs` regex in this same file already handles this shape; before
+  // this fix GUID_RE required a separator and missed it, so `classifyName`
+  // reported `semantic` for precisely the GUID-named activities this
+  // profile exists to flag.
+  test('matches a separator-less 32-hex GUID', () => {
+    expect(GUID_RE.test('180a63f795be43bf8683a480e75deb84')).toBe(true);
+  });
 });
 
 describe('classifyName', () => {
@@ -32,6 +42,10 @@ describe('classifyName', () => {
     expect(classifyName('_6d45be8c-8010-4d11-8775-487a28b88087_Niet van toepassing', false)).toBe(
       'opaque-dangling'
     );
+  });
+
+  test('a separator-less 32-hex GUID name is classified opaque', () => {
+    expect(classifyName('180a63f795be43bf8683a480e75deb84', false)).toBe('opaque-dangling');
   });
 });
 
@@ -98,6 +112,39 @@ describe('measureDmn', () => {
     expect(m.decisions.semantic).toBe(1);
     expect(m.inputs.semantic).toBe(1);
   });
+
+  // §I2: the rest of this codebase treats the `dmn:`/`uitv:` prefix as
+  // optional (dso.service.ts's `/<(?:dmn:)?definitions/` and the `(?:\w+:)?`
+  // matches throughout `normalizeDmnForOperaton`); `normalizeDmnForOperaton`
+  // never ADDS the prefix, so an un-prefixed DMN is not itself an error. A
+  // hardcoded `dmn:`/`uitv:` here previously measured such a DMN as
+  // `decisions: {total: 0, ...}` — silently reporting nothing opaque.
+  test('counts decisions, inputs and questions on an UN-PREFIXED DMN', () => {
+    const unprefixed = `<?xml version="1.0"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/">
+  <decision id="d1" name="Boom kappen of houtopstand vellen"/>
+  <decision id="d2" name="_6d45be8c-8010-4d11-8775-487a28b88087_Vergunningplicht"/>
+  <inputData id="i1" name="uitv__864933e7-4ea9-45a2-ae17-d8b1a4df34d7"/>
+  <vraagTekst><![CDATA[Wilt u een boom of beplanting weghalen?]]></vraagTekst>
+</definitions>`;
+
+    const m = measureDmn(unprefixed);
+
+    expect(m.decisions.total).toBe(2);
+    expect(m.decisions.opaque).toBe(1);
+    expect(m.inputs.total).toBe(1);
+    expect(m.questions).toEqual(['Wilt u een boom of beplanting weghalen?']);
+  });
+
+  // The prefix becoming optional must not start counting `decisionTable` (or
+  // its un-prefixed form) as a `decision` — the tag-name guard in `openTags`
+  // must still exclude it.
+  test('an un-prefixed decisionTable is not counted as a decision', () => {
+    const unprefixed =
+      '<definitions xmlns="x"><decision id="d1" name="A"/><decisionTable id="t1"/></definitions>';
+
+    expect(measureDmn(unprefixed).decisions.total).toBe(1);
+  });
 });
 
 describe('profileDossier', () => {
@@ -117,6 +164,10 @@ describe('profileDossier', () => {
       })),
     },
     annotation: { groep: 'kapactiviteit' },
+    // The RTR's own locaties for this activity — the third layer §I3 checks.
+    // Carries the same gebiedengroep ref as the annotation and DMN layers,
+    // so the worked-example case is present in all three.
+    rtrLocaties: ['nl.imow-gm0995.gebiedengroep.180a63f795be43bf8683a480e75deb84'],
     decisionCriteria: {
       // Carries the gebiedengroep ref so refResolvability has something to resolve —
       // the dossier resolved that same identificatie to a name above.
@@ -141,6 +192,24 @@ describe('profileDossier', () => {
     expect(profileDossier(dossier).refResolvability.resolved).toBe(1);
   });
 
+  // §I3: cross-layer consistency is a THREE-layer check (RTR, annotations,
+  // DMN), not the two `refResolvability` already covers.
+  test('reports a ref present in the RTR, annotations and DMN as a shared object', () => {
+    expect(profileDossier(dossier).crossLayerConsistency.sharedObjects).toEqual([
+      'nl.imow-gm0995.gebiedengroep.180a63f795be43bf8683a480e75deb84',
+    ]);
+  });
+
+  test('does NOT report a ref as shared when the RTR never listed it under the activity locaties', () => {
+    const noRtrMatch = { ...dossier, rtrLocaties: [] } as unknown as Dossier;
+
+    expect(profileDossier(noRtrMatch).crossLayerConsistency.sharedObjects).toEqual([]);
+    // Still resolvable via the annotation layer alone — proves this is a
+    // genuinely three-layer gate, not a break in the two-layer resolution
+    // refResolvability already performs.
+    expect(profileDossier(noRtrMatch).refResolvability.resolved).toBe(1);
+  });
+
   test('produces no single headline grade', () => {
     const p = profileDossier(dossier) as unknown as Record<string, unknown>;
     expect(p['grade']).toBeUndefined();
@@ -152,7 +221,17 @@ describe('profileDossier', () => {
       ...dossier,
       urn: 'nl.imow-gm0995.activiteit.180a63f7-95be-43bf-8683-a480e75deb84',
     } as Dossier;
-    expect(profileDossier(opaque).activityIdentity).not.toBe('semantic');
+    expect(profileDossier(opaque).activityIdentity).toBe('opaque-dangling');
+  });
+
+  // §I1: IMOW URN local names are 32 CONTIGUOUS hex characters, no separator
+  // at all — the form GUID_RE previously missed entirely.
+  test('a separator-less 32-hex URN local name is classified opaque', () => {
+    const opaque = {
+      ...dossier,
+      urn: 'nl.imow-gm0995.activiteit.180a63f795be43bf8683a480e75deb84',
+    } as Dossier;
+    expect(profileDossier(opaque).activityIdentity).toBe('opaque-dangling');
   });
 
   // The `resolvable` flag must be earned from a real readable name, not

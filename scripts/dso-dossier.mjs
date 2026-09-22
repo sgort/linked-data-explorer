@@ -1,7 +1,7 @@
 // scripts/dso-dossier.mjs
 // Renders an activity dossier to Markdown.
 //
-// Usage: npm run dso:dossier -- --urn=<urn> [--env=prod] [--date=YYYY-MM-DD] [--out=<path>]
+// Usage: npm run dso:dossier -- --urn=<urn> [--env=prod] [--date=dd-MM-yyyy] [--authority=<code>] [--out=<path>]
 //
 // Requires an already-running backend. This script never starts, stops or
 // restarts a server.
@@ -135,7 +135,9 @@ async function main() {
   );
 
   if (!args.urn) {
-    console.error('Usage: npm run dso:dossier -- --urn=<urn> [--env=prod] [--date=YYYY-MM-DD] [--out=<path>]');
+    console.error(
+      'Usage: npm run dso:dossier -- --urn=<urn> [--env=prod] [--date=dd-MM-yyyy] [--authority=<code>] [--out=<path>]'
+    );
     process.exit(2);
   }
 

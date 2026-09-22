@@ -66,6 +66,30 @@ describe('createTtlCache', () => {
     expect(cache.stats().oldestAgeSeconds).toBe(4);
   });
 
+  test('an entry never read again is swept out of stats().size once its TTL elapses and another set() runs', () => {
+    let t = 1000;
+    const cache = createTtlCache<string>({ name: 'test-k', ttlMs: 5000, now: () => t });
+    cache.set('a', '1');
+    // Nobody ever calls get('a') — the lazy expiry inside get() never fires
+    // for this key. Only a later set() should sweep it.
+    t = 6001;
+    cache.set('b', '2');
+    expect(cache.stats().size).toBe(1);
+  });
+
+  test('stats() does not count expired-but-unswept entries', () => {
+    let t = 1000;
+    const cache = createTtlCache<string>({ name: 'test-l', ttlMs: 5000, now: () => t });
+    cache.set('a', '1');
+    cache.set('b', '2');
+    t = 8000;
+    // 'a' and 'b' are both expired now; a fresh set() sweeps them before
+    // stats() is read, so oldestAgeSeconds must reflect only the live 'c',
+    // not the stale entries that would otherwise overstate it.
+    cache.set('c', '3');
+    expect(cache.stats()).toEqual({ size: 1, ttlSeconds: 5, oldestAgeSeconds: 0 });
+  });
+
   test('clearNamedCaches() with no name clears every registered cache', () => {
     const cacheI = createTtlCache<string>({ name: 'test-i', ttlMs: 5000 });
     const cacheJ = createTtlCache<string>({ name: 'test-j', ttlMs: 5000 });

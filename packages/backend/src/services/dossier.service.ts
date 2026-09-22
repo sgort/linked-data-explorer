@@ -39,6 +39,14 @@ export interface JuridischeRegelEntry {
 }
 
 export interface LegalSource {
+  /**
+   * False when either the omgevingsplan itself, or its annotation graph,
+   * could not be resolved. `false` after a failed annotations fetch even
+   * though `regelingIdentificatie` is set — otherwise a real regeling title
+   * renders above a `juridischeRegels` list that is empty only because the
+   * fetch that would have populated it failed, not because it is genuinely
+   * empty.
+   */
   available: boolean;
   regelingIdentificatie: string | null;
   regelingTitel: string | null;
@@ -78,6 +86,13 @@ export interface Dossier {
   bestuursorgaan: { code: string; oin: string | null } | null;
   legalSource: LegalSource;
   annotation: Annotation;
+  /**
+   * The RTR activity's own `locaties`, by `identificatie`. Carried onto the
+   * dossier so cross-layer consistency (§I3) can require a shared object to
+   * appear in all three layers — RTR, annotations and DMN — not just the
+   * two the annotation-resolved locaties already cover.
+   */
+  rtrLocaties: string[];
   decisionCriteria: RuleSet | null;
   submissionRequirements: RuleSet | null;
   provenance: Provenance;
@@ -95,6 +110,30 @@ function bevoegdGezagCode(bestuursorgaan: {
   organisatieCode?: string;
 }): string {
   return `${bestuursorgaan.organisatieType ?? ''}${bestuursorgaan.organisatieCode ?? ''}`.toLowerCase();
+}
+
+/**
+ * dd-MM-yyyy -> YYYY-MM-dd.
+ *
+ * The route's wire format is dd-MM-yyyy (matching every sibling DSO route,
+ * and what `dsoService.getActiviteit` — the RTR — expects). Ozon's
+ * `getRegeltekstAnnotaties` takes the same validity date as `geldigOp`, but
+ * in ISO form: forwarding `req.datum` unchanged made Ozon reject or
+ * silently misinterpret it, which surfaced as `regelingIdentificatie`
+ * resolving fine while `juridischeRegels` was silently empty. Tolerant: a
+ * value that matches neither shape is passed through unchanged rather than
+ * thrown on, since geldigOp is optional and the upstream can decide it did
+ * not like it.
+ */
+function toIsoDate(datum: string | undefined): string | undefined {
+  if (datum === undefined) return undefined;
+  const ddMmYyyy = datum.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (ddMmYyyy) {
+    const [, dd, mm, yyyy] = ddMmYyyy;
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(datum)) return datum;
+  return datum;
 }
 
 /**
@@ -120,6 +159,7 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
     omschrijving?: string;
     bestuursorgaan?: { oin?: string; organisatieType?: string; organisatieCode?: string };
     regelBeheerObjecten?: RegelBeheerObject[];
+    locaties?: { identificatie: string }[];
   };
 
   const bo = activiteit.bestuursorgaan ?? {};
@@ -158,13 +198,15 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
 
   // 3. Ozon — the annotation graph, joined on activiteitRef
   let annotaties: OzonAnnotaties | null = null;
+  let annotatiesFailed = false;
   if (regelingIdentificatie) {
     try {
       annotaties = await ozonService.getRegeltekstAnnotaties(regelingIdentificatie, req.env, {
-        geldigOp: req.datum,
+        geldigOp: toIsoDate(req.datum),
       });
     } catch (error) {
       record('annotaties', error);
+      annotatiesFailed = true;
     }
   }
 
@@ -272,7 +314,7 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
     omschrijving: activiteit.omschrijving ?? null,
     bestuursorgaan: { code: gezagCode, oin: bo.oin ?? null },
     legalSource: {
-      available: regelingIdentificatie !== null,
+      available: regelingIdentificatie !== null && !annotatiesFailed,
       regelingIdentificatie,
       regelingTitel,
       juridischeRegels,
@@ -284,6 +326,7 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
       symboolcode: activiteitRecord?.symboolcodes?.vlak ?? null,
       bovenliggendeActiviteitRef: activiteitRecord?.bovenliggendeActiviteitRef ?? null,
     },
+    rtrLocaties: (activiteit.locaties ?? []).map((l) => l.identificatie),
     decisionCriteria: resolved.find((r) => r.typering === 'Conclusie') ?? null,
     submissionRequirements: resolved.find((r) => r.typering === 'Indieningsvereisten') ?? null,
     provenance: {
