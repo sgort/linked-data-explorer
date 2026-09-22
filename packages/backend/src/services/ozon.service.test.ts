@@ -128,4 +128,60 @@ describe('ozon requests', () => {
 
     await expect(ozon.zoekRegelingen({ bevoegdGezag: ['gm0995'] }, 'prod')).rejects.toThrow('404');
   });
+
+  test('zoekRegelingen defaults to the pre-production environment and size when omitted', async () => {
+    await ozon.zoekRegelingen({ bevoegdGezag: ['gm0995'] });
+
+    const [url] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).toContain('https://pre.example/ozon');
+    expect(url).toContain('size=100');
+  });
+
+  test('getRegeltekstAnnotaties defaults env, opts and the geldigOp cache key, and omits an empty query', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    await ozon.getRegeltekstAnnotaties('_akn_nl_act_gm0995_2020_omgevingsplan');
+
+    const [url] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).toContain('https://pre.example/ozon');
+    expect(url).not.toContain('?');
+
+    // The cache key falls back to 'today' when geldigOp is omitted: a second
+    // call with an explicit geldigOp of 'today' must hit the same cache entry.
+    await ozon.getRegeltekstAnnotaties('_akn_nl_act_gm0995_2020_omgevingsplan', 'pre', {
+      geldigOp: 'today',
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('getRegeltekstAnnotaties defaults every missing array field to empty rather than throwing', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    const data = await ozon.getRegeltekstAnnotaties('_akn_nl_act_gm0995_leeg');
+
+    expect(data).toEqual({
+      activiteiten: [],
+      regelteksten: [],
+      regelsVoorIedereen: [],
+      locaties: [],
+      gebiedsaanwijzingen: [],
+      omgevingsnormen: [],
+    });
+  });
+
+  test('getDocumentComponent defaults to the pre-production environment when omitted', async () => {
+    await ozon.getDocumentComponent(
+      '_akn_nl_act_gm0995_2020_omgevingsplan',
+      'gm0995_5e613b8efac0433cb977d3445e057208__chp_15'
+    );
+
+    const [url] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).toContain('https://pre.example/ozon');
+  });
 });

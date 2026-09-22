@@ -74,6 +74,30 @@ describe('measureDmn', () => {
       'nl.imow-gm0995.gebiedengroep.180a63f795be43bf8683a480e75deb84',
     ]);
   });
+
+  test('an unterminated opening tag is skipped rather than throwing or grabbing garbage', () => {
+    // No `>` appears anywhere after the second `<dmn:decision` match, so
+    // `openTags` must bail via its `end === -1` guard instead of scanning
+    // past the end of the string.
+    const truncated =
+      '<dmn:definitions xmlns:dmn="x"><dmn:decision id="d1" name="A"/><dmn:decision name="incomplete"';
+
+    expect(() => measureDmn(truncated)).not.toThrow();
+    expect(measureDmn(truncated).decisions.total).toBe(1);
+  });
+
+  test('a decision or input tag with no name attribute reports an empty name rather than throwing', () => {
+    const noName =
+      '<dmn:definitions xmlns:dmn="x"><dmn:decision id="d1"/><dmn:inputData id="i1"/></dmn:definitions>';
+
+    const m = measureDmn(noName);
+
+    expect(m.decisions.total).toBe(1);
+    // An empty name is not a GUID, so it is classified semantic rather than
+    // making nameOf's fallback throw or produce `undefined`.
+    expect(m.decisions.semantic).toBe(1);
+    expect(m.inputs.semantic).toBe(1);
+  });
 });
 
 describe('profileDossier', () => {
@@ -151,5 +175,37 @@ describe('profileDossier', () => {
       omschrijving: 'Boom kappen of houtopstand vellen',
     } as unknown as Dossier;
     expect(profileDossier(resolvable).activityIdentity).toBe('opaque-resolvable');
+  });
+
+  test('a urn with fewer than 4 dot-separated segments falls back to the full urn as the local name', () => {
+    // Only 2 segments after splitting on '.', so `.slice(3).join('.')` is ''
+    // and the code must fall back to the full urn — which, unlike '', is
+    // itself opaque. An implementation that forgot the `|| d.urn` fallback
+    // would classify this 'semantic' instead.
+    const shortUrn = {
+      ...dossier,
+      urn: 'nl.imow-6d45be8c-8010-4d11-8775-487a28b88087',
+      omschrijving: null,
+      annotation: { groep: 'kapactiviteit' },
+    } as unknown as Dossier;
+    expect(profileDossier(shortUrn).activityIdentity).toBe('opaque-dangling');
+  });
+
+  test('a dossier with no decisionCriteria and no legal source falls back to nulls and empty counts', () => {
+    const minimal = {
+      urn: 'nl.imow-gm0995.activiteit.Iets',
+      omschrijving: 'Iets',
+      annotation: { naam: null },
+      decisionCriteria: null,
+      submissionRequirements: null,
+    } as unknown as Dossier;
+
+    const p = profileDossier(minimal);
+
+    expect(p.decisionNaming).toBeNull();
+    expect(p.inputNaming).toBeNull();
+    expect(p.labelCoverage).toBeNull();
+    expect(p.refResolvability).toEqual({ total: 0, resolved: 0, dangling: 0 });
+    expect(p.legalTraceability).toEqual({ rules: 0, withWId: 0, withArticleText: 0 });
   });
 });

@@ -1,7 +1,27 @@
 // scripts/dso-dossier.test.mjs
 import { renderDossier } from './dso-dossier.mjs';
+import { execFileSync } from 'node:child_process';
 
 const checks = [];
+
+// --- Regression: importing must not throw when process.argv[1] is absent --
+//
+// The direct-invocation guard used to build `file://${process.argv[1]...}`
+// by hand, which threw at import time whenever process.argv[1] was
+// undefined (e.g. `node -e "import(...)"`). A module must not throw merely
+// from being imported. Run in a real subprocess: this test file itself
+// always has a defined process.argv[1], so the failure mode can only be
+// observed from an separate invocation where argv[1] is absent.
+{
+  const url = new URL('./dso-dossier.mjs', import.meta.url).href;
+  let importSafe = true;
+  try {
+    execFileSync(process.execPath, ['-e', `import(${JSON.stringify(url)})`], { stdio: 'pipe' });
+  } catch {
+    importSafe = false;
+  }
+  checks.push(['importing the module does not throw when process.argv[1] is undefined', importSafe]);
+}
 
 /**
  * Renders `data` and reports a crash as a named, uniform failure instead of

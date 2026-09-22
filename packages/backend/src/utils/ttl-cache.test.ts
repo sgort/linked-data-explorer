@@ -53,4 +53,28 @@ describe('createTtlCache', () => {
     clearNamedCaches('test-g');
     expect(cache.get('a')).toBeUndefined();
   });
+
+  test('stats reports the age of the oldest entry across multiple entries, not just the last one', () => {
+    let t = 1000;
+    const cache = createTtlCache<string>({ name: 'test-h', ttlMs: 5000, now: () => t });
+    cache.set('a', '1');
+    t = 2000;
+    cache.set('b', '2');
+    t = 5000;
+    // 'a' is 4s old, 'b' is 3s old: the oldest must stay 4, proving the
+    // comparison does not simply take the most-recently-iterated entry.
+    expect(cache.stats().oldestAgeSeconds).toBe(4);
+  });
+
+  test('clearNamedCaches() with no name clears every registered cache', () => {
+    const cacheI = createTtlCache<string>({ name: 'test-i', ttlMs: 5000 });
+    const cacheJ = createTtlCache<string>({ name: 'test-j', ttlMs: 5000 });
+    cacheI.set('a', '1');
+    cacheJ.set('b', '2');
+
+    clearNamedCaches();
+
+    expect(cacheI.get('a')).toBeUndefined();
+    expect(cacheJ.get('b')).toBeUndefined();
+  });
 });

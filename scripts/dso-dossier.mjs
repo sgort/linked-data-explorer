@@ -7,6 +7,7 @@
 // restarts a server.
 
 import fs from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 const BASE = process.env.LDE_API_BASE_URL ?? 'http://localhost:3001';
 
@@ -169,6 +170,8 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}`) {
+const invokedDirectly =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (invokedDirectly) {
   await main();
 }

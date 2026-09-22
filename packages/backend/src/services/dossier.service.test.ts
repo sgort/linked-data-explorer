@@ -191,6 +191,60 @@ describe('buildDossier', () => {
     expect(d.provenance.failures.some((f) => f.step === 'documentComponent')).toBe(true);
   });
 
+  test('a rejected regelingen search records the reason and leaves the legal source unavailable', async () => {
+    ozon.zoekRegelingen.mockRejectedValue(new Error('Ozon responded 503: boom'));
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(false);
+    expect(d.provenance.failures).toContainEqual({
+      step: 'regeling',
+      detail: 'Ozon responded 503: boom',
+    });
+    // Downstream steps that depend on regelingIdentificatie must not run.
+    expect(ozon.getRegeltekstAnnotaties).not.toHaveBeenCalled();
+  });
+
+  test('a rejected annotaties fetch records the reason and leaves the legal source available with no rules', async () => {
+    ozon.getRegeltekstAnnotaties.mockRejectedValue(
+      new Error('Ozon responded 500: annotaties down')
+    );
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(true);
+    expect(d.legalSource.juridischeRegels).toHaveLength(0);
+    expect(d.provenance.failures).toContainEqual({
+      step: 'annotaties',
+      detail: 'Ozon responded 500: annotaties down',
+    });
+  });
+
+  test('a failing DMN extraction records the reason but still returns the rule set', async () => {
+    dso.getSttrBestand.mockRejectedValue(new Error('DSO responded 404: STTR not found'));
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.decisionCriteria?.identifier).toBe(114233);
+    expect(d.decisionCriteria?.dmn).toBeNull();
+    expect(d.provenance.failures).toContainEqual({
+      step: 'dmn',
+      detail: 'DSO responded 404: STTR not found',
+    });
+  });
+
+  test('a rejected toepasbare-regels lookup records the reason and omits that rule set', async () => {
+    dso.getToepasbareRegels.mockRejectedValue(
+      new Error('DSO responded 502: toepasbare regels down')
+    );
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.decisionCriteria).toBeNull();
+    expect(d.submissionRequirements).toBeNull();
+    expect(d.provenance.failures.filter((f) => f.step === 'toepasbareRegels')).toHaveLength(2);
+  });
+
   test('no regeling of type 003 marks the legal source unavailable', async () => {
     ozon.zoekRegelingen.mockResolvedValue({ _embedded: { regelingen: [] } });
 
@@ -217,5 +271,142 @@ describe('buildDossier', () => {
 
     expect(d.provenance.env).toBe('prod');
     expect(d.provenance.datum).toBe('22-09-2026');
+  });
+
+  test('an activiteit missing bestuursorgaan, omschrijving and regelBeheerObjecten defaults every optional field rather than crashing', async () => {
+    dso.getActiviteit.mockResolvedValue({});
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.bestuursorgaan).toEqual({ code: '', oin: null });
+    expect(d.omschrijving).toBeNull();
+    expect(d.decisionCriteria).toBeNull();
+    expect(d.submissionRequirements).toBeNull();
+    expect(dso.getToepasbareRegels).not.toHaveBeenCalled();
+  });
+
+  test('a functioneleStructuurRef with no concept segment yields an empty viewer id', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      regelBeheerObjecten: [
+        {
+          typering: 'Conclusie',
+          functioneleStructuurRef:
+            'http://toepasbare-regels.omgevingswet.overheid.nl/x/no-concept-segment',
+        },
+      ],
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.decisionCriteria?.viewerUrl).toBe(
+      'https://omgevingswet.overheid.nl/registratie-toepasbare-regels/id/'
+    );
+  });
+
+  test('a non-Error rejection is stringified rather than crashing on .message', async () => {
+    ozon.zoekRegelingen.mockRejectedValue('plain string failure');
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.provenance.failures).toContainEqual({
+      step: 'regeling',
+      detail: 'plain string failure',
+    });
+  });
+
+  test('a regelingen response with no _embedded is treated as an empty result set', async () => {
+    ozon.zoekRegelingen.mockResolvedValue({});
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(false);
+    expect(d.provenance.failures.some((f) => f.step === 'regeling')).toBe(true);
+  });
+
+  test('an omgevingsplan with no officieleTitel yields a null regelingTitel', async () => {
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: [
+          {
+            identificatie: '/akn/nl/act/gm0995/2020/omgevingsplan',
+            type: { code: '/join/id/stop/regelingtype_003' },
+          },
+        ],
+      },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(true);
+    expect(d.legalSource.regelingTitel).toBeNull();
+  });
+
+  test('a regel missing kwalificatie, idealisatie and a resolvable wId or locatie defaults each to null', async () => {
+    ozon.getRegeltekstAnnotaties.mockResolvedValue({
+      activiteiten: [],
+      regelteksten: [],
+      locaties: [],
+      regelsVoorIedereen: [
+        {
+          identificatie: 'regelA',
+          regeltekstRef: 'unknown-regeltekst',
+          activiteitLocatieaanduidingen: [{ identificatie: 'aandA', activiteitRef: URN }],
+        },
+        {
+          identificatie: 'regelB',
+          regeltekstRef: 'unknown-regeltekst',
+          activiteitLocatieaanduidingen: [
+            { identificatie: 'aandB', activiteitRef: URN, locatieRefs: ['unresolvable-locatie'] },
+          ],
+        },
+        {
+          // No activiteitLocatieaanduidingen at all: must be filtered out silently.
+          identificatie: 'regelC-no-aanduidingen',
+          regeltekstRef: 'unknown-regeltekst',
+        },
+      ],
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.juridischeRegels).toHaveLength(2);
+    const regelA = d.legalSource.juridischeRegels.find((r) => r.identificatie === 'regelA');
+    const regelB = d.legalSource.juridischeRegels.find((r) => r.identificatie === 'regelB');
+    expect(regelA?.kwalificatie).toBeNull();
+    expect(regelA?.idealisatie).toBeNull();
+    expect(regelA?.wId).toBeNull();
+    expect(regelA?.locaties).toEqual([]);
+    expect(regelB?.locaties).toEqual([{ identificatie: 'unresolvable-locatie', naam: null }]);
+  });
+
+  test('a document component response with no inhoud yields a null articleText', async () => {
+    ozon.getDocumentComponent.mockResolvedValue({ _embedded: { documentComponenten: [] } });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    const withWId = d.legalSource.juridischeRegels.filter((r) => r.wId);
+    expect(withWId.length).toBeGreaterThan(0);
+    expect(withWId.every((r) => r.articleText === null)).toBe(true);
+  });
+
+  test('a toepasbare-regels lookup with no results yields no rule set for that rbo, not a crash', async () => {
+    dso.getToepasbareRegels.mockResolvedValue({ _embedded: { toepasbareRegels: [] } });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.decisionCriteria).toBeNull();
+    expect(d.submissionRequirements).toBeNull();
+  });
+
+  test('a toepasbare regel with no sttrVersie or begindatum defaults both to null', async () => {
+    dso.getToepasbareRegels.mockResolvedValue({
+      _embedded: { toepasbareRegels: [{ identifier: 114233 }] },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.decisionCriteria?.sttrVersie).toBeNull();
+    expect(d.decisionCriteria?.begindatum).toBeNull();
   });
 });
