@@ -1,6 +1,30 @@
 {
   "activiteiten": [
     {
+      "identificatie": "nl.imow-gm0995.activiteit.GeslotenBodemenergInst",
+      "naam": "Gesloten bodemenergiesysteem installeren gereguleerd in het omgevingsplan",
+      "groep": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/activiteit/id/concept/MilieubelastendeActiviteit",
+        "waarde": "milieubelastende activiteit"
+      },
+      "symboolcodes": {
+        "vlak": "vag035"
+      },
+      "bovenliggendeActiviteitRef": "nl.imow-gm0995.activiteit.MilieubelastendeAct"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.activiteit.AntenneBouwen",
+      "naam": "Antenne-installatie bouwen, in stand houden of gebruiken",
+      "groep": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/activiteit/id/concept/BouwactiviteitRuimtelijk",
+        "waarde": "bouwactiviteit ruimtelijk"
+      },
+      "symboolcodes": {
+        "vlak": "vag116"
+      },
+      "bovenliggendeActiviteitRef": "nl.imow-gm0995.activiteit.BouwwerkBouwen"
+    },
+    {
       "identificatie": "nl.imow-gm0995.activiteit.HoutopstandVellen",
       "naam": "Boom kappen of houtopstand vellen",
       "groep": {
@@ -23,8 +47,16 @@
       "wId": "gm0995_d7034ba59279448593d76d96f015599f__chp_15__subchp_15.4__art_15.3__para_2"
     },
     {
+      "identificatie": "nl.imow-gm0995.regeltekst.2020000524",
+      "wId": "gm0995_1-0__chp_22__subchp_22.3__subsec_22.3.26__art_22.260__para_2"
+    },
+    {
       "identificatie": "nl.imow-gm0995.regeltekst.4296ab3cee4d4bdc9d11f580b48b6822",
       "wId": "gm0995_d4a634c07f6f400aa04e77509126d678__chp_15__subchp_15.4__art_15.2__para_2"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.2020000523",
+      "wId": "gm0995_1-0__chp_22__subchp_22.3__subsec_22.3.26__art_22.260__para_1"
     },
     {
       "identificatie": "nl.imow-gm0995.regeltekst.2020000593",
@@ -37,6 +69,10 @@
     {
       "identificatie": "nl.imow-gm0995.regeltekst.85935fb2098046aa916712929739eae9",
       "wId": "gm0995_ae571aa1019b4484add0836cda95c717__chp_15__subchp_15.4__art_15.15"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.2020000525",
+      "wId": "gm0995_1-0__chp_22__subchp_22.3__subsec_22.3.26__art_22.260__para_3"
     },
     {
       "identificatie": "nl.imow-gm0995.regeltekst.16f109549f344d7ba1c1013e9b6df2d1",
@@ -53,6 +89,14 @@
     {
       "identificatie": "nl.imow-gm0995.regeltekst.e7c6d0d603aa4af096129e2bb36a1310",
       "wId": "gm0995_9fa25368e58f4fa697db3c85572e3dbf__chp_15__subchp_15.4__art_15.3__para_1"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.2de25803876247ee8fb35a5843eac968",
+      "wId": "gm0995_12bccdfdb2384c17b919b2a4254208c7__chp_5__subchp_5.6__subsec_5.6.1__subsec_5.6.1.2__art_5.54__para_14"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.regeltekst.21c1762d73bd44cbb9346052aea87640",
+      "wId": "gm0995_1365d11006f7426baa406044a5b201fa__chp_5__subchp_5.5__subsec_5.5.1__subsec_5.5.1.2__art_5.58__para_1"
     }
   ],
   "regelsVoorIedereen": [
@@ -393,6 +437,526 @@
           "waarde": "natuur"
         }
       ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.2020000524",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.2020000524",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.f37d185174164651a8f9f37816f875ef",
+          "activiteitRef": "nl.imow-gm0995.activiteit.GeslotenBodemenergInst",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/AndersGeduid",
+            "waarde": "anders geduid"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag035"
+          }
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.2020000523",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.2020000523",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.bd7dffd10e29424e9ba487d5c46f760e",
+          "activiteitRef": "nl.imow-gm0995.activiteit.GeslotenBodemenergInst",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/AndersGeduid",
+            "waarde": "anders geduid"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag035"
+          }
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.2020000525",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.2020000525",
+      "locatieRefs": [
+        "nl.imow-gm0995.ambtsgebied.9999999999"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.55dfc18c35f64f0cbdd9b0e82fd95fcf",
+          "activiteitRef": "nl.imow-gm0995.activiteit.GeslotenBodemenergInst",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/AndersGeduid",
+            "waarde": "anders geduid"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.ambtsgebied.9999999999"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag035"
+          }
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.21c1762d73bd44cbb9346052aea87640",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.21c1762d73bd44cbb9346052aea87640",
+      "locatieRefs": [
+        "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.0c0c6ba697724689bea905ab58a2bdee",
+          "activiteitRef": "nl.imow-gm0995.activiteit.BouwwerkInfrastruct",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.e291c9d6c7bd4466af854cda5f885584",
+          "activiteitRef": "nl.imow-gm0995.activiteit.ZwembadBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.9a41cc86dcbc433eaefad577beff21a8",
+          "activiteitRef": "nl.imow-gm0995.activiteit.Erfafscheiding",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.c4007840f3a048858d78f17d390cff81",
+          "activiteitRef": "nl.imow-gm0995.activiteit.BouwwerkAgrarischBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.3ae1ae9d454440bea3e3ca23436a4a33",
+          "activiteitRef": "nl.imow-gm0995.activiteit.TuinmeubilairBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.65947fd02438441f9bda09206583f6a7",
+          "activiteitRef": "nl.imow-gm0995.activiteit.BuisleidingBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.0782f01bd7e74b1aaf45c1baf3861eb4",
+          "activiteitRef": "nl.imow-gm0995.activiteit.AfscheidingDakterras",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.d65765f308814e1faa28c06db9e29045",
+          "activiteitRef": "nl.imow-gm0995.activiteit.AnderBouwwerkBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.32ff177332524636902429f75bf5b7d1",
+          "activiteitRef": "nl.imow-gm0995.activiteit.VlaggenmastBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.277041f65c5443dea7230b0a2a522707",
+          "activiteitRef": "nl.imow-gm0995.activiteit.BouwwerkBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.64565f76b33b495698de5e064e5df216",
+          "activiteitRef": "nl.imow-gm0995.activiteit.SportSpeeltBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.be02b8ee6dc8491987b7a210af70a5f0",
+          "activiteitRef": "nl.imow-gm0995.activiteit.AntenneBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.ef7997ac947e42b0add24b78ad70c4d8",
+          "activiteitRef": "nl.imow-gm0995.activiteit.ConstrTerreinhoogte",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        }
+      ],
+      "themas": [
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Bouwen",
+          "waarde": "bouwen"
+        },
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Bouwwerken",
+          "waarde": "bouwwerken"
+        }
+      ]
+    },
+    {
+      "identificatie": "nl.imow-gm0995.juridischeregel.2de25803876247ee8fb35a5843eac968",
+      "idealisatie": {
+        "code": "http://standaarden.omgevingswet.overheid.nl/idealisatie/id/concept/Exact",
+        "waarde": "exact"
+      },
+      "regeltekstRef": "nl.imow-gm0995.regeltekst.2de25803876247ee8fb35a5843eac968",
+      "locatieRefs": [
+        "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+      ],
+      "activiteitLocatieaanduidingen": [
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.7fe27e6a4135428da086840f4c8a689e",
+          "activiteitRef": "nl.imow-gm0995.activiteit.Erfafscheiding",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.1805e095ea99416189627fcec302ec86",
+          "activiteitRef": "nl.imow-gm0995.activiteit.ZwembadBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.28eeaca5fbe0446b8acc15c1a33db3d5",
+          "activiteitRef": "nl.imow-gm0995.activiteit.AfscheidingDakterras",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.be6ca089829d4279b5ef90378099ebe9",
+          "activiteitRef": "nl.imow-gm0995.activiteit.BuisleidingBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.242d35afb2654eefb557f0d83cbb9391",
+          "activiteitRef": "nl.imow-gm0995.activiteit.AnderBouwwerkBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.9b428f95ca6349acbe9da8e207d9ca4b",
+          "activiteitRef": "nl.imow-gm0995.activiteit.VlaggenmastBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.622ee49bbcf0426abaa58891d083a0ca",
+          "activiteitRef": "nl.imow-gm0995.activiteit.TuinmeubilairBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.ee619909327b44f88d0f2d5165537fcd",
+          "activiteitRef": "nl.imow-gm0995.activiteit.BouwwerkBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.7bd7749254cb4748a55e3dc49db6cde3",
+          "activiteitRef": "nl.imow-gm0995.activiteit.BouwwerkInfrastruct",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.81f082c2aa5c4ea599d7f14104a87520",
+          "activiteitRef": "nl.imow-gm0995.activiteit.SportSpeeltBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.a940602c0764415691d48f9655f24756",
+          "activiteitRef": "nl.imow-gm0995.activiteit.ConstrTerreinhoogte",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.bf130a16fcd448a4aae27cf8ec1ebc61",
+          "activiteitRef": "nl.imow-gm0995.activiteit.BouwwerkAgrarischBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        },
+        {
+          "identificatie": "nl.imow-gm0995.activiteitlocatieaanduiding.5b9920c892ce48e9b4535565e7b3c147",
+          "activiteitRef": "nl.imow-gm0995.activiteit.AntenneBouwen",
+          "activiteitregelkwalificatie": {
+            "code": "http://standaarden.omgevingswet.overheid.nl/activiteitregelkwalificatie/id/concept/Gebod",
+            "waarde": "gebod"
+          },
+          "locatieRefs": [
+            "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879"
+          ],
+          "symbolisatie": {
+            "geometrieType": "vlak",
+            "symboolcode": "vag116"
+          }
+        }
+      ],
+      "themas": [
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Bouwen",
+          "waarde": "bouwen"
+        },
+        {
+          "code": "http://standaarden.omgevingswet.overheid.nl/thema/id/concept/Bouwwerken",
+          "waarde": "bouwwerken"
+        }
+      ]
     }
   ],
   "locaties": [
@@ -409,12 +973,29 @@
       "locatieType": "Ambtsgebied",
       "geometrieIdentificatie": "GM0995_20230101",
       "noemer": "Ambtsgebied Gemeente Lelystad"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.gebiedengroep.b4a2e71039e64c88b57f0bd945fd3879",
+      "locatieType": "Gebiedengroep",
+      "locatieRefs": [
+        "nl.imow-gm0995.gebied.8b72924de68f43bfb7c5f6b0366c09be"
+      ],
+      "noemer": "bouwwerk, geen gebouw zijnde, 60 m, mits"
+    },
+    {
+      "identificatie": "nl.imow-gm0995.gebiedengroep.579386d848d4489b83679b4b2d95317c",
+      "locatieType": "Gebiedengroep",
+      "locatieRefs": [
+        "nl.imow-gm0995.gebied.fd872827f95a4a8fbe59ad2a98fc4352"
+      ],
+      "noemer": "bouwwerk, geen gebouw zijnde, 1 m"
     }
   ],
   "gebiedsaanwijzingen": [],
   "omgevingsnormen": [],
   "_source": {
     "env": "prod",
-    "geldigOp": "2026-09-22"
+    "geldigOp": "2026-09-22",
+    "note": "Trimmed from the production annotation graph for _akn_nl_act_gm0995_2020_omgevingsplan. Includes real decoy entries (GeslotenBodemenergInst, AntenneBouwen) deliberately, so the activiteitRef filter and the activiteiten .find() lookup are falsifiable in tests, not just the HoutopstandVellen slice."
   }
 }
