@@ -124,8 +124,35 @@ is when its pin started to decide what ships: before, Oryx built the bundle on
 `zizmor.yml` keeps its own literal, `24.20.0`, deliberately: its
 `renovate-config-validator` step needs Node 24.
 
-Still floating: the App Service host runtime, `NODE|22-lts`, which is the
-platform's choice within the major.
+**The App Service host runtime cannot be pinned exactly, and that is now a
+decision rather than an omission.** `az webapp list-runtimes --os linux`
+returns, for Node, exactly `NODE|22-lts`, `NODE|24-lts` and `NODE|26` —
+major-level only. There is no exact version, no digest, and no setting that
+takes one, so "pin at the highest precision the platform allows" is satisfied
+by naming the major and nothing more.
+
+What remains reachable is keeping that major in step with `.nvmrc`'s, and
+**the ordering is part of the pin**: switch the App Service first, then merge
+the `.nvmrc` bump. No pull-request check runs against an App Service, so
+nothing enforces this.
+
+`ronl-linkeddata-backend-acc` moved to `NODE|24-lts` on 23 September, ahead of
+#80; `ronl-linkeddata-backend-prod` is still `NODE|22-lts` and coherent with
+the artifact it runs, and moves with the promotion that carries a Node 24
+build.
+
+**And the ordering alone is not enough here**, because this backend ships a
+native module. `libxmljs2` builds against NAN rather than N-API, so its
+`xmljs.node` is bound to `NODE_MODULE_VERSION` — 127 on Node 22, 137 on Node
+24. Between switching the runtime and deploying an artifact rebuilt on the new
+major, the binary does not match the host; the same is true in reverse if the
+merge comes first. That is not merely an interruption: on 23 September the
+deploy reported success — health, `build.sha`, the shape layers and
+`/v1/dmns` all green — while DMN validation returned `BASE-ERR` for every
+user. The deploy workflows now POST a minimal DMN to `/v1/dmns/validate` after
+the build check and fail on that signature, because the build-time
+`require('libxmljs2')` assertion runs on the runner and proves only that the
+binary matches the Node that built it.
 
 ### 4. `zizmor-action`'s `version: '1.29.0'` input
 
