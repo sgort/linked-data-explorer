@@ -44,10 +44,36 @@ out of the previous one. Four joins, in the order the dossier performs them:
 `organisatieType` and `organisatieCode` (`GM` + `0995`), concatenated and
 lowercased to `gm0995` — the code Ozon's regelingen search expects. `POST
 /regelingen/_zoek {"bevoegdGezag":["gm0995"]}` returns every regeling that
-authority publishes; the dossier selects the one typed
-`/join/id/stop/regelingtype_003` (Omgevingsplan) and discards the rest.
-Lelystad has four regelingen — omgevingsplan, omgevingsvisie,
-voorbereidingsbesluit, warmteprogramma — and only the first is in scope.
+authority publishes, and the dossier then has to pick the right one.
+
+**Which regeling depends on the bestuurslaag.** An omgevingsplan is the
+gemeente's instrument; the other levels each have their own, and looking for
+an omgevingsplan anywhere else finds nothing. Verified against production:
+
+| Bestuurslaag | Core instrument | `regelingtype` |
+|---|---|---|
+| gemeente | Omgevingsplan | `/join/id/stop/regelingtype_003` |
+| provincie | Omgevingsverordening | `/join/id/stop/regelingtype_004` |
+| waterschap | Waterschapsverordening | `/join/id/stop/regelingtype_005` |
+| rijk | AMvB | `/join/id/stop/regelingtype_001` |
+
+The level comes from `bestuursorgaan.bestuurslaag`, which the RTR does supply,
+falling back to the authority code's prefix (`gm` / `pv` / `ws` / `mnre`) when
+it is absent. An explicit `--authority` overrides the code, and the level then
+follows that authority's own prefix.
+
+Lelystad publishes four regelingen — omgevingsplan, omgevingsvisie,
+voorbereidingsbesluit, warmteprogramma — and only the omgevingsplan is in
+scope. Selection is by type code, never by position or title.
+
+**An authority can publish several regelingen of the right type.** The Rijk
+publishes two AMvBs: `/akn/nl/act/mnre1034/2020/regOW01` (Omgevingswet) and
+`/akn/nl/act/mnre1034/2021/OOWATRXX1` (Aansluitdocument Rijk). The dossier
+tries them in order and keeps the first that actually annotates the requested
+activity, capping the attempts at three — each annotation graph can be several
+megabytes, so this is a bounded probe, not a sweep. Whichever was used is
+recorded in `provenance`; if none matched, so is that, along with which were
+checked and which could not be fetched.
 
 **Activity to article.** This is the join that does not exist where you would
 expect it. A `regeltekst` in the annotation graph carries only its own
@@ -91,7 +117,7 @@ npm run dso:dossier -- --urn=<urn> [--env=prod] [--date=dd-MM-yyyy] [--authority
 | `--urn` | Required. The IMOW activity URN, e.g. `nl.imow-gm0995.activiteit.HoutopstandVellen`. |
 | `--env` | `pre` (default) or `prod`. Selects which DSO environment answers every call in the chain. |
 | `--date` | Validity date, `dd-MM-yyyy` — the same wire format as every other DSO route's `datum` parameter. Omitted means "today" on both the RTR call and the rendered report. The dossier service converts internally to the ISO form Ozon's `geldigOp` expects; the CLI flag itself always takes dd-MM-yyyy. |
-| `--authority` | Required only for a national (`mnre`) activity — see §6. The bevoegd-gezag code (e.g. `gm0995`) of the plan to scan for annotations. |
+| `--authority` | Optional override. The bevoegd-gezag code (e.g. `gm0995`) of the regeling to scan for annotations, instead of the one derived from the activity's own `bestuursorgaan`. Useful for a national activity that is annotated into a specific municipal plan — see §6. Never required. |
 | `--out` | Write the rendered Markdown to a file instead of stdout. |
 
 The script talks to `LDE_API_BASE_URL` (default `http://localhost:3001`) — it
@@ -181,29 +207,73 @@ because that is where the worked example lives.
 
 **Another activity** is simply a different URN passed to the same command.
 
-**National activities are the one case needing an extra parameter.** A
-rijk (`mnre`) activity does not, by itself, say which plan annotates it — the
-Lelystad omgevingsplan's own annotation graph contains both `nl.imow-gm0995`
-*and* `nl.imow-mnre1034` activity namespaces, because national activities get
-annotated into many municipal plans at once. For an `nl.imow-mnre####` URN
-the dossier cannot guess which plan to scan, so it requires `--authority`
-(the bevoegd-gezag code of the plan to read) and returns a 400 naming the
-parameter if it is missing.
+**National activities work like any other, with one wrinkle.** A rijk
+(`mnre`) URN resolves through the same chain: its `bestuurslaag` is `rijk`,
+so the dossier looks in the Rijk's AMvBs rather than in an omgevingsplan.
+
+The wrinkle is that a national activity can *also* be annotated into
+municipal plans — Lelystad's own annotation graph carries both
+`nl.imow-gm0995` and `nl.imow-mnre1034` namespaces, because national
+activities get annotated into many plans at once. So for a national activity
+there is no single correct answer to "which plan annotates it"; there are
+potentially hundreds. `--authority` exists for that case: it says *scan this
+authority's regeling instead of the one I would derive*.
+
+**It is not required, and its absence is not an error.** An earlier version
+of this service rejected every `mnre` URN without `--authority` with a 400.
+That was wrong twice over. It blocked activities that need no authority at
+all — `nl.imow-mnre1034.activiteit.RijksmonArchMonument` carries its own
+Conclusie and Indieningsvereisten and scores 23 of 23 decisions semantic —
+and the advice it gave was itself false, since no municipality can supply a
+national activity's own legal source. A request naming a valid URN is not
+malformed, so it no longer answers 400; an unresolvable legal source is
+reported as unavailable with the reason, and the other three links are
+returned.
 
 ## 7. Edge cases
 
-**Activities with no rule sets.** Parent/grouping activities such as
-`nl.imow-gm0995.activiteit.OverigeAct` legitimately have an empty
-`regelBeheerObjecten` array on the RTR. Legal source and annotation still
-resolve normally; decision criteria and submission requirements are reported
-as absent, not as an error. This is not a failure of the join — a parent
-activity is not itself the executable unit, its children are.
+**Activities with no rule sets — taxonomy nodes.** Parent/grouping
+activities legitimately have an empty `regelBeheerObjecten` array on the RTR.
+Legal source and annotation still resolve normally; decision criteria and
+submission requirements are reported as absent, not as an error. This is not
+a failure of the join — a parent activity is not itself the executable unit,
+its children are.
 
-**Authorities with no omgevingsplan.** Not every bevoegd gezag has a
-regeling typed `regelingtype_003` at all. When none is found, the dossier
-still returns the RTR-side data with the legal-source link marked
+Three signals together identify one: no `regelBeheerObjecten`,
+`toonbaar: false`, and one or more `onderliggendeActiviteiten`.
+`nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit` is the clearest
+example — it has no rules of its own and two children,
+`RijksmonArchMonument` and `RijkmonMonument`, which carry a Conclusie and
+Indieningsvereisten each. Loading the parent and finding nothing is the
+correct answer; the rules are one level down. `nl.imow-gm0995.activiteit.OverigeAct`
+is the same shape at gemeente level.
+
+**Authorities with no regeling of the expected type.** Not every bevoegd
+gezag publishes the instrument its level implies. When none is found, the
+dossier still returns the RTR-side data with the legal-source link marked
 unavailable and the reason recorded in `provenance.failures`, rather than
 failing the whole request.
+
+**A legal source that cannot be reached at all.** Some activities resolve
+three links and not the fourth, and that is a real answer rather than a bug.
+`nl.imow-mnre1034.activiteit.RijksmonArchMonument` returns its Conclusie
+(`88073`) and Indieningsvereisten (`86071`), but neither of the Rijk's two
+AMvBs annotates it — its legal source lives somewhere this method does not
+reach. The dossier says so explicitly:
+
+```
+2 regeling(en) of type /join/id/stop/regelingtype_001 for mnre1034 were tried
+for nl.imow-mnre1034.activiteit.RijksmonArchMonument — 2 checked and do not
+annotate it: /akn/nl/act/mnre1034/2020/regOW01, /akn/nl/act/mnre1034/2021/OOWATRXX1
+```
+
+That wording is deliberate. A regeling that was fetched and found not to
+annotate the activity is reported separately from one that could not be
+fetched at all, and a fetch failure names the candidate it came from. The
+reader can tell *we looked in the right places and it is not there* from *we
+could not look* — a distinction an empty legal source alone would hide, and
+the thing that makes a partial dossier trustworthy rather than merely
+incomplete.
 
 **Tijdelijke delen are out of scope, deliberately.** Lelystad's omgevingsplan
 lists four tijdelijke delen (`ws0650`, `pv24`, `mnre1034`), and it would be

@@ -112,6 +112,14 @@ authority code (e.g. `GM0995`), never a readable name.
 The detail response carries `regelBeheerObjecten` (which unlocks §2.4) and
 `_links.onderliggendeActiviteiten` — a list of HAL hrefs and nothing else.
 
+**The selection is shared, not local.** `selectedUrn`, the active validity date,
+the authority OIN and the authority level live in `DsoExplorer` rather than in
+this tab, so the Quality Profile tab (§2.5) can read them. Switching tabs
+preserves all four; changing Level or Authority, clicking Load, and closing the
+detail panel still clear the selection. The detail panel also carries a
+quality-profile teaser, which renders from the client cache only and never
+triggers the dossier call on its own — see §2.5.
+
 **Child-activity fan-out (1 + N requests).** Because the RTR returns bare hrefs
 for children, with no `omschrijving`, the panel cannot label them without asking
 the API about each one individually. So as soon as the parent resolves,
@@ -197,7 +205,51 @@ plus activity metadata. Only identifiers travel in the URL — the CPSV Editor f
 the XML itself from `GET /v1/dso/toepasbare-regels/{dmnId}/dmn?env=<env>` on this same
 backend, so this LDE endpoint is a **cross-application contract**, not just internal.
 
-### 2.5 BPMN modeler — DSO activity selector
+### 2.5 Quality Profile tab (`QualityProfileTab`)
+
+The fourth tab. It shows the quality profile of the activity **currently
+selected in the Activities tab**: how much of that activity's chain is readable
+as it stands, and how much the dossier had to recover. The concepts behind the
+numbers — the two axes, the three identifier classes, and why no single headline
+grade is produced — are in
+[`dso-activity-dossier.md` §8](dso-activity-dossier.md); this section covers only
+how the tab is wired.
+
+**Shared selection.** `selectedUrn`, the active validity date, the authority OIN
+and the authority level live in `DsoExplorer`, not in `ActiviteitenTab`, so a tab
+other than Activities can read the current selection. Switching tabs does not
+clear it. Changing Level or Authority, clicking Load, and closing the detail
+panel all still do. Returning to Activities restores the authority's filtered
+list rather than resetting to the unfiltered date-based one.
+
+**One call, lazily.** `getActiviteitDossier(urn, env, datum?, authority?)` →
+`GET /v1/dso/activiteiten/:urn/dossier` → **APIs 2 + 5 + 6**. That single call
+fans out across three upstream APIs, so it is the most expensive request the
+viewer makes. It is issued only when the Quality Profile tab is active, cached
+client-side by `env|datum|urn`, and never triggered merely by selecting an
+activity. The `authority` parameter is sent as a bevoegd-gezag **code**
+(`gm0995`), not an OIN — the backend matches it against `bevoegdGezag`.
+
+**What it renders.** A context toolbar (activity, authority, `Compare with`,
+`Dossier .md`), an activity summary card, one scorecard per rule set with the
+decision and input tables behind them, the legal-source articles, and a footer
+carrying the environment and validity date. Compare mode fetches a second
+dossier — the same activity local name under another authority's prefix, using
+*that* authority's code — and switches to a matrix that keeps the two side by
+side. Conclusie and Indieningsvereisten are always separate columns; nothing is
+averaged.
+
+**Detail-panel teaser.** `ActivityDetailPanel` shows a two-row summary of the
+same profile, and is the one place the two rule sets are summed — it is a
+pointer into the tab, not a score. It renders from the client cache only, so
+selecting an activity never triggers the expensive call.
+
+**Markdown download.** The `Dossier .md` button renders the same Markdown as the
+CLI. Both import `renderDossier` from `scripts/dossier-render.mjs`; a test
+asserts the two references are the same function object, so the CLI output and
+the download cannot drift apart.
+
+### 2.6 BPMN modeler — DSO activity selector
 
 Outside the viewer proper, `DsoActiviteitSelector` verifies a manually entered
 activity URN when linking a BPMN process to a DSO activity. It reuses
@@ -248,6 +300,26 @@ query parameter (header takes precedence); anything else falls back to `pre`.
   `1 + N` upstream calls in one burst. It exists only to turn hrefs into readable
   names. If child counts grow or DSO rate limiting appears, a concurrency cap is
   the first thing to add.
+- **The regeling lookup is per bestuurslaag, not omgevingsplan-only.** An
+  omgevingsplan (`regelingtype_003`) is the gemeente instrument. Provincie
+  publishes an Omgevingsverordening (`_004`), waterschap a
+  Waterschapsverordening (`_005`), rijk an AMvB (`_001`). The dossier picks by
+  the activity's `bestuursorgaan.bestuurslaag`, falling back to the authority
+  code prefix. An earlier version hardcoded `_003`, so every provincie,
+  waterschap and rijk activity silently reported "no omgevingsplan" — a failure
+  that went unnoticed because nothing exercised those levels. See
+  [`dso-activity-dossier.md` §2](dso-activity-dossier.md).
+- **Taxonomy nodes have no rules of their own.** An activity with an empty
+  `regelBeheerObjecten`, `toonbaar: false` and one or more
+  `onderliggendeActiviteiten` is a grouping node; its children carry the rules.
+  `nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit` → `RijksmonArchMonument`
+  and `RijkmonMonument` is the clearest example. An empty dossier for such a URN
+  is the correct answer, not a lookup failure.
+- **A dossier can legitimately resolve three of four links.** Where no regeling
+  annotates the activity, `legalSource.available` is false and
+  `provenance.failures` records which regelingen were checked and found not to
+  annotate it, separately from any that could not be fetched. The request is not
+  rejected: a valid URN is not a malformed request.
 - **Timeout on production requests** uses `config.dso.timeout`; `config.dsoProd` has
   no `timeout` field of its own, so both environments share the pre-production value.
 - **Doc drift:** the route comments for `/begrippen` and `/activiteiten` say the
@@ -262,9 +334,17 @@ query parameter (header takes precedence); anything else falls back to `pre`.
 | File | Role |
 |------|------|
 | `packages/backend/src/utils/config.ts` | Base URLs, API keys, timeout (pre + prod) |
-| `packages/backend/src/services/dso.service.ts` | All outbound DSO calls, STTR/DMN/form parsing |
+| `packages/backend/src/services/dso.service.ts` | Outbound calls to APIs 1–5, STTR/DMN/form parsing |
+| `packages/backend/src/services/ozon.service.ts` | Outbound calls to API 6 (Ozon Presenteren v8) |
+| `packages/backend/src/services/dossier.service.ts` | The four-link join — the only place it lives |
+| `packages/backend/src/services/quality.service.ts` | Dossier → quality profile. Pure, no I/O |
+| `packages/backend/src/utils/ttl-cache.ts` | Shared TTL cache (activity detail, annotation graphs) |
 | `packages/backend/src/routes/dso.routes.ts` | `/v1/dso` proxy endpoints |
 | `packages/backend/src/routes/registry.ts` | Mounts the router at `/v1/dso` |
-| `packages/frontend/src/services/dsoService.ts` | Typed client + HAL unwrapping |
-| `packages/frontend/src/components/DsoExplorer/DsoExplorer.tsx` | The three tabs, rules panel, CPSV handoff |
+| `packages/frontend/src/services/dsoService.ts` | Typed client + HAL unwrapping + dossier cache |
+| `packages/frontend/src/components/DsoExplorer/DsoExplorer.tsx` | The four tabs, shared selection, rules panel, CPSV handoff |
+| `packages/frontend/src/components/DsoExplorer/QualityProfileTab.tsx` | The Quality Profile tab (§2.5) |
+| `packages/frontend/src/components/DsoExplorer/shared.tsx` | `Section`, `TYPERING_META`, naming/tone tokens |
 | `packages/frontend/src/components/BpmnModeler/DsoActiviteitSelector.tsx` | URN verification in the BPMN modeler |
+| `scripts/dossier-render.mjs` | `renderDossier` — shared by the CLI and the browser download |
+| `scripts/dso-dossier.mjs` | The `npm run dso:dossier` CLI |
