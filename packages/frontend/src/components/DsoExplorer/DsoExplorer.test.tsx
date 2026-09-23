@@ -1392,6 +1392,7 @@ function minimalDossier(overrides: Record<string, unknown> = {}) {
       bovenliggendeActiviteitRef: null,
     },
     rtrLocaties: [],
+    childActivityUrns: [],
     decisionCriteria: null,
     submissionRequirements: null,
     provenance: {

@@ -244,7 +244,7 @@ describe('buildDossier', () => {
     expect(d.legalSource.juridischeRegels).toHaveLength(0);
     expect(d.provenance.failures).toContainEqual({
       step: 'annotaties',
-      detail: 'Ozon responded 500: annotaties down',
+      detail: 'Ozon responded 500: annotaties down (/akn/nl/act/gm0995/2020/omgevingsplan)',
     });
   });
 
@@ -300,16 +300,317 @@ describe('buildDossier', () => {
     expect(d.provenance.failures.some((f) => f.step === 'regeling')).toBe(true);
   });
 
-  test('a national activity without an authority parameter is rejected', async () => {
+  test('a national activity with no authority parameter returns a dossier, not a rejection', async () => {
     dso.getActiviteit.mockResolvedValue({
       ...activiteit,
-      urn: 'nl.imow-mnre1034.activiteit.Iets',
-      bestuursorgaan: { organisatieType: 'MNRE', organisatieCode: '1034' },
+      urn: 'nl.imow-mnre1034.activiteit.RijksmonArchMonument',
+      bestuursorgaan: {
+        oin: '00000001003214345000',
+        organisatieType: 'MNRE',
+        organisatieCode: '1034',
+      },
+    });
+    // The default `ozon.zoekRegelingen` mock only carries regelingtype_006 and
+    // _010 candidates for gm0995 — none of type _001 (AMvB), which is what a
+    // rijk authority is searched for. So this activity's rule sets still
+    // resolve (they come straight off the RTR's own regelBeheerObjecten,
+    // independent of the legal source), while the legal source itself is
+    // unavailable with a recorded reason — the known, correct outcome for
+    // RijksmonArchMonument.
+
+    const d = await buildDossier({
+      urn: 'nl.imow-mnre1034.activiteit.RijksmonArchMonument',
+      env: 'prod',
     });
 
-    await expect(
-      buildDossier({ urn: 'nl.imow-mnre1034.activiteit.Iets', env: 'prod' })
-    ).rejects.toThrow('authority');
+    expect(d.decisionCriteria?.identifier).toBe(114233);
+    expect(d.submissionRequirements?.identifier).toBe(105947);
+    expect(d.legalSource.available).toBe(false);
+    expect(d.provenance.failures.some((f) => f.step === 'regeling')).toBe(true);
+  });
+
+  test.each([
+    ['gemeente', 'GM', '0995', '/join/id/stop/regelingtype_003'],
+    ['provincie', 'PV', '24', '/join/id/stop/regelingtype_004'],
+    ['waterschap', 'WS', '0501', '/join/id/stop/regelingtype_005'],
+    ['rijk', 'MNRE', '1034', '/join/id/stop/regelingtype_001'],
+  ])(
+    "selects the %s regeling type (%s%s -> %s) for its own level, not another level's",
+    async (level, organisatieType, organisatieCode, expectedType) => {
+      dso.getActiviteit.mockResolvedValue({
+        ...activiteit,
+        bestuursorgaan: { organisatieType, organisatieCode },
+      });
+      ozon.zoekRegelingen.mockResolvedValue({
+        _embedded: {
+          regelingen: [
+            // A decoy of a type no bestuurslaag in the mapping uses — a
+            // regression to "just take the first regeling" must fail this.
+            { identificatie: 'decoy', type: { code: '/join/id/stop/regelingtype_999' } },
+            {
+              identificatie: `correct-${level}`,
+              type: { code: expectedType },
+              officieleTitel: `Correct for ${level}`,
+            },
+          ],
+        },
+      });
+
+      const d = await buildDossier({ urn: URN, env: 'prod' });
+
+      expect(d.provenance.regelingIdentificatie).toBe(`correct-${level}`);
+      expect(d.legalSource.regelingTitel).toBe(`Correct for ${level}`);
+    }
+  );
+
+  // A1: every case above builds `bestuursorgaan` WITHOUT a `bestuurslaag`
+  // field, so they only ever exercise the `bestuurslaagFromCode` fallback.
+  // In production `bestuursorgaan.bestuurslaag` IS present (verified live),
+  // so THIS is the branch that actually runs. These two cases cover the
+  // native field driving the choice — one where it disagrees with what the
+  // code prefix would give, which is the one that fails if the two
+  // branches are ever swapped or `??` becomes `||`.
+  test('bestuursorgaan.bestuurslaag drives the level even when it disagrees with the code prefix', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      bestuursorgaan: { organisatieType: 'GM', organisatieCode: '0995', bestuurslaag: 'provincie' },
+    });
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: [
+          {
+            identificatie: 'provincie-verordening',
+            type: { code: '/join/id/stop/regelingtype_004' }, // provincie, not gemeente
+            officieleTitel: 'Provincie via bestuurslaag',
+          },
+        ],
+      },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.provenance.regelingIdentificatie).toBe('provincie-verordening');
+    expect(d.legalSource.regelingTitel).toBe('Provincie via bestuurslaag');
+  });
+
+  test('bestuursorgaan.bestuurslaag resolves the level even when the code prefix cannot', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      bestuursorgaan: { organisatieType: 'XX', organisatieCode: '123', bestuurslaag: 'waterschap' },
+    });
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: [
+          {
+            identificatie: 'waterschap-verordening',
+            type: { code: '/join/id/stop/regelingtype_005' },
+            officieleTitel: 'Waterschap via bestuurslaag',
+          },
+        ],
+      },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(true);
+    expect(d.provenance.regelingIdentificatie).toBe('waterschap-verordening');
+  });
+
+  // D1: an unexpected bestuurslaag value (wrong casing here) must not be
+  // trusted via the bare `as Bestuurslaag` cast — it must fall back to the
+  // code-derived level instead of flowing through and producing a
+  // "no regeling of type undefined" failure.
+  test('a junk bestuurslaag value falls back to the code-derived level rather than being trusted', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      bestuursorgaan: { organisatieType: 'GM', organisatieCode: '0995', bestuurslaag: 'Gemeente' },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(true);
+    expect(d.provenance.regelingIdentificatie).toBe('/akn/nl/act/gm0995/2020/omgevingsplan');
+  });
+
+  // C1: the degrade path — bestuurslaag cannot be determined at all (no
+  // native field, and a code prefix outside gm/pv/ws/mnre) — must record a
+  // failure and still return a dossier, never throw or default to gemeente.
+  test('an activity whose bestuurslaag cannot be determined at all degrades to an unavailable legal source with a named reason', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      bestuursorgaan: { organisatieType: 'XX', organisatieCode: '123' },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(false);
+    expect(d.provenance.failures).toContainEqual({
+      step: 'regeling',
+      detail: 'Could not determine the bestuurslaag for xx123',
+    });
+    expect(d.urn).toBe(URN);
+  });
+
+  // B1: the mixed-failure path — one candidate's annotations fetch throws,
+  // another is actually fetched and found not to match. The two must stay
+  // distinct in provenance, and the summary must never claim the errored
+  // candidate was checked.
+  test('a mixed candidate path keeps an errored candidate distinct from one actually checked and not matching', async () => {
+    const urn = 'nl.imow-mnre1034.activiteit.RijksmonArchMonument';
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      urn,
+      bestuursorgaan: { organisatieType: 'MNRE', organisatieCode: '1034' },
+    });
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: [
+          { identificatie: 'errors-out', type: { code: '/join/id/stop/regelingtype_001' } },
+          { identificatie: 'checked-no-match', type: { code: '/join/id/stop/regelingtype_001' } },
+        ],
+      },
+    });
+    ozon.getRegeltekstAnnotaties.mockImplementation((id: string) => {
+      if (id === 'errors-out') return Promise.reject(new Error('DSO responded 500: boom'));
+      return Promise.resolve({
+        activiteiten: [],
+        regelteksten: [],
+        locaties: [],
+        regelsVoorIedereen: [],
+      });
+    });
+
+    const d = await buildDossier({ urn, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(false);
+
+    const annotatiesFailure = d.provenance.failures.find(
+      (f) => f.step === 'annotaties' && f.detail.includes('errors-out')
+    );
+    expect(annotatiesFailure?.detail).toBe('DSO responded 500: boom (errors-out)');
+
+    const summary = d.provenance.failures.find((f) => f.step === 'regeling');
+    expect(summary?.detail).toContain('could not be fetched');
+    expect(summary?.detail).toContain('errors-out');
+    expect(summary?.detail).toMatch(/checked and do not annotate.*checked-no-match/);
+    // The overclaim this guards against: asserting the errored candidate
+    // was checked and found not to annotate the activity.
+    expect(summary?.detail).not.toMatch(/checked and do not annotate[^;]*errors-out/);
+  });
+
+  test('with several candidates of the preferred type, uses the first whose annotations actually name the activity', async () => {
+    const urn = 'nl.imow-mnre1034.activiteit.RijksmonArchMonument';
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      urn,
+      bestuursorgaan: { organisatieType: 'MNRE', organisatieCode: '1034' },
+    });
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: [
+          {
+            identificatie: '/akn/nl/act/mnre1034/2020/regOW01',
+            type: { code: '/join/id/stop/regelingtype_001' },
+            officieleTitel: 'Omgevingswet',
+          },
+          {
+            identificatie: '/akn/nl/act/mnre1034/2021/OOWATRXX1',
+            type: { code: '/join/id/stop/regelingtype_001' },
+            officieleTitel: 'Aansluitdocument Rijk',
+          },
+        ],
+      },
+    });
+    const empty = { activiteiten: [], regelteksten: [], locaties: [], regelsVoorIedereen: [] };
+    const withHit = {
+      ...empty,
+      regelsVoorIedereen: [
+        {
+          identificatie: 'r1',
+          regeltekstRef: 'rt1',
+          activiteitLocatieaanduidingen: [{ identificatie: 'a1', activiteitRef: urn }],
+        },
+      ],
+    };
+    ozon.getRegeltekstAnnotaties.mockImplementation((id: string) =>
+      Promise.resolve(id === '/akn/nl/act/mnre1034/2021/OOWATRXX1' ? withHit : empty)
+    );
+
+    const d = await buildDossier({ urn, env: 'prod' });
+
+    expect(d.provenance.regelingIdentificatie).toBe('/akn/nl/act/mnre1034/2021/OOWATRXX1');
+    expect(d.legalSource.available).toBe(true);
+    expect(ozon.getRegeltekstAnnotaties).toHaveBeenNthCalledWith(
+      1,
+      '/akn/nl/act/mnre1034/2020/regOW01',
+      'prod',
+      expect.anything()
+    );
+    expect(ozon.getRegeltekstAnnotaties).toHaveBeenNthCalledWith(
+      2,
+      '/akn/nl/act/mnre1034/2021/OOWATRXX1',
+      'prod',
+      expect.anything()
+    );
+  });
+
+  test('caps regeling attempts at 3 and records what was tried when none annotate the activity', async () => {
+    const urn = 'nl.imow-mnre1034.activiteit.RijksmonArchMonument';
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      urn,
+      bestuursorgaan: { organisatieType: 'MNRE', organisatieCode: '1034' },
+    });
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: ['c1', 'c2', 'c3', 'c4'].map((id) => ({
+          identificatie: id,
+          type: { code: '/join/id/stop/regelingtype_001' },
+        })),
+      },
+    });
+    ozon.getRegeltekstAnnotaties.mockResolvedValue({
+      activiteiten: [],
+      regelteksten: [],
+      locaties: [],
+      regelsVoorIedereen: [],
+    });
+
+    const d = await buildDossier({ urn, env: 'prod' });
+
+    expect(ozon.getRegeltekstAnnotaties).toHaveBeenCalledTimes(3);
+    expect(d.legalSource.available).toBe(false);
+    const failure = d.provenance.failures.find((f) => f.step === 'regeling');
+    expect(failure?.detail).toContain('c1');
+    expect(failure?.detail).toContain('c2');
+    expect(failure?.detail).toContain('c3');
+    expect(failure?.detail).not.toContain('c4');
+  });
+
+  test('an explicit authority overrides the derived level, not just the code', async () => {
+    // The activity itself is a gemeente activity (URN's own bestuursorgaan),
+    // but the caller names a rijk authority explicitly — the AMvB type must
+    // be searched for, not gemeente's omgevingsplan type.
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: [
+          {
+            identificatie: 'amvb-x',
+            type: { code: '/join/id/stop/regelingtype_001' },
+            officieleTitel: 'AMvB X',
+          },
+        ],
+      },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod', authority: 'mnre1034' });
+
+    expect(ozon.zoekRegelingen).toHaveBeenCalledWith(
+      { bevoegdGezag: ['mnre1034'] },
+      'prod',
+      expect.anything()
+    );
+    expect(d.provenance.regelingIdentificatie).toBe('amvb-x');
   });
 
   test('provenance records env and datum', async () => {
@@ -470,5 +771,63 @@ describe('buildDossier', () => {
 
     expect(d.decisionCriteria?.sttrVersie).toBeNull();
     expect(d.decisionCriteria?.begindatum).toBeNull();
+  });
+});
+
+describe('buildDossier — childActivityUrns', () => {
+  // Step 1's RTR response already carries `_links.onderliggendeActiviteiten`
+  // (see the `ACTIVITEIT_DETAIL` fixture in dso.routes.test.ts for the same
+  // href shape) — this must cost no additional upstream call.
+  test('carries the child activity URNs, in RTR order, from _links.onderliggendeActiviteiten', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      urn: 'nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit',
+      _links: {
+        onderliggendeActiviteiten: [
+          {
+            href: '/activiteiten/nl.imow-mnre1034.activiteit.RijksmonArchMonument?datum=01-01-2026',
+          },
+          { href: '/activiteiten/nl.imow-mnre1034.activiteit.RijkmonMonument?datum=01-01-2026' },
+        ],
+      },
+    });
+
+    const d = await buildDossier({
+      urn: 'nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit',
+      env: 'prod',
+    });
+
+    expect(d.childActivityUrns).toEqual([
+      'nl.imow-mnre1034.activiteit.RijksmonArchMonument',
+      'nl.imow-mnre1034.activiteit.RijkmonMonument',
+    ]);
+    // Zero extra fan-out: only the fixed set of upstream calls the dossier
+    // already makes, nothing keyed off a child URN.
+    expect(dso.getActiviteit).toHaveBeenCalledTimes(1);
+  });
+
+  test('an activity with no children carries an empty array', async () => {
+    dso.getActiviteit.mockResolvedValue({ ...activiteit, _links: undefined });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.childActivityUrns).toEqual([]);
+  });
+
+  test.each([
+    ['no _links at all', undefined],
+    ['_links present but no onderliggendeActiviteiten key', {}],
+    ['onderliggendeActiviteiten is not an array', { onderliggendeActiviteiten: 'not-an-array' }],
+    ['an entry with no href', { onderliggendeActiviteiten: [{}] }],
+    [
+      'an entry whose href does not match the activiteiten path shape',
+      { onderliggendeActiviteiten: [{ href: '/not-an-activiteiten-path' }] },
+    ],
+  ])('degrades to an empty array rather than throwing: %s', async (_label, links) => {
+    dso.getActiviteit.mockResolvedValue({ ...activiteit, _links: links });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.childActivityUrns).toEqual([]);
   });
 });

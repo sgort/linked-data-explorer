@@ -98,15 +98,10 @@ router.get('/activiteiten/:urn/dossier', async (req: Request, res: Response) => 
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DSO request failed';
     logger.error('[DSO Routes] GET /activiteiten/:urn/dossier failed', { error: msg });
-    const status = msg.includes('authority') ? 400 : msg.includes('404') ? 404 : 502;
+    const status = msg.includes('404') ? 404 : 502;
     sendProblem(res, req, {
       status,
-      title:
-        status === 400
-          ? 'Invalid request'
-          : status === 404
-            ? 'Not found'
-            : 'Upstream request failed',
+      title: status === 404 ? 'Not found' : 'Upstream request failed',
       detail: msg,
     });
   }

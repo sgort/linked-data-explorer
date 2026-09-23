@@ -1720,6 +1720,7 @@ const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
             authorityOin={authorityOin}
             env={env}
             onGoToActivities={() => setTab('activiteiten')}
+            onSelectUrn={handleSelectUrn}
           />
         )}
       </div>

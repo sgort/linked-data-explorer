@@ -3856,11 +3856,12 @@ paths:
           in: query
           required: false
           description: >-
-            The authority (bevoegd gezag) code, e.g. `gm0995`, whose plan to
-            scan. Required for a national (mnre) activity, which is annotated
-            in many authorities' plans and cannot resolve one on its own;
-            optional otherwise, where it overrides the authority the activity
-            itself carries.
+            The authority (bevoegd gezag) code, e.g. `gm0995`, whose
+            regeling to scan. Optional: without it, the activity's own
+            bestuursorgaan is used. Overrides the authority — and the
+            instrument level derived from it — the activity itself carries;
+            useful because a national (mnre) activity can also be annotated
+            in another authority's plan, such as a municipal omgevingsplan.
           schema:
             type: string
       responses:
@@ -3880,24 +3881,6 @@ paths:
                   data:
                     type: object
                     description: The assembled dossier, plus a qualityProfile field.
-        '400':
-          description: >-
-            A national activity was requested without an authority parameter
-            to disambiguate which plan to scan.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-              examples:
-                missingAuthority:
-                  value:
-                    {
-                      type: 'about:blank',
-                      status: 400,
-                      title: 'Invalid request',
-                      detail: 'A national activity is annotated in many plans: pass an authority parameter for nl.imow-mnre1034.activiteit.X',
-                      instance: '/v1/dso/activiteiten/nl.imow-mnre1034.activiteit.X/dossier',
-                    }
         '404':
           description: No activity exists for this URN.
           content:

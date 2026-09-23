@@ -483,6 +483,7 @@ describe('getActiviteitDossier', () => {
       bovenliggendeActiviteitRef: null,
     },
     rtrLocaties: ['loc-1'],
+    childActivityUrns: [],
     decisionCriteria: {
       typering: 'Conclusie',
       identifier: 114233,

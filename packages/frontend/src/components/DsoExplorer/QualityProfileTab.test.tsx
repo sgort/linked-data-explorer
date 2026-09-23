@@ -5,11 +5,12 @@
 // input for the handoff and is never committed, so the figures are inlined
 // here rather than read from it at runtime.
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const getActiviteitDossier = vi.fn();
+const getActiviteitDetail = vi.fn();
 
 vi.mock('../../services/dsoService', async () => {
   const actual = await vi.importActual<typeof import('../../services/dsoService')>(
@@ -18,6 +19,7 @@ vi.mock('../../services/dsoService', async () => {
   return {
     ...actual,
     getActiviteitDossier: (...args: unknown[]) => getActiviteitDossier(...args),
+    getActiviteitDetail: (...args: unknown[]) => getActiviteitDetail(...args),
   };
 });
 
@@ -32,6 +34,14 @@ import QualityProfileTab, { QualityProfileTabProps } from './QualityProfileTab';
 afterEach(() => {
   vi.restoreAllMocks();
   getActiviteitDossier.mockReset();
+  getActiviteitDetail.mockReset();
+});
+
+// A safe default so any test whose dossier happens to carry
+// childActivityUrns (most don't) doesn't crash on an unmocked call — tests
+// that care about a specific name or a failed lookup override this.
+beforeEach(() => {
+  getActiviteitDetail.mockImplementation(async (urn: string) => ({ urn, omschrijving: null }));
 });
 
 // ─── Fixture builders ────────────────────────────────────────────────────────
@@ -254,6 +264,7 @@ function gm0995Dossier(overrides: Partial<DsoDossier> = {}): DsoDossier {
       bovenliggendeActiviteitRef: null,
     },
     rtrLocaties: [],
+    childActivityUrns: [],
     decisionCriteria: {
       typering: 'Conclusie',
       identifier: 114233,
@@ -393,6 +404,7 @@ function gm1708Dossier(overrides: Partial<DsoDossier> = {}): DsoDossier {
       bovenliggendeActiviteitRef: null,
     },
     rtrLocaties: [],
+    childActivityUrns: [],
     decisionCriteria: {
       typering: 'Conclusie',
       identifier: 116244,
@@ -445,6 +457,7 @@ function gm1708Dossier(overrides: Partial<DsoDossier> = {}): DsoDossier {
 }
 
 function renderTab(props: Partial<QualityProfileTabProps> = {}, onGoToActivities = vi.fn()) {
+  const onSelectUrn = vi.fn();
   render(
     <QualityProfileTab
       selectedUrn={GM0995_URN}
@@ -452,10 +465,11 @@ function renderTab(props: Partial<QualityProfileTabProps> = {}, onGoToActivities
       authorityOin=""
       env="pre"
       onGoToActivities={onGoToActivities}
+      onSelectUrn={onSelectUrn}
       {...props}
     />
   );
-  return { onGoToActivities };
+  return { onGoToActivities, onSelectUrn };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -515,14 +529,99 @@ describe('QualityProfileTab — states', () => {
           datum: null,
           regelingIdentificatie: 'reg-gm0995',
           fetchedAt: '2026-09-22T21:03:31.478Z',
-          failures: [{ step: 'legalSource', detail: 'No omgevingsplan found for gm0000' }],
+          failures: [
+            { step: 'regeling', detail: 'No regeling of type regelingtype_003 for gm0000' },
+          ],
         },
       })
     );
     renderTab();
 
     expect(await screen.findByText('Incomplete legs')).toBeTruthy();
-    expect(screen.getByText(/legalSource: No omgevingsplan found for gm0000/)).toBeTruthy();
+    expect(
+      screen.getByText(/regeling: No regeling of type regelingtype_003 for gm0000/)
+    ).toBeTruthy();
+  });
+
+  // A national (mnre) activity like RijksmonArchMonument no longer errors
+  // for lacking an authority (the backend guard that threw was removed):
+  // buildDossier now returns 200 with the rule sets fully resolved and
+  // `legalSource.available: false`, plus a reason in `provenance.failures`.
+  // The tab must render that as a normal dossier — rule sets and all — not
+  // fall into the red error state, and the "no legal source" reason must
+  // come from `provenance.failures` rather than a hardcoded, omgevingsplan-
+  // specific message (wrong on both counts once other bestuurslagen and
+  // non-error outcomes are possible).
+  test('a dossier with legalSource.available: false and present rule sets renders the rule sets and the reason, not an error', async () => {
+    getActiviteitDossier.mockResolvedValue(
+      gm0995Dossier({
+        urn: 'nl.imow-mnre1034.activiteit.RijksmonArchMonument',
+        legalSource: {
+          available: false,
+          regelingIdentificatie: null,
+          regelingTitel: null,
+          juridischeRegels: [],
+        },
+        qualityProfile: {
+          urn: 'nl.imow-mnre1034.activiteit.RijksmonArchMonument',
+          activityIdentity: 'semantic',
+          legalTraceability: { rules: 0, withWId: 0, withArticleText: 0 },
+          crossLayerConsistency: { sharedObjects: [] },
+          ruleSets: {
+            conclusie: {
+              decisionNaming: { total: 7, semantic: 3, opaque: 4, items: gm0995ConclusieDecisions },
+              inputNaming: { total: 5, semantic: 0, opaque: 5, items: gm0995ConclusieInputs },
+              labelCoverage: { inputs: 5, withQuestion: 5 },
+              refResolvability: { total: 1, resolved: 1, dangling: 0 },
+            },
+            indieningsvereisten: {
+              decisionNaming: { total: 21, semantic: 1, opaque: 20, items: gm0995IndDecisions },
+              inputNaming: { total: 10, semantic: 0, opaque: 10, items: gm0995IndInputs },
+              labelCoverage: { inputs: 10, withQuestion: 7 },
+              refResolvability: { total: 0, resolved: 0, dangling: 0 },
+            },
+          },
+        },
+        provenance: {
+          env: 'prod',
+          datum: null,
+          regelingIdentificatie: null,
+          fetchedAt: '2026-09-23T09:00:00.000Z',
+          failures: [
+            {
+              step: 'regeling',
+              detail:
+                'None of the 2 regeling(en) of type /join/id/stop/regelingtype_001 for mnre1034 annotate nl.imow-mnre1034.activiteit.RijksmonArchMonument: tried /akn/nl/act/mnre1034/2020/regOW01, /akn/nl/act/mnre1034/2021/OOWATRXX1',
+            },
+          ],
+        },
+      })
+    );
+    renderTab({ selectedUrn: 'nl.imow-mnre1034.activiteit.RijksmonArchMonument' });
+
+    // The rule sets still resolve and render.
+    expect(await screen.findByText('3/7 semantic')).toBeTruthy();
+
+    // No red error state.
+    expect(screen.queryByText(/not available in the/)).toBeNull();
+
+    // The reason comes from provenance.failures, not a hardcoded message.
+    expect(screen.getByText('Incomplete legs')).toBeTruthy();
+    expect(screen.getByText(/regeling: None of the 2 regeling\(en\) of type/)).toBeTruthy();
+
+    // The summary card points at the reason rather than showing a bare "—".
+    expect(screen.getByText('Not resolved — see Incomplete legs')).toBeTruthy();
+  });
+
+  test('the summary card shows the regeling title, not the pointer, when the legal source is available', async () => {
+    getActiviteitDossier.mockResolvedValue(gm0995Dossier());
+    renderTab();
+
+    // "Omgevingsplan gemeente Lelystad" also appears in the annotation
+    // section below, so scope to the "Legal source" summary card itself.
+    const legalSourceCard = (await screen.findByText('Legal source')).closest('div') as HTMLElement;
+    expect(within(legalSourceCard).getByText('Omgevingsplan gemeente Lelystad')).toBeTruthy();
+    expect(within(legalSourceCard).queryByText('Not resolved — see Incomplete legs')).toBeNull();
   });
 });
 
@@ -639,6 +738,93 @@ describe('QualityProfileTab — null rule set', () => {
     // Never zero counts, which would read as "measured and found nothing".
     expect(screen.queryByText(/0\/0/)).toBeNull();
     expect(screen.queryByText('Decision naming')).toBeNull();
+  });
+});
+
+// ─── Taxonomy node (docs/dso-activity-dossier.md §7) ──────────────────────────
+//
+// nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit is the worked
+// example: both rule sets null, two children (RijksmonArchMonument,
+// RijkmonMonument) that carry their own Conclusie and Indieningsvereisten.
+
+const TAXONOMY_URN = 'nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit';
+const CHILD_1 = 'nl.imow-mnre1034.activiteit.RijksmonArchMonument';
+const CHILD_2 = 'nl.imow-mnre1034.activiteit.RijkmonMonument';
+
+function taxonomyNodeDossier(childActivityUrns: string[]): DsoDossier {
+  return gm0995Dossier({
+    urn: TAXONOMY_URN,
+    decisionCriteria: null,
+    submissionRequirements: null,
+    qualityProfile: {
+      ...gm0995Dossier().qualityProfile,
+      urn: TAXONOMY_URN,
+      ruleSets: { conclusie: null, indieningsvereisten: null },
+    },
+    childActivityUrns,
+  });
+}
+
+describe('QualityProfileTab — taxonomy node', () => {
+  test('a dossier with null rule sets and children renders the block, the count, and one entry per child', async () => {
+    getActiviteitDossier.mockResolvedValue(taxonomyNodeDossier([CHILD_1, CHILD_2]));
+    getActiviteitDetail.mockImplementation(async (urn: string) => ({
+      urn,
+      omschrijving: urn === CHILD_1 ? 'Rijksmonument archeologie' : 'Rijksmonument monument',
+    }));
+    renderTab({ selectedUrn: TAXONOMY_URN });
+
+    expect(
+      await screen.findByText(/This is a grouping activity.*2 child activities\./)
+    ).toBeTruthy();
+    expect(await screen.findByText('Rijksmonument archeologie')).toBeTruthy();
+    expect(await screen.findByText('Rijksmonument monument')).toBeTruthy();
+  });
+
+  test("clicking a child invokes the selection callback with that child's URN", async () => {
+    getActiviteitDossier.mockResolvedValue(taxonomyNodeDossier([CHILD_1, CHILD_2]));
+    getActiviteitDetail.mockResolvedValue({ urn: CHILD_1, omschrijving: null });
+    const { onSelectUrn } = renderTab({ selectedUrn: TAXONOMY_URN });
+
+    // Before the (never-resolving-to-a-name) lookup settles the fallback is
+    // the URN local name, which is still a legitimate way to click it.
+    const link = await screen.findByRole('button', { name: 'RijksmonArchMonument' });
+    await userEvent.click(link);
+
+    expect(onSelectUrn).toHaveBeenCalledWith(CHILD_1);
+  });
+
+  test('a dossier with rule sets does NOT render the block, even if it has children', async () => {
+    getActiviteitDossier.mockResolvedValue(
+      gm0995Dossier({ childActivityUrns: [CHILD_1, CHILD_2] })
+    );
+    renderTab();
+
+    await screen.findByText('3/7 semantic'); // dossier has finished loading
+    expect(screen.queryByText(/This is a grouping activity/)).toBeNull();
+  });
+
+  test('a dossier with null rule sets and NO children does not render it either', async () => {
+    getActiviteitDossier.mockResolvedValue(taxonomyNodeDossier([]));
+    renderTab({ selectedUrn: TAXONOMY_URN });
+
+    await screen.findAllByText('Not present for this activity.');
+    expect(screen.queryByText(/This is a grouping activity/)).toBeNull();
+    expect(getActiviteitDetail).not.toHaveBeenCalled();
+  });
+
+  test('a failed name lookup still renders the child, falling back to the URN local name', async () => {
+    getActiviteitDossier.mockResolvedValue(taxonomyNodeDossier([CHILD_1, CHILD_2]));
+    getActiviteitDetail.mockImplementation(async (urn: string) => {
+      if (urn === CHILD_1) throw new Error('HTTP 500');
+      return { urn, omschrijving: 'Rijksmonument monument' };
+    });
+    renderTab({ selectedUrn: TAXONOMY_URN });
+
+    // The failed lookup's child still renders — under its URN local name —
+    // rather than being dropped or left blank.
+    expect(await screen.findByText('RijksmonArchMonument')).toBeTruthy();
+    expect(await screen.findByText('Rijksmonument monument')).toBeTruthy();
   });
 });
 
@@ -865,14 +1051,6 @@ describe('QualityProfileTab — edge cases and fallbacks', () => {
     renderTab();
 
     expect(await screen.findByText('id: 999 · STTR v— · —')).toBeTruthy();
-  });
-
-  test('a 400 error with an authority already set is shown verbatim, not the mnre-specific message', async () => {
-    getActiviteitDossier.mockRejectedValue(new Error('HTTP 400 Bad Request'));
-    renderTab({ authorityOin: '00000001005024249000' });
-
-    expect(await screen.findByText('HTTP 400 Bad Request')).toBeTruthy();
-    expect(screen.queryByText(/needs an authority/)).toBeNull();
   });
 
   test('an authority OIN is resolved to its bevoegd-gezag code before reaching getActiviteitDossier', async () => {
