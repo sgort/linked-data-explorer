@@ -28,6 +28,7 @@ coverage
 
 # Hand-authored ambient declarations (not generated output) — keep tracked
 !packages/backend/src/types/shacl-rdf.d.ts
+!scripts/dossier-render.d.ts
 
 # Hand-authored Jest config (not generated output) — keep tracked
 !packages/backend/jest.config.js

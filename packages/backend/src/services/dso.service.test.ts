@@ -11,6 +11,7 @@ const configMock = {
     zoekinterfaceBaseUrl: 'https://pre.example/zoek',
     opvragenWerkzaamhedenBaseUrl: 'https://pre.example/werkzaamheden',
     uitvoerenGegevensBaseUrl: 'https://pre.example/uitvoeren',
+    ozonBaseUrl: 'https://pre.example/ozon',
     apiKey: 'pre-key',
     timeout: 15000,
   },
@@ -20,6 +21,7 @@ const configMock = {
     zoekinterfaceBaseUrl: 'https://prod.example/zoek',
     opvragenWerkzaamhedenBaseUrl: 'https://prod.example/werkzaamheden',
     uitvoerenGegevensBaseUrl: 'https://prod.example/uitvoeren',
+    ozonBaseUrl: 'https://prod.example/ozon',
     apiKey: 'prod-key',
   },
 };
@@ -30,6 +32,8 @@ jest.mock('../utils/config', () => ({
 }));
 
 import { logger } from '../utils/logger';
+import { clearNamedCaches } from '../utils/ttl-cache';
+import * as dsoService from './dso.service';
 import {
   extractDmnFromSttr,
   extractFormScaffoldFromSttr,
@@ -89,6 +93,11 @@ beforeEach(() => {
   mockFetch.mockReset().mockResolvedValue(response());
   mockLogWarn.mockReset();
   global.fetch = mockFetch as unknown as typeof fetch;
+  // File-scope, so the pre-existing `describe('getActiviteit')` block (which
+  // has no cache-clearing of its own) cannot pass only by luck of its cases
+  // not colliding on a cache key — it shares the module-level
+  // `dso-activiteit` cache with every other test in this file.
+  clearNamedCaches('dso-activiteit');
 });
 
 afterEach(() => {
@@ -889,5 +898,104 @@ describe('extractFormScaffoldFromSttr', () => {
 
   test('stamps the requested form id onto the schema', () => {
     expect(extractFormScaffoldFromSttr(sttr(''), 'kapvergunning').id).toBe('kapvergunning');
+  });
+});
+
+describe('getActiviteit caching', () => {
+  const urn = 'nl.imow-gm0995.activiteit.HoutopstandVellen';
+
+  beforeEach(() => {
+    clearNamedCaches('dso-activiteit');
+    (global.fetch as jest.Mock).mockReset();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ urn, omschrijving: 'Boom kappen of houtopstand vellen' }),
+    });
+  });
+
+  test('a repeated lookup makes no second upstream request', async () => {
+    await getActiviteit(urn, '22-09-2026', 'prod');
+    await getActiviteit(urn, '22-09-2026', 'prod');
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('the cached response is identical to the uncached one', async () => {
+    const first = await getActiviteit(urn, '22-09-2026', 'prod');
+    const second = await getActiviteit(urn, '22-09-2026', 'prod');
+
+    expect(second).toEqual(first);
+  });
+
+  test('a different env is a different cache key', async () => {
+    await getActiviteit(urn, '22-09-2026', 'prod');
+    await getActiviteit(urn, '22-09-2026', 'pre');
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('a different datum is a different cache key', async () => {
+    await getActiviteit(urn, '22-09-2026', 'prod');
+    await getActiviteit(urn, '01-01-2024', 'prod');
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('clearing the named cache forces a refetch', async () => {
+    await getActiviteit(urn, '22-09-2026', 'prod');
+    clearNamedCaches('dso-activiteit');
+    await getActiviteit(urn, '22-09-2026', 'prod');
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('dsoFetch request options', () => {
+  beforeEach(() => {
+    (global.fetch as jest.Mock).mockReset();
+    (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+  });
+
+  test('defaults to GET with hal+json and no body', async () => {
+    await dsoService.getActiviteiten({ datum: '22-09-2026' }, 'pre');
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.method ?? 'GET').toBe('GET');
+    expect(init.headers.Accept).toBe('application/hal+json');
+    expect(init.body).toBeUndefined();
+  });
+
+  test('sends a JSON body and extra headers when asked', async () => {
+    await dsoService.dsoFetch('https://example.test/x', 'pre', {
+      method: 'POST',
+      body: { bevoegdGezag: ['gm0995'] },
+      headers: { 'Content-Crs': 'http://www.opengis.net/def/crs/EPSG/0/28992' },
+    });
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.method).toBe('POST');
+    expect(init.headers['Content-Type']).toBe('application/json');
+    expect(init.headers['Content-Crs']).toBe('http://www.opengis.net/def/crs/EPSG/0/28992');
+    expect(JSON.parse(init.body)).toEqual({ bevoegdGezag: ['gm0995'] });
+  });
+
+  test('defaults to POST when a body is supplied without an explicit method', async () => {
+    await dsoService.dsoFetch('https://example.test/x', 'pre', {
+      body: { bevoegdGezag: ['gm0995'] },
+    });
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.method).toBe('POST');
+    expect(init.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(init.body)).toEqual({ bevoegdGezag: ['gm0995'] });
+  });
+
+  test('an explicit GET with no body stays a bodyless GET', async () => {
+    await dsoService.dsoFetch('https://example.test/x', 'pre', { method: 'GET' });
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.method).toBe('GET');
+    expect(init.body).toBeUndefined();
+    expect(init.headers['Content-Type']).toBeUndefined();
   });
 });

@@ -10,6 +10,8 @@ const getWerkzaamheidDetail = vi.fn();
 const getActiviteiten = vi.fn();
 const getActiviteitenByOin = vi.fn();
 const getActiviteitDetail = vi.fn();
+const getActiviteitDossier = vi.fn();
+const getCachedActiviteitDossier = vi.fn();
 const fetchToepasbareRegels = vi.fn();
 const fetchFormScaffold = vi.fn();
 const saveForm = vi.fn();
@@ -27,6 +29,8 @@ vi.mock('../../services/dsoService', async () => {
     getActiviteiten: (...args: unknown[]) => getActiviteiten(...args),
     getActiviteitenByOin: (...args: unknown[]) => getActiviteitenByOin(...args),
     getActiviteitDetail: (...args: unknown[]) => getActiviteitDetail(...args),
+    getActiviteitDossier: (...args: unknown[]) => getActiviteitDossier(...args),
+    getCachedActiviteitDossier: (...args: unknown[]) => getCachedActiviteitDossier(...args),
     fetchToepasbareRegels: (...args: unknown[]) => fetchToepasbareRegels(...args),
     fetchFormScaffold: (...args: unknown[]) => fetchFormScaffold(...args),
   };
@@ -67,6 +71,8 @@ afterEach(() => {
   getActiviteiten.mockReset();
   getActiviteitenByOin.mockReset();
   getActiviteitDetail.mockReset();
+  getActiviteitDossier.mockReset();
+  getCachedActiviteitDossier.mockReset();
   fetchToepasbareRegels.mockReset();
   fetchFormScaffold.mockReset();
   saveForm.mockReset();
@@ -311,7 +317,7 @@ describe('DsoExplorer — Activities tab', () => {
       'urn:manual{Enter}'
     );
 
-    expect(await screen.findByText('Manual activity')).toBeTruthy();
+    expect(await screen.findByText('Manual activity', { selector: 'p' })).toBeTruthy();
     expect(getActiviteitDetail).toHaveBeenCalledWith('urn:manual', undefined, 'pre');
   });
 
@@ -1073,7 +1079,7 @@ describe('DsoExplorer — Activities toolbar', () => {
     await userEvent.type(field, 'urn:manual');
     await userEvent.click(screen.getByRole('button', { name: 'Inspect' }));
 
-    expect(await screen.findByText('Manual activity')).toBeTruthy();
+    expect(await screen.findByText('Manual activity', { selector: 'p' })).toBeTruthy();
   });
 
   test('pressing Enter on a blank URN field does nothing', async () => {
@@ -1110,7 +1116,12 @@ describe('DsoExplorer — Activities toolbar', () => {
     await userEvent.click(screen.getByText('Kind'));
     await screen.findByText('Activity detail');
 
-    await userEvent.click(screen.getAllByText('Kind')[0]);
+    // Scoped to <p> elements and taking the first (DOM order: list row, then
+    // the detail panel's own header) — once selected, selectedName also
+    // shows as a same-text pill on the Quality Profile tab button (README
+    // §1's selection hint, a <span>), so an unscoped getAllByText('Kind')[0]
+    // would now hit that pill instead of the list row.
+    await userEvent.click(screen.getAllByText('Kind', { selector: 'p' })[0]);
     await vi.waitFor(() => expect(screen.queryByText('Activity detail')).toBeNull());
   });
 
@@ -1203,6 +1214,135 @@ describe('DsoExplorer — Activities toolbar', () => {
   });
 });
 
+// ─── Selected authority survives a tab switch (README: same as selectedUrn) ─
+//
+// ActiviteitenTab remounts every time the user switches back to it, and its
+// mount effect used to unconditionally clear authorityOin and reload the
+// unfiltered date-based list — wiping the user's authority choice on every
+// round trip through Quality Profile. authorityOin is lifted into
+// DsoExplorer (like selectedUrn), so it is spared the same way now: on
+// remount, an authority that is still selected has its filtered list
+// restored instead.
+
+describe('DsoExplorer — Activities tab: authority survives a tab switch', () => {
+  test('switching Activities → Quality Profile → Activities preserves the selected authority and its filtered list', async () => {
+    getActiviteitenByOin.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    await openTab(/Activities/);
+    await screen.findByText('Valid on');
+    await selectAuthority('Gemeente', 'Lelystad');
+    await screen.findByText('Kapvergunning');
+    getActiviteitenByOin.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+    await screen.findByText('No activity selected');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activities' }));
+
+    // The Authority select still reflects Lelystad (not reset to the
+    // placeholder), and its filtered list was restored — not the
+    // unfiltered date-based list the old mount effect fell back to.
+    await vi.waitFor(() =>
+      expect((screen.getByLabelText('Authority') as HTMLSelectElement).value).not.toBe('')
+    );
+    expect(await screen.findByText('Kapvergunning')).toBeTruthy();
+    expect(getActiviteitenByOin).toHaveBeenCalled();
+  });
+
+  test('changing Level after that round trip still clears the authority', async () => {
+    getActiviteitenByOin.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    await openTab(/Activities/);
+    await screen.findByText('Valid on');
+    await selectAuthority('Gemeente', 'Lelystad');
+    await screen.findByText('Kapvergunning');
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Activities' }));
+    await screen.findByText('Kapvergunning');
+
+    await userEvent.selectOptions(screen.getByLabelText('Level'), 'Provincie');
+
+    const authoritySelect = screen.getByLabelText('Authority') as HTMLSelectElement;
+    expect(authoritySelect.value).toBe('');
+    expect(screen.queryByText('Kapvergunning')).toBeNull();
+  });
+
+  // Regression test for the blank-select bug: `level` used to be local to
+  // ActiviteitenTab, so it reset to 'gemeente' on every remount while the
+  // lifted `authorityOin` did not. Picking a non-gemeente authority (like
+  // the round-trip test above does with Gemeente/Lelystad — the default
+  // level — would never have caught this) and switching tabs used to leave
+  // the Authority select showing a value that wasn't among its own
+  // (now-gemeente) options, i.e. rendered blank, while the list below still
+  // showed the provincie's activities.
+  test('switching tabs and back preserves a non-default Level, and the Authority select value is among its rendered options', async () => {
+    getActiviteitenByOin.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Zuid-Hollandse activiteit' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    await openTab(/Activities/);
+    await screen.findByText('Valid on');
+    await selectAuthority('Provincie', 'Zuid-Holland');
+    await screen.findByText('Zuid-Hollandse activiteit');
+    getActiviteitenByOin.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+    await screen.findByText('No activity selected');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activities' }));
+
+    // The Level select still shows provincie, not the gemeente default.
+    const levelSelect = screen.getByLabelText('Level') as HTMLSelectElement;
+    await vi.waitFor(() => expect(levelSelect.value).toBe('provincie'));
+
+    // The Authority select's value must correspond to one of its own
+    // rendered options — not merely be non-empty — since a stale value that
+    // matches no option is exactly what rendered blank before the fix.
+    const authoritySelect = screen.getByLabelText('Authority') as HTMLSelectElement;
+    const optionValues = Array.from(authoritySelect.options).map((o) => o.value);
+    expect(authoritySelect.value).not.toBe('');
+    expect(optionValues).toContain(authoritySelect.value);
+    expect(screen.getByRole('option', { name: 'Zuid-Holland' })).toBeTruthy();
+
+    // And the filtered list is still Zuid-Holland's, not reloaded unfiltered.
+    expect(await screen.findByText('Zuid-Hollandse activiteit')).toBeTruthy();
+    expect(getActiviteitenByOin).toHaveBeenCalled();
+  });
+
+  test('changing Level clears the authority, the results and the open activity selection', async () => {
+    getActiviteitenByOin.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    getActiviteitDetail.mockResolvedValue({
+      urn: 'a1',
+      omschrijving: 'Kapvergunning',
+      verfijnbaar: false,
+    });
+    await openTab(/Activities/);
+    await screen.findByText('Valid on');
+    await selectAuthority('Gemeente', 'Lelystad');
+    await userEvent.click(await screen.findByText('Kapvergunning'));
+    await screen.findByText('Activity detail');
+
+    await userEvent.selectOptions(screen.getByLabelText('Level'), 'Provincie');
+
+    const authoritySelect = screen.getByLabelText('Authority') as HTMLSelectElement;
+    expect(authoritySelect.value).toBe('');
+    expect(screen.queryByText('Activity detail')).toBeNull();
+    expect(screen.queryByText('Kapvergunning')).toBeNull();
+  });
+});
+
 describe('DsoExplorer — authorityLabel for a non-preset (register-only) authority', () => {
   test('an authority the register carries an OIN for, but which was never one of the old chips, is labelled by its register name', async () => {
     fetchToepasbareRegels.mockResolvedValue({
@@ -1230,5 +1370,261 @@ describe('DsoExplorer — authorityLabel for a non-preset (register-only) author
 
     const publish = await screen.findByRole('link', { name: /Publish via CPSV Editor/ });
     expect(publish.getAttribute('href')).toContain('authority=Zuid-Holland');
+  });
+});
+
+function minimalDossier(overrides: Record<string, unknown> = {}) {
+  return {
+    urn: 'a1',
+    omschrijving: 'Kapvergunning',
+    bestuursorgaan: null,
+    legalSource: {
+      available: true,
+      regelingIdentificatie: null,
+      regelingTitel: null,
+      juridischeRegels: [],
+    },
+    annotation: {
+      identificatie: null,
+      naam: null,
+      groep: null,
+      symboolcode: null,
+      bovenliggendeActiviteitRef: null,
+    },
+    rtrLocaties: [],
+    decisionCriteria: null,
+    submissionRequirements: null,
+    provenance: {
+      env: 'pre',
+      datum: null,
+      regelingIdentificatie: null,
+      fetchedAt: '2026-09-22T00:00:00.000Z',
+      failures: [],
+    },
+    qualityProfile: {
+      urn: 'a1',
+      activityIdentity: 'semantic',
+      legalTraceability: { rules: 0, withWId: 0, withArticleText: 0 },
+      crossLayerConsistency: { sharedObjects: [] },
+      ruleSets: { conclusie: null, indieningsvereisten: null },
+    },
+    ...overrides,
+  };
+}
+
+describe('DsoExplorer — Quality Profile tab', () => {
+  async function selectActivity() {
+    getActiviteiten.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    getActiviteitDetail.mockResolvedValue({
+      urn: 'a1',
+      omschrijving: 'Kapvergunning',
+      verfijnbaar: true,
+    });
+    getActiviteitDossier.mockResolvedValue(minimalDossier());
+    searchBegrippen.mockResolvedValue(emptyResult());
+    render(<DsoExplorer />);
+    await screen.findByPlaceholderText('Search concepts…');
+    await userEvent.click(screen.getByRole('button', { name: /Activities/ }));
+    await userEvent.click(await screen.findByText('Kapvergunning'));
+    await screen.findByText('Activity detail');
+  }
+
+  test('the tab button renders and switches tabs when clicked', async () => {
+    searchBegrippen.mockResolvedValue(emptyResult());
+    render(<DsoExplorer />);
+    await screen.findByPlaceholderText('Search concepts…');
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+
+    expect(await screen.findByText('No activity selected')).toBeTruthy();
+  });
+
+  test('with no selection, shows the empty state, and Go to Activities switches to the Activities tab', async () => {
+    searchBegrippen.mockResolvedValue(emptyResult());
+    getActiviteiten.mockResolvedValue(emptyResult());
+    render(<DsoExplorer />);
+    await screen.findByPlaceholderText('Search concepts…');
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+    await screen.findByText('No activity selected');
+    expect(
+      screen.getByText('Select an activity in the Activities tab — its quality profile opens here.')
+    ).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Go to Activities' }));
+
+    expect(await screen.findByText('Valid on')).toBeTruthy();
+  });
+
+  test('selection survives a tab switch', async () => {
+    await selectActivity();
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+    expect(await screen.findByText('Kapvergunning')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activities' }));
+
+    expect(await screen.findByText('Activity detail')).toBeTruthy();
+  });
+
+  test('the selection-hint pill appears on the tab button elsewhere, and not while Quality Profile itself is active', async () => {
+    await selectActivity();
+
+    const qualityTabButton = screen.getByRole('button', { name: /Quality Profile/ });
+    expect(within(qualityTabButton).getByText('Kapvergunning')).toBeTruthy();
+
+    await userEvent.click(qualityTabButton);
+
+    expect(within(qualityTabButton).queryByText('Kapvergunning')).toBeNull();
+  });
+
+  test('changing Authority still clears the selection', async () => {
+    getActiviteitenByOin.mockResolvedValue(emptyResult());
+    await selectActivity();
+
+    await selectAuthority('Gemeente', 'Lelystad');
+
+    await vi.waitFor(() => expect(screen.queryByText('Activity detail')).toBeNull());
+  });
+});
+
+// ─── Activities detail panel: Quality profile teaser (README §2) ───────────
+//
+// The dossier call is expensive (it fans out across three upstream APIs
+// including Ozon), so per design_handoff_dso_quality_profile/README.md §2
+// and the "Interactions and behaviour" section, selecting an activity must
+// never trigger it — the teaser reads the cache only, via the synchronous
+// getCachedActiviteitDossier, and otherwise offers a "Load quality profile"
+// link. getCachedActiviteitDossier is mocked directly here (rather than
+// relying on dsoService's real in-memory cache, which getActiviteitDossier's
+// own mock never populates) so each test controls exactly what is "cached".
+
+/** counts of items by naming class, built for the teaser's stacked bar/sum. */
+function decisionItems(semanticCount: number, opaqueCount: number) {
+  return [
+    ...Array.from({ length: semanticCount }, (_, i) => ({ name: `d-sem-${i}`, class: 'semantic' })),
+    ...Array.from({ length: opaqueCount }, (_, i) => ({
+      name: `d-opq-${i}`,
+      class: 'opaque-dangling',
+    })),
+  ];
+}
+
+function inputItems(semanticCount: number, opaqueCount: number) {
+  return [
+    ...Array.from({ length: semanticCount }, (_, i) => ({
+      name: `i-sem-${i}`,
+      class: 'semantic',
+      question: 'Q?',
+    })),
+    ...Array.from({ length: opaqueCount }, (_, i) => ({
+      name: `i-opq-${i}`,
+      class: 'opaque-dangling',
+      question: null,
+    })),
+  ];
+}
+
+// The gm0995 (Lelystad) reference dossier's figures — same ones asserted in
+// QualityProfileTab.test.tsx's own Scorecard tests: Conclusie 3/7 decisions,
+// 0/5 inputs semantic; Indieningsvereisten 1/21 decisions, 0/10 inputs
+// semantic. Summed across both rule sets (this teaser is the one place that
+// happens): decisions 3+1=4 semantic of 7+21=28; inputs 0+0=0 semantic of
+// 5+10=15.
+function gm0995TeaserRuleSets() {
+  return {
+    conclusie: {
+      decisionNaming: { total: 7, semantic: 3, opaque: 4, items: decisionItems(3, 4) },
+      inputNaming: { total: 5, semantic: 0, opaque: 5, items: inputItems(0, 5) },
+      labelCoverage: { inputs: 5, withQuestion: 5 },
+      refResolvability: { total: 1, resolved: 1, dangling: 0 },
+    },
+    indieningsvereisten: {
+      decisionNaming: { total: 21, semantic: 1, opaque: 20, items: decisionItems(1, 20) },
+      inputNaming: { total: 10, semantic: 0, opaque: 10, items: inputItems(0, 10) },
+      labelCoverage: { inputs: 10, withQuestion: 7 },
+      refResolvability: { total: 0, resolved: 0, dangling: 0 },
+    },
+  };
+}
+
+function gm0995TeaserDossier() {
+  return minimalDossier({
+    urn: 'a1',
+    qualityProfile: {
+      urn: 'a1',
+      activityIdentity: 'semantic',
+      legalTraceability: { rules: 10, withWId: 10, withArticleText: 10 },
+      crossLayerConsistency: { sharedObjects: [] },
+      ruleSets: gm0995TeaserRuleSets(),
+    },
+  });
+}
+
+describe('DsoExplorer — Activities detail panel: Quality profile teaser', () => {
+  async function selectActivity() {
+    getActiviteiten.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    getActiviteitDetail.mockResolvedValue({
+      urn: 'a1',
+      omschrijving: 'Kapvergunning',
+      verfijnbaar: true,
+    });
+    searchBegrippen.mockResolvedValue(emptyResult());
+    render(<DsoExplorer />);
+    await screen.findByPlaceholderText('Search concepts…');
+    await userEvent.click(screen.getByRole('button', { name: /Activities/ }));
+    await userEvent.click(await screen.findByText('Kapvergunning'));
+    await screen.findByText('Activity detail');
+  }
+
+  test('selecting an activity does not call getActiviteitDossier, and offers "Load quality profile" instead', async () => {
+    await selectActivity();
+
+    await screen.findByText('Quality profile');
+    expect(screen.getByRole('button', { name: 'Load quality profile' })).toBeTruthy();
+    expect(getActiviteitDossier).not.toHaveBeenCalled();
+  });
+
+  test('a cached dossier renders the teaser with figures summed across both rule sets', async () => {
+    getCachedActiviteitDossier.mockReturnValue(gm0995TeaserDossier());
+    await selectActivity();
+
+    expect(await screen.findByText('4/28 semantic')).toBeTruthy(); // Decision naming
+    expect(screen.getByText('0/15 semantic')).toBeTruthy(); // Input naming
+    expect(screen.getByText('Decision naming')).toBeTruthy();
+    expect(screen.getByText('Input naming')).toBeTruthy();
+    // Cached, so still no fetch.
+    expect(getActiviteitDossier).not.toHaveBeenCalled();
+  });
+
+  test('"Open in Quality Profile ›" switches to the Quality Profile tab for the same activity', async () => {
+    getCachedActiviteitDossier.mockReturnValue(gm0995TeaserDossier());
+    getActiviteitDossier.mockResolvedValue(gm0995TeaserDossier());
+    await selectActivity();
+    await screen.findByText('4/28 semantic');
+
+    await userEvent.click(screen.getByRole('button', { name: /Open in Quality Profile/ }));
+
+    // Unique to the Quality Profile tab's context toolbar.
+    expect(await screen.findByText('Compare with')).toBeTruthy();
+  });
+
+  test('clicking "Load quality profile" fetches once and then renders the teaser', async () => {
+    getActiviteitDossier.mockResolvedValue(gm0995TeaserDossier());
+    await selectActivity();
+    await screen.findByText('Quality profile');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Load quality profile' }));
+
+    expect(await screen.findByText('4/28 semantic')).toBeTruthy();
+    expect(getActiviteitDossier).toHaveBeenCalledTimes(1);
   });
 });

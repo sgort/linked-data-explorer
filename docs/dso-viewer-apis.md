@@ -15,7 +15,7 @@ pre-production and production stelsel.
 
 ## 1. Upstream DSO APIs
 
-Five separate DSO APIs back the viewer. Base URLs are configured per environment in
+Six separate DSO APIs back the viewer. Base URLs are configured per environment in
 `packages/backend/src/utils/config.ts` (`config.dso` = pre, `config.dsoProd` = prod)
 and are overridable via environment variables.
 
@@ -26,6 +26,7 @@ and are overridable via environment variables.
 | 3 | **Zoekinterface** `toepasbare-regels/api/zoekinterface/v2` | Werkzaamheden search + autocomplete | `…/publiek/toepasbare-regels/api/zoekinterface/v2` | `DSO_ZOEKINTERFACE_BASE_URL` |
 | 4 | **Opvragen Werkzaamheden** `toepasbare-regels/api/opvragenwerkzaamheden/v1` | Versioned werkzaamheid detail | `…/publiek/toepasbare-regels/api/opvragenwerkzaamheden/v1` | `DSO_OPVRAGEN_WERKZAAMHEDEN_BASE_URL` |
 | 5 | **Toepasbare Regels Uitvoeren Gegevens** `…/toepasbareregelsuitvoerengegevens/v1` | Rule metadata + STTR file download | `…/publiek/toepasbare-regels/api/toepasbareregelsuitvoerengegevens/v1` | `DSO_UITVOEREN_GEGEVENS_BASE_URL` |
+| 6 | **Ozon Omgevingsdocumenten Presenteren v8** `omgevingsdocumenten/api/presenteren/v8` | Regelingen search, regeltekst annotation graph, document component text — backs the activity dossier (`docs/dso-activity-dossier.md`) | `…/publiek/omgevingsdocumenten/api/presenteren/v8` | `DSO_OZON_BASE_URL` |
 
 Production URLs are the same paths on `service.omgevingswet.overheid.nl` (no `.pre`),
 selected with the `_PROD` suffixed variables plus `DSO_API_KEY_PROD`.
@@ -141,9 +142,13 @@ Behaviour worth knowing:
   names, so the count stays correct even when some lookups fail.
 - Each child request inherits the parent's `datum` and `env`.
 - Names live in local component state, cleared and re-fetched on every
-  `urn` / `datum` / `env` change. There is **no cache and no concurrency cap**:
-  navigating into a child issues its own fan-out, and re-opening an activity you
-  already visited fetches everything again.
+  `urn` / `datum` / `env` change, so the frontend itself never caches across
+  navigations. The backend does, though: `dso.service.ts`'s `getActiviteit`
+  (API 2's detail call, which every child request hits) is TTL-cached for 5
+  minutes, so re-opening an activity you already visited within that window
+  reuses the cached response rather than re-hitting the RTR. There is
+  **still no concurrency cap**: navigating into a child issues its own
+  1 + N fan-out regardless of how many requests are already in flight.
 
 Dates in the UI are ISO (`YYYY-MM-DD`) and converted to the DSO's `dd-MM-yyyy` before
 being sent; when omitted, the backend defaults to today.
@@ -217,6 +222,10 @@ the `pre` environment (no `env` argument is passed).
 | `/v1/dso/toepasbare-regels/:id/sttr` | GET | 5 Uitvoeren Gegevens | `GET /toepasbareRegels/{id}/sttrBestand` |
 | `/v1/dso/toepasbare-regels/:id/dmn` | GET | 5 Uitvoeren Gegevens | `GET /toepasbareRegels/{id}/sttrBestand` + DMN extraction |
 | `/v1/dso/toepasbare-regels/:id/form-scaffold` | GET | 5 Uitvoeren Gegevens | `GET /toepasbareRegels/{id}/sttrBestand` + form-js scaffold |
+| `/v1/dso/activiteiten/:urn/dossier` | GET | 2 RTR + 5 Uitvoeren Gegevens + 6 Ozon | Joins §2.3–§2.4's calls plus Ozon; see `docs/dso-activity-dossier.md` |
+| `/v1/dso/regelingen/zoek` | POST | 6 Ozon | `POST /regelingen/_zoek` |
+| `/v1/dso/regelingen/:id/annotaties` | GET | 6 Ozon | `GET /regelingen/{id}/regeltekstannotaties` |
+| `/v1/dso/regelingen/:id/documentstructuur/:wId` | GET | 6 Ozon | `GET /regelingen/{id}/documentstructuur/{wId}` |
 
 Every endpoint accepts the environment via `X-Dso-Env: prod` header or `?env=prod`
 query parameter (header takes precedence); anything else falls back to `pre`.
@@ -233,9 +242,12 @@ query parameter (header takes precedence); anything else falls back to `pre`.
   end in both the backend and `dsoService.ts`, but no UI calls it — the Activities
   tab uses date and OIN modes only. It is ready for a map/point-selection feature.
 - **The child fan-out is the viewer's heaviest interaction.** Opening one activity
-  issues `1 + N` RTR requests with no batching, caching or concurrency limit
-  (see §2.3). It exists only to turn hrefs into readable names. If child counts
-  grow or DSO rate limiting appears, this is the first thing to memoise.
+  issues `1 + N` RTR requests with no batching or concurrency limit (see §2.3).
+  Each request is TTL-cached server-side for 5 minutes, so repeat fan-outs within
+  that window are cheap, but the first fan-out for a given activity still costs
+  `1 + N` upstream calls in one burst. It exists only to turn hrefs into readable
+  names. If child counts grow or DSO rate limiting appears, a concurrency cap is
+  the first thing to add.
 - **Timeout on production requests** uses `config.dso.timeout`; `config.dsoProd` has
   no `timeout` field of its own, so both environments share the pre-production value.
 - **Doc drift:** the route comments for `/begrippen` and `/activiteiten` say the
