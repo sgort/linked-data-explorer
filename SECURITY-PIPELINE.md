@@ -33,7 +33,7 @@ two together.
 | `actions/setup-node`           | `820762786026740c76f36085b0efc47a31fe5020` | v7.0.0           |
 | `Azure/static-web-apps-deploy` | `4d27395796ac319302594769cfe812bd207490b1` | v1 (branch head) |
 | `azure/webapps-deploy`         | `02a81bead70021f5284939794bcec79c271ab383` | v3.0.8           |
-| `zizmorcore/zizmor-action`     | `70fb788f84895a7701f5643d103d587e460b5c99` | v0.6.3           |
+| `zizmorcore/zizmor-action`     | `cc914d7f3750a2d13d75c7f184a1060aa0e9d482` | v0.6.4           |
 
 `zizmor 1.29.0` reports **0 findings** across all eight workflows.
 
@@ -121,7 +121,7 @@ deploy workflows read one exact version from `.nvmrc`, maintained by Renovate's
 is when its pin started to decide what ships: before, Oryx built the bundle on
 22.22.0 regardless.
 
-`zizmor.yml` keeps its own literal, `24.20.0`, deliberately: its
+`zizmor.yml` keeps its own literal, `24.21.0`, deliberately: its
 `renovate-config-validator` step needs Node 24.
 
 Still floating: the App Service host runtime, `NODE|22-lts`, which is the
