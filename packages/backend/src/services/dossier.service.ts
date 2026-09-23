@@ -13,13 +13,53 @@ import type { DsoEnv } from './dso.service';
 import type { OzonAnnotaties } from './ozon.service';
 import { logger } from '../utils/logger';
 
-const OMGEVINGSPLAN_TYPE = '/join/id/stop/regelingtype_003';
+export type Bestuurslaag = 'gemeente' | 'provincie' | 'waterschap' | 'rijk';
+
+/**
+ * The STOP `regelingtype` an authority at each bestuurslaag actually
+ * publishes its legal rules in — the instrument step 2 searches for. A
+ * gemeente's rules live in its omgevingsplan; a provincie, waterschap or
+ * rijk authority never publishes one, so filtering by any other level's
+ * type there finds nothing.
+ */
+export const REGELINGTYPE_BY_BESTUURSLAAG: Record<Bestuurslaag, string> = {
+  gemeente: '/join/id/stop/regelingtype_003', // Omgevingsplan
+  provincie: '/join/id/stop/regelingtype_004', // Omgevingsverordening
+  waterschap: '/join/id/stop/regelingtype_005', // Waterschapsverordening
+  rijk: '/join/id/stop/regelingtype_001', // AMvB (Algemene Maatregel van Bestuur)
+};
+
+/**
+ * How many candidate regelingen of the preferred type get their annotation
+ * graph fetched while probing for one that actually names this activity.
+ * Each fetch can be multi-megabyte, so this stays small.
+ */
+const MAX_REGELING_ATTEMPTS = 3;
+
+/**
+ * `gm0995` -> gemeente, `pv24` -> provincie, `ws...` -> waterschap,
+ * `mnre1034` -> rijk. Fallback for when the RTR response carries no
+ * `bestuursorgaan.bestuurslaag` of its own.
+ */
+function bestuurslaagFromCode(code: string): Bestuurslaag | null {
+  if (code.startsWith('gm')) return 'gemeente';
+  if (code.startsWith('pv')) return 'provincie';
+  if (code.startsWith('ws')) return 'waterschap';
+  if (code.startsWith('mnre')) return 'rijk';
+  return null;
+}
 
 export interface DossierRequest {
   urn: string;
   env: DsoEnv;
   datum?: string;
-  /** Required for a national (mnre) activity: which authority's plan to scan. */
+  /**
+   * The authority (bevoegd gezag) code whose regeling to scan, e.g.
+   * `gm0995`. Optional: without it, the activity's own `bestuursorgaan` is
+   * used. A national (mnre) activity CAN be annotated in another
+   * authority's plan (e.g. a municipal omgevingsplan), which is what this
+   * lets a caller check explicitly.
+   */
   authority?: string;
 }
 
@@ -40,12 +80,15 @@ export interface JuridischeRegelEntry {
 
 export interface LegalSource {
   /**
-   * False when either the omgevingsplan itself, or its annotation graph,
-   * could not be resolved. `false` after a failed annotations fetch even
-   * though `regelingIdentificatie` is set — otherwise a real regeling title
-   * renders above a `juridischeRegels` list that is empty only because the
-   * fetch that would have populated it failed, not because it is genuinely
-   * empty.
+   * False when no regeling for this authority's level (see
+   * `REGELINGTYPE_BY_BESTUURSLAAG`) could be resolved AND confirmed to
+   * annotate this activity — whether because none exists, the search or an
+   * annotation fetch failed, or every candidate's annotation graph simply
+   * does not name this activity (`provenance.failures` records which).
+   * `regelingIdentificatie` and `annotaties` are only ever set together, on
+   * the candidate that was actually selected, so this is never `true` with
+   * an empty `juridischeRegels` list that is empty only because a later
+   * fetch failed.
    */
   available: boolean;
   regelingIdentificatie: string | null;
@@ -157,56 +200,110 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
   // 1. RTR
   const activiteit = (await dsoService.getActiviteit(req.urn, req.datum, req.env)) as {
     omschrijving?: string;
-    bestuursorgaan?: { oin?: string; organisatieType?: string; organisatieCode?: string };
+    bestuursorgaan?: {
+      oin?: string;
+      organisatieType?: string;
+      organisatieCode?: string;
+      bestuurslaag?: string;
+    };
     regelBeheerObjecten?: RegelBeheerObject[];
     locaties?: { identificatie: string }[];
   };
 
   const bo = activiteit.bestuursorgaan ?? {};
   const derivedCode = bevoegdGezagCode(bo);
-  const isNational = derivedCode.startsWith('mnre');
-  if (isNational && !req.authority) {
-    throw new Error(
-      `A national activity is annotated in many plans: pass an authority parameter for ${req.urn}`
-    );
-  }
   const gezagCode = req.authority ?? derivedCode;
+  // An explicit authority overrides not just the code but the level it
+  // implies: the caller is naming a DIFFERENT authority's plan, so that
+  // authority's own prefix decides the instrument, not the activity's.
+  const bestuurslaag: Bestuurslaag | null = req.authority
+    ? bestuurslaagFromCode(req.authority)
+    : ((bo.bestuurslaag as Bestuurslaag | undefined) ?? bestuurslaagFromCode(derivedCode));
 
-  // 2. Ozon — the authority's omgevingsplan
+  // 2 + 3. Ozon — the authority's regeling for its level, then the
+  // annotation graph that actually names this activity's juridische regels.
+  // An authority can publish more than one regeling of the preferred type
+  // (a rijk authority can have several AMvBs); each candidate is tried in
+  // turn until one's annotation graph actually names this activity, capped
+  // at MAX_REGELING_ATTEMPTS since every attempt fetches a multi-megabyte
+  // graph. With exactly one candidate it is used regardless of match: a
+  // successful fetch that genuinely contains no rule for this activity is a
+  // real result, not evidence the wrong regeling was picked.
   let regelingIdentificatie: string | null = null;
   let regelingTitel: string | null = null;
-  try {
-    const regelingen = (await ozonService.zoekRegelingen({ bevoegdGezag: [gezagCode] }, req.env, {
-      size: 100,
-    })) as {
-      _embedded?: {
-        regelingen?: { identificatie: string; type?: { code: string }; officieleTitel?: string }[];
-      };
-    };
-    const plan = (regelingen._embedded?.regelingen ?? []).find(
-      (r) => r.type?.code === OMGEVINGSPLAN_TYPE
-    );
-    if (plan) {
-      regelingIdentificatie = plan.identificatie;
-      regelingTitel = plan.officieleTitel ?? null;
-    } else {
-      record('regeling', new Error(`No omgevingsplan (regelingtype_003) for ${gezagCode}`));
-    }
-  } catch (error) {
-    record('regeling', error);
-  }
-
-  // 3. Ozon — the annotation graph, joined on activiteitRef
   let annotaties: OzonAnnotaties | null = null;
-  let annotatiesFailed = false;
-  if (regelingIdentificatie) {
+
+  if (!bestuurslaag) {
+    record('regeling', new Error(`Could not determine the bestuurslaag for ${gezagCode}`));
+  } else {
+    const preferredType = REGELINGTYPE_BY_BESTUURSLAAG[bestuurslaag];
+    let candidates: { identificatie: string; type?: { code: string }; officieleTitel?: string }[] =
+      [];
+    let searchFailed = false;
     try {
-      annotaties = await ozonService.getRegeltekstAnnotaties(regelingIdentificatie, req.env, {
-        geldigOp: toIsoDate(req.datum),
-      });
+      const regelingen = (await ozonService.zoekRegelingen({ bevoegdGezag: [gezagCode] }, req.env, {
+        size: 100,
+      })) as {
+        _embedded?: {
+          regelingen?: {
+            identificatie: string;
+            type?: { code: string };
+            officieleTitel?: string;
+          }[];
+        };
+      };
+      candidates = (regelingen._embedded?.regelingen ?? []).filter(
+        (r) => r.type?.code === preferredType
+      );
     } catch (error) {
-      record('annotaties', error);
-      annotatiesFailed = true;
+      record('regeling', error);
+      searchFailed = true;
+    }
+
+    if (!searchFailed) {
+      if (candidates.length === 0) {
+        record('regeling', new Error(`No regeling of type ${preferredType} for ${gezagCode}`));
+      } else {
+        const attempted: string[] = [];
+        let anyFetchSucceeded = false;
+        for (const candidate of candidates.slice(0, MAX_REGELING_ATTEMPTS)) {
+          attempted.push(candidate.identificatie);
+          try {
+            const result = await ozonService.getRegeltekstAnnotaties(
+              candidate.identificatie,
+              req.env,
+              {
+                geldigOp: toIsoDate(req.datum),
+              }
+            );
+            anyFetchSucceeded = true;
+            const matches = (result.regelsVoorIedereen ?? []).some((j) =>
+              (j.activiteitLocatieaanduidingen ?? []).some((a) => a.activiteitRef === req.urn)
+            );
+            if (matches || candidates.length === 1) {
+              regelingIdentificatie = candidate.identificatie;
+              regelingTitel = candidate.officieleTitel ?? null;
+              annotaties = result;
+              break;
+            }
+          } catch (error) {
+            record('annotaties', error);
+          }
+        }
+        // Only report "none of them matched" when at least one attempt
+        // actually resolved — if every attempt threw, the recorded
+        // `annotaties` failures already explain why nothing was selected,
+        // and a second summary here would misleadingly imply they were
+        // checked and came up empty rather than that they failed to fetch.
+        if (!regelingIdentificatie && anyFetchSucceeded) {
+          record(
+            'regeling',
+            new Error(
+              `None of the ${attempted.length} regeling(en) of type ${preferredType} for ${gezagCode} annotate ${req.urn}: tried ${attempted.join(', ')}`
+            )
+          );
+        }
+      }
     }
   }
 
@@ -314,7 +411,7 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
     omschrijving: activiteit.omschrijving ?? null,
     bestuursorgaan: { code: gezagCode, oin: bo.oin ?? null },
     legalSource: {
-      available: regelingIdentificatie !== null && !annotatiesFailed,
+      available: regelingIdentificatie !== null,
       regelingIdentificatie,
       regelingTitel,
       juridischeRegels,

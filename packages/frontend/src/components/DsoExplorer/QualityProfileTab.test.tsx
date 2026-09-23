@@ -515,14 +515,85 @@ describe('QualityProfileTab — states', () => {
           datum: null,
           regelingIdentificatie: 'reg-gm0995',
           fetchedAt: '2026-09-22T21:03:31.478Z',
-          failures: [{ step: 'legalSource', detail: 'No omgevingsplan found for gm0000' }],
+          failures: [
+            { step: 'regeling', detail: 'No regeling of type regelingtype_003 for gm0000' },
+          ],
         },
       })
     );
     renderTab();
 
     expect(await screen.findByText('Incomplete legs')).toBeTruthy();
-    expect(screen.getByText(/legalSource: No omgevingsplan found for gm0000/)).toBeTruthy();
+    expect(
+      screen.getByText(/regeling: No regeling of type regelingtype_003 for gm0000/)
+    ).toBeTruthy();
+  });
+
+  // A national (mnre) activity like RijksmonArchMonument no longer errors
+  // for lacking an authority (the backend guard that threw was removed):
+  // buildDossier now returns 200 with the rule sets fully resolved and
+  // `legalSource.available: false`, plus a reason in `provenance.failures`.
+  // The tab must render that as a normal dossier — rule sets and all — not
+  // fall into the red error state, and the "no legal source" reason must
+  // come from `provenance.failures` rather than a hardcoded, omgevingsplan-
+  // specific message (wrong on both counts once other bestuurslagen and
+  // non-error outcomes are possible).
+  test('a dossier with legalSource.available: false and present rule sets renders the rule sets and the reason, not an error', async () => {
+    getActiviteitDossier.mockResolvedValue(
+      gm0995Dossier({
+        urn: 'nl.imow-mnre1034.activiteit.RijksmonArchMonument',
+        legalSource: {
+          available: false,
+          regelingIdentificatie: null,
+          regelingTitel: null,
+          juridischeRegels: [],
+        },
+        qualityProfile: {
+          urn: 'nl.imow-mnre1034.activiteit.RijksmonArchMonument',
+          activityIdentity: 'semantic',
+          legalTraceability: { rules: 0, withWId: 0, withArticleText: 0 },
+          crossLayerConsistency: { sharedObjects: [] },
+          ruleSets: {
+            conclusie: {
+              decisionNaming: { total: 7, semantic: 3, opaque: 4, items: gm0995ConclusieDecisions },
+              inputNaming: { total: 5, semantic: 0, opaque: 5, items: gm0995ConclusieInputs },
+              labelCoverage: { inputs: 5, withQuestion: 5 },
+              refResolvability: { total: 1, resolved: 1, dangling: 0 },
+            },
+            indieningsvereisten: {
+              decisionNaming: { total: 21, semantic: 1, opaque: 20, items: gm0995IndDecisions },
+              inputNaming: { total: 10, semantic: 0, opaque: 10, items: gm0995IndInputs },
+              labelCoverage: { inputs: 10, withQuestion: 7 },
+              refResolvability: { total: 0, resolved: 0, dangling: 0 },
+            },
+          },
+        },
+        provenance: {
+          env: 'prod',
+          datum: null,
+          regelingIdentificatie: null,
+          fetchedAt: '2026-09-23T09:00:00.000Z',
+          failures: [
+            {
+              step: 'regeling',
+              detail:
+                'None of the 2 regeling(en) of type /join/id/stop/regelingtype_001 for mnre1034 annotate nl.imow-mnre1034.activiteit.RijksmonArchMonument: tried /akn/nl/act/mnre1034/2020/regOW01, /akn/nl/act/mnre1034/2021/OOWATRXX1',
+            },
+          ],
+        },
+      })
+    );
+    renderTab({ selectedUrn: 'nl.imow-mnre1034.activiteit.RijksmonArchMonument' });
+
+    // The rule sets still resolve and render.
+    expect(await screen.findByText('3/7 semantic')).toBeTruthy();
+
+    // No red error state.
+    expect(screen.queryByText(/not available in the/)).toBeNull();
+
+    // The reason comes from provenance.failures, not a hardcoded message.
+    expect(screen.getByText('Incomplete legs')).toBeTruthy();
+    expect(screen.getByText(/regeling: None of the 2 regeling\(en\) of type/)).toBeTruthy();
   });
 });
 
@@ -865,14 +936,6 @@ describe('QualityProfileTab — edge cases and fallbacks', () => {
     renderTab();
 
     expect(await screen.findByText('id: 999 · STTR v— · —')).toBeTruthy();
-  });
-
-  test('a 400 error with an authority already set is shown verbatim, not the mnre-specific message', async () => {
-    getActiviteitDossier.mockRejectedValue(new Error('HTTP 400 Bad Request'));
-    renderTab({ authorityOin: '00000001005024249000' });
-
-    expect(await screen.findByText('HTTP 400 Bad Request')).toBeTruthy();
-    expect(screen.queryByText(/needs an authority/)).toBeNull();
   });
 
   test('an authority OIN is resolved to its bevoegd-gezag code before reaching getActiviteitDossier', async () => {

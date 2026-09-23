@@ -882,10 +882,6 @@ const QualityProfileTab: React.FC<QualityProfileTabProps> = ({
           setError(
             `This activity is not available in the ${env === 'prod' ? 'production' : 'pre-production'} DSO environment.`
           );
-        } else if (msg.includes('400') && !authorityCode) {
-          setError(
-            'This national activity needs an authority — choose one in the Activities tab’s Authority select.'
-          );
         } else {
           setError(msg);
         }

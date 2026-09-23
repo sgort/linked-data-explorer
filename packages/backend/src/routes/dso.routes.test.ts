@@ -274,18 +274,21 @@ describe('GET /v1/dso/activiteiten/:urn/dossier', () => {
     expect(dossier.buildDossier).toHaveBeenCalled();
   });
 
-  test('a missing authority for a national activity answers 400', async () => {
+  // buildDossier no longer throws to reject a national activity for lacking
+  // an authority — that guard was removed. Nothing in the dossier chain maps
+  // to 400 any more, including an error message that happens to mention
+  // "authority" (e.g. a genuinely failed upstream call), so this now answers
+  // 502 like any other upstream failure.
+  test('an error mentioning "authority" no longer answers 400', async () => {
     dossier.buildDossier.mockRejectedValue(
-      new Error('A national activity is annotated in many plans: pass an authority parameter')
+      new Error('Ozon responded 503: authority lookup unavailable')
     );
 
     const res = await request(makeApp()).get(
       '/v1/dso/activiteiten/nl.imow-mnre1034.activiteit.X/dossier'
     );
 
-    expect(res.status).toBe(400);
-    expect(res.body.title).toBe('Invalid request');
-    expect(res.body.detail).toContain('authority');
+    expect(res.status).toBe(502);
   });
 
   test('an upstream failure answers 502', async () => {
@@ -1035,19 +1038,6 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     );
 
     expect(res.status).toBe(200);
-    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}/dossier');
-  });
-
-  test('GET /activiteiten/:urn/dossier 400, as documented', async () => {
-    dossier.buildDossier.mockRejectedValue(
-      new Error('A national activity is annotated in many plans: pass an authority parameter')
-    );
-
-    const res = await request(makeDocumentedApp()).get(
-      '/v1/dso/activiteiten/nl.imow-mnre1034.activiteit.X/dossier'
-    );
-
-    expect(res.status).toBe(400);
     expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}/dossier');
   });
 
