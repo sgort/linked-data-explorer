@@ -5,7 +5,7 @@
 // input for the handoff and is never committed, so the figures are inlined
 // here rather than read from it at runtime.
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
@@ -594,6 +594,20 @@ describe('QualityProfileTab — states', () => {
     // The reason comes from provenance.failures, not a hardcoded message.
     expect(screen.getByText('Incomplete legs')).toBeTruthy();
     expect(screen.getByText(/regeling: None of the 2 regeling\(en\) of type/)).toBeTruthy();
+
+    // The summary card points at the reason rather than showing a bare "—".
+    expect(screen.getByText('Not resolved — see Incomplete legs')).toBeTruthy();
+  });
+
+  test('the summary card shows the regeling title, not the pointer, when the legal source is available', async () => {
+    getActiviteitDossier.mockResolvedValue(gm0995Dossier());
+    renderTab();
+
+    // "Omgevingsplan gemeente Lelystad" also appears in the annotation
+    // section below, so scope to the "Legal source" summary card itself.
+    const legalSourceCard = (await screen.findByText('Legal source')).closest('div') as HTMLElement;
+    expect(within(legalSourceCard).getByText('Omgevingsplan gemeente Lelystad')).toBeTruthy();
+    expect(within(legalSourceCard).queryByText('Not resolved — see Incomplete legs')).toBeNull();
   });
 });
 

@@ -367,7 +367,11 @@ const ActivitySummaryCard: React.FC<{ dossier: DsoDossier; authorityPrefix?: str
       style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' }}
     >
       <Section title="Legal source">
-        <p className="text-xs text-slate-600">{legalTitle}</p>
+        {dossier.legalSource.available ? (
+          <p className="text-xs text-slate-600">{legalTitle}</p>
+        ) : (
+          <p className="text-xs text-slate-400 italic">Not resolved — see Incomplete legs</p>
+        )}
       </Section>
       <Section title="Activity identity">
         <div className="flex items-center gap-2">

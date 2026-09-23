@@ -244,7 +244,7 @@ describe('buildDossier', () => {
     expect(d.legalSource.juridischeRegels).toHaveLength(0);
     expect(d.provenance.failures).toContainEqual({
       step: 'annotaties',
-      detail: 'Ozon responded 500: annotaties down',
+      detail: 'Ozon responded 500: annotaties down (/akn/nl/act/gm0995/2020/omgevingsplan)',
     });
   });
 
@@ -362,6 +362,141 @@ describe('buildDossier', () => {
       expect(d.legalSource.regelingTitel).toBe(`Correct for ${level}`);
     }
   );
+
+  // A1: every case above builds `bestuursorgaan` WITHOUT a `bestuurslaag`
+  // field, so they only ever exercise the `bestuurslaagFromCode` fallback.
+  // In production `bestuursorgaan.bestuurslaag` IS present (verified live),
+  // so THIS is the branch that actually runs. These two cases cover the
+  // native field driving the choice — one where it disagrees with what the
+  // code prefix would give, which is the one that fails if the two
+  // branches are ever swapped or `??` becomes `||`.
+  test('bestuursorgaan.bestuurslaag drives the level even when it disagrees with the code prefix', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      bestuursorgaan: { organisatieType: 'GM', organisatieCode: '0995', bestuurslaag: 'provincie' },
+    });
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: [
+          {
+            identificatie: 'provincie-verordening',
+            type: { code: '/join/id/stop/regelingtype_004' }, // provincie, not gemeente
+            officieleTitel: 'Provincie via bestuurslaag',
+          },
+        ],
+      },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.provenance.regelingIdentificatie).toBe('provincie-verordening');
+    expect(d.legalSource.regelingTitel).toBe('Provincie via bestuurslaag');
+  });
+
+  test('bestuursorgaan.bestuurslaag resolves the level even when the code prefix cannot', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      bestuursorgaan: { organisatieType: 'XX', organisatieCode: '123', bestuurslaag: 'waterschap' },
+    });
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: [
+          {
+            identificatie: 'waterschap-verordening',
+            type: { code: '/join/id/stop/regelingtype_005' },
+            officieleTitel: 'Waterschap via bestuurslaag',
+          },
+        ],
+      },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(true);
+    expect(d.provenance.regelingIdentificatie).toBe('waterschap-verordening');
+  });
+
+  // D1: an unexpected bestuurslaag value (wrong casing here) must not be
+  // trusted via the bare `as Bestuurslaag` cast — it must fall back to the
+  // code-derived level instead of flowing through and producing a
+  // "no regeling of type undefined" failure.
+  test('a junk bestuurslaag value falls back to the code-derived level rather than being trusted', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      bestuursorgaan: { organisatieType: 'GM', organisatieCode: '0995', bestuurslaag: 'Gemeente' },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(true);
+    expect(d.provenance.regelingIdentificatie).toBe('/akn/nl/act/gm0995/2020/omgevingsplan');
+  });
+
+  // C1: the degrade path — bestuurslaag cannot be determined at all (no
+  // native field, and a code prefix outside gm/pv/ws/mnre) — must record a
+  // failure and still return a dossier, never throw or default to gemeente.
+  test('an activity whose bestuurslaag cannot be determined at all degrades to an unavailable legal source with a named reason', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      bestuursorgaan: { organisatieType: 'XX', organisatieCode: '123' },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(false);
+    expect(d.provenance.failures).toContainEqual({
+      step: 'regeling',
+      detail: 'Could not determine the bestuurslaag for xx123',
+    });
+    expect(d.urn).toBe(URN);
+  });
+
+  // B1: the mixed-failure path — one candidate's annotations fetch throws,
+  // another is actually fetched and found not to match. The two must stay
+  // distinct in provenance, and the summary must never claim the errored
+  // candidate was checked.
+  test('a mixed candidate path keeps an errored candidate distinct from one actually checked and not matching', async () => {
+    const urn = 'nl.imow-mnre1034.activiteit.RijksmonArchMonument';
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      urn,
+      bestuursorgaan: { organisatieType: 'MNRE', organisatieCode: '1034' },
+    });
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: [
+          { identificatie: 'errors-out', type: { code: '/join/id/stop/regelingtype_001' } },
+          { identificatie: 'checked-no-match', type: { code: '/join/id/stop/regelingtype_001' } },
+        ],
+      },
+    });
+    ozon.getRegeltekstAnnotaties.mockImplementation((id: string) => {
+      if (id === 'errors-out') return Promise.reject(new Error('DSO responded 500: boom'));
+      return Promise.resolve({
+        activiteiten: [],
+        regelteksten: [],
+        locaties: [],
+        regelsVoorIedereen: [],
+      });
+    });
+
+    const d = await buildDossier({ urn, env: 'prod' });
+
+    expect(d.legalSource.available).toBe(false);
+
+    const annotatiesFailure = d.provenance.failures.find(
+      (f) => f.step === 'annotaties' && f.detail.includes('errors-out')
+    );
+    expect(annotatiesFailure?.detail).toBe('DSO responded 500: boom (errors-out)');
+
+    const summary = d.provenance.failures.find((f) => f.step === 'regeling');
+    expect(summary?.detail).toContain('could not be fetched');
+    expect(summary?.detail).toContain('errors-out');
+    expect(summary?.detail).toMatch(/checked and do not annotate.*checked-no-match/);
+    // The overclaim this guards against: asserting the errored candidate
+    // was checked and found not to annotate the activity.
+    expect(summary?.detail).not.toMatch(/checked and do not annotate[^;]*errors-out/);
+  });
 
   test('with several candidates of the preferred type, uses the first whose annotations actually name the activity', async () => {
     const urn = 'nl.imow-mnre1034.activiteit.RijksmonArchMonument';

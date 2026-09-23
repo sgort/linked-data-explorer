@@ -49,6 +49,21 @@ function bestuurslaagFromCode(code: string): Bestuurslaag | null {
   return null;
 }
 
+const KNOWN_BESTUURSLAGEN = new Set<string>(Object.keys(REGELINGTYPE_BY_BESTUURSLAAG));
+
+/**
+ * Validates `bestuursorgaan.bestuurslaag` against the known keys before it
+ * is trusted. The RTR's field is untyped on the wire, and `??` only falls
+ * back on `null`/`undefined` — an unexpected value (wrong casing, an empty
+ * string, a fifth value) would otherwise flow through and degrade into a
+ * confusing "no regeling of type undefined" failure instead of falling
+ * back to the code prefix.
+ */
+function asBestuurslaag(value: string | undefined): Bestuurslaag | null {
+  if (value !== undefined && KNOWN_BESTUURSLAGEN.has(value)) return value as Bestuurslaag;
+  return null;
+}
+
 export interface DossierRequest {
   urn: string;
   env: DsoEnv;
@@ -191,8 +206,12 @@ function viewerUrl(functioneleStructuurRef: string): string {
 
 export async function buildDossier(req: DossierRequest): Promise<Dossier> {
   const failures: { step: string; detail: string }[] = [];
-  const record = (step: string, error: unknown) => {
-    const detail = error instanceof Error ? error.message : String(error);
+  // `context`, when given, is appended so a reader knows WHICH candidate a
+  // failure is about — e.g. an `annotaties` fetch failure on its own does
+  // not say which regeling was being read (see the candidate loop below).
+  const record = (step: string, error: unknown, context?: string) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const detail = context ? `${message} (${context})` : message;
     logger.warn('[Dossier] step failed', { step, detail });
     failures.push({ step, detail });
   };
@@ -218,7 +237,7 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
   // authority's own prefix decides the instrument, not the activity's.
   const bestuurslaag: Bestuurslaag | null = req.authority
     ? bestuurslaagFromCode(req.authority)
-    : ((bo.bestuurslaag as Bestuurslaag | undefined) ?? bestuurslaagFromCode(derivedCode));
+    : (asBestuurslaag(bo.bestuurslaag) ?? bestuurslaagFromCode(derivedCode));
 
   // 2 + 3. Ozon — the authority's regeling for its level, then the
   // annotation graph that actually names this activity's juridische regels.
@@ -265,7 +284,14 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
         record('regeling', new Error(`No regeling of type ${preferredType} for ${gezagCode}`));
       } else {
         const attempted: string[] = [];
-        let anyFetchSucceeded = false;
+        // Kept separate so the summary below never conflates them: a
+        // candidate in `checkedNoMatch` was actually read and genuinely does
+        // not name this activity, while one in `notFetched` was never read
+        // at all — its `annotaties` failure (recorded with its own
+        // identificatie, below) explains why, but it is not evidence the
+        // regeling doesn't annotate the activity.
+        const checkedNoMatch: string[] = [];
+        const notFetched: string[] = [];
         for (const candidate of candidates.slice(0, MAX_REGELING_ATTEMPTS)) {
           attempted.push(candidate.identificatie);
           try {
@@ -276,7 +302,6 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
                 geldigOp: toIsoDate(req.datum),
               }
             );
-            anyFetchSucceeded = true;
             const matches = (result.regelsVoorIedereen ?? []).some((j) =>
               (j.activiteitLocatieaanduidingen ?? []).some((a) => a.activiteitRef === req.urn)
             );
@@ -286,20 +311,30 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
               annotaties = result;
               break;
             }
+            checkedNoMatch.push(candidate.identificatie);
           } catch (error) {
-            record('annotaties', error);
+            record('annotaties', error, candidate.identificatie);
+            notFetched.push(candidate.identificatie);
           }
         }
-        // Only report "none of them matched" when at least one attempt
-        // actually resolved — if every attempt threw, the recorded
-        // `annotaties` failures already explain why nothing was selected,
-        // and a second summary here would misleadingly imply they were
-        // checked and came up empty rather than that they failed to fetch.
-        if (!regelingIdentificatie && anyFetchSucceeded) {
+        // Only summarize when at least one candidate was actually checked
+        // and found not to match — if every attempt threw, the recorded
+        // per-candidate `annotaties` failures already explain why nothing
+        // was selected, and an aggregate here would add nothing (worse, it
+        // would read as "checked, not found" for candidates never read).
+        // When it does fire, name both groups so a reader can tell "we
+        // looked and it is not there" from "we could not look" for each one.
+        if (!regelingIdentificatie && checkedNoMatch.length > 0) {
+          const parts = [
+            `${checkedNoMatch.length} checked and do not annotate ${req.urn}: ${checkedNoMatch.join(', ')}`,
+          ];
+          if (notFetched.length > 0) {
+            parts.push(`${notFetched.length} could not be fetched: ${notFetched.join(', ')}`);
+          }
           record(
             'regeling',
             new Error(
-              `None of the ${attempted.length} regeling(en) of type ${preferredType} for ${gezagCode} annotate ${req.urn}: tried ${attempted.join(', ')}`
+              `${attempted.length} regeling(en) of type ${preferredType} for ${gezagCode} were tried for ${req.urn} — ${parts.join('; ')}`
             )
           );
         }
