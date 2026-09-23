@@ -88,6 +88,117 @@ Nothing in that table is uniform by accident. Each application has a different
 build shape, and the differences below are re-derived per repository rather than
 copied.
 
+### What changed on 23 September 2026
+
+One day, and the first thing on this page that had never actually been run.
+
+| repository        | change                                                                                                                                 | pull request                                                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| ronl-business-api | **v2026.09.11 released and promoted** — the first promotion sequenced by a workflow rather than by hand                                | [#193](https://github.com/sgort/ronl-business-api/pull/193), [#194](https://github.com/sgort/ronl-business-api/pull/194) |
+| ronl-business-api | the local dev stack's images pinned by tag and index digest; `docker:pinDigests` added; the App Service runtime decision recorded      | [#197](https://github.com/sgort/ronl-business-api/pull/197)                                                              |
+| ronl-business-api | `/bump-release` runs the tests before it commits                                                                                       | [#190](https://github.com/sgort/ronl-business-api/pull/190)                                                              |
+| ronl-business-api | the vestigial `KEYCLOAK_CLIENT_SECRET` deleted from the production App Service, once `main` carried the commit that stopped reading it | —                                                                                                                        |
+
+**The promotion ordering worked, and here is the evidence rather than the
+claim.** #177 replaced four racing deploy workflows with one sequenced
+promotion, and until this date it had only ever been exercised as a dry run. The
+first real promotion of `acc` to `main`:
+
+```
+changes           16:53:09 → 16:53:14
+backend / build   16:53:18 → 17:00:09   6m51s
+frontend          17:00:13 → 17:05:25
+pa-demo           17:00:13 → 17:02:56
+public-site       17:00:13 → 17:03:23
+```
+
+All three site jobs started **four seconds after the backend completed**. Under
+the previous arrangement they would have started alongside it at 16:53:18 and
+finished around 17:03 — roughly five minutes _before_ the backend they depend
+on. The public site is the one that matters there: its build prerenders against
+the live API, so that window is exactly where a 404 gets baked into the deployed
+output rather than shown once.
+
+Production reported `build.sha` matching the promoted commit, `run: 2` — the
+second automated production backend deploy, and the first inside a sequenced
+promotion. Every previous one was a script run from a laptop.
+
+**The App Service runtime cannot be pinned, and that is now a decision rather
+than an open question.** #119 asked to pin the floating `NODE|22-lts` exactly
+where the platform allows, or record why not. `az webapp list-runtimes --os
+linux` returns, for Node, exactly `NODE|22-lts`, `NODE|24-lts` and `NODE|26` —
+major-level only, no exact version, no digest, no setting that takes one. All
+four App Services across both repositories run `NODE|22-lts`.
+
+What remains reachable is keeping the App Service's major in step with
+`.nvmrc`'s, and **the ordering is part of the pin**: switch the App Service
+first, then merge the `.nvmrc` bump. No pull-request check runs against an App
+Service, so nothing enforces this and it has to be written where it gets read —
+`SECURITY-PIPELINE.md` for RONL Business API, and this page and #119 for the
+shared half. **That unblocks #80**, which has been held open since 19 September
+for precisely this reason.
+
+**The rule has an exception, and Linked Data Explorer is it.** `switch first,
+then merge` is complete only for a pure-JavaScript backend. This repository's
+ships `libxmljs2`, which builds against NAN rather than N-API, so its
+`xmljs.node` is bound to `NODE_MODULE_VERSION` — 127 on Node 22, 137 on Node 24.
+Between switching the runtime and deploying an artifact rebuilt on the new
+major, the binary does not match the host and the backend will not start. The
+same is true in reverse if the merge comes first.
+
+What makes that worth writing down is not the interruption — these are sandbox
+applications and an interruption costs nothing — but that **the deploy reports
+success while the application will not start**. The workflow does assert the
+binding loads:
+
+```
+node -e "require('./deploy/node_modules/libxmljs2')" && echo "libxmljs2 native binding loads"
+```
+
+and that assertion runs on the RUNNER. It proves the binary matches the Node the
+runner built it with, which is exactly the axis that cannot see a runner-versus-host
+mismatch. So the one check in the pipeline that looks like it covers this is the
+reason the failure is quiet. Recovery is automatic — `.nvmrc` is in this
+workflow's paths filter and its `changes` pattern since #186, so the merge fires
+the deploy that rebuilds the binary — but someone watching a green run and a dead
+application needs this paragraph to know why.
+
+RONL Business API is unaffected: its backend has thirty runtime dependencies and
+none are native. The two `.node` files in its tree, `@rollup/rollup-linux-x64-gnu`
+and `@napi-rs/lzma`, are development-only and reach no deploy bundle.
+
+**A floating tag is invisible to Renovate.** The container-image item on #119
+split cleanly once the question became _does this repository apply the file?_
+RONL Business API's `docker-compose.yml` — the local dev stack, applied from the
+tree by developers — now pins all five images by tag and **index** digest, with
+`docker:pinDigests` in `renovate.json` so they are maintained rather than merely
+set. The same rule that file already stated for actions: pinning without
+automated updates decays into an unpatched tree, which is worse than floating.
+
+Two of those five were `:latest`, and that is the finding worth carrying to the
+other two repositories. Renovate's docker-compose manager tracks a tag it can
+compare; `:latest` gives it nothing, so `alpine:latest` and
+`operaton/operaton:latest` appeared on no dashboard and in no pull request —
+they were the only images in the tree that nothing was watching at all. The
+three already on version tags were merely unpinned, which is a weaker problem.
+
+The three compose files under `deployment/vm/` are deliberately **not** pinned,
+and that is the more interesting half. Nothing in that repository applies them:
+no workflow, no script reads them. A digest there would record a value no deploy
+consults, against a host whose running image cannot be read from the repository
+— a pin that cannot be verified is a pin that can be wrong with nothing saying
+so. Same shape as the backend deploy before #35, which sat outside every gate on
+the page describing it.
+
+That became [ronl-business-api#196](https://github.com/sgort/ronl-business-api/issues/196),
+a sub-issue of #119: bring the VM deployment under control first, pin second. Two
+decisions narrowed it on the day it was opened. The VM's SSH is firewalled to a
+single fixed IP address, so a GitHub-hosted runner cannot reach it at all — which
+rules out lifting the existing hand-run script into a workflow, and points at the
+VM reconciling the files itself rather than anything pushing to it. And the scope
+is acceptance only, because the production side is being replaced by a new
+supplier's infrastructure.
+
 ### What changed on 19–22 September 2026
 
 Four days, and the end of two things this page had been describing as open since
@@ -1984,9 +2095,10 @@ point where that is now noticed rather than discovered six months later.
 | linked-data-explorer             | #97   | confirmed on 22 Sep: the refresh ran in all three and introduced no version younger than 14 days (201 packages measured). Remaining: `renovate/stability-days` reports the branch as held anyway, and all three merged over it |
 | linked-data-explorer             | #119  | the gaps against ICTU's dependency guideline, tracked for all three repositories                                                                                                                                               |
 | all three                        | —     | nothing keeps the mirrors synced _between_ releases; `check-mirror` only observes                                                                                                                                              |
+| ronl-business-api                | #196  | the three `deployment/vm/` compose files carry unpinned tags, one of them `:latest`, and nothing in the repository applies them — so a digest there would be unverifiable. ACC only; production is being replaced              |
 | ronl-business-api                | —     | only `main` was sequenced by #177; `acc`'s four deploy workflows still race a push, and its ruleset names four build jobs by name                                                                                              |
 | linked-data-explorer             | —     | the same four-way race on a push to `main`; `main` requires `audit` and `scan`, neither a deploy job, so #177's shape is open here                                                                                             |
-| linked-data-explorer             | #80   | Node 24 bump blocked on the App Service runtime: both backends run `NODE                                                                                                                                                       | 22-lts`, so merging it would build on 24 and run on 22. The three literals it was raised against are gone (#179) |
+| linked-data-explorer             | #80   | unblocked 23 Sep: Azure offers major-level Node runtimes only, so an exact App Service pin is not available; the control is the ORDERING — switch both backends to the new major first, then merge. Nothing enforces it        |
 | linked-data-explorer             | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod                                                                                                                                         |
 | linked-data-explorer             | —     | no `check-previews`, and close jobs still inside the deploy workflows; none orphaned today                                                                                                                                     |
 | ttl-editor                       | #117  | a stale, conflicted Renovate pull request with a live preview, expected to orphan it on close for `check-previews` to catch                                                                                                    |
@@ -2087,7 +2199,9 @@ The two new Linked Data Explorer rows are both things noticed while doing
 something else. **#80** would have CI running a Node older than the `engines`
 floor it declares in the same pull request; npm only warns without
 `engine-strict`, which is why its build is green, and it wants resolving on its
-own branch rather than on a release cut. The `1.9.12` row is cosmetic — a legacy
+own branch rather than on a release cut. Its _other_ half — the App Service
+running a different major than the build — was decided on 23 September and is no
+longer a blocker, only an ordering. The `1.9.12` row is cosmetic — a legacy
 status label from before `Released` was the convention — but it now renders a
 "Latest" badge on a July entry sitting below `2026.09.2` in production.
 
