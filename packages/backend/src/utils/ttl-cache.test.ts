@@ -17,6 +17,24 @@ describe('createTtlCache', () => {
     expect(cache.get('k')).toBeUndefined();
   });
 
+  // Item 12: the two cases above sit comfortably either side of the boundary
+  // (999ms remaining, 1001ms over), so `now - storedAt > ttlMs` versus `>=`
+  // was pinned by nothing. Decision: an entry aged EXACTLY ttlMs is still
+  // live — `set()` records `storedAt = t`, so an entry read at `t + ttlMs`
+  // has age `ttlMs`, and treating that instant as already-expired would
+  // shave real time off the advertised TTL for every caller (a 5-minute
+  // cache would in practice guarantee under 5 minutes). "Live through the
+  // full TTL, gone the instant after" is the more useful contract, and it is
+  // what `>` (not `>=`) already implements — this only makes it explicit and
+  // failure-visible.
+  test('a value aged exactly ttlMs is still live: the boundary is inclusive', () => {
+    let t = 1000;
+    const cache = createTtlCache<string>({ name: 'test-b2', ttlMs: 5000, now: () => t });
+    cache.set('k', 'v');
+    t = 1000 + 5000;
+    expect(cache.get('k')).toBe('v');
+  });
+
   test('returns undefined for a key never set', () => {
     const cache = createTtlCache<string>({ name: 'test-c', ttlMs: 5000 });
     expect(cache.get('absent')).toBeUndefined();
@@ -31,11 +49,21 @@ describe('createTtlCache', () => {
     expect(cache.get('b')).toBe('2');
   });
 
-  test('clear() with no key empties the cache', () => {
-    const cache = createTtlCache<string>({ name: 'test-e', ttlMs: 5000 });
+  // Item 13: asserting only that one previously-set key is gone doesn't prove
+  // the cache is actually empty — a clear() that (say) only ever dropped the
+  // first-inserted key would still pass a single-key version of this test.
+  // Two entries and a `stats().size === 0` check close that gap. The clock
+  // never advances, so any emptiness here is caused by clear(), not by the
+  // TTL lazily expiring entries out from under the assertion.
+  test('clear() with no key empties the cache, not merely expires entries', () => {
+    const t = 1000;
+    const cache = createTtlCache<string>({ name: 'test-e', ttlMs: 5000, now: () => t });
     cache.set('a', '1');
+    cache.set('b', '2');
     cache.clear();
     expect(cache.get('a')).toBeUndefined();
+    expect(cache.get('b')).toBeUndefined();
+    expect(cache.stats().size).toBe(0);
   });
 
   test('stats report size, ttl and the oldest entry age', () => {

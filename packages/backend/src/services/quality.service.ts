@@ -108,6 +108,17 @@ function matchTag(xml: string, tag: string): { open: string; inner: string }[] {
     // stripped against the exact tag being measured. The same guard keeps
     // `<uitv:uitvoeringsregels>` (plural, the questionnaire wrapper) from
     // being read as a `uitvoeringsregel`.
+    // Currently unreachable for `decisionTable`/`uitvoeringsregels`: the
+    // `re` above already requires whitespace immediately after the shorter
+    // tag name, and neither "decisionTable" nor "uitvoeringsregels" has a
+    // space there, so `re` never matches them in the first place. Left in
+    // deliberately as defence-in-depth — if `re` is ever loosened (e.g. to
+    // tolerate `<decision/>` or an attribute glued on with no space), this
+    // guard becomes the only thing stopping `decisionTable` from being
+    // counted as a `decision`. Do not delete it as dead code; see
+    // quality.service.test.ts's "…is not counted as a decision" cases,
+    // which pin the outward guarantee regardless of which mechanism enforces
+    // it.
     const qualifiedName = open.slice(1).split(/[\s>]/)[0] ?? '';
     const localName = qualifiedName.includes(':') ? qualifiedName.split(':')[1] : qualifiedName;
     if (localName !== tag) continue;

@@ -246,6 +246,20 @@ describe('measureDmn', () => {
 
     expect(measureDmn(unprefixed).decisions.total).toBe(1);
   });
+
+  // Item 16: pins the outward guarantee — `decisionTable`, prefixed or not,
+  // is never counted as a `decision` — independent of which mechanism
+  // enforces it (today, `matchTag`'s regex already excludes it before the
+  // tag-name guard in quality.service.ts is ever reached; see the comment
+  // there). A minimal, dedicated fixture per form, so this survives even if
+  // the larger fixture above changes shape.
+  test('a prefixed decisionTable is not counted as a decision', () => {
+    const prefixed =
+      '<dmn:definitions xmlns:dmn="x"><dmn:decision id="d1" name="A"/>' +
+      '<dmn:decisionTable id="t1"/></dmn:definitions>';
+
+    expect(measureDmn(prefixed).decisions.total).toBe(1);
+  });
 });
 
 describe('profileDossier', () => {

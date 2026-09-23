@@ -122,15 +122,19 @@ describe('ozon requests', () => {
     expect(url).toContain('geldigOp=2026-09-22');
   });
 
-  test('getDocumentComponent requests the wId under documentstructuur', async () => {
-    await ozon.getDocumentComponent(
-      '_akn_nl_act_gm0995_2020_omgevingsplan',
-      'gm0995_5e613b8efac0433cb977d3445e057208__chp_15__subchp_15.4__art_15.2__para_5',
-      'prod'
-    );
+  // Item 15: asserting only a prefix of the wId is safe by construction — the
+  // wId is interpolated into the URL untransformed, so a truncation bug
+  // after this prefix would still pass. Pin the FULL id, including the `.`
+  // and `__` it genuinely contains, to prove those characters survive
+  // unescaped and unmangled rather than merely that the request starts
+  // correctly.
+  test('getDocumentComponent requests the full, untransformed wId under documentstructuur', async () => {
+    const wId = 'gm0995_5e613b8efac0433cb977d3445e057208__chp_15__subchp_15.4__art_15.2__para_5';
+
+    await ozon.getDocumentComponent('_akn_nl_act_gm0995_2020_omgevingsplan', wId, 'prod');
 
     const [url] = (global.fetch as jest.Mock).mock.calls[0];
-    expect(url).toContain('/documentstructuur/gm0995_5e613b8efac0433cb977d3445e057208__chp_15');
+    expect(url).toContain(`/documentstructuur/${wId}`);
   });
 
   test('an upstream failure surfaces the status in the thrown message', async () => {

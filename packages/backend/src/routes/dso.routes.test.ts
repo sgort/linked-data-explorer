@@ -59,6 +59,19 @@ function makeApp() {
   return app;
 }
 
+// Item 17: was two identical local copies, one per OpenAPI-conformance
+// describe block below (activiteiten/begrippen/werkzaamheden, and
+// regelingen). No shared state between them, so nothing stopped them
+// drifting apart; a single file-scope helper used by both removes that risk.
+function makeDocumentedApp() {
+  const app = express();
+  app.use(express.json());
+  app.use(versionMiddleware); // app-wide in index.ts
+  app.use('/v1/dso', dsoRoutes);
+  app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+  return app;
+}
+
 beforeEach(() => {
   for (const fn of Object.values(svc)) {
     if (typeof fn === 'function') fn.mockReset();
@@ -658,15 +671,6 @@ describe('GET /v1/dso/toepasbare-regels/:id/form-scaffold', () => {
 });
 
 describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match their OpenAPI description', () => {
-  function makeDocumentedApp() {
-    const app = express();
-    app.use(express.json());
-    app.use(versionMiddleware); // app-wide in index.ts
-    app.use('/v1/dso', dsoRoutes);
-    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
-    return app;
-  }
-
   // Realistic HAL-shaped fixtures (embedded arrays, _links, paging), not the
   // bare-bones placeholders used by the handler tests above, so the loosely
   // typed `data` object is actually exercised with more than one key and more
@@ -1460,15 +1464,6 @@ describe('GET /v1/dso/regelingen/:id/documentstructuur/:wId', () => {
 });
 
 describe('/v1/dso regelingen operations match their OpenAPI description', () => {
-  function makeDocumentedApp() {
-    const app = express();
-    app.use(express.json());
-    app.use(versionMiddleware); // app-wide in index.ts
-    app.use('/v1/dso', dsoRoutes);
-    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
-    return app;
-  }
-
   const REGELINGEN_ZOEK_RESULT = {
     _embedded: {
       regelingen: [

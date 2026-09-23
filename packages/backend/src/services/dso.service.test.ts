@@ -944,11 +944,21 @@ describe('getActiviteit caching', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test('the cached response is identical to the uncached one', async () => {
+  // Item 14: the previous version of this test asserted `second toEqual
+  // first`. That cannot fail for the reason its name implies — the cache
+  // returns the exact stored object by reference, so `second IS first`, and
+  // even a broken cache would still pass `toEqual` here since the upstream
+  // mock returns equal *content* on every call regardless of caching. What
+  // actually distinguishes a cache hit is that no second upstream request
+  // happens, and — since 76b4071 froze cached activity records — that the
+  // returned object is that frozen record, not a fresh copy.
+  test('a cache hit returns the frozen cached value, with no second upstream request', async () => {
     const first = await getActiviteit(urn, '22-09-2026', 'prod');
     const second = await getActiviteit(urn, '22-09-2026', 'prod');
 
-    expect(second).toEqual(first);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(second).toBe(first);
+    expect(Object.isFrozen(second)).toBe(true);
   });
 
   test('a different env is a different cache key', async () => {
