@@ -214,6 +214,27 @@ describe('buildDossier', () => {
     expect(d.provenance.failures.some((f) => f.step === 'documentComponent')).toBe(true);
   });
 
+  // Item 5: with ten concurrent legs, a bare {step, detail} does not say
+  // WHICH wId's article fetch failed. The annotaties leg already carries a
+  // candidate identity; this pins the same treatment for documentComponent.
+  test('a failing article fetch identifies the wId that failed', async () => {
+    const failingWId =
+      'gm0995_5e613b8efac0433cb977d3445e057208__chp_15__subchp_15.4__art_15.2__para_5';
+    ozon.getDocumentComponent.mockImplementation((_regelingId: string, wId: string) => {
+      if (wId === failingWId) return Promise.reject(new Error('DSO responded 500: boom'));
+      return Promise.resolve({
+        _embedded: {
+          documentComponenten: [{ inhoud: `<Inhoud><Al>TEXT FOR ${wId}</Al></Inhoud>` }],
+        },
+      });
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    const failure = d.provenance.failures.find((f) => f.step === 'documentComponent');
+    expect(failure?.detail).toBe(`DSO responded 500: boom (${failingWId})`);
+  });
+
   test('a rejected regelingen search records the reason and leaves the legal source unavailable', async () => {
     ozon.zoekRegelingen.mockRejectedValue(new Error('Ozon responded 503: boom'));
 
@@ -266,7 +287,12 @@ describe('buildDossier', () => {
     expect(d.provenance.failures.some((f) => f.step === 'annotaties')).toBe(false);
   });
 
-  test('a failing DMN extraction records the reason but still returns the rule set', async () => {
+  // Item 5: the dmn leg now names the rule identifier it was extracting for
+  // — both rule sets fail here (dso.getSttrBestand is rejected for every
+  // call), and their identifiers (114233, 105947) are distinct, so a
+  // regression to the old bare {step, detail} would collapse them into two
+  // indistinguishable entries.
+  test('a failing DMN extraction records the reason, identifying the rule, but still returns the rule set', async () => {
     dso.getSttrBestand.mockRejectedValue(new Error('DSO responded 404: STTR not found'));
 
     const d = await buildDossier({ urn: URN, env: 'prod' });
@@ -275,11 +301,15 @@ describe('buildDossier', () => {
     expect(d.decisionCriteria?.dmn).toBeNull();
     expect(d.provenance.failures).toContainEqual({
       step: 'dmn',
-      detail: 'DSO responded 404: STTR not found',
+      detail: 'DSO responded 404: STTR not found (114233)',
+    });
+    expect(d.provenance.failures).toContainEqual({
+      step: 'dmn',
+      detail: 'DSO responded 404: STTR not found (105947)',
     });
   });
 
-  test('a rejected toepasbare-regels lookup records the reason and omits that rule set', async () => {
+  test('a rejected toepasbare-regels lookup records the reason, identifying the functioneleStructuurRef, and omits that rule set', async () => {
     dso.getToepasbareRegels.mockRejectedValue(
       new Error('DSO responded 502: toepasbare regels down')
     );
@@ -288,7 +318,23 @@ describe('buildDossier', () => {
 
     expect(d.decisionCriteria).toBeNull();
     expect(d.submissionRequirements).toBeNull();
-    expect(d.provenance.failures.filter((f) => f.step === 'toepasbareRegels')).toHaveLength(2);
+    const failures = d.provenance.failures.filter((f) => f.step === 'toepasbareRegels');
+    expect(failures).toHaveLength(2);
+    expect(
+      failures.some((f) =>
+        f.detail.includes(
+          'http://toepasbare-regels.omgevingswet.overheid.nl/x/id/concept/Conclusie' + URN
+        )
+      )
+    ).toBe(true);
+    expect(
+      failures.some((f) =>
+        f.detail.includes(
+          'http://toepasbare-regels.omgevingswet.overheid.nl/x/id/concept/IndieningsvereistenVergunning' +
+            URN
+        )
+      )
+    ).toBe(true);
   });
 
   test('no regeling of type 003 marks the legal source unavailable', async () => {
@@ -298,6 +344,98 @@ describe('buildDossier', () => {
 
     expect(d.legalSource.available).toBe(false);
     expect(d.provenance.failures.some((f) => f.step === 'regeling')).toBe(true);
+  });
+
+  // Item 1: the un-paged search only ever read page 1 (size: 100), so the
+  // preferred-type regeling falls off the end for an authority publishing
+  // more than a page's worth. Here it only shows up on page 2.
+  test('pages through the regelingen search when the omgevingsplan is not on page 1', async () => {
+    ozon.zoekRegelingen.mockImplementation(
+      (_body: unknown, _env: unknown, opts: { page?: number }) => {
+        if ((opts?.page ?? 1) === 1) {
+          return Promise.resolve({
+            _embedded: {
+              regelingen: [
+                { identificatie: 'decoy', type: { code: '/join/id/stop/regelingtype_006' } },
+              ],
+            },
+            page: { number: 1, size: 1, totalElements: 2, totalPages: 2 },
+          });
+        }
+        return Promise.resolve({
+          _embedded: {
+            regelingen: [
+              {
+                identificatie: '/akn/nl/act/gm0995/2020/omgevingsplan',
+                type: { code: '/join/id/stop/regelingtype_003' },
+                officieleTitel: 'Omgevingsplan gemeente Lelystad',
+              },
+            ],
+          },
+          page: { number: 2, size: 1, totalElements: 2, totalPages: 2 },
+        });
+      }
+    );
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(ozon.zoekRegelingen).toHaveBeenCalledTimes(2);
+    expect(ozon.zoekRegelingen).toHaveBeenNthCalledWith(1, { bevoegdGezag: ['gm0995'] }, 'prod', {
+      size: 100,
+    });
+    expect(ozon.zoekRegelingen).toHaveBeenNthCalledWith(2, { bevoegdGezag: ['gm0995'] }, 'prod', {
+      size: 100,
+      page: 2,
+    });
+    expect(d.provenance.regelingIdentificatie).toBe('/akn/nl/act/gm0995/2020/omgevingsplan');
+    expect(d.legalSource.available).toBe(true);
+  });
+
+  // A single page of results (the common case) must not trigger any extra
+  // fetch beyond page 1.
+  test('does not fetch a second page when the first page says there is only one', async () => {
+    ozon.zoekRegelingen.mockResolvedValue({
+      _embedded: {
+        regelingen: [
+          {
+            identificatie: '/akn/nl/act/gm0995/2020/omgevingsplan',
+            type: { code: '/join/id/stop/regelingtype_003' },
+          },
+        ],
+      },
+      page: { number: 1, size: 1, totalElements: 1, totalPages: 1 },
+    });
+
+    await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(ozon.zoekRegelingen).toHaveBeenCalledTimes(1);
+  });
+
+  // Item 1: caps the regelingen search pagination and, when nothing of the
+  // preferred type was found within the cap, records that the search was
+  // truncated rather than reporting a plain "not found" — a truncated
+  // search is never silently reported as evidence the instrument is absent.
+  test('caps the regelingen search at the page limit and records a truncated search', async () => {
+    ozon.zoekRegelingen.mockImplementation(
+      (_body: unknown, _env: unknown, opts: { page?: number }) => {
+        const page = opts?.page ?? 1;
+        return Promise.resolve({
+          _embedded: {
+            regelingen: [
+              { identificatie: `decoy-${page}`, type: { code: '/join/id/stop/regelingtype_006' } },
+            ],
+          },
+          page: { number: page, size: 1, totalElements: 15, totalPages: 15 },
+        });
+      }
+    );
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(ozon.zoekRegelingen).toHaveBeenCalledTimes(10);
+    expect(d.legalSource.available).toBe(false);
+    const failure = d.provenance.failures.find((f) => f.step === 'regeling');
+    expect(failure?.detail).toContain('truncated');
   });
 
   test('a national activity with no authority parameter returns a dossier, not a rejection', async () => {
@@ -634,6 +772,55 @@ describe('buildDossier', () => {
       'prod',
       { geldigOp: '2026-09-22' }
     );
+  });
+
+  // Item 3: getToepasbareRegels previously took no date at all, so a dossier
+  // requested for a past `datum` still got the CURRENT executable rules
+  // alongside a historical legal source. The wire format is dd-MM-yyyy,
+  // unconverted — unlike Ozon's geldigOp above, this is an RTR-side call.
+  test('threads the dossier datum through to getToepasbareRegels, unconverted', async () => {
+    await buildDossier({ urn: URN, env: 'prod', datum: '22-09-2026' });
+
+    expect(dso.getToepasbareRegels).toHaveBeenCalledWith(expect.any(String), 'prod', '22-09-2026');
+  });
+
+  test('calls getToepasbareRegels with datum undefined when the dossier itself has none', async () => {
+    await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(dso.getToepasbareRegels).toHaveBeenCalledWith(expect.any(String), 'prod', undefined);
+  });
+
+  // Item 3: reading [0] relied on upstream ordering that is not guaranteed.
+  // Two candidates come back for the same functioneleStructuurRef (rule
+  // history overlap); the one with the more recent begindatum must win,
+  // regardless of which position the upstream lists it in.
+  test('picks the toepasbare regel with the most recent begindatum when more than one comes back', async () => {
+    dso.getToepasbareRegels.mockResolvedValue({
+      _embedded: {
+        toepasbareRegels: [
+          { identifier: 1, begindatum: '01-01-2024' },
+          { identifier: 2, begindatum: '15-06-2026' },
+          { identifier: 3, begindatum: '30-07-2025' },
+        ],
+      },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.decisionCriteria?.identifier).toBe(2);
+    expect(d.submissionRequirements?.identifier).toBe(2);
+  });
+
+  test('a tie on begindatum (or none at all) picks whichever the upstream listed first', async () => {
+    dso.getToepasbareRegels.mockResolvedValue({
+      _embedded: {
+        toepasbareRegels: [{ identifier: 42 }, { identifier: 99 }],
+      },
+    });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.decisionCriteria?.identifier).toBe(42);
   });
 
   test('an activiteit missing bestuursorgaan, omschrijving and regelBeheerObjecten defaults every optional field rather than crashing', async () => {

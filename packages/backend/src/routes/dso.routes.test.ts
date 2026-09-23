@@ -59,6 +59,19 @@ function makeApp() {
   return app;
 }
 
+// Item 17: was two identical local copies, one per OpenAPI-conformance
+// describe block below (activiteiten/begrippen/werkzaamheden, and
+// regelingen). No shared state between them, so nothing stopped them
+// drifting apart; a single file-scope helper used by both removes that risk.
+function makeDocumentedApp() {
+  const app = express();
+  app.use(express.json());
+  app.use(versionMiddleware); // app-wide in index.ts
+  app.use('/v1/dso', dsoRoutes);
+  app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+  return app;
+}
+
 beforeEach(() => {
   for (const fn of Object.values(svc)) {
     if (typeof fn === 'function') fn.mockReset();
@@ -208,6 +221,21 @@ describe('GET /v1/dso/activiteiten/:urn', () => {
     await request(makeApp()).get('/v1/dso/activiteiten/urn-a').query({ datum: '01-01-2026' });
 
     expect(svc.getActiviteit).toHaveBeenCalledWith('urn-a', '01-01-2026', 'pre');
+  });
+
+  // Express already decodes path params once. A second decodeURIComponent
+  // in the route corrupts a URN carrying a literal `%` — `%25` (a
+  // percent-encoded `%`) becomes a bare `%` on the first (correct) decode,
+  // then `%` alone throws / silently mangles further chars on a second pass.
+  // This URN's raw form contains a literal `%25` substring, which must
+  // survive the round trip unchanged.
+  test('does not double-decode a URN containing a percent-encoded-looking sequence', async () => {
+    svc.getActiviteit.mockResolvedValue({});
+    const rawUrn = 'nl.imow-gm0995.activiteit.100%25Compleet';
+
+    await request(makeApp()).get(`/v1/dso/activiteiten/${encodeURIComponent(rawUrn)}`);
+
+    expect(svc.getActiviteit).toHaveBeenCalledWith(rawUrn, undefined, 'pre');
   });
 
   test('translates an upstream 404 into a 404', async () => {
@@ -447,6 +475,15 @@ describe('werkzaamheden search', () => {
     expect(svc.getWerkzaamheidDetail).toHaveBeenCalledWith('urn:nl:imow:werkzaamheid:1', 'pre');
   });
 
+  test('GET /werkzaamheden/:urn does not double-decode a URN containing a percent-encoded-looking sequence', async () => {
+    svc.getWerkzaamheidDetail.mockResolvedValue({});
+    const rawUrn = 'nl.imow-gm0995.werkzaamheid.100%25Compleet';
+
+    await request(makeApp()).get(`/v1/dso/werkzaamheden/${encodeURIComponent(rawUrn)}`);
+
+    expect(svc.getWerkzaamheidDetail).toHaveBeenCalledWith(rawUrn, 'pre');
+  });
+
   test('GET /werkzaamheden/:urn translates an upstream 404', async () => {
     svc.getWerkzaamheidDetail.mockRejectedValue(new Error('404 not found'));
 
@@ -634,15 +671,6 @@ describe('GET /v1/dso/toepasbare-regels/:id/form-scaffold', () => {
 });
 
 describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match their OpenAPI description', () => {
-  function makeDocumentedApp() {
-    const app = express();
-    app.use(express.json());
-    app.use(versionMiddleware); // app-wide in index.ts
-    app.use('/v1/dso', dsoRoutes);
-    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
-    return app;
-  }
-
   // Realistic HAL-shaped fixtures (embedded arrays, _links, paging), not the
   // bare-bones placeholders used by the handler tests above, so the loosely
   // typed `data` object is actually exercised with more than one key and more
@@ -1436,15 +1464,6 @@ describe('GET /v1/dso/regelingen/:id/documentstructuur/:wId', () => {
 });
 
 describe('/v1/dso regelingen operations match their OpenAPI description', () => {
-  function makeDocumentedApp() {
-    const app = express();
-    app.use(express.json());
-    app.use(versionMiddleware); // app-wide in index.ts
-    app.use('/v1/dso', dsoRoutes);
-    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
-    return app;
-  }
-
   const REGELINGEN_ZOEK_RESULT = {
     _embedded: {
       regelingen: [

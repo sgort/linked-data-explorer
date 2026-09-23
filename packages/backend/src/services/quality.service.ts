@@ -26,8 +26,17 @@ import type { Dossier } from './dossier.service';
  * the GUID-named activities this profile exists to flag.
  */
 const H = '[0-9a-f]';
+// Anchored on both sides against another hex digit (not against `\b`, which
+// would not help here — `_` and `-` are themselves plausible token
+// separators in this domain, e.g. `onderwerp_<guid>` or `uitv__<guid>`, so
+// they must stay allowed immediately outside the match). This blocks a GUID
+// from being read out of the middle of a longer hex/digit run — since
+// digits are a subset of [0-9a-f], an all-numeric string of, say, 40 digits
+// would otherwise always contain a matching 32-char substring — while still
+// matching a GUID that is genuinely a standalone token bounded by `.`, `_`,
+// `-`, start/end of string, or non-hex letters.
 export const GUID_RE = new RegExp(
-  `(?:${H}{8}[-_]${H}{4}[-_]${H}{4}[-_]${H}{4}[-_]${H}{12}|${H}{32})`,
+  `(?<![0-9a-f])(?:${H}{8}[-_]${H}{4}[-_]${H}{4}[-_]${H}{4}[-_]${H}{12}|${H}{32})(?![0-9a-f])`,
   'i'
 );
 
@@ -99,6 +108,17 @@ function matchTag(xml: string, tag: string): { open: string; inner: string }[] {
     // stripped against the exact tag being measured. The same guard keeps
     // `<uitv:uitvoeringsregels>` (plural, the questionnaire wrapper) from
     // being read as a `uitvoeringsregel`.
+    // Currently unreachable for `decisionTable`/`uitvoeringsregels`: the
+    // `re` above already requires whitespace immediately after the shorter
+    // tag name, and neither "decisionTable" nor "uitvoeringsregels" has a
+    // space there, so `re` never matches them in the first place. Left in
+    // deliberately as defence-in-depth — if `re` is ever loosened (e.g. to
+    // tolerate `<decision/>` or an attribute glued on with no space), this
+    // guard becomes the only thing stopping `decisionTable` from being
+    // counted as a `decision`. Do not delete it as dead code; see
+    // quality.service.test.ts's "…is not counted as a decision" cases,
+    // which pin the outward guarantee regardless of which mechanism enforces
+    // it.
     const qualifiedName = open.slice(1).split(/[\s>]/)[0] ?? '';
     const localName = qualifiedName.includes(':') ? qualifiedName.split(':')[1] : qualifiedName;
     if (localName !== tag) continue;

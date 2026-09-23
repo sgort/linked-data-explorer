@@ -32,6 +32,7 @@ jest.mock('../utils/config', () => ({
 }));
 
 import * as ozon from './ozon.service';
+import { clearNamedCaches } from '../utils/ttl-cache';
 
 const realFetch = global.fetch;
 
@@ -59,7 +60,10 @@ describe('ozon requests', () => {
       ok: true,
       json: async () => ({ _embedded: { regelingen: [] } }),
     });
-    ozon.__clearAnnotatiesCache();
+    // One registry (`clearNamedCaches`), not a bespoke per-cache export — see
+    // dso.service.test.ts's `clearNamedCaches('dso-activiteit')` for the
+    // sibling cache using the same mechanism.
+    clearNamedCaches('ozon-annotaties');
   });
 
   afterEach(() => {
@@ -75,6 +79,16 @@ describe('ozon requests', () => {
     expect(init.method).toBe('POST');
     expect(init.headers['Content-Crs']).toBe('http://www.opengis.net/def/crs/EPSG/0/28992');
     expect(JSON.parse(init.body)).toEqual({ bevoegdGezag: ['gm0995'] });
+  });
+
+  test('zoekRegelingen omits the page param by default and includes it when given', async () => {
+    await ozon.zoekRegelingen({ bevoegdGezag: ['gm0995'] }, 'prod');
+    let [url] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).not.toContain('page=');
+
+    await ozon.zoekRegelingen({ bevoegdGezag: ['gm0995'] }, 'prod', { page: 2 });
+    [url] = (global.fetch as jest.Mock).mock.calls[1];
+    expect(url).toContain('page=2');
   });
 
   test('zoekRegelingen targets production when env is prod', async () => {
@@ -108,15 +122,19 @@ describe('ozon requests', () => {
     expect(url).toContain('geldigOp=2026-09-22');
   });
 
-  test('getDocumentComponent requests the wId under documentstructuur', async () => {
-    await ozon.getDocumentComponent(
-      '_akn_nl_act_gm0995_2020_omgevingsplan',
-      'gm0995_5e613b8efac0433cb977d3445e057208__chp_15__subchp_15.4__art_15.2__para_5',
-      'prod'
-    );
+  // Item 15: asserting only a prefix of the wId is safe by construction — the
+  // wId is interpolated into the URL untransformed, so a truncation bug
+  // after this prefix would still pass. Pin the FULL id, including the `.`
+  // and `__` it genuinely contains, to prove those characters survive
+  // unescaped and unmangled rather than merely that the request starts
+  // correctly.
+  test('getDocumentComponent requests the full, untransformed wId under documentstructuur', async () => {
+    const wId = 'gm0995_5e613b8efac0433cb977d3445e057208__chp_15__subchp_15.4__art_15.2__para_5';
+
+    await ozon.getDocumentComponent('_akn_nl_act_gm0995_2020_omgevingsplan', wId, 'prod');
 
     const [url] = (global.fetch as jest.Mock).mock.calls[0];
-    expect(url).toContain('/documentstructuur/gm0995_5e613b8efac0433cb977d3445e057208__chp_15');
+    expect(url).toContain(`/documentstructuur/${wId}`);
   });
 
   test('an upstream failure surfaces the status in the thrown message', async () => {

@@ -959,6 +959,62 @@ const QualityProfileSection: React.FC<{
   );
 };
 
+// Child-activity names cost one upstream request each (the RTR returns bare
+// hrefs, no `omschrijving`) — see issue #196. Fetching every child at once
+// means an activity with N children fires N simultaneous requests just to
+// render one detail panel. This pool caps how many of those requests are in
+// flight together.
+//
+// 5 is the middle of the 4-6 range the issue suggests: enough that a panel
+// with a handful of children still fills in near-instantly, low enough that
+// a 23-child activity (the example in #196) goes out in five short waves
+// instead of one burst.
+const CHILD_NAME_POOL_SIZE = 5;
+
+/**
+ * Resolves child-activity names with at most `poolSize` requests in flight
+ * at once, calling `onResolved` as each one settles so the caller can fill
+ * the panel in progressively rather than waiting on the slowest child.
+ *
+ * Keeps `Promise.allSettled` semantics: a failing child is swallowed here
+ * and simply never calls `onResolved` for that URN, so it never affects the
+ * others. `isCancelled` is checked before every new request is started and
+ * again before every state update, so a torn-down caller (unmount, or a
+ * change of urn/datum/env) stops both queuing further work and writing
+ * results for work already in flight.
+ */
+function resolveChildNamesWithPool(
+  childUrns: string[],
+  datum: string | undefined,
+  env: DsoEnv,
+  poolSize: number,
+  isCancelled: () => boolean,
+  onResolved: (childUrn: string, name: string | null) => void
+): void {
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < childUrns.length) {
+      if (isCancelled()) return;
+      const childUrn = childUrns[nextIndex];
+      nextIndex += 1;
+      try {
+        const child = await getActiviteitDetail(childUrn, datum, env);
+        if (isCancelled()) return;
+        onResolved(childUrn, child.omschrijving ?? null);
+      } catch {
+        // One failing child must never stop the others from resolving —
+        // matches the previous Promise.allSettled behaviour.
+      }
+    }
+  }
+
+  const workerCount = Math.min(poolSize, childUrns.length);
+  for (let i = 0; i < workerCount; i++) {
+    void worker();
+  }
+}
+
 const ActivityDetailPanel: React.FC<{
   urn: string;
   datum?: string;
@@ -981,36 +1037,36 @@ const ActivityDetailPanel: React.FC<{
   const authorityCode = authorityOin ? findAuthorityByOin(authorityOin)?.code : undefined;
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
     setDetail(null);
     setChildNames({});
     getActiviteitDetail(urn, datum, env)
       .then((d) => {
+        if (cancelled) return;
         setDetail(d as DsoActiviteitDetail);
         onLoaded?.(d.omschrijving ?? d.urn);
-        // Fetch child names in parallel after parent loads
+        // Fetch child names with a bounded pool after the parent loads —
+        // see resolveChildNamesWithPool and issue #196.
         const children = d._links?.onderliggendeActiviteiten ?? [];
         if (children.length > 0) {
-          Promise.allSettled(
-            children.map((c) =>
-              getActiviteitDetail(urnFromHref(c.href), datum, env).then((child) => ({
-                urn: urnFromHref(c.href),
-                name: child.omschrijving ?? null,
-              }))
-            )
-          ).then((results) => {
-            const names: Record<string, string> = {};
-            results.forEach((r) => {
-              if (r.status === 'fulfilled' && r.value.name) {
-                names[r.value.urn] = r.value.name;
-              }
-            });
-            setChildNames(names);
-          });
+          const childUrns = children.map((c) => urnFromHref(c.href));
+          resolveChildNamesWithPool(
+            childUrns,
+            datum,
+            env,
+            CHILD_NAME_POOL_SIZE,
+            () => cancelled,
+            (childUrn, name) => {
+              if (cancelled || !name) return;
+              setChildNames((prev) => ({ ...prev, [childUrn]: name }));
+            }
+          );
         }
       })
       .catch((e) => {
+        if (cancelled) return;
         const msg = e instanceof Error ? e.message : 'Failed to load';
         setError(
           msg.includes('404')
@@ -1018,7 +1074,13 @@ const ActivityDetailPanel: React.FC<{
             : msg
         );
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [urn, datum, env, onLoaded]);
 
   return (

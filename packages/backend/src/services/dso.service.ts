@@ -52,6 +52,10 @@ export async function dsoFetch(
         'x-api-key': dsoConfig.apiKey,
         Accept: 'application/hal+json',
         ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        // Deliberately spread last: ozon.service.ts is the only caller that
+        // supplies `init.headers`, and it needs its own `Content-Crs` to come
+        // through. Defaults win unless a caller explicitly names the same
+        // header — see the pinning test in dso.service.test.ts.
         ...init.headers,
       },
       ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
@@ -321,6 +325,14 @@ export async function getActiviteit(
   const url = `${getDsoConfig(env).rtrBaseUrl}/activiteiten/${encodeURIComponent(urn)}?${params}`;
   logger.info('[DSO] GET activiteit detail', { env, urn, datum: effectiveDatum });
   const data = await dsoFetch(url, env);
+  // Cached by reference (see the cache comment above), so a caller mutating
+  // its own copy would otherwise poison every later read of this key.
+  // `dossier.service.ts` never does this today — it builds new objects — but
+  // nothing stops the next consumer. A shallow Object.freeze is a cheap
+  // top-level guard (O(1), no traversal) on data that is fetched hot; it
+  // will not catch a caller mutating a nested object/array, but a full deep
+  // clone or deep freeze on every hit was judged not worth the cost here.
+  if (data !== null && typeof data === 'object') Object.freeze(data);
   activiteitCache.set(cacheKey, data);
   return data;
 }
@@ -483,16 +495,24 @@ async function dsoFetchXml(url: string, env: DsoEnv = 'pre'): Promise<string> {
 }
 
 /**
- * GET /toepasbareRegels?functioneleStructuurRef=...
+ * GET /toepasbareRegels?functioneleStructuurRef=...&datum=dd-MM-yyyy
  * Returns the metadata list for a given functioneleStructuurRef.
+ *
+ * `datum` is optional and, like every other RTR-side call in this file, in
+ * dd-MM-yyyy — the upstream's own self-href on this endpoint comes back with
+ * exactly that format (`…?…&datum=22-09-2026&…`). Left out, the upstream
+ * presumably defaults to "today", same as the sibling RTR calls; omitting it
+ * keeps every existing caller (which never passed a date) unaffected.
  */
 export async function getToepasbareRegels(
   functioneleStructuurRef: string,
-  env: DsoEnv = 'pre'
+  env: DsoEnv = 'pre',
+  datum?: string
 ): Promise<unknown> {
   const params = new URLSearchParams({ functioneleStructuurRef });
+  if (datum) params.set('datum', datum);
   const url = `${getDsoConfig(env).uitvoerenGegevensBaseUrl}/toepasbareRegels?${params}`;
-  logger.info('[DSO] GET toepasbareRegels', { env, functioneleStructuurRef });
+  logger.info('[DSO] GET toepasbareRegels', { env, functioneleStructuurRef, datum });
   return dsoFetch(url, env);
 }
 

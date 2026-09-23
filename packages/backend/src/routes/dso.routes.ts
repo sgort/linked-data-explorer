@@ -118,7 +118,9 @@ router.get('/activiteiten/:urn', async (req: Request, res: Response) => {
   res.set('API-Version', packageJson.version);
 
   try {
-    const urn = decodeURIComponent(req.params.urn);
+    // Express already decodes path params — a second decodeURIComponent here
+    // would corrupt a URN containing a literal `%` (e.g. `%25` -> `%`).
+    const urn = req.params.urn;
     const datum = req.query.datum as string | undefined;
 
     const data = await dsoService.getActiviteit(urn, datum, getEnv(req));
@@ -268,7 +270,9 @@ router.post('/werkzaamheden/suggereer', async (req: Request, res: Response) => {
 router.get('/werkzaamheden/:urn', async (req: Request, res: Response) => {
   res.set('API-Version', packageJson.version);
   try {
-    const urn = decodeURIComponent(req.params.urn);
+    // Express already decodes path params — see the identical comment on
+    // GET /activiteiten/:urn above.
+    const urn = req.params.urn;
     const data = await dsoService.getWerkzaamheidDetail(urn, getEnv(req));
     res.status(200).json({ success: true, data });
   } catch (error) {

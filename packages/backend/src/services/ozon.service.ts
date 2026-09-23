@@ -78,11 +78,16 @@ export function toOzonPathId(identificatie: string): string {
 export async function zoekRegelingen(
   body: { bevoegdGezag?: string[]; typeBevoegdGezag?: string[] },
   env: DsoEnv = 'pre',
-  opts: { size?: number } = {}
+  opts: { size?: number; page?: number } = {}
 ): Promise<unknown> {
   const params = new URLSearchParams({ size: String(opts.size ?? 100) });
+  // Omitted by default so every existing caller's request is unchanged;
+  // dossier.service.ts's paging loop is the only caller that passes it (see
+  // its `MAX_REGELINGEN_PAGES` cap), the same way `getActiviteitenByOin` in
+  // dso.service.ts pages the RTR search.
+  if (opts.page !== undefined) params.set('page', String(opts.page));
   const url = `${baseUrl(env)}/regelingen/_zoek?${params}`;
-  logger.info('[Ozon] POST regelingen/_zoek', { env, body });
+  logger.info('[Ozon] POST regelingen/_zoek', { env, body, page: opts.page });
   return dsoFetch(url, env, { method: 'POST', body, headers: { 'Content-Crs': CONTENT_CRS } });
 }
 
@@ -139,9 +144,4 @@ export async function getDocumentComponent(
   const url = `${baseUrl(env)}/regelingen/${pathId}/documentstructuur/${wId}`;
   logger.info('[Ozon] GET documentstructuur component', { env, pathId, wId });
   return dsoFetch(url, env, { headers: { 'Content-Crs': CONTENT_CRS } });
-}
-
-/** Test seam: lets a suite start from an empty annotation cache. */
-export function __clearAnnotatiesCache(): void {
-  annotatiesCache.clear();
 }
