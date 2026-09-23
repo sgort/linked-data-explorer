@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
@@ -897,6 +897,274 @@ describe('DsoExplorer — activity detail', () => {
     await screen.findByText('Rule types present');
     expect(screen.queryByText(/Applicable rules/)).toBeNull();
     expect(fetchToepasbareRegels).not.toHaveBeenCalled();
+  });
+});
+
+// Issue #196: the child-activity name fan-out is pooled to a bounded number
+// of in-flight requests, fills in progressively, and stops both writing
+// state and starting new requests once the panel is torn down.
+describe('DsoExplorer — child-activity name pool (#196)', () => {
+  const POOL_SIZE = 5;
+
+  async function openActivities() {
+    getActiviteiten.mockResolvedValue(emptyResult());
+    await openTab(/Activities/);
+    await screen.findByText('Valid on');
+  }
+
+  async function inspect(urn: string) {
+    const input = screen.getByPlaceholderText('Paste URN to inspect directly…');
+    await userEvent.clear(input);
+    await userEvent.type(input, `${urn}{Enter}`);
+  }
+
+  function childHref(i: number) {
+    return `https://dso.example/activiteiten/urn%3Aa%3Akid-${i}`;
+  }
+
+  function childUrn(i: number) {
+    return `urn:a:kid-${i}`;
+  }
+
+  function rootDetail(n: number) {
+    return {
+      urn: 'urn:a:root',
+      omschrijving: 'Root',
+      verfijnbaar: false,
+      _links: {
+        onderliggendeActiviteiten: Array.from({ length: n }, (_, i) => ({ href: childHref(i) })),
+      },
+    };
+  }
+
+  test('never has more than the pool size in flight at once', async () => {
+    const N = 12;
+    const calls: string[] = [];
+    const pending = new Map<string, (v: { omschrijving: string }) => void>();
+    let active = 0;
+    let maxActive = 0;
+
+    getActiviteitDetail.mockImplementation((urn: string) => {
+      if (urn === 'urn:a:root') return Promise.resolve(rootDetail(N));
+      calls.push(urn);
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      return new Promise((resolve) => {
+        pending.set(urn, (v) => {
+          active -= 1;
+          resolve(v);
+        });
+      });
+    });
+
+    await openActivities();
+    await inspect('urn:a:root');
+
+    expect(await screen.findByText(`Child activities (${N})`)).toBeTruthy();
+
+    // The pool starts its first wave synchronously once the parent resolves.
+    // An unpooled fan-out would have fired all N requests already.
+    await waitFor(() => expect(calls.length).toBe(POOL_SIZE));
+    expect(calls.length).toBe(POOL_SIZE);
+    expect(maxActive).toBe(POOL_SIZE);
+
+    // Drain the queue one request at a time; concurrency must never exceed
+    // the cap even as later waves start.
+    for (let i = 0; i < N; i++) {
+      await waitFor(() => expect(calls.length).toBeGreaterThan(i));
+      const urn = calls[i];
+      await act(async () => {
+        pending.get(urn)!({ omschrijving: `Name ${i}` });
+        await Promise.resolve();
+      });
+      expect(active).toBeLessThanOrEqual(POOL_SIZE);
+    }
+
+    expect(maxActive).toBe(POOL_SIZE);
+    await waitFor(() => {
+      for (let i = 0; i < N; i++) {
+        expect(screen.getByText(`Name ${i}`)).toBeTruthy();
+      }
+    });
+  });
+
+  test('resolves all children and names them regardless of resolution order', async () => {
+    const N = 7;
+    const calls: string[] = [];
+    const pending = new Map<string, (v: { omschrijving: string }) => void>();
+    const resolved = new Set<string>();
+
+    getActiviteitDetail.mockImplementation((urn: string) => {
+      if (urn === 'urn:a:root') return Promise.resolve(rootDetail(N));
+      calls.push(urn);
+      return new Promise((resolve) => pending.set(urn, resolve));
+    });
+
+    await openActivities();
+    await inspect('urn:a:root');
+    await screen.findByText(`Child activities (${N})`);
+
+    for (let i = 0; i < N; i++) {
+      await waitFor(() => {
+        expect(calls.some((u) => !resolved.has(u))).toBe(true);
+      });
+      // Resolve the most-recently-queued outstanding request each time —
+      // deliberately not FIFO — to prove ordering doesn't matter.
+      const available = calls.filter((u) => !resolved.has(u));
+      const urn = available[available.length - 1];
+      resolved.add(urn);
+      await act(async () => {
+        pending.get(urn)!({ omschrijving: `Name for ${urn}` });
+        await Promise.resolve();
+      });
+    }
+
+    await waitFor(() => {
+      for (let i = 0; i < N; i++) {
+        expect(screen.getByText(`Name for ${childUrn(i)}`)).toBeTruthy();
+      }
+    });
+  });
+
+  test('a failing child does not prevent the others from being named', async () => {
+    const N = 3;
+    getActiviteitDetail.mockImplementation(async (urn: string) => {
+      if (urn === 'urn:a:root') return rootDetail(N);
+      if (urn === childUrn(1)) throw new Error('boom');
+      return { urn, omschrijving: `Name for ${urn}` };
+    });
+
+    await openActivities();
+    await inspect('urn:a:root');
+    await screen.findByText(`Child activities (${N})`);
+
+    expect(await screen.findByText(`Name for ${childUrn(0)}`)).toBeTruthy();
+    expect(await screen.findByText(`Name for ${childUrn(2)}`)).toBeTruthy();
+    // The failing child never gets a name, so it falls back to its raw URN.
+    expect(screen.getByText(childUrn(1))).toBeTruthy();
+  });
+
+  test('a child that resolves without an omschrijving falls back to its URN', async () => {
+    const N = 1;
+    getActiviteitDetail.mockImplementation(async (urn: string) => {
+      if (urn === 'urn:a:root') return rootDetail(N);
+      return { urn, verfijnbaar: false };
+    });
+
+    await openActivities();
+    await inspect('urn:a:root');
+    await screen.findByText(`Child activities (${N})`);
+
+    expect(await screen.findByText(childUrn(0))).toBeTruthy();
+  });
+
+  test('fills in names progressively rather than waiting for the slowest child', async () => {
+    const N = 8;
+    const calls: string[] = [];
+    const pending = new Map<string, (v: { omschrijving: string }) => void>();
+
+    getActiviteitDetail.mockImplementation((urn: string) => {
+      if (urn === 'urn:a:root') return Promise.resolve(rootDetail(N));
+      calls.push(urn);
+      return new Promise((resolve) => pending.set(urn, resolve));
+    });
+
+    await openActivities();
+    await inspect('urn:a:root');
+    await screen.findByText(`Child activities (${N})`);
+    await waitFor(() => expect(calls.length).toBe(POOL_SIZE));
+
+    // Resolve only the first child in the pool; the rest are still pending.
+    await act(async () => {
+      pending.get(calls[0])!({ omschrijving: 'First back' });
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText('First back')).toBeTruthy();
+    // The others haven't resolved yet, so they still show their raw URN.
+    expect(screen.getByText(childUrn(1))).toBeTruthy();
+    expect(screen.getByText(childUrn(2))).toBeTruthy();
+  });
+
+  test('stops writing state and starting requests after the panel unmounts', async () => {
+    const N = 8;
+    const calls: string[] = [];
+    const pending = new Map<string, (v: { omschrijving: string }) => void>();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    getActiviteitDetail.mockImplementation((urn: string) => {
+      if (urn === 'urn:a:root') return Promise.resolve(rootDetail(N));
+      calls.push(urn);
+      return new Promise((resolve) => pending.set(urn, resolve));
+    });
+
+    await openActivities();
+    await inspect('urn:a:root');
+    await screen.findByText(`Child activities (${N})`);
+    await waitFor(() => expect(calls.length).toBe(POOL_SIZE));
+    const callsAtTeardown = calls.length;
+
+    // Close the panel — this unmounts ActivityDetailPanel.
+    await userEvent.click(screen.getByTitle('Close'));
+
+    // Resolve the requests that were already in flight when torn down.
+    await act(async () => {
+      for (const urn of [...calls]) {
+        pending.get(urn)?.({ omschrijving: `Name for ${urn}` });
+      }
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // The pool must not have queued any further requests once cancelled.
+    expect(calls.length).toBe(callsAtTeardown);
+    // And no state was written for an unmounted component (React logs that
+    // as a console.error).
+    expect(consoleError).not.toHaveBeenCalled();
+
+    consoleError.mockRestore();
+  });
+
+  test('stops writing state and starting requests when the urn changes', async () => {
+    const N = 8;
+    const calls: string[] = [];
+    const pending = new Map<string, (v: { omschrijving: string }) => void>();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    getActiviteitDetail.mockImplementation((urn: string) => {
+      if (urn === 'urn:a:root') return Promise.resolve(rootDetail(N));
+      if (urn === 'urn:a:other') {
+        return Promise.resolve({ urn: 'urn:a:other', omschrijving: 'Other', verfijnbaar: false });
+      }
+      calls.push(urn);
+      return new Promise((resolve) => pending.set(urn, resolve));
+    });
+
+    await openActivities();
+    await inspect('urn:a:root');
+    await screen.findByText(`Child activities (${N})`);
+    await waitFor(() => expect(calls.length).toBe(POOL_SIZE));
+    const callsAtTeardown = calls.length;
+
+    // Navigate to a different activity while root's children are still pending.
+    await inspect('urn:a:other');
+    await screen.findByText('Other', { selector: 'p' });
+
+    await act(async () => {
+      for (const urn of [...calls]) {
+        pending.get(urn)?.({ omschrijving: `Name for ${urn}` });
+      }
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // The pool must not have queued any further requests for the activity
+    // that is no longer being viewed.
+    expect(calls.length).toBe(callsAtTeardown);
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(screen.queryByText(`Child activities (${N})`)).toBeNull();
+
+    consoleError.mockRestore();
   });
 });
 
