@@ -1243,13 +1243,20 @@ const ActiviteitenTab: React.FC<{
   env: DsoEnv;
   // Selection is lifted into DsoExplorer so the Quality Profile tab can read
   // the same activity, validity date and authority without ActiviteitenTab
-  // being mounted. Switching tabs must not clear this state.
+  // being mounted. Switching tabs must not clear this state. `level` is
+  // lifted for a different reason: it never leaves this tab, but it drives
+  // the Authority select's option list, and that select's `value` is the
+  // lifted `authorityOin` — leaving `level` local meant it reset to
+  // 'gemeente' on every remount while `authorityOin` didn't, so the select
+  // could show a value that wasn't among its own options.
   selectedUrn: string | null;
   onSelectUrn: (urn: string | null) => void;
   selectedDatum: string | undefined;
   onSelectedDatumChange: (datum: string | undefined) => void;
   authorityOin: string;
   onAuthorityOinChange: (oin: string) => void;
+  level: AuthorityLevel;
+  onLevelChange: (level: AuthorityLevel) => void;
   onSelectedNameChange: (name: string | undefined) => void;
   onOpenQualityProfile: () => void;
 }> = ({
@@ -1260,6 +1267,8 @@ const ActiviteitenTab: React.FC<{
   onSelectedDatumChange,
   authorityOin,
   onAuthorityOinChange,
+  level,
+  onLevelChange,
   onSelectedNameChange,
   onOpenQualityProfile,
 }) => {
@@ -1270,7 +1279,6 @@ const ActiviteitenTab: React.FC<{
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [urnInput, setUrnInput] = useState('');
-  const [level, setLevel] = useState<AuthorityLevel>('gemeente');
   // Client-side name filter — only meaningful when an authority is fixed,
   // since OIN mode loads the authority's full activity set in one call.
   const [nameFilter, setNameFilter] = useState('');
@@ -1335,9 +1343,10 @@ const ActiviteitenTab: React.FC<{
     // Note: selectedUrn is intentionally left alone here. It is owned by
     // DsoExplorer now, and this effect re-runs every time this tab is
     // remounted (including on a tab switch back to Activities) — clearing
-    // it here would defeat the point of lifting it. authorityOin is spared
-    // the same way now: it is lifted into DsoExplorer too, and the user
-    // asked for their authority choice to survive a round trip through the
+    // it here would defeat the point of lifting it. authorityOin and level
+    // are spared the same way now: both are lifted into DsoExplorer, and
+    // the user asked for their authority choice (and the level that
+    // produced its option list) to survive a round trip through the
     // Quality Profile tab exactly like the selection does. Changing Level
     // or Authority still clears both (see handleLevelChange /
     // handleAuthorityChange) — this is only about the tab remounting with
@@ -1369,7 +1378,7 @@ const ActiviteitenTab: React.FC<{
 
   const handleLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newLevel = e.target.value as AuthorityLevel;
-    setLevel(newLevel);
+    onLevelChange(newLevel);
     onAuthorityOinChange('');
     onSelectUrn(null);
     setNameFilter('');
@@ -1624,6 +1633,10 @@ const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
   const [selectedDatum, setSelectedDatum] = useState<string | undefined>(undefined);
   const [authorityOin, setAuthorityOin] = useState('');
   const [selectedName, setSelectedName] = useState<string | undefined>(undefined);
+  // Also lifted so it survives ActiviteitenTab remounting on a tab switch —
+  // see the comment on ActiviteitenTab's props for why it must track
+  // authorityOin rather than reset independently of it.
+  const [level, setLevel] = useState<AuthorityLevel>('gemeente');
 
   const handleSelectUrn = useCallback((urn: string | null) => {
     setSelectedUrn(urn);
@@ -1694,6 +1707,8 @@ const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
             onSelectedDatumChange={setSelectedDatum}
             authorityOin={authorityOin}
             onAuthorityOinChange={setAuthorityOin}
+            level={level}
+            onLevelChange={setLevel}
             onSelectedNameChange={setSelectedName}
             onOpenQualityProfile={() => setTab('quality')}
           />

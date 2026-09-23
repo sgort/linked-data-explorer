@@ -1273,6 +1273,74 @@ describe('DsoExplorer — Activities tab: authority survives a tab switch', () =
     expect(authoritySelect.value).toBe('');
     expect(screen.queryByText('Kapvergunning')).toBeNull();
   });
+
+  // Regression test for the blank-select bug: `level` used to be local to
+  // ActiviteitenTab, so it reset to 'gemeente' on every remount while the
+  // lifted `authorityOin` did not. Picking a non-gemeente authority (like
+  // the round-trip test above does with Gemeente/Lelystad — the default
+  // level — would never have caught this) and switching tabs used to leave
+  // the Authority select showing a value that wasn't among its own
+  // (now-gemeente) options, i.e. rendered blank, while the list below still
+  // showed the provincie's activities.
+  test('switching tabs and back preserves a non-default Level, and the Authority select value is among its rendered options', async () => {
+    getActiviteitenByOin.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Zuid-Hollandse activiteit' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    await openTab(/Activities/);
+    await screen.findByText('Valid on');
+    await selectAuthority('Provincie', 'Zuid-Holland');
+    await screen.findByText('Zuid-Hollandse activiteit');
+    getActiviteitenByOin.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+    await screen.findByText('No activity selected');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activities' }));
+
+    // The Level select still shows provincie, not the gemeente default.
+    const levelSelect = screen.getByLabelText('Level') as HTMLSelectElement;
+    await vi.waitFor(() => expect(levelSelect.value).toBe('provincie'));
+
+    // The Authority select's value must correspond to one of its own
+    // rendered options — not merely be non-empty — since a stale value that
+    // matches no option is exactly what rendered blank before the fix.
+    const authoritySelect = screen.getByLabelText('Authority') as HTMLSelectElement;
+    const optionValues = Array.from(authoritySelect.options).map((o) => o.value);
+    expect(authoritySelect.value).not.toBe('');
+    expect(optionValues).toContain(authoritySelect.value);
+    expect(screen.getByRole('option', { name: 'Zuid-Holland' })).toBeTruthy();
+
+    // And the filtered list is still Zuid-Holland's, not reloaded unfiltered.
+    expect(await screen.findByText('Zuid-Hollandse activiteit')).toBeTruthy();
+    expect(getActiviteitenByOin).toHaveBeenCalled();
+  });
+
+  test('changing Level clears the authority, the results and the open activity selection', async () => {
+    getActiviteitenByOin.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    getActiviteitDetail.mockResolvedValue({
+      urn: 'a1',
+      omschrijving: 'Kapvergunning',
+      verfijnbaar: false,
+    });
+    await openTab(/Activities/);
+    await screen.findByText('Valid on');
+    await selectAuthority('Gemeente', 'Lelystad');
+    await userEvent.click(await screen.findByText('Kapvergunning'));
+    await screen.findByText('Activity detail');
+
+    await userEvent.selectOptions(screen.getByLabelText('Level'), 'Provincie');
+
+    const authoritySelect = screen.getByLabelText('Authority') as HTMLSelectElement;
+    expect(authoritySelect.value).toBe('');
+    expect(screen.queryByText('Activity detail')).toBeNull();
+    expect(screen.queryByText('Kapvergunning')).toBeNull();
+  });
 });
 
 describe('DsoExplorer — authorityLabel for a non-preset (register-only) authority', () => {
