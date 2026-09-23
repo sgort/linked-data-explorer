@@ -21,6 +21,7 @@ import {
   DecisionNamingItem,
   DsoDossier,
   DsoEnv,
+  getActiviteitDetail,
   getActiviteitDossier,
   IdClass,
   InputNamingItem,
@@ -407,6 +408,74 @@ const FailuresBox: React.FC<{ failures: { step: string; detail: string }[] }> = 
     </ul>
   </div>
 );
+
+// ── Taxonomy-node notice (docs/dso-activity-dossier.md §7) ──────────────────
+//
+// A taxonomy node (a parent/grouping activity) has both rule sets null but
+// carries `childActivityUrns` from the RTR — its rules live one level down,
+// in its children. Rather than leave the reader with two "Not present for
+// this activity." cards and nothing else, this points at where the rules
+// actually are.
+
+/** Bounds the child-name lookup fan-out; a taxonomy node has few children in practice. */
+const MAX_CHILD_NAME_LOOKUPS = 20;
+
+const ChildActivitiesNotice: React.FC<{
+  childUrns: string[];
+  env: DsoEnv;
+  datum?: string;
+  onSelectUrn: (urn: string) => void;
+}> = ({ childUrns, env, datum, onSelectUrn }) => {
+  const [names, setNames] = useState<Record<string, string>>({});
+
+  // Resolves readable names for the (few) children, the same
+  // getActiviteitDetail-per-href pattern ActivityDetailPanel already uses
+  // for its own child list — 5-minute backend cache, so this is cheap. Never
+  // blocks the rest of the panel: the list below renders immediately with
+  // the URN's local name and swaps in the readable name once (if) it
+  // resolves. A failed or slow lookup simply never overwrites the fallback.
+  useEffect(() => {
+    let cancelled = false;
+    setNames({});
+    const toResolve = childUrns.slice(0, MAX_CHILD_NAME_LOOKUPS);
+    Promise.allSettled(
+      toResolve.map((urn) =>
+        getActiviteitDetail(urn, datum, env).then((d) => ({ urn, name: d.omschrijving ?? null }))
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      const resolved: Record<string, string> = {};
+      results.forEach((r) => {
+        if (r.status === 'fulfilled' && r.value.name) resolved[r.value.urn] = r.value.name;
+      });
+      setNames(resolved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [childUrns, env, datum]);
+
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+      <p className="text-sm text-slate-600">
+        This is a grouping activity — its rules live in its {childUrns.length} child{' '}
+        {childUrns.length === 1 ? 'activity' : 'activities'}.
+      </p>
+      <ul className="mt-2.5 space-y-1">
+        {childUrns.map((urn) => (
+          <li key={urn}>
+            <button
+              onClick={() => onSelectUrn(urn)}
+              className="text-xs text-blue-600 hover:underline text-left break-all"
+            >
+              {names[urn] ?? localName(urn)}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 
 // ── Scorecard layout (README §3c) ────────────────────────────────────────────
 
@@ -823,6 +892,13 @@ export interface QualityProfileTabProps {
   authorityOin: string;
   env: DsoEnv;
   onGoToActivities: () => void;
+  /**
+   * Makes `urn` the selected activity — used by the taxonomy-node notice's
+   * child links so clicking one reloads this tab for that child. `selectedUrn`
+   * is owned by DsoExplorer (see its comment on ActiviteitenTab's props), so
+   * this is threaded down the same way `onGoToActivities` is.
+   */
+  onSelectUrn: (urn: string) => void;
 }
 
 const QualityProfileTab: React.FC<QualityProfileTabProps> = ({
@@ -831,6 +907,7 @@ const QualityProfileTab: React.FC<QualityProfileTabProps> = ({
   authorityOin,
   env,
   onGoToActivities,
+  onSelectUrn,
 }) => {
   const [dossier, setDossier] = useState<DsoDossier | null>(null);
   const [loading, setLoading] = useState(false);
@@ -998,6 +1075,16 @@ const QualityProfileTab: React.FC<QualityProfileTabProps> = ({
 
   if (!dossier) return null;
 
+  // Taxonomy node: BOTH rule sets absent AND it has children — an activity
+  // with children that ALSO carries its own rules is not a taxonomy node,
+  // and is not shown this notice. Only the primary dossier, never the
+  // compared one (Compare is a separate, side-by-side concern).
+  const isTaxonomyNode =
+    !compareDossier &&
+    dossier.qualityProfile.ruleSets.conclusie === null &&
+    dossier.qualityProfile.ruleSets.indieningsvereisten === null &&
+    dossier.childActivityUrns.length > 0;
+
   const primaryAuthorityLabel = currentAuthority ? shortName(currentAuthority) : undefined;
   const compareAuthorityLabel = compareAuthority ? shortName(compareAuthority) : undefined;
 
@@ -1058,6 +1145,17 @@ const QualityProfileTab: React.FC<QualityProfileTabProps> = ({
             <ActivitySummaryCard dossier={compareDossier} authorityPrefix={compareAuthorityLabel} />
           )}
         </div>
+
+        {isTaxonomyNode && (
+          <div className="shrink-0">
+            <ChildActivitiesNotice
+              childUrns={dossier.childActivityUrns}
+              env={env}
+              datum={selectedDatum}
+              onSelectUrn={onSelectUrn}
+            />
+          </div>
+        )}
 
         {compareError && (
           <div className="shrink-0 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">

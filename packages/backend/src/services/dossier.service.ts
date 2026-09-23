@@ -153,6 +153,15 @@ export interface Dossier {
   rtrLocaties: string[];
   decisionCriteria: RuleSet | null;
   submissionRequirements: RuleSet | null;
+  /**
+   * URNs of this activity's own children (RTR `_links.onderliggendeActiviteiten`),
+   * in the order the RTR returned them. Empty when there are none. Free —
+   * these hrefs are already on the step-1 RTR response, so this costs no
+   * additional upstream call. Lets the taxonomy-node edge case (§7 of
+   * docs/dso-activity-dossier.md) point a reader at where an empty dossier's
+   * rules actually live, without the dossier fetching each child itself.
+   */
+  childActivityUrns: string[];
   provenance: Provenance;
 }
 
@@ -204,6 +213,39 @@ function viewerUrl(functioneleStructuurRef: string): string {
   return `https://omgevingswet.overheid.nl/registratie-toepasbare-regels/id/${concept}`;
 }
 
+/**
+ * Extracts the activiteit URN from a HAL href of the form
+ * `…/activiteiten/{urn}?datum=…` — mirrors
+ * packages/frontend/src/services/dsoService.ts's `urnFromHref`. Returns
+ * `null` rather than the raw href when the path shape isn't recognised, so a
+ * malformed entry is dropped instead of masquerading as a URN.
+ */
+function urnFromHref(href: string): string | null {
+  const match = href.match(/activiteiten\/([^?]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
+ * `_links.onderliggendeActiviteiten` -> child activity URNs, in RTR order.
+ * Degrades to `[]` rather than throwing on anything malformed — a missing
+ * `_links`, a non-array value, or an entry without a usable `href` — since a
+ * parent activity legitimately has none, and a shape surprise here must not
+ * take down the rest of the dossier.
+ */
+function childActivityUrnsFrom(links: unknown): string[] {
+  const entries = (links as { onderliggendeActiviteiten?: unknown } | undefined)
+    ?.onderliggendeActiviteiten;
+  if (!Array.isArray(entries)) return [];
+  const urns: string[] = [];
+  for (const entry of entries) {
+    const href = (entry as { href?: unknown } | null)?.href;
+    if (typeof href !== 'string') continue;
+    const urn = urnFromHref(href);
+    if (urn) urns.push(urn);
+  }
+  return urns;
+}
+
 export async function buildDossier(req: DossierRequest): Promise<Dossier> {
   const failures: { step: string; detail: string }[] = [];
   // `context`, when given, is appended so a reader knows WHICH candidate a
@@ -227,6 +269,7 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
     };
     regelBeheerObjecten?: RegelBeheerObject[];
     locaties?: { identificatie: string }[];
+    _links?: { onderliggendeActiviteiten?: { href: string }[] };
   };
 
   const bo = activiteit.bestuursorgaan ?? {};
@@ -461,6 +504,7 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
     rtrLocaties: (activiteit.locaties ?? []).map((l) => l.identificatie),
     decisionCriteria: resolved.find((r) => r.typering === 'Conclusie') ?? null,
     submissionRequirements: resolved.find((r) => r.typering === 'Indieningsvereisten') ?? null,
+    childActivityUrns: childActivityUrnsFrom(activiteit._links),
     provenance: {
       env: req.env,
       datum: req.datum ?? null,

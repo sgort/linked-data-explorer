@@ -773,3 +773,61 @@ describe('buildDossier', () => {
     expect(d.decisionCriteria?.begindatum).toBeNull();
   });
 });
+
+describe('buildDossier — childActivityUrns', () => {
+  // Step 1's RTR response already carries `_links.onderliggendeActiviteiten`
+  // (see the `ACTIVITEIT_DETAIL` fixture in dso.routes.test.ts for the same
+  // href shape) — this must cost no additional upstream call.
+  test('carries the child activity URNs, in RTR order, from _links.onderliggendeActiviteiten', async () => {
+    dso.getActiviteit.mockResolvedValue({
+      ...activiteit,
+      urn: 'nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit',
+      _links: {
+        onderliggendeActiviteiten: [
+          {
+            href: '/activiteiten/nl.imow-mnre1034.activiteit.RijksmonArchMonument?datum=01-01-2026',
+          },
+          { href: '/activiteiten/nl.imow-mnre1034.activiteit.RijkmonMonument?datum=01-01-2026' },
+        ],
+      },
+    });
+
+    const d = await buildDossier({
+      urn: 'nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit',
+      env: 'prod',
+    });
+
+    expect(d.childActivityUrns).toEqual([
+      'nl.imow-mnre1034.activiteit.RijksmonArchMonument',
+      'nl.imow-mnre1034.activiteit.RijkmonMonument',
+    ]);
+    // Zero extra fan-out: only the fixed set of upstream calls the dossier
+    // already makes, nothing keyed off a child URN.
+    expect(dso.getActiviteit).toHaveBeenCalledTimes(1);
+  });
+
+  test('an activity with no children carries an empty array', async () => {
+    dso.getActiviteit.mockResolvedValue({ ...activiteit, _links: undefined });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.childActivityUrns).toEqual([]);
+  });
+
+  test.each([
+    ['no _links at all', undefined],
+    ['_links present but no onderliggendeActiviteiten key', {}],
+    ['onderliggendeActiviteiten is not an array', { onderliggendeActiviteiten: 'not-an-array' }],
+    ['an entry with no href', { onderliggendeActiviteiten: [{}] }],
+    [
+      'an entry whose href does not match the activiteiten path shape',
+      { onderliggendeActiviteiten: [{ href: '/not-an-activiteiten-path' }] },
+    ],
+  ])('degrades to an empty array rather than throwing: %s', async (_label, links) => {
+    dso.getActiviteit.mockResolvedValue({ ...activiteit, _links: links });
+
+    const d = await buildDossier({ urn: URN, env: 'prod' });
+
+    expect(d.childActivityUrns).toEqual([]);
+  });
+});

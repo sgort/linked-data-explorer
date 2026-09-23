@@ -248,6 +248,13 @@ Indieningsvereisten each. Loading the parent and finding nothing is the
 correct answer; the rules are one level down. `nl.imow-gm0995.activiteit.OverigeAct`
 is the same shape at gemeente level.
 
+The dossier carries these children as `childActivityUrns` — the RTR's own
+`_links.onderliggendeActiviteiten` from step 1, so this costs no extra
+upstream call. The Quality Profile tab surfaces them as links when both rule
+sets are null and the list is non-empty, so an otherwise-empty dossier points
+a reader at where the activity's rules actually are, rather than leaving them
+with two "Not present for this activity." cards and nothing else.
+
 **Authorities with no regeling of the expected type.** Not every bevoegd
 gezag publishes the instrument its level implies. When none is found, the
 dossier still returns the RTR-side data with the legal-source link marked

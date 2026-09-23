@@ -399,6 +399,13 @@ export interface Dossier {
   rtrLocaties: string[];
   decisionCriteria: RuleSet | null;
   submissionRequirements: RuleSet | null;
+  /**
+   * URNs of this activity's own children (RTR `_links.onderliggendeActiviteiten`),
+   * in RTR order. Empty when there are none. See
+   * packages/backend/src/services/dossier.service.ts's `Dossier` for why
+   * this is free — it is already on the step-1 RTR response.
+   */
+  childActivityUrns: string[];
   provenance: Provenance;
 }
 

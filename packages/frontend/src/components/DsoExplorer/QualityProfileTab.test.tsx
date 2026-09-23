@@ -7,9 +7,10 @@
 
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const getActiviteitDossier = vi.fn();
+const getActiviteitDetail = vi.fn();
 
 vi.mock('../../services/dsoService', async () => {
   const actual = await vi.importActual<typeof import('../../services/dsoService')>(
@@ -18,6 +19,7 @@ vi.mock('../../services/dsoService', async () => {
   return {
     ...actual,
     getActiviteitDossier: (...args: unknown[]) => getActiviteitDossier(...args),
+    getActiviteitDetail: (...args: unknown[]) => getActiviteitDetail(...args),
   };
 });
 
@@ -32,6 +34,14 @@ import QualityProfileTab, { QualityProfileTabProps } from './QualityProfileTab';
 afterEach(() => {
   vi.restoreAllMocks();
   getActiviteitDossier.mockReset();
+  getActiviteitDetail.mockReset();
+});
+
+// A safe default so any test whose dossier happens to carry
+// childActivityUrns (most don't) doesn't crash on an unmocked call — tests
+// that care about a specific name or a failed lookup override this.
+beforeEach(() => {
+  getActiviteitDetail.mockImplementation(async (urn: string) => ({ urn, omschrijving: null }));
 });
 
 // ─── Fixture builders ────────────────────────────────────────────────────────
@@ -254,6 +264,7 @@ function gm0995Dossier(overrides: Partial<DsoDossier> = {}): DsoDossier {
       bovenliggendeActiviteitRef: null,
     },
     rtrLocaties: [],
+    childActivityUrns: [],
     decisionCriteria: {
       typering: 'Conclusie',
       identifier: 114233,
@@ -393,6 +404,7 @@ function gm1708Dossier(overrides: Partial<DsoDossier> = {}): DsoDossier {
       bovenliggendeActiviteitRef: null,
     },
     rtrLocaties: [],
+    childActivityUrns: [],
     decisionCriteria: {
       typering: 'Conclusie',
       identifier: 116244,
@@ -445,6 +457,7 @@ function gm1708Dossier(overrides: Partial<DsoDossier> = {}): DsoDossier {
 }
 
 function renderTab(props: Partial<QualityProfileTabProps> = {}, onGoToActivities = vi.fn()) {
+  const onSelectUrn = vi.fn();
   render(
     <QualityProfileTab
       selectedUrn={GM0995_URN}
@@ -452,10 +465,11 @@ function renderTab(props: Partial<QualityProfileTabProps> = {}, onGoToActivities
       authorityOin=""
       env="pre"
       onGoToActivities={onGoToActivities}
+      onSelectUrn={onSelectUrn}
       {...props}
     />
   );
-  return { onGoToActivities };
+  return { onGoToActivities, onSelectUrn };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -724,6 +738,93 @@ describe('QualityProfileTab — null rule set', () => {
     // Never zero counts, which would read as "measured and found nothing".
     expect(screen.queryByText(/0\/0/)).toBeNull();
     expect(screen.queryByText('Decision naming')).toBeNull();
+  });
+});
+
+// ─── Taxonomy node (docs/dso-activity-dossier.md §7) ──────────────────────────
+//
+// nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit is the worked
+// example: both rule sets null, two children (RijksmonArchMonument,
+// RijkmonMonument) that carry their own Conclusie and Indieningsvereisten.
+
+const TAXONOMY_URN = 'nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit';
+const CHILD_1 = 'nl.imow-mnre1034.activiteit.RijksmonArchMonument';
+const CHILD_2 = 'nl.imow-mnre1034.activiteit.RijkmonMonument';
+
+function taxonomyNodeDossier(childActivityUrns: string[]): DsoDossier {
+  return gm0995Dossier({
+    urn: TAXONOMY_URN,
+    decisionCriteria: null,
+    submissionRequirements: null,
+    qualityProfile: {
+      ...gm0995Dossier().qualityProfile,
+      urn: TAXONOMY_URN,
+      ruleSets: { conclusie: null, indieningsvereisten: null },
+    },
+    childActivityUrns,
+  });
+}
+
+describe('QualityProfileTab — taxonomy node', () => {
+  test('a dossier with null rule sets and children renders the block, the count, and one entry per child', async () => {
+    getActiviteitDossier.mockResolvedValue(taxonomyNodeDossier([CHILD_1, CHILD_2]));
+    getActiviteitDetail.mockImplementation(async (urn: string) => ({
+      urn,
+      omschrijving: urn === CHILD_1 ? 'Rijksmonument archeologie' : 'Rijksmonument monument',
+    }));
+    renderTab({ selectedUrn: TAXONOMY_URN });
+
+    expect(
+      await screen.findByText(/This is a grouping activity.*2 child activities\./)
+    ).toBeTruthy();
+    expect(await screen.findByText('Rijksmonument archeologie')).toBeTruthy();
+    expect(await screen.findByText('Rijksmonument monument')).toBeTruthy();
+  });
+
+  test("clicking a child invokes the selection callback with that child's URN", async () => {
+    getActiviteitDossier.mockResolvedValue(taxonomyNodeDossier([CHILD_1, CHILD_2]));
+    getActiviteitDetail.mockResolvedValue({ urn: CHILD_1, omschrijving: null });
+    const { onSelectUrn } = renderTab({ selectedUrn: TAXONOMY_URN });
+
+    // Before the (never-resolving-to-a-name) lookup settles the fallback is
+    // the URN local name, which is still a legitimate way to click it.
+    const link = await screen.findByRole('button', { name: 'RijksmonArchMonument' });
+    await userEvent.click(link);
+
+    expect(onSelectUrn).toHaveBeenCalledWith(CHILD_1);
+  });
+
+  test('a dossier with rule sets does NOT render the block, even if it has children', async () => {
+    getActiviteitDossier.mockResolvedValue(
+      gm0995Dossier({ childActivityUrns: [CHILD_1, CHILD_2] })
+    );
+    renderTab();
+
+    await screen.findByText('3/7 semantic'); // dossier has finished loading
+    expect(screen.queryByText(/This is a grouping activity/)).toBeNull();
+  });
+
+  test('a dossier with null rule sets and NO children does not render it either', async () => {
+    getActiviteitDossier.mockResolvedValue(taxonomyNodeDossier([]));
+    renderTab({ selectedUrn: TAXONOMY_URN });
+
+    await screen.findAllByText('Not present for this activity.');
+    expect(screen.queryByText(/This is a grouping activity/)).toBeNull();
+    expect(getActiviteitDetail).not.toHaveBeenCalled();
+  });
+
+  test('a failed name lookup still renders the child, falling back to the URN local name', async () => {
+    getActiviteitDossier.mockResolvedValue(taxonomyNodeDossier([CHILD_1, CHILD_2]));
+    getActiviteitDetail.mockImplementation(async (urn: string) => {
+      if (urn === CHILD_1) throw new Error('HTTP 500');
+      return { urn, omschrijving: 'Rijksmonument monument' };
+    });
+    renderTab({ selectedUrn: TAXONOMY_URN });
+
+    // The failed lookup's child still renders — under its URN local name —
+    // rather than being dropped or left blank.
+    expect(await screen.findByText('RijksmonArchMonument')).toBeTruthy();
+    expect(await screen.findByText('Rijksmonument monument')).toBeTruthy();
   });
 });
 

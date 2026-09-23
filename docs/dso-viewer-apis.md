@@ -239,6 +239,13 @@ dossier — the same activity local name under another authority's prefix, using
 side. Conclusie and Indieningsvereisten are always separate columns; nothing is
 averaged.
 
+**Taxonomy nodes point at their children.** The dossier's `childActivityUrns`
+(free — see `dso-activity-dossier.md` §7) lets the tab do more than report an
+empty answer for a grouping activity: when both rule sets are null and
+children are present, it renders a notice listing them as links, each
+resolving its readable name via `getActiviteitDetail` and falling back to the
+URN's local name.
+
 **Detail-panel teaser.** `ActivityDetailPanel` shows a two-row summary of the
 same profile, and is the one place the two rule sets are summed — it is a
 pointer into the tab, not a score. It renders from the client cache only, so
@@ -314,7 +321,9 @@ query parameter (header takes precedence); anything else falls back to `pre`.
   `onderliggendeActiviteiten` is a grouping node; its children carry the rules.
   `nl.imow-mnre1034.activiteit.Rijksmonumentenactiviteit` → `RijksmonArchMonument`
   and `RijkmonMonument` is the clearest example. An empty dossier for such a URN
-  is the correct answer, not a lookup failure.
+  is the correct answer, not a lookup failure — see §2.5 for how the Quality
+  Profile tab now surfaces the children instead of leaving the reader with
+  nothing.
 - **A dossier can legitimately resolve three of four links.** Where no regeling
   annotates the activity, `legalSource.available` is false and
   `provenance.failures` records which regelingen were checked and found not to
