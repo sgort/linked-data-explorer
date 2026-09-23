@@ -682,6 +682,32 @@ describe('QualityProfileTab — Compare', () => {
       await screen.findByText('Boom kappen of houtopstand vellen_Niet van toepassing_cross')
     ).toBeTruthy();
   });
+
+  test('a "Clear compare" control appears only while comparing, and resets to the Scorecard layout', async () => {
+    getActiviteitDossier.mockImplementation(async (urn: string) => {
+      if (urn === GM0995_URN) return gm0995Dossier();
+      if (urn === GM1708_URN) return gm1708Dossier();
+      throw new Error(`unexpected urn ${urn}`);
+    });
+    renderTab();
+    await screen.findByText('3/7 semantic');
+
+    // No comparison active yet — the clear control is not rendered.
+    expect(screen.queryByRole('button', { name: /Clear compare/ })).toBeNull();
+
+    await userEvent.selectOptions(screen.getByLabelText('Compare with'), 'gm1708');
+    await screen.findByText('4/4 semantic');
+    expect(screen.getByText('Dimension')).toBeTruthy(); // Matrix layout is up
+
+    await userEvent.click(screen.getByRole('button', { name: /Clear compare/ }));
+
+    // Back to the single-dossier Scorecard view.
+    expect(screen.queryByText('Dimension')).toBeNull();
+    expect(screen.getByText('Conclusie')).toBeTruthy();
+    expect(screen.getByText('Indieningsvereisten')).toBeTruthy();
+    expect((screen.getByLabelText('Compare with') as HTMLSelectElement).value).toBe('');
+    expect(screen.queryByRole('button', { name: /Clear compare/ })).toBeNull();
+  });
 });
 
 describe('QualityProfileTab — footer', () => {
@@ -870,6 +896,30 @@ describe('QualityProfileTab — edge cases and fallbacks', () => {
     await screen.findByText('3/7 semantic');
 
     expect(getActiviteitDossier).toHaveBeenCalledWith(GM0995_URN, 'pre', undefined, undefined);
+  });
+});
+
+describe('QualityProfileTab — Compare authority (correctness)', () => {
+  test("the compare fetch uses the COMPARED authority, not the primary's", async () => {
+    getActiviteitDossier.mockImplementation(async (urn: string) => {
+      if (urn === GM0995_URN) return gm0995Dossier();
+      if (urn === GM1708_URN) return gm1708Dossier();
+      throw new Error(`unexpected urn ${urn}`);
+    });
+    // The primary activity's own authority is gm0995 (Lelystad) — set via
+    // its OIN, resolved to the code the same way the primary fetch does.
+    renderTab({ authorityOin: '00000001005024249000' });
+    await screen.findByText('3/7 semantic');
+
+    await userEvent.selectOptions(screen.getByLabelText('Compare with'), 'gm1708');
+    await screen.findByText('4/4 semantic');
+
+    // The compared dossier (GM1708_URN) must be fetched with the COMPARED
+    // authority's code (gm1708). This is the bug: previously the PRIMARY
+    // authority's code (gm0995) was passed instead, so the backend searched
+    // Lelystad's regelingen for a Steenwijkerland activity.
+    expect(getActiviteitDossier).toHaveBeenCalledWith(GM1708_URN, 'pre', undefined, 'gm1708');
+    expect(getActiviteitDossier).not.toHaveBeenCalledWith(GM1708_URN, 'pre', undefined, 'gm0995');
   });
 });
 

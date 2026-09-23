@@ -1284,6 +1284,15 @@ const ActiviteitenTab: React.FC<{
     return `${d}-${m}-${y}`;
   };
 
+  // Inverse of toDsoDate — used only to redisplay the "Valid on" field on
+  // remount (see the mount effect below), since `selectedDatum` is lifted
+  // and stored in DSO format (dd-mm-yyyy).
+  const fromDsoDate = (dso: string | undefined) => {
+    if (!dso) return '';
+    const [d, m, y] = dso.split('-');
+    return `${y}-${m}-${d}`;
+  };
+
   const load = useCallback(
     async (d: string, p: number) => {
       setLoading(true);
@@ -1326,10 +1335,24 @@ const ActiviteitenTab: React.FC<{
     // Note: selectedUrn is intentionally left alone here. It is owned by
     // DsoExplorer now, and this effect re-runs every time this tab is
     // remounted (including on a tab switch back to Activities) — clearing
-    // it here would defeat the point of lifting it.
-    onAuthorityOinChange('');
-    setOinMode(false);
-    load('', 1);
+    // it here would defeat the point of lifting it. authorityOin is spared
+    // the same way now: it is lifted into DsoExplorer too, and the user
+    // asked for their authority choice to survive a round trip through the
+    // Quality Profile tab exactly like the selection does. Changing Level
+    // or Authority still clears both (see handleLevelChange /
+    // handleAuthorityChange) — this is only about the tab remounting with
+    // no user action in between.
+    if (authorityOin) {
+      // An authority was already selected when this tab remounted —
+      // restore ITS list (and the "Valid on" field that produced it)
+      // instead of falling back to the unfiltered date-based list, which
+      // would silently drop the filter the user had left in place.
+      setDatum(fromDsoDate(selectedDatum));
+      loadByOin(authorityOin, selectedDatum);
+    } else {
+      setOinMode(false);
+      load('', 1);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 

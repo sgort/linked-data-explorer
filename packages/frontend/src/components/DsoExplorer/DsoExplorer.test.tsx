@@ -1214,6 +1214,67 @@ describe('DsoExplorer — Activities toolbar', () => {
   });
 });
 
+// ─── Selected authority survives a tab switch (README: same as selectedUrn) ─
+//
+// ActiviteitenTab remounts every time the user switches back to it, and its
+// mount effect used to unconditionally clear authorityOin and reload the
+// unfiltered date-based list — wiping the user's authority choice on every
+// round trip through Quality Profile. authorityOin is lifted into
+// DsoExplorer (like selectedUrn), so it is spared the same way now: on
+// remount, an authority that is still selected has its filtered list
+// restored instead.
+
+describe('DsoExplorer — Activities tab: authority survives a tab switch', () => {
+  test('switching Activities → Quality Profile → Activities preserves the selected authority and its filtered list', async () => {
+    getActiviteitenByOin.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    await openTab(/Activities/);
+    await screen.findByText('Valid on');
+    await selectAuthority('Gemeente', 'Lelystad');
+    await screen.findByText('Kapvergunning');
+    getActiviteitenByOin.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+    await screen.findByText('No activity selected');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Activities' }));
+
+    // The Authority select still reflects Lelystad (not reset to the
+    // placeholder), and its filtered list was restored — not the
+    // unfiltered date-based list the old mount effect fell back to.
+    await vi.waitFor(() =>
+      expect((screen.getByLabelText('Authority') as HTMLSelectElement).value).not.toBe('')
+    );
+    expect(await screen.findByText('Kapvergunning')).toBeTruthy();
+    expect(getActiviteitenByOin).toHaveBeenCalled();
+  });
+
+  test('changing Level after that round trip still clears the authority', async () => {
+    getActiviteitenByOin.mockResolvedValue({
+      items: [{ urn: 'a1', omschrijving: 'Kapvergunning' }],
+      page: { number: 1, size: 10 },
+      hasNext: false,
+    });
+    await openTab(/Activities/);
+    await screen.findByText('Valid on');
+    await selectAuthority('Gemeente', 'Lelystad');
+    await screen.findByText('Kapvergunning');
+
+    await userEvent.click(screen.getByRole('button', { name: /Quality Profile/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Activities' }));
+    await screen.findByText('Kapvergunning');
+
+    await userEvent.selectOptions(screen.getByLabelText('Level'), 'Provincie');
+
+    const authoritySelect = screen.getByLabelText('Authority') as HTMLSelectElement;
+    expect(authoritySelect.value).toBe('');
+    expect(screen.queryByText('Kapvergunning')).toBeNull();
+  });
+});
+
 describe('DsoExplorer — authorityLabel for a non-preset (register-only) authority', () => {
   test('an authority the register carries an OIN for, but which was never one of the old chips, is labelled by its register name', async () => {
     fetchToepasbareRegels.mockResolvedValue({

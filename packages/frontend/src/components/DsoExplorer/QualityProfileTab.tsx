@@ -6,7 +6,7 @@
 // docs/dso-activity-dossier.md §8 for why the profile is never collapsed
 // into one grade.
 
-import { Download, Gauge, Loader2 } from 'lucide-react';
+import { Download, Gauge, Loader2, X } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 
 // The dossier Markdown renderer lives in scripts/dossier-render.mjs — a
@@ -757,6 +757,15 @@ const ContextToolbar: React.FC<{
               </option>
             ))}
           </select>
+          {compareCode && (
+            <button
+              onClick={() => onCompareCodeChange('')}
+              aria-label="Clear compare"
+              className="px-2 py-1 text-[10px] bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-colors inline-flex items-center gap-1"
+            >
+              <X size={11} /> Clear compare
+            </button>
+          )}
           <button
             onClick={() => downloadDossierMarkdown(dossier)}
             className="px-2 py-1 text-[10px] bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-colors inline-flex items-center gap-1"
@@ -902,7 +911,15 @@ const QualityProfileTab: React.FC<QualityProfileTabProps> = ({
     if (!compareUrn) return;
     let cancelled = false;
     setCompareError(null);
-    getActiviteitDossier(compareUrn, env, selectedDatum, authorityCode)
+    // The compared dossier's authority is `compareCode` itself — it's
+    // already a bevoegd-gezag CODE (compareOptions is built straight off
+    // `a.code`, the same register `findAuthorityByOin` resolves into), never
+    // an OIN, so it needs no resolution the way `authorityOin` above does.
+    // Passing `authorityCode` (the PRIMARY activity's authority) here was
+    // the bug: the backend treats `authority` as an override
+    // (dossier.service.ts's `gezagCode`), so it searched the primary
+    // authority's regelingen for the compared activity.
+    getActiviteitDossier(compareUrn, env, selectedDatum, compareCode)
       .then((d) => {
         if (!cancelled) setCompareDossier(d);
       })
@@ -912,7 +929,7 @@ const QualityProfileTab: React.FC<QualityProfileTabProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [compareCode, dossier, env, selectedDatum, authorityCode]);
+  }, [compareCode, dossier, env, selectedDatum]);
 
   const currentAuthority = useMemo(
     () =>
