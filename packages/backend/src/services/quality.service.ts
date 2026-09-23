@@ -26,8 +26,17 @@ import type { Dossier } from './dossier.service';
  * the GUID-named activities this profile exists to flag.
  */
 const H = '[0-9a-f]';
+// Anchored on both sides against another hex digit (not against `\b`, which
+// would not help here — `_` and `-` are themselves plausible token
+// separators in this domain, e.g. `onderwerp_<guid>` or `uitv__<guid>`, so
+// they must stay allowed immediately outside the match). This blocks a GUID
+// from being read out of the middle of a longer hex/digit run — since
+// digits are a subset of [0-9a-f], an all-numeric string of, say, 40 digits
+// would otherwise always contain a matching 32-char substring — while still
+// matching a GUID that is genuinely a standalone token bounded by `.`, `_`,
+// `-`, start/end of string, or non-hex letters.
 export const GUID_RE = new RegExp(
-  `(?:${H}{8}[-_]${H}{4}[-_]${H}{4}[-_]${H}{4}[-_]${H}{12}|${H}{32})`,
+  `(?<![0-9a-f])(?:${H}{8}[-_]${H}{4}[-_]${H}{4}[-_]${H}{4}[-_]${H}{12}|${H}{32})(?![0-9a-f])`,
   'i'
 );
 

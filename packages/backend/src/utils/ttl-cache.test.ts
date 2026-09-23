@@ -90,6 +90,15 @@ describe('createTtlCache', () => {
     expect(cache.stats()).toEqual({ size: 1, ttlSeconds: 5, oldestAgeSeconds: 0 });
   });
 
+  test('stats() ignores expired entries even when polled with no intervening set()', () => {
+    let t = 1000;
+    const cache = createTtlCache<string>({ name: 'test-m', ttlMs: 5000, now: () => t });
+    cache.set('a', '1');
+    cache.set('b', '2');
+    t = 8000; // both expired; nothing else calls set() or get() before stats()
+    expect(cache.stats()).toEqual({ size: 0, ttlSeconds: 5, oldestAgeSeconds: null });
+  });
+
   test('clearNamedCaches() with no name clears every registered cache', () => {
     const cacheI = createTtlCache<string>({ name: 'test-i', ttlMs: 5000 });
     const cacheJ = createTtlCache<string>({ name: 'test-j', ttlMs: 5000 });

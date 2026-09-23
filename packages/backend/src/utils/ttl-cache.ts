@@ -65,13 +65,21 @@ export function createTtlCache<T>(opts: {
       else entries.delete(key);
     },
     stats() {
+      // Expired entries are only swept inside set() (see above), so between
+      // writes `entries` can still hold stale keys. Rather than mutate state
+      // on what should be a harmless read, this just skips anything already
+      // past its TTL while counting — same O(n) cost as the set() sweep, no
+      // side effect on a read-only call.
       let oldest: number | null = null;
+      let size = 0;
       const t = now();
       for (const entry of entries.values()) {
+        if (t - entry.storedAt > ttlMs) continue;
+        size++;
         const age = Math.floor((t - entry.storedAt) / 1000);
         if (oldest === null || age > oldest) oldest = age;
       }
-      return { size: entries.size, ttlSeconds: Math.floor(ttlMs / 1000), oldestAgeSeconds: oldest };
+      return { size, ttlSeconds: Math.floor(ttlMs / 1000), oldestAgeSeconds: oldest };
     },
   };
 

@@ -210,6 +210,21 @@ describe('GET /v1/dso/activiteiten/:urn', () => {
     expect(svc.getActiviteit).toHaveBeenCalledWith('urn-a', '01-01-2026', 'pre');
   });
 
+  // Express already decodes path params once. A second decodeURIComponent
+  // in the route corrupts a URN carrying a literal `%` — `%25` (a
+  // percent-encoded `%`) becomes a bare `%` on the first (correct) decode,
+  // then `%` alone throws / silently mangles further chars on a second pass.
+  // This URN's raw form contains a literal `%25` substring, which must
+  // survive the round trip unchanged.
+  test('does not double-decode a URN containing a percent-encoded-looking sequence', async () => {
+    svc.getActiviteit.mockResolvedValue({});
+    const rawUrn = 'nl.imow-gm0995.activiteit.100%25Compleet';
+
+    await request(makeApp()).get(`/v1/dso/activiteiten/${encodeURIComponent(rawUrn)}`);
+
+    expect(svc.getActiviteit).toHaveBeenCalledWith(rawUrn, undefined, 'pre');
+  });
+
   test('translates an upstream 404 into a 404', async () => {
     svc.getActiviteit.mockRejectedValue(new Error('DSO responded 404 Not Found'));
 
@@ -445,6 +460,15 @@ describe('werkzaamheden search', () => {
 
     expect(res.status).toBe(200);
     expect(svc.getWerkzaamheidDetail).toHaveBeenCalledWith('urn:nl:imow:werkzaamheid:1', 'pre');
+  });
+
+  test('GET /werkzaamheden/:urn does not double-decode a URN containing a percent-encoded-looking sequence', async () => {
+    svc.getWerkzaamheidDetail.mockResolvedValue({});
+    const rawUrn = 'nl.imow-gm0995.werkzaamheid.100%25Compleet';
+
+    await request(makeApp()).get(`/v1/dso/werkzaamheden/${encodeURIComponent(rawUrn)}`);
+
+    expect(svc.getWerkzaamheidDetail).toHaveBeenCalledWith(rawUrn, 'pre');
   });
 
   test('GET /werkzaamheden/:urn translates an upstream 404', async () => {

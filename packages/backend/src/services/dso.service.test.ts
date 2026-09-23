@@ -463,6 +463,30 @@ describe('getToepasbareRegels', () => {
     expect(url.pathname).toBe('/uitvoeren/toepasbareRegels');
     expect(url.searchParams.get('functioneleStructuurRef')).toBe('https://example.org/concept/1');
   });
+
+  test('omits datum when not given, so existing callers are unaffected', async () => {
+    await getToepasbareRegels('https://example.org/concept/1');
+
+    expect(requestedUrl().searchParams.has('datum')).toBe(false);
+  });
+
+  // Item 3: without this, an activity with rule history gets the current
+  // toepasbare regel even when the dossier itself was requested for a past
+  // date — the upstream's own self-href shows the wire format is dd-MM-yyyy,
+  // matching every other RTR-side call, not the ISO form Ozon's geldigOp uses.
+  test('forwards an explicit datum in dd-MM-yyyy, unconverted', async () => {
+    await getToepasbareRegels('https://example.org/concept/1', 'pre', '22-09-2026');
+
+    expect(requestedUrl().searchParams.get('datum')).toBe('22-09-2026');
+  });
+
+  test('targets production when asked, alongside the datum filter', async () => {
+    await getToepasbareRegels('https://example.org/concept/1', 'prod', '01-01-2026');
+
+    const url = requestedUrl();
+    expect(url.origin).toBe('https://prod.example');
+    expect(url.searchParams.get('datum')).toBe('01-01-2026');
+  });
 });
 
 describe('getSttrBestand', () => {
@@ -948,6 +972,25 @@ describe('getActiviteit caching', () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
+
+  // Item 8: the cache stores the resolved activity by reference. A caller
+  // that mutated its own copy would otherwise poison every later read of
+  // the same key. Freezing on write is the guard; this pins it from the
+  // read side too, since a caller can only observe the frozen object.
+  test('the cached activity is frozen, so a caller mutating its own copy cannot poison a later read', async () => {
+    const first = (await getActiviteit(urn, '22-09-2026', 'prod')) as Record<string, unknown>;
+
+    expect(Object.isFrozen(first)).toBe(true);
+    try {
+      first.omschrijving = 'Mutated by a careless caller';
+    } catch {
+      // Strict mode throws on a frozen-object write; either way the
+      // assignment must not have taken effect, which the read below checks.
+    }
+
+    const second = (await getActiviteit(urn, '22-09-2026', 'prod')) as Record<string, unknown>;
+    expect(second.omschrijving).toBe('Boom kappen of houtopstand vellen');
+  });
 });
 
 describe('dsoFetch request options', () => {
@@ -997,5 +1040,27 @@ describe('dsoFetch request options', () => {
     expect(init.method).toBe('GET');
     expect(init.body).toBeUndefined();
     expect(init.headers['Content-Type']).toBeUndefined();
+  });
+
+  // Item 9: pins the header-merge contract. `init.headers` is spread last —
+  // deliberately, so ozon.service.ts's Content-Crs comes through — which
+  // means a caller CAN override a default. This test asserts both halves:
+  // a caller-supplied header neither named here survives untouched, and one
+  // that does duplicate a default name wins over it.
+  test('caller headers apply alongside the defaults, and an explicit override wins', async () => {
+    await dsoService.dsoFetch('https://example.test/x', 'pre', {
+      headers: {
+        'Content-Crs': 'http://www.opengis.net/def/crs/EPSG/0/28992',
+        Accept: 'application/json',
+      },
+    });
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    // Untouched default still present.
+    expect(init.headers['x-api-key']).toBe('pre-key');
+    // Caller-only header came through.
+    expect(init.headers['Content-Crs']).toBe('http://www.opengis.net/def/crs/EPSG/0/28992');
+    // Caller explicitly overrode the default Accept.
+    expect(init.headers['Accept']).toBe('application/json');
   });
 });

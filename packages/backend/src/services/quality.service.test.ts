@@ -25,6 +25,20 @@ describe('GUID detection', () => {
   test('matches a separator-less 32-hex GUID', () => {
     expect(GUID_RE.test('180a63f795be43bf8683a480e75deb84')).toBe(true);
   });
+
+  // §I4: digits are a subset of [0-9a-f], so an unanchored regex would find a
+  // matching 32-char substring inside ANY digit run of 32 or more — reporting
+  // an ordinary long number as opaque. Anchoring against an adjacent hex
+  // digit (not `\b`, since `_`/`-` are themselves valid separators right next
+  // to a real GUID) closes this without touching any of the four real cases
+  // above, which all still pass.
+  test('does not match a 32-digit run embedded inside a longer digit string', () => {
+    expect(GUID_RE.test('1234567890123456789012345678901234567890')).toBe(false);
+  });
+
+  test('still matches a 32-hex run that is exactly the whole string, digits only', () => {
+    expect(GUID_RE.test('12345678901234567890123456789012')).toBe(true);
+  });
 });
 
 describe('classifyName', () => {

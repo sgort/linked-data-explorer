@@ -37,6 +37,28 @@ export const REGELINGTYPE_BY_BESTUURSLAAG: Record<Bestuurslaag, string> = {
 const MAX_REGELING_ATTEMPTS = 3;
 
 /**
+ * Safety cap on how many pages of an authority's regelingen search this
+ * reads before giving up — mirrors `MAX_ACTIVITEITEN_OIN_PAGES` in
+ * `dso.service.ts`'s `getActiviteitenByOin`. 10 pages of 100 = 1000
+ * regelingen; above that the search is truncated rather than read without
+ * bound.
+ */
+const MAX_REGELINGEN_PAGES = 10;
+
+interface RegelingCandidate {
+  identificatie: string;
+  type?: { code: string };
+  officieleTitel?: string;
+}
+
+interface OzonPageInfo {
+  number: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+/**
  * `gm0995` -> gemeente, `pv24` -> provincie, `ws...` -> waterschap,
  * `mnre1034` -> rijk. Fallback for when the RTR response carries no
  * `bestuursorgaan.bestuurslaag` of its own.
@@ -246,6 +268,86 @@ function childActivityUrnsFrom(links: unknown): string[] {
   return urns;
 }
 
+/**
+ * Pages through an authority's regelingen search (HAL, `page.totalPages`)
+ * until every page has been read or `MAX_REGELINGEN_PAGES` is hit.
+ *
+ * The un-paged version only ever read page 1 (`size: 100`), so an authority
+ * publishing more than 100 regelingen could have its instrument fall off the
+ * end and be reported as "no regeling of type …" — a wrong answer, not an
+ * error (`mnre1034` already returns a full page). Follows the same pattern
+ * as `dso.service.ts`'s `getActiviteitenByOin`: fetch page 1, read its page
+ * info, then fetch the rest sequentially up to the cap and merge.
+ *
+ * Returns `capped: true` when pages remained unread at the cap, so the
+ * caller can tell "genuinely no regeling of this type" from "the search was
+ * truncated" instead of conflating them into the same failure.
+ */
+async function fetchAllRegelingen(
+  gezagCode: string,
+  env: DsoEnv
+): Promise<{ regelingen: RegelingCandidate[]; capped: boolean }> {
+  const fetchPage = (page?: number) =>
+    ozonService.zoekRegelingen({ bevoegdGezag: [gezagCode] }, env, {
+      size: 100,
+      ...(page !== undefined ? { page } : {}),
+    }) as Promise<{ _embedded?: { regelingen?: RegelingCandidate[] }; page?: OzonPageInfo }>;
+
+  const first = await fetchPage();
+  const pages = [first];
+  const pageInfo = first.page;
+  let capped = false;
+
+  if (pageInfo && pageInfo.totalPages > 1) {
+    const lastPage = Math.min(pageInfo.totalPages, MAX_REGELINGEN_PAGES);
+    // Sequential, on purpose — kinder to the upstream than firing every page
+    // at once, same trade-off getActiviteitenByOin makes.
+    for (let p = 2; p <= lastPage; p++) {
+      pages.push(await fetchPage(p));
+    }
+    if (lastPage < pageInfo.totalPages) {
+      capped = true;
+      logger.warn('[Dossier] regelingen search hit the page cap, response is truncated', {
+        gezagCode,
+        totalElements: pageInfo.totalElements,
+        fetchedPages: lastPage,
+        totalPages: pageInfo.totalPages,
+      });
+    }
+  }
+
+  return {
+    regelingen: pages.flatMap((p) => p._embedded?.regelingen ?? []),
+    capped,
+  };
+}
+
+/** dd-MM-yyyy -> a UTC millisecond timestamp comparable with `<`/`>`, or
+ * `-Infinity` for anything absent or malformed — so an entry with no usable
+ * begindatum always sorts last rather than crashing or comparing as "now". */
+function parseDdMmYyyy(value: string | undefined): number {
+  if (!value) return -Infinity;
+  const match = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!match) return -Infinity;
+  const [, dd, mm, yyyy] = match;
+  return Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd));
+}
+
+/**
+ * When a toepasbareRegels lookup returns more than one entry (rule history
+ * overlap for the requested date), `[0]` relies on an upstream ordering that
+ * is not guaranteed. Picks the entry with the most recent `begindatum`
+ * instead — the version that most recently took effect on-or-before the
+ * requested date is the one actually in force. Ties (including "no
+ * begindatum on any candidate") resolve deterministically to whichever the
+ * upstream listed first, via `reduce`'s left-to-right, `>`-not-`>=` compare.
+ */
+function pickMostRecentToepasbareRegel<T extends { begindatum?: string }>(items: T[]): T {
+  return items.reduce((best, candidate) =>
+    parseDdMmYyyy(candidate.begindatum) > parseDdMmYyyy(best.begindatum) ? candidate : best
+  );
+}
+
 export async function buildDossier(req: DossierRequest): Promise<Dossier> {
   const failures: { step: string; detail: string }[] = [];
   // `context`, when given, is appended so a reader knows WHICH candidate a
@@ -299,24 +401,13 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
     record('regeling', new Error(`Could not determine the bestuurslaag for ${gezagCode}`));
   } else {
     const preferredType = REGELINGTYPE_BY_BESTUURSLAAG[bestuurslaag];
-    let candidates: { identificatie: string; type?: { code: string }; officieleTitel?: string }[] =
-      [];
+    let candidates: RegelingCandidate[] = [];
     let searchFailed = false;
+    let searchCapped = false;
     try {
-      const regelingen = (await ozonService.zoekRegelingen({ bevoegdGezag: [gezagCode] }, req.env, {
-        size: 100,
-      })) as {
-        _embedded?: {
-          regelingen?: {
-            identificatie: string;
-            type?: { code: string };
-            officieleTitel?: string;
-          }[];
-        };
-      };
-      candidates = (regelingen._embedded?.regelingen ?? []).filter(
-        (r) => r.type?.code === preferredType
-      );
+      const { regelingen, capped } = await fetchAllRegelingen(gezagCode, req.env);
+      candidates = regelingen.filter((r) => r.type?.code === preferredType);
+      searchCapped = capped;
     } catch (error) {
       record('regeling', error);
       searchFailed = true;
@@ -324,7 +415,13 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
 
     if (!searchFailed) {
       if (candidates.length === 0) {
-        record('regeling', new Error(`No regeling of type ${preferredType} for ${gezagCode}`));
+        // A cap-truncated search that found nothing is NOT the same claim as
+        // an exhaustive one that found nothing — say so, so it is never
+        // silently reported as "not found" when it may simply be unread.
+        const detail = searchCapped
+          ? `No regeling of type ${preferredType} for ${gezagCode} in the first ${MAX_REGELINGEN_PAGES} pages searched (search truncated at the page cap — more pages exist)`
+          : `No regeling of type ${preferredType} for ${gezagCode}`;
+        record('regeling', new Error(detail));
       } else {
         const attempted: string[] = [];
         // Kept separate so the summary below never conflates them: a
@@ -428,9 +525,9 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
       })
     );
     const byWId = new Map<string, string | null>();
-    texts.forEach((t) => {
+    texts.forEach((t, i) => {
       if (t.status === 'fulfilled') byWId.set(t.value.wId, t.value.inhoud);
-      else record('documentComponent', t.reason);
+      else record('documentComponent', t.reason, wIds[i]);
     });
     juridischeRegels.forEach((r) => {
       if (r.wId) r.articleText = byWId.get(r.wId) ?? null;
@@ -443,14 +540,19 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
     rbos.map(async (rbo) => {
       const regels = (await dsoService.getToepasbareRegels(
         rbo.functioneleStructuurRef,
-        req.env
+        req.env,
+        req.datum
       )) as {
         _embedded?: {
           toepasbareRegels?: { identifier: number; sttrVersie?: number; begindatum?: string }[];
         };
       };
-      const first = regels._embedded?.toepasbareRegels?.[0];
-      if (!first) return null;
+      const candidates = regels._embedded?.toepasbareRegels ?? [];
+      if (candidates.length === 0) return null;
+      // More than one can still come back for a date (rule-history overlap);
+      // `[0]` relied on an upstream ordering that is not guaranteed. Pick
+      // deterministically instead — most recent begindatum wins.
+      const first = pickMostRecentToepasbareRegel(candidates);
 
       // The same two calls the `/toepasbare-regels/:id/dmn` route makes, in
       // process. `extractDmnFromSttr` is synchronous and takes the STTR XML,
@@ -461,7 +563,7 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
         const sttr = await dsoService.getSttrBestand(String(first.identifier), req.env);
         dmn = dsoService.extractDmnFromSttr(sttr);
       } catch (error) {
-        record('dmn', error);
+        record('dmn', error, String(first.identifier));
       }
 
       const set: RuleSet = {
@@ -479,9 +581,10 @@ export async function buildDossier(req: DossierRequest): Promise<Dossier> {
   );
 
   const resolved: RuleSet[] = [];
-  ruleSets.forEach((r) => {
+  ruleSets.forEach((r, i) => {
     if (r.status === 'fulfilled' && r.value) resolved.push(r.value);
-    else if (r.status === 'rejected') record('toepasbareRegels', r.reason);
+    else if (r.status === 'rejected')
+      record('toepasbareRegels', r.reason, rbos[i].functioneleStructuurRef);
   });
 
   return {
