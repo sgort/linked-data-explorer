@@ -33,7 +33,7 @@ two together.
 | `actions/setup-node`           | `820762786026740c76f36085b0efc47a31fe5020` | v7.0.0           |
 | `Azure/static-web-apps-deploy` | `4d27395796ac319302594769cfe812bd207490b1` | v1 (branch head) |
 | `azure/webapps-deploy`         | `02a81bead70021f5284939794bcec79c271ab383` | v3.0.8           |
-| `zizmorcore/zizmor-action`     | `70fb788f84895a7701f5643d103d587e460b5c99` | v0.6.3           |
+| `zizmorcore/zizmor-action`     | `cc914d7f3750a2d13d75c7f184a1060aa0e9d482` | v0.6.4           |
 
 `zizmor 1.29.0` reports **0 findings** across all eight workflows.
 
@@ -121,7 +121,7 @@ deploy workflows read one exact version from `.nvmrc`, maintained by Renovate's
 is when its pin started to decide what ships: before, Oryx built the bundle on
 22.22.0 regardless.
 
-`zizmor.yml` keeps its own literal, `24.20.0`, deliberately: its
+`zizmor.yml` keeps its own literal, `24.21.0`, deliberately: its
 `renovate-config-validator` step needs Node 24.
 
 **The App Service host runtime cannot be pinned exactly, and that is now a
@@ -143,8 +143,7 @@ build.
 
 **And the ordering alone is not enough here**, because this backend ships a
 native module. `libxmljs2` builds against NAN rather than N-API, so its
-`xmljs.node` is bound to `NODE_MODULE_VERSION` — 127 on Node 22, 137 on Node
-24. Between switching the runtime and deploying an artifact rebuilt on the new
+`xmljs.node` is bound to `NODE_MODULE_VERSION` — 127 on Node 22, 137 on Node 24. Between switching the runtime and deploying an artifact rebuilt on the new
 major, the binary does not match the host; the same is true in reverse if the
 merge comes first. That is not merely an interruption: on 23 September the
 deploy reported success — health, `build.sha`, the shape layers and
@@ -366,9 +365,134 @@ passed. If `changes` fails, the build runs anyway. Two things follow:
   `Build and Deploy Job`; they were renamed so each can be required on its own.
   Rename one of these jobs and the ruleset waits for a name that no longer
   reports. Update the ruleset in the same change.
+
+  The two PRODUCTION site workflows carried the same collision until #210 and
+  are now `Build and Deploy Production Frontend` and `Build and Deploy
+Production ROPA Site`. Nothing requires them today -- `main` asks for
+  `audit` and `scan` only -- so this changes no ruleset. It is a
+  precondition: while both answered to one name they could not be required,
+  referenced or told apart in a check list, and a promotion pull request showed
+  two identical rows.
+
 - **`main` requires `audit` and `scan` only, deliberately.** The backend
   production workflow has no `pull_request` trigger (#46), and promotion carries
   commits that already passed these checks on `acc`.
+
+  The two site production workflows DO have one, on `main`. So a promotion pull
+  request builds them and deploys a preview to the production Static Web App --
+  environment `209` on `ropa-flevoland-prod` during the v2026.09.6 promotion,
+  with `default` still serving `main`.
+
+  **That is kept deliberately** (#210, decided 24 September 2026). A promotion
+  pull request produces a preview of the PRODUCTION site, built from `acc`,
+  before anything is promoted -- so the real thing can be looked at rather than
+  inferred from an acceptance build. That is the point, and it is why these two
+  workflows carry a trigger the backend does not.
+
+  What it costs, so nobody discovers it as a surprise:
+
+  - a public URL on the production resource, serving unreleased code, for as
+    long as the pull request is open;
+  - an environment slot on the production app -- the same ceiling
+    `check-previews` exists for in `ronl-business-api`, and this repository
+    still has no such check;
+  - the `close_pull_request_job` is what removes it, so a pull request that
+    closes without that job running leaves the preview behind. GitHub does not
+    run `pull_request` workflows while a pull request has a merge conflict,
+    closing included -- which is exactly how eight previews leaked in
+    `ronl-business-api` on 12 September 2026.
+
+  **The backend deliberately does NOT have this**, and that asymmetry is the
+  decision rather than an oversight: a preview SITE is a page to look at, while
+  a preview BACKEND on production would be a second live API against production
+  data. The trigger belongs on one and not the other.
+
+### Promotion runs the three production deploys in order
+
+Until #210 each production workflow triggered itself on a push to `main` with
+its own `paths:` filter, and the three raced. On the v2026.09.6 promotion the
+ROPA site **finished deploying to production before the backend had started
+building** — so for several minutes production served new pages against the
+previous API. Nothing broke, and nothing would have caught it either: three
+green checks is exactly what that failure looks like.
+
+`promote-to-production.yml` is now the only thing a push to `main` starts. It
+calls the three deploys as reusable workflows, backend first, then the two
+sites together:
+
+```
+changes ──▶ backend ──┬──▶ frontend
+                      └──▶ ropa-site
+```
+
+- **The backend goes first and alone.** A site calling an API older than itself
+  is the failure worth preventing. Two sites deploying at once is not — neither
+  depends on the other, so the promotion is no slower than it was, only ordered.
+- **A failed backend stops both sites.** If the new API did not reach
+  production, nothing written against it should start serving.
+- **A skipped backend does not.** Each site waits for the backend to *reach a
+  result*, checked against `["success","skipped"]` rather than `!= 'failure'`,
+  and then decides on its own changes. `!cancelled()` is what lets a job
+  evaluate its condition at all once a dependency skipped; without it GitHub
+  skips the dependent regardless of what the condition says.
+
+**The path filters had to leave the triggers.** A filter per workflow cannot
+express "the sites wait for the backend", and a filter on the promotion workflow
+would stop the decision itself from running. They live in
+`scripts/promotion-targets.mjs`, which answers for all three in one place and
+writes `backend`, `frontend` and `ropa_site` to `GITHUB_OUTPUT`.
+
+That script is the only thing standing between a promotion and a deploy that
+silently does not happen, so it is a module with `scripts/promotion-targets.test.mjs`
+beside it rather than a `run:` block — 24 checks, run by `npm run test:scripts`
+and by the promotion's own `changes` job *before* it is used. Four of those
+checks are a drift guard: the two site workflows still carry their path lists on
+the `pull_request` trigger that builds the production preview, and the test
+fails if those lists and the script's patterns stop agreeing. Without it a
+promotion could preview a site it then declines to deploy.
+
+**It fails safe towards deploying everything.** A promotion whose range cannot
+be read is not a promotion that changed nothing. Three cases reach that path —
+a `workflow_dispatch`, which carries no `before`; a first push or force-push,
+whose `before` is all zeros; and a `before` this clone cannot resolve — and all
+three deploy all three targets. A redeployed unchanged app costs five minutes;
+a skipped changed one leaves production on the wrong code with a green
+promotion to say otherwise. For the same reason the `if` on each deploy runs it
+when `changes` did **not** succeed as well as when it said `true`.
+
+**Three things this changed inside the called workflows**, each of which would
+have been a silent misfire:
+
+- **`github.event_name` is the CALLER's event.** Both site workflows gated
+  their deploy job on `github.event_name == 'push'`, which is true for a
+  promotion started by a push and false for one started by `workflow_dispatch` —
+  the deploy would have been skipped outright. The condition is now phrased as
+  an exclusion: everything except a pull request being closed.
+- **`github.workflow` is the CALLER's name.** The concurrency groups used it, so
+  all three deploys would have shared one group and queued behind each other.
+  Each group now names its own app.
+- **Secrets do not cross into a called workflow.** Each is declared under
+  `workflow_call` and passed by name from the promotion — not `secrets:
+  inherit`, which would hand each deploy every secret the repository has.
+  `secrets.GITHUB_TOKEN` is the exception; it is available without passing.
+
+`workflow_dispatch` on the promotion takes a `dry_run` input, defaulting to
+**true**, so a manual dispatch errs towards saying what it would do. The three
+calls are resolved when the run is parsed, before any job starts, so a dry run
+still fails loudly on a bad reference, a missing secret or an unsatisfiable
+`needs` graph — it just deploys nothing.
+
+The three deploy workflows keep their own `workflow_dispatch` (backend) and
+`pull_request` (the two sites) triggers. The preview a promotion pull request
+builds is **not** part of the sequence and is unaffected by it: different
+trigger, different concurrency group, and it runs before the promotion exists.
+
+`ronl-business-api` solved the same problem the same way in its own #177, and
+the shape comes from there — including `$/` rather than `./` for the workflow
+references. GitHub's self-repository syntax resolves against this repository at
+this commit; the workspace-relative form resolves against the runner's
+filesystem, so it can pick up something an earlier step wrote there, and
+zizmor's self-repository audit flags it.
 
 **The two rulesets differ in one parameter, deliberately.**
 `require_extra_approval_for_unattributed_changes` is `true` on `acc` and `false`

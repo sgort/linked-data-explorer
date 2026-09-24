@@ -83,10 +83,92 @@ Explorer's rows were re-verified the same day.
 | **Install checked at start**  | ✅ `start`            | ✅ `dev`, three scripts   | ✅ `dev`                  |
 | **Install checked at push**   | ✅ pre-push           | ✅ pre-push               | ✅ pre-push               |
 | **Orphaned previews checked** | ✅ `check-previews`   | ❌ none orphaned today    | ✅ `check-previews`       |
+| **Preview on a promotion PR** | ✅ production SWA     | ✅ sites only, decided    | ❌ none, #87              |
 
 Nothing in that table is uniform by accident. Each application has a different
 build shape, and the differences below are re-derived per repository rather than
 copied.
+
+**The last row is the one where the three genuinely disagree, and RONL Business
+API is the outlier.** A pull request that promotes `acc` to `main` builds and
+deploys a preview of the PRODUCTION site in both ttl-editor
+(`azure-static-web-apps-white-sky-02b674303.yml`) and Linked Data Explorer
+(`azure-frontend-production.yml`, `azure-ropa-site-prod.yml`). In RONL Business
+API no production workflow carries a `pull_request` trigger at all.
+
+Both positions are now decisions rather than accidents, and they answer
+different questions:
+
+- **Linked Data Explorer keeps it** (linked-data-explorer#210, 24 September
+  2026): a promotion pull request produces a preview of the real production
+  site, built from `acc`, so it can be looked at before anything is promoted
+  rather than inferred from an acceptance build. ttl-editor has the same shape.
+- **RONL Business API excludes it** (ronl-business-api#87): `main` is promoted
+  from `acc`, so the content has already run its suite there, and re-running it
+  on the promotion says nothing new.
+
+The costs are real and belong with the decision. A preview on a production
+Static Web App is a public URL serving unreleased code, and it holds an
+environment slot on the production app — the ceiling `check-previews` exists
+for, which Linked Data Explorer still does not have. The teardown depends on the
+close job running, and GitHub does not run `pull_request` workflows while a pull
+request has a merge conflict, closing included: that is how eight previews leaked
+in RONL Business API on 12 September 2026.
+
+The BACKEND is excluded everywhere, and that asymmetry is deliberate in both
+repositories that have one. A preview site is a page to look at; a preview
+backend on production would be a second live API against production data.
+
+### What changed on 24 September 2026
+
+A promotion, and then the day spent on what the promotion showed.
+
+| repository           | change                                                                                                                                       | pull request                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| linked-data-explorer | **v2026.09.6 released and promoted** — Node 24 on both tiers, and the first promotion to expose the production deploy race                    | [#204](https://github.com/sgort/linked-data-explorer/pull/204), [#209](https://github.com/sgort/linked-data-explorer/pull/209) |
+| linked-data-explorer | `buildInfo` reads the build file at module load instead of lazily, so an old process can no longer report a new file's contents               | [#211](https://github.com/sgort/linked-data-explorer/pull/211)                   |
+| linked-data-explorer | both production site deploy jobs renamed, so they can be told apart in a check list                                                           | [#212](https://github.com/sgort/linked-data-explorer/pull/212)                   |
+| linked-data-explorer | the backend deploy verification runs all five checks instead of exiting on the first, so the native-binding assertion is always reached       | [#213](https://github.com/sgort/linked-data-explorer/pull/213)                   |
+| linked-data-explorer | the production-site preview on a promotion pull request recorded as a decision rather than an open question                                   | [#214](https://github.com/sgort/linked-data-explorer/pull/214)                   |
+| linked-data-explorer | **the three production deploys sequenced** — `promote-to-production.yml` calls them in order, closing the last item of #210                   | —                                                                                |
+| linked-data-explorer | the required reviewer removed from the `production` environment                                                                              | —                                                                                |
+| ronl-business-api    | the comment claiming Linked Data Explorer's production environment carries required reviewers, corrected on the day that stopped being true   | [#202](https://github.com/sgort/ronl-business-api/pull/202)                      |
+
+**The race this page recorded as open was not theoretical, and the promotion is
+what proved it.** The row below said Linked Data Explorer had "the same four-way
+race on a push to `main`". It had a three-way one, and on the v2026.09.6
+promotion the ROPA site **finished deploying to production before the backend
+had started building** — production served new pages against the previous API
+for several minutes, under three green checks.
+
+`promote-to-production.yml` now takes #177's shape: one workflow on a push to
+`main`, a `changes` job that decides which deploys are needed, the backend
+first, then the two sites in parallel. The differences from RONL Business API
+are both consequences of decisions already on this page:
+
+- **three deploys, not four**, and the two sites keep their own `pull_request`
+  trigger for the production preview. A called workflow and a preview build are
+  different runs with different concurrency groups, so the sequence does not
+  touch the preview and the preview does not enter the sequence.
+- **the decision lives in `scripts/promotion-targets.mjs` with a test beside
+  it**, rather than in a `run:` block. RONL Business API's `promotion-targets.sh`
+  was exercised against a case table by hand; this one is 24 checks run by the
+  promotion's own `changes` job before the script is used, four of which fail if
+  the script's patterns and the site workflows' `pull_request` path lists stop
+  agreeing.
+
+**Three things the move to `workflow_call` changed inside the called
+workflows**, each of which would otherwise have misfired silently: in a called
+workflow `github.event_name` is the *caller's* event, so both sites' `== 'push'`
+gate would have skipped the deploy on a `workflow_dispatch` promotion;
+`github.workflow` is the *caller's* name, so the three concurrency groups would
+have collapsed into one and queued; and secrets do not cross the call, so each
+is declared and passed by name rather than with `secrets: inherit`.
+
+**What is now genuinely uniform across the two repositories**: a promotion to
+production is one ordered run, it fails safe towards deploying everything when
+it cannot read its own commit range, and a failed backend stops the sites.
+ttl-editor has a single Static Web App and nothing to sequence.
 
 ### What changed on 23 September 2026
 
@@ -2097,7 +2179,7 @@ point where that is now noticed rather than discovered six months later.
 | all three                        | —     | nothing keeps the mirrors synced _between_ releases; `check-mirror` only observes                                                                                                                                              |
 | ronl-business-api                | #196  | the three `deployment/vm/` compose files carry unpinned tags, one of them `:latest`, and nothing in the repository applies them — so a digest there would be unverifiable. ACC only; production is being replaced              |
 | ronl-business-api                | —     | only `main` was sequenced by #177; `acc`'s four deploy workflows still race a push, and its ruleset names four build jobs by name                                                                                              |
-| linked-data-explorer             | —     | the same four-way race on a push to `main`; `main` requires `audit` and `scan`, neither a deploy job, so #177's shape is open here                                                                                             |
+| linked-data-explorer             | —     | **closed 24 Sep**: it was a THREE-way race, and the v2026.09.6 promotion ran it — the ROPA site finished deploying before the backend started building. `promote-to-production.yml` now sequences all three (#210)                |
 | linked-data-explorer             | #80   | unblocked 23 Sep: Azure offers major-level Node runtimes only, so an exact App Service pin is not available; the control is the ORDERING — switch both backends to the new major first, then merge. Nothing enforces it        |
 | linked-data-explorer             | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod                                                                                                                                         |
 | linked-data-explorer             | —     | no `check-previews`, and close jobs still inside the deploy workflows; none orphaned today                                                                                                                                     |

@@ -311,6 +311,21 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: |
+          # Every assertion below runs, and the step fails at the end if any of them
+          # did. It used to `exit 1` at the first failure, which meant one check could
+          # stop the others from ever running.
+          #
+          # That is not hypothetical. On the v2026.09.6 production promotion the
+          # OpenAPI/health version comparison failed inside the deploy's stale window
+          # and exited -- so the NATIVE BINDING assertion below it never executed. A
+          # soft consistency check suppressed a hard correctness one, and the binding
+          # had to be verified by hand afterwards. Had it been broken, nothing would
+          # have said so.
+          #
+          # Collecting rather than reordering, deliberately: reordering only changes
+          # WHICH check gets to mask the rest.
+          checks_failed=0
+
           echo "Checking v1 endpoints..."
           
           # Test /v1/health
@@ -347,7 +362,7 @@ jobs:
           else
             echo "❌ Running build is ${running_sha:-unreadable}, expected $EXPECTED_SHA: the deploy did not take effect"
             curl -s https://acc.backend.linkeddata.open-regels.nl/v1/health | jq '.build' || true
-            exit 1
+            checks_failed=1
           fi
 
           if [ "$shacl_complete" = "true" ]; then
@@ -355,7 +370,7 @@ jobs:
           else
             echo "❌ SHACL shape layers incomplete (shacl.complete: ${shacl_complete:-unreadable})"
             curl -s https://acc.backend.linkeddata.open-regels.nl/v1/health | jq '.shacl' || true
-            exit 1
+            checks_failed=1
           fi
 
           # OpenAPI description (#129): served, and describing the release that is
@@ -378,7 +393,7 @@ jobs:
             echo "✅ /v1/openapi.json describes $doc_version"
           else
             echo "❌ /v1/openapi.json info.version is ${doc_version:-unreadable}; /v1/health version is ${api_version:-unreadable}"
-            exit 1
+            checks_failed=1
           fi
           
           # Test /v1/dmns
@@ -466,12 +481,17 @@ jobs:
             echo "   and the shape layers all report fine. Usually the App Service"
             echo "   runtime major and the Node the artifact was built on disagree,"
             echo "   or a restart cached a stale .node -- try restarting the app."
-            exit 1
+            checks_failed=1
           elif printf '%s' "$native_body" | jq -e '.data.layers.base' >/dev/null 2>&1; then
             echo "✅ libxmljs2 native binding works on the deployed app"
           else
             echo "❌ /v1/dmns/validate did not answer with a base layer after 5 attempts"
             printf '%s' "$native_body" | head -c 400
+            checks_failed=1
+          fi
+
+          if [ "$checks_failed" = "1" ]; then
+            echo "❌ One or more deploy checks failed -- see the ❌ lines above."
             exit 1
           fi
 

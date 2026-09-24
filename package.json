@@ -1,6 +1,6 @@
 {
   "name": "linked-data-explorer-monorepo",
-  "version": "2026.09.6",
+  "version": "2026.09.7",
   "private": true,
   "description": "Monorepo for Linked Data Explorer - RONL DMN Orchestration Platform",
   "workspaces": [
@@ -20,6 +20,7 @@
     "format": "npm run format --workspaces --if-present",
     "check-format": "npm run check-format --workspaces --if-present",
     "check-supply-chain": "node scripts/check-supply-chain.mjs",
+    "test:scripts": "node scripts/promotion-targets.test.mjs && node scripts/dso-dossier.test.mjs",
     "check-mirror": "bash scripts/check-mirror.sh",
     "authorities:generate": "node scripts/generate-dso-authorities.mjs",
     "dso:dossier": "node scripts/dso-dossier.mjs",
@@ -29,7 +30,7 @@
   "devDependencies": {
     "concurrently": "^9.2.4",
     "husky": "^9.1.7",
-    "lint-staged": "^16.4.0"
+    "lint-staged": "^17.5.1"
   },
   "lint-staged": {
     "packages/frontend/**/*.{js,jsx,ts,tsx,json,css,md}": [

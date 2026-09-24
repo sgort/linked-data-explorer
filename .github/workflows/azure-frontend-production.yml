@@ -1,20 +1,20 @@
 name: Deploy Frontend to Production
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'packages/frontend/**'
-      - '.github/workflows/azure-frontend-production.yml'
-      # The root lockfile and manifest, so a lockfile-only promotion redeploys
-      # rather than leaving production on the previous tree. See the acc
-      # workflow and #97.
-      - 'package-lock.json'
-      - 'package.json'
-      # .nvmrc sets the Node version this workflow builds, tests and ships on.
-      # Without it here, a Node bump built and deployed nothing (#119).
-      - '.nvmrc'
+  # Called by promote-to-production.yml AFTER the backend has deployed, so the
+  # site never serves new pages against an old API (#210). The `push` trigger
+  # that used to be here is what made the two race; its path filter now lives
+  # in scripts/promotion-targets.mjs, which decides for all three deploys.
+  workflow_call:
+    secrets:
+      AZURE_STATIC_WEB_APPS_API_TOKEN_WITTY_BEACH_0A7CFA203:
+        required: true
+  # The pull_request trigger stays, and is NOT part of the promotion sequence:
+  # it builds a preview of the production site from the promotion pull request,
+  # so the real thing can be looked at before anything is promoted. Decided in
+  # #210 and written up in SECURITY-PIPELINE.md, together with what it costs.
+  # These paths are the reference copy of the frontend filter --
+  # scripts/promotion-targets.test.mjs fails if the two stop agreeing.
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
@@ -29,8 +29,12 @@ on:
 # Same serialisation as the acc workflow, but production runs QUEUE
 # rather than cancel: interrupting a live production deployment to
 # start another is worse than waiting for it.
+#
+# Named explicitly rather than with `github.workflow`: in a called workflow
+# that expression resolves to the CALLER's name, so the three production
+# deploys would share one group and queue behind each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: deploy-frontend-production-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 # Default to read-only; jobs opt into more only where required.
@@ -42,9 +46,14 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    # Runs for every trigger EXCEPT a pull request being closed (the close job
+    # below handles that). Phrased as an exclusion rather than
+    # `event_name == 'push'`: when this workflow is CALLED, github.event_name is
+    # the caller's event, so a promotion started by workflow_dispatch would have
+    # skipped the deploy outright.
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-24.04
-    name: Build and Deploy Job
+    name: Build and Deploy Production Frontend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -72,8 +81,11 @@ jobs:
       - name: Build frontend for production
         working-directory: packages/frontend
         # See azure-frontend-acc.yml for why these are injected rather than
-        # derived from git. Production deploys from a push to main, so
-        # github.sha is a real commit here, never a synthesised merge commit.
+        # derived from git. On a promotion -- called from a push to main --
+        # github.sha is the real commit being promoted. On the preview build
+        # from a promotion pull request it is the synthesised merge commit,
+        # which is the right sha for a preview: it identifies what the preview
+        # actually contains, not what main holds today.
         env:
           VITE_BUILD_SHA: ${{ github.sha }}
           VITE_BUILD_RUN: ${{ github.run_number }}

@@ -24,8 +24,24 @@ export function createOpenApiRouter(load: () => OpenApiDocument = readOpenApiDoc
 
   router.get('/', (req: Request, res: Response) => {
     try {
-      // Read once: the file is part of the deploy artifact and changes only with
-      // a redeploy, which restarts the process. A failed read is not cached.
+      // Read once per process. A failed read is not cached, so a document that
+      // is not built yet is retried rather than remembered as broken.
+      //
+      // NOT 'changes only with a redeploy, which restarts the process', which
+      // this comment used to claim and which is false: a zip deploy overwrites
+      // the file BEFORE the restart. So between those two moments this process
+      // can serve a document from an artifact it is not running -- which is
+      // exactly what happened on the v2026.09.6 production promotion, where
+      // /v1/openapi.json reported 2026.09.6 while /v1/health, bound at module
+      // load, still reported 2026.09.5.
+      //
+      // getBuildInfo() had the same defect and the same sentence, and was made
+      // eager in #211 because a stale build.sha is a false pass in the deploy
+      // gate. This one is left lazy on purpose: reading eagerly would consume a
+      // startup failure that 'does not cache a failed read' deliberately
+      // surfaces as a 500, and #211 already closes the deploy path -- the
+      // build.sha check now waits for the new process, so by the time anything
+      // compares versions the read is no longer stale. Tracked on #210.
       cached ??= load();
       res.json(cached);
     } catch (err) {

@@ -1,12 +1,21 @@
 name: Deploy Ropa site to Productuion
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'packages/ropa-site/**'
-      - '.github/workflows/azure-ropa-site-prod.yml'
+  # Called by promote-to-production.yml AFTER the backend has deployed (#210).
+  # The `push` trigger that used to be here is what let this site finish
+  # deploying to production before the backend had started building, seen on
+  # the v2026.09.6 promotion. Its path filter now lives in
+  # scripts/promotion-targets.mjs, which decides for all three deploys.
+  workflow_call:
+    secrets:
+      AZURE_STATIC_WEB_APPS_API_TOKEN_ROPA_PROD:
+        required: true
+  # The pull_request trigger stays, and is NOT part of the promotion sequence:
+  # it builds a preview of the production site from the promotion pull request,
+  # so the real thing can be looked at before anything is promoted. Decided in
+  # #210 and written up in SECURITY-PIPELINE.md, together with what it costs.
+  # These paths are the reference copy of the ropa-site filter --
+  # scripts/promotion-targets.test.mjs fails if the two stop agreeing.
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
@@ -18,8 +27,12 @@ on:
 # Same serialisation as the acc workflow, but production runs QUEUE
 # rather than cancel: interrupting a live production deployment to
 # start another is worse than waiting for it.
+#
+# Named explicitly rather than with `github.workflow`: in a called workflow
+# that expression resolves to the CALLER's name, so the three production
+# deploys would share one group and queue behind each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: deploy-ropa-site-production-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 # Default to read-only; jobs opt into more only where required.
@@ -31,9 +44,14 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    # Runs for every trigger EXCEPT a pull request being closed (the close job
+    # below handles that). Phrased as an exclusion rather than
+    # `event_name == 'push'`: when this workflow is CALLED, github.event_name is
+    # the caller's event, so a promotion started by workflow_dispatch would have
+    # skipped the deploy outright.
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-24.04
-    name: Build and Deploy Job
+    name: Build and Deploy Production ROPA Site
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
