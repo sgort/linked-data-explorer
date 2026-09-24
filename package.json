@@ -28,7 +28,7 @@
     "postinstall": "node scripts/write-deps-marker.mjs"
   },
   "devDependencies": {
-    "concurrently": "^9.2.4",
+    "concurrently": "^10.0.5",
     "husky": "^9.1.7",
     "lint-staged": "^17.5.1"
   },
