@@ -165,7 +165,11 @@ checks.push([
 
     const missed = samples.filter((s) => promotionTargets([s])[target] !== true);
     if (missed.length) {
-      console.error(`  ${workflow}: pull_request paths the ${target} pattern misses:`, missed);
+      // Constant format string, values as arguments. Interpolating `workflow`
+      // into it would make the path itself the format string -- harmless while
+      // these two come from SITES above, wrong the moment they come from a
+      // directory listing. semgrep javascript.lang.security.audit.unsafe-formatstring
+      console.error('  %s: pull_request paths the %s pattern misses: %j', workflow, target, missed);
     }
     checks.push([
       `${workflow} pull_request paths agree with the ${target} pattern`,
