@@ -112,7 +112,8 @@
       "bpmn": "ThuisbatterijSubsidieAanvraagProcess.bpmn",
       "forms": [
         "recht-en-hoogte-subsidie-thuisbatterij.form",
-        "awb-notify-applicant-thuisbatterij.form"
+        "awb-notify-applicant-thuisbatterij.form",
+        "thuisbatterij-aanvullende-gegevens.form"
       ],
       "documents": [
         "thuisbatterij_subsidie_beschikking.document"

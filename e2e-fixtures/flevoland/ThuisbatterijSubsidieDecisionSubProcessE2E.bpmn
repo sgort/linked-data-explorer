@@ -1,7 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:ronl="http://ronl.nl/schema/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_Thuisbatterij_SubProcess" targetNamespace="https://regels.overheid.nl/services/recht-hoogte-subsidie-thuisbatterij-flevoland/bpmn/subprocess" exporter="Camunda Modeler" exporterVersion="5.43.1">
+  <bpmn:collaboration id="Collaboration_Thuisbatterij_Sub">
+    <bpmn:participant id="Participant_Thuisbatterij_Sub" name="Thuisbatterijsubsidie - Beoordeling recht en hoogte" processRef="ThuisbatterijSubsidieDecisionSubProcessE2E" />
+  </bpmn:collaboration>
   <bpmn:process id="ThuisbatterijSubsidieDecisionSubProcessE2E" name="Thuisbatterijsubsidie - Beoordeling recht en hoogte" isExecutable="true" camunda:historyTimeToLive="365" ronl:organization="flevoland">
     <bpmn:documentation>Called subprocess for the substantive subsidy decision. It mirrors the tree-felling permit subprocess pattern: DMN assessment, case review, final decision resolution, and setting process variables. First the DMN decision RechtOpSubsidieThuisbatterij decides eligibility/recht. Only if eligible, the DMN decision BehaalbareHoogteSubsidie calculates the amount/hoogte.</bpmn:documentation>
+    <bpmn:laneSet id="LaneSet_Thuisbatterij_Sub">
+      <bpmn:lane id="Lane_Behandelaar" name="Behandelaar">
+        <bpmn:flowNodeRef>Sub_CaseReview</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Systeem" name="Systeem">
+        <bpmn:flowNodeRef>SubStart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub_PrepareDmnInput</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub_AssessRight</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub_InterpretRight</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub_EligibleGateway</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub_CalculateAmount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub_ExtractAmount</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub_ResolveDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub_FinalGateway</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub_SetGranted</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Sub_SetRejected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SubEnd</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
     <bpmn:startEvent id="SubStart" name="Start beoordeling">
       <bpmn:outgoing>Flow_Sub_Start_Prepare</bpmn:outgoing>
     </bpmn:startEvent>
@@ -345,12 +367,12 @@ if (hoogteReason !== null &amp;&amp; hoogteReason !== undefined) {
 
 execution.setVariable("hoogteCalculated", java.lang.Boolean.TRUE);</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:userTask id="Sub_CaseReview" name="Case review: recht en hoogte subsidie" camunda:formRef="thuisbatterij-subsidie-review" camunda:formRefBinding="deployment" camunda:candidateGroups="caseworker">
+    <bpmn:userTask id="Sub_CaseReview" name="Beoordeling behandelaar: recht en hoogte subsidie" camunda:formRef="thuisbatterij-subsidie-review" camunda:formRefBinding="deployment" camunda:candidateGroups="caseworker">
       <bpmn:incoming>Flow_Sub_Amount_Review</bpmn:incoming>
       <bpmn:incoming>Flow_Sub_Eligible_No</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Review_Resolve</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:scriptTask id="Sub_ResolveDecision" name="Resolve final subsidy decision" scriptFormat="javascript">
+    <bpmn:scriptTask id="Sub_ResolveDecision" name="Definitief subsidiebesluit vaststellen" scriptFormat="javascript">
       <bpmn:incoming>Flow_Sub_Review_Resolve</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Resolve_Gateway</bpmn:outgoing>
       <bpmn:script>var reviewAction = execution.getVariable("reviewAction");
@@ -459,7 +481,7 @@ execution.setVariable("phase5Complete", true);</bpmn:script>
       <bpmn:outgoing>Flow_Sub_Final_Yes</bpmn:outgoing>
       <bpmn:outgoing>Flow_Sub_Final_No</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:scriptTask id="Sub_SetGranted" name="Set decision variables: Toegekend" scriptFormat="javascript">
+    <bpmn:scriptTask id="Sub_SetGranted" name="Besluitvariabelen zetten: Toegekend" scriptFormat="javascript">
       <bpmn:incoming>Flow_Sub_Final_Yes</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Granted_End</bpmn:outgoing>
       <bpmn:script>var amount = execution.getVariable("subsidyAmount");
@@ -470,7 +492,7 @@ execution.setVariable("paymentRequired", Number(amount) &gt; 0);
 execution.setVariable("chainProcessRequired", true);
 execution.setVariable("finalMessage", "Uw aanvraag voor subsidie voor een thuisbatterij is toegekend. Het subsidiebedrag bedraagt EUR " + amount + ".");</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:scriptTask id="Sub_SetRejected" name="Set decision variables: Afgewezen" scriptFormat="javascript">
+    <bpmn:scriptTask id="Sub_SetRejected" name="Besluitvariabelen zetten: Afgewezen" scriptFormat="javascript">
       <bpmn:incoming>Flow_Sub_Final_No</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Rejected_End</bpmn:outgoing>
       <bpmn:script>var reason = execution.getVariable("reviewMotiveringVastgesteld") || execution.getVariable("rechtMotivering") || "Niet voldaan aan de voorwaarden voor subsidie thuisbatterij Flevoland.";
@@ -514,121 +536,133 @@ execution.setVariable("finalMessage", "Uw aanvraag voor subsidie voor een thuisb
     <bpmn:association id="Association_E2EFixture" sourceRef="Annotation_E2EFixture" targetRef="SubStart" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_Thuisbatterij_SubProcess">
-    <bpmndi:BPMNPlane id="BPMNPlane_Thuisbatterij_SubProcess" bpmnElement="ThuisbatterijSubsidieDecisionSubProcessE2E">
+    <bpmndi:BPMNPlane id="BPMNPlane_Thuisbatterij_SubProcess" bpmnElement="Collaboration_Thuisbatterij_Sub">
       <bpmndi:BPMNShape id="Annotation_E2EFixture_di" bpmnElement="Annotation_E2EFixture">
-        <dc:Bounds x="100" y="120" width="320" height="100" />
+        <dc:Bounds x="170" y="70" width="320" height="100" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Association_E2EFixture_di" bpmnElement="Association_E2EFixture">
-        <di:waypoint x="260" y="220" />
-        <di:waypoint x="178" y="299" />
+        <di:waypoint x="250" y="170" />
+        <di:waypoint x="180" y="302" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Participant_Thuisbatterij_Sub_di" bpmnElement="Participant_Thuisbatterij_Sub" isHorizontal="true">
+        <dc:Bounds x="100" y="60" width="1820" height="480" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Behandelaar_di" bpmnElement="Lane_Behandelaar" isHorizontal="true">
+        <dc:Bounds x="130" y="60" width="1790" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Systeem_di" bpmnElement="Lane_Systeem" isHorizontal="true">
+        <dc:Bounds x="130" y="220" width="1790" height="320" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="SubStart_di" bpmnElement="SubStart">
-        <dc:Bounds x="120" y="172" width="36" height="36" />
+        <dc:Bounds x="162" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="160" y="345" width="50" height="27" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_PrepareDmnInput_di" bpmnElement="Sub_PrepareDmnInput">
-        <dc:Bounds x="210" y="150" width="130" height="80" />
+        <dc:Bounds x="225" y="280" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_AssessRight_di" bpmnElement="Sub_AssessRight">
-        <dc:Bounds x="395" y="150" width="150" height="80" />
+        <dc:Bounds x="415" y="280" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_InterpretRight_di" bpmnElement="Sub_InterpretRight">
-        <dc:Bounds x="600" y="150" width="140" height="80" />
+        <dc:Bounds x="605" y="280" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_EligibleGateway_di" bpmnElement="Sub_EligibleGateway" isMarkerVisible="true">
-        <dc:Bounds x="780" y="165" width="50" height="50" />
+        <dc:Bounds x="815" y="295" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="781" y="224.5" width="47" height="27" />
+          <dc:Bounds x="800" y="352" width="80" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_CalculateAmount_di" bpmnElement="Sub_CalculateAmount">
-        <dc:Bounds x="885" y="38" width="150" height="80" />
+        <dc:Bounds x="925" y="280" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_ExtractAmount_di" bpmnElement="Sub_ExtractAmount">
-        <dc:Bounds x="1090" y="38" width="150" height="80" />
+        <dc:Bounds x="1115" y="280" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_CaseReview_di" bpmnElement="Sub_CaseReview">
-        <dc:Bounds x="1090" y="150" width="150" height="80" />
+        <dc:Bounds x="1115" y="100" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_ResolveDecision_di" bpmnElement="Sub_ResolveDecision">
-        <dc:Bounds x="1290" y="150" width="150" height="80" />
+        <dc:Bounds x="1305" y="280" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_FinalGateway_di" bpmnElement="Sub_FinalGateway" isMarkerVisible="true">
-        <dc:Bounds x="1490" y="165" width="50" height="50" />
+        <dc:Bounds x="1505" y="295" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1475" y="135" width="95" height="27" />
+          <dc:Bounds x="1490" y="266" width="80" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_SetGranted_di" bpmnElement="Sub_SetGranted">
-        <dc:Bounds x="1600" y="80" width="150" height="80" />
+        <dc:Bounds x="1615" y="280" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_SetRejected_di" bpmnElement="Sub_SetRejected">
-        <dc:Bounds x="1600" y="250" width="150" height="80" />
+        <dc:Bounds x="1615" y="420" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="SubEnd_di" bpmnElement="SubEnd">
-        <dc:Bounds x="1810" y="172" width="36" height="36" />
+        <dc:Bounds x="1842" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1815" y="284" width="90" height="14" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_Sub_Start_Prepare_di" bpmnElement="Flow_Sub_Start_Prepare">
-        <di:waypoint x="156" y="190" />
-        <di:waypoint x="210" y="190" />
+        <di:waypoint x="198" y="320" />
+        <di:waypoint x="225" y="320" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Sub_Prepare_AssessRight_di" bpmnElement="Flow_Sub_Prepare_AssessRight">
-        <di:waypoint x="340" y="190" />
-        <di:waypoint x="395" y="190" />
+        <di:waypoint x="375" y="320" />
+        <di:waypoint x="415" y="320" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Sub_AssessRight_Interpret_di" bpmnElement="Flow_Sub_AssessRight_Interpret">
-        <di:waypoint x="545" y="190" />
-        <di:waypoint x="600" y="190" />
+        <di:waypoint x="565" y="320" />
+        <di:waypoint x="605" y="320" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Sub_Interpret_Eligible_di" bpmnElement="Flow_Sub_Interpret_Eligible">
-        <di:waypoint x="740" y="190" />
-        <di:waypoint x="780" y="190" />
+        <di:waypoint x="755" y="320" />
+        <di:waypoint x="815" y="320" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Sub_Eligible_No_di" bpmnElement="Flow_Sub_Eligible_No">
-        <di:waypoint x="830" y="190" />
-        <di:waypoint x="1090" y="190" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Sub_Amount_Extract_di" bpmnElement="Flow_Sub_Amount_Extract">
-        <di:waypoint x="1035" y="78" />
-        <di:waypoint x="1090" y="78" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Sub_Amount_Review_di" bpmnElement="Flow_Sub_Amount_Review">
-        <di:waypoint x="1165" y="118" />
-        <di:waypoint x="1165" y="150" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Sub_Review_Resolve_di" bpmnElement="Flow_Sub_Review_Resolve">
-        <di:waypoint x="1240" y="190" />
-        <di:waypoint x="1290" y="190" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Sub_Resolve_Gateway_di" bpmnElement="Flow_Sub_Resolve_Gateway">
-        <di:waypoint x="1440" y="190" />
-        <di:waypoint x="1490" y="190" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Sub_Final_Yes_di" bpmnElement="Flow_Sub_Final_Yes">
-        <di:waypoint x="1515" y="165" />
-        <di:waypoint x="1515" y="120" />
-        <di:waypoint x="1600" y="120" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Sub_Final_No_di" bpmnElement="Flow_Sub_Final_No">
-        <di:waypoint x="1515" y="215" />
-        <di:waypoint x="1515" y="290" />
-        <di:waypoint x="1600" y="290" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Sub_Granted_End_di" bpmnElement="Flow_Sub_Granted_End">
-        <di:waypoint x="1750" y="120" />
-        <di:waypoint x="1780" y="120" />
-        <di:waypoint x="1780" y="190" />
-        <di:waypoint x="1810" y="190" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Sub_Rejected_End_di" bpmnElement="Flow_Sub_Rejected_End">
-        <di:waypoint x="1750" y="290" />
-        <di:waypoint x="1780" y="290" />
-        <di:waypoint x="1780" y="190" />
-        <di:waypoint x="1810" y="190" />
+        <di:waypoint x="840" y="295" />
+        <di:waypoint x="840" y="140" />
+        <di:waypoint x="1115" y="140" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1ecxeub_di" bpmnElement="Flow_1ecxeub">
-        <di:waypoint x="805" y="165" />
-        <di:waypoint x="805" y="78" />
-        <di:waypoint x="885" y="78" />
+        <di:waypoint x="865" y="320" />
+        <di:waypoint x="925" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Amount_Extract_di" bpmnElement="Flow_Sub_Amount_Extract">
+        <di:waypoint x="1075" y="320" />
+        <di:waypoint x="1115" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Amount_Review_di" bpmnElement="Flow_Sub_Amount_Review">
+        <di:waypoint x="1190" y="280" />
+        <di:waypoint x="1190" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Review_Resolve_di" bpmnElement="Flow_Sub_Review_Resolve">
+        <di:waypoint x="1265" y="140" />
+        <di:waypoint x="1380" y="140" />
+        <di:waypoint x="1380" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Resolve_Gateway_di" bpmnElement="Flow_Sub_Resolve_Gateway">
+        <di:waypoint x="1455" y="320" />
+        <di:waypoint x="1505" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Final_Yes_di" bpmnElement="Flow_Sub_Final_Yes">
+        <di:waypoint x="1555" y="320" />
+        <di:waypoint x="1615" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Final_No_di" bpmnElement="Flow_Sub_Final_No">
+        <di:waypoint x="1530" y="345" />
+        <di:waypoint x="1530" y="460" />
+        <di:waypoint x="1615" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Granted_End_di" bpmnElement="Flow_Sub_Granted_End">
+        <di:waypoint x="1765" y="320" />
+        <di:waypoint x="1842" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sub_Rejected_End_di" bpmnElement="Flow_Sub_Rejected_End">
+        <di:waypoint x="1765" y="460" />
+        <di:waypoint x="1860" y="460" />
+        <di:waypoint x="1860" y="338" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

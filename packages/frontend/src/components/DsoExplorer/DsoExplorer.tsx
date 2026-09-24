@@ -52,14 +52,8 @@ import {
 import { FormService } from '../../services/formService';
 import { FormSchema } from '../../types';
 import QualityProfileTab from './QualityProfileTab';
-import {
-  NAMING_META,
-  NAMING_ORDER,
-  Section,
-  TONE_TEXT,
-  toneForRatio,
-  TYPERING_META,
-} from './shared';
+import { Section } from './shared';
+import { NAMING_META, NAMING_ORDER, TONE_TEXT, toneForRatio, TYPERING_META } from './tokens';
 
 type Tab = 'begrippen' | 'werkzaamheden' | 'activiteiten' | 'quality';
 
