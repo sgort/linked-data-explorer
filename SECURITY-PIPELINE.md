@@ -381,9 +381,31 @@ Production ROPA Site`. Nothing requires them today -- `main` asks for
   The two site production workflows DO have one, on `main`. So a promotion pull
   request builds them and deploys a preview to the production Static Web App --
   environment `209` on `ropa-flevoland-prod` during the v2026.09.6 promotion,
-  with `default` still serving `main`. Whether that is a feature worth keeping
-  or an asymmetry to remove is #210; recorded here because this section
-  otherwise reads as though production has no `pull_request` triggers at all.
+  with `default` still serving `main`.
+
+  **That is kept deliberately** (#210, decided 24 September 2026). A promotion
+  pull request produces a preview of the PRODUCTION site, built from `acc`,
+  before anything is promoted -- so the real thing can be looked at rather than
+  inferred from an acceptance build. That is the point, and it is why these two
+  workflows carry a trigger the backend does not.
+
+  What it costs, so nobody discovers it as a surprise:
+
+  - a public URL on the production resource, serving unreleased code, for as
+    long as the pull request is open;
+  - an environment slot on the production app -- the same ceiling
+    `check-previews` exists for in `ronl-business-api`, and this repository
+    still has no such check;
+  - the `close_pull_request_job` is what removes it, so a pull request that
+    closes without that job running leaves the preview behind. GitHub does not
+    run `pull_request` workflows while a pull request has a merge conflict,
+    closing included -- which is exactly how eight previews leaked in
+    `ronl-business-api` on 12 September 2026.
+
+  **The backend deliberately does NOT have this**, and that asymmetry is the
+  decision rather than an oversight: a preview SITE is a page to look at, while
+  a preview BACKEND on production would be a second live API against production
+  data. The trigger belongs on one and not the other.
 
 **The two rulesets differ in one parameter, deliberately.**
 `require_extra_approval_for_unattributed_changes` is `true` on `acc` and `false`
