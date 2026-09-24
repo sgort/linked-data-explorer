@@ -209,6 +209,36 @@ do for `ubuntu-latest`. So a newer Ubuntu release should arrive as a Renovate
 update rather than by hand. Confirm on the Dependency Dashboard (#36) that
 `ubuntu-24.04` is listed before relying on that.
 
+## Dependency audit, daily
+
+Every gate above runs on a commit. A new advisory lands against code that has
+not changed, so a pipeline that only reacts to commits never sees it — and
+Dependabot alerts watch the default branch, `acc`, not the `main` that
+production deploys from. ICTU recommendation 10, tracked in #119.
+
+`.github/workflows/dependency-audit.yml` runs at 05:17 UTC daily, and on
+demand. It audits **both `acc` and `main`**, reading each branch's lockfile
+with `npm audit --package-lock-only`, so it installs nothing.
+
+|                           |                                                                             |
+| ------------------------- | --------------------------------------------------------------------------- |
+| Fails on                  | a **high or critical** advisory in **production** dependencies              |
+| Reports but does not fail | moderate and low advisories, and everything dev-only                        |
+| Where it reports          | the run's step summary, and one tracking issue it opens, updates and closes |
+| Node                      | an exact literal, not `.nvmrc` — it audits a branch that need not carry one |
+
+**It counts advisories, not packages.** `npm audit` reports one entry per
+affected package, so one advisory on a widely-used package looks like dozens of
+findings: on 24 September 2026 linked-data-explorer's 28 "moderate" entries were
+three advisories, 24 of them the same `@tiptap/core` reached through its
+extensions. `scripts/audit-tree.mjs` groups by advisory before reporting.
+A number that overstates the problem gets ignored, which is the failure mode a
+daily audit exists to avoid.
+
+**A run that cannot audit exits 2, and is treated like a finding.** A tool that
+fails to run must not report a clean tree — the same rule `--no-suppress-errors`
+enforces for Semgrep.
+
 ## Version currency
 
 All seven `actions/checkout` references now pin **v7.0.1**, converged in
@@ -430,8 +460,8 @@ changes ──▶ backend ──┬──▶ frontend
   depends on the other, so the promotion is no slower than it was, only ordered.
 - **A failed backend stops both sites.** If the new API did not reach
   production, nothing written against it should start serving.
-- **A skipped backend does not.** Each site waits for the backend to *reach a
-  result*, checked against `["success","skipped"]` rather than `!= 'failure'`,
+- **A skipped backend does not.** Each site waits for the backend to _reach a
+  result_, checked against `["success","skipped"]` rather than `!= 'failure'`,
   and then decides on its own changes. `!cancelled()` is what lets a job
   evaluate its condition at all once a dependency skipped; without it GitHub
   skips the dependent regardless of what the condition says.
@@ -445,7 +475,7 @@ writes `backend`, `frontend` and `ropa_site` to `GITHUB_OUTPUT`.
 That script is the only thing standing between a promotion and a deploy that
 silently does not happen, so it is a module with `scripts/promotion-targets.test.mjs`
 beside it rather than a `run:` block — 24 checks, run by `npm run test:scripts`
-and by the promotion's own `changes` job *before* it is used. Four of those
+and by the promotion's own `changes` job _before_ it is used. Four of those
 checks are a drift guard: the two site workflows still carry their path lists on
 the `pull_request` trigger that builds the production preview, and the test
 fails if those lists and the script's patterns stop agreeing. Without it a
@@ -473,7 +503,7 @@ have been a silent misfire:
   Each group now names its own app.
 - **Secrets do not cross into a called workflow.** Each is declared under
   `workflow_call` and passed by name from the promotion — not `secrets:
-  inherit`, which would hand each deploy every secret the repository has.
+inherit`, which would hand each deploy every secret the repository has.
   `secrets.GITHUB_TOKEN` is the exception; it is available without passing.
 
 `workflow_dispatch` on the promotion takes a `dry_run` input, defaulting to
