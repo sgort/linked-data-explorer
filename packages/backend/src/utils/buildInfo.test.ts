@@ -111,4 +111,51 @@ describe('getBuildInfo', () => {
     expect(first.label).toEqual(expect.any(String));
     expect(getBuildInfo()).toBe(first);
   });
+
+  // The test above pins THAT the read is cached. This one pins WHEN it happens,
+  // which is the part that matters and the part nothing covered.
+  //
+  // A zip deploy overwrites build-info.json while the PREVIOUS process is still
+  // serving; the restart comes afterwards. So the file does change under a
+  // running process -- which is what the comment on getBuildInfo used to deny.
+  // Reading it lazily let that old process report the NEW build the moment
+  // something first asked, and the first thing to ask is the deploy's own
+  // build.sha check. A false pass in the gate whose whole purpose is to prove
+  // the new build is serving.
+  //
+  // Seen on production on 24 September 2026, promotion e71c4a4: the check read
+  // build.sha = e71c4a4 and, two seconds later, version = 2026.09.5 -- the
+  // previous release. One process: version is bound at module load, build.sha
+  // was read from disk afterwards. The plan has capacity 1, so two instances
+  // could not explain it.
+  test('reports the build it loaded with, even after the file changes underneath', async () => {
+    const real = jest.requireActual<typeof fs>('fs').readFileSync;
+    // Whatever is on disk right now. The deploy changes it mid-test.
+    let onDisk = JSON.stringify({ sha: SHA, run: '412' });
+
+    const spy = jest.spyOn(fs, 'readFileSync').mockImplementation(((
+      file: fs.PathOrFileDescriptor,
+      options?: unknown
+    ) => {
+      if (String(file).endsWith('build-info.json')) return onDisk;
+      return (real as (...args: unknown[]) => unknown)(file, options);
+    }) as typeof fs.readFileSync);
+
+    let loaded!: typeof import('./buildInfo');
+    try {
+      await jest.isolateModulesAsync(async () => {
+        loaded = await import('./buildInfo');
+      });
+
+      // The deploy lands: build-info.json on disk is now a different build,
+      // while this process keeps serving.
+      onDisk = JSON.stringify({ sha: SHA, run: '999' });
+
+      // Read at module load, the overwrite is never observed. Read lazily, this
+      // process reports 999 -- a build it is not running.
+      expect(loaded.getBuildInfo().run).toBe('412');
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });

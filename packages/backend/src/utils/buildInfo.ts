@@ -78,13 +78,27 @@ export function readBuildInfo(file: string = BUILD_INFO_PATH): BuildInfo {
   return { sha, shortSha, run, isTracked: true, label: `build ${shortSha} · #${run}` };
 }
 
-let cached: BuildInfo | undefined;
-
 /**
- * The running build, read once on first use. The file is part of the artifact
- * and cannot change without a redeploy, which restarts the process.
+ * The running build, read ONCE AT MODULE LOAD and never again.
+ *
+ * Not lazily on first use, which is what this did until 24 September 2026. The
+ * comment then claimed the file 'cannot change without a redeploy, which
+ * restarts the process'. It can: a zip deploy overwrites build-info.json while
+ * the previous process is still serving, and the restart comes afterwards.
+ *
+ * So a lazy read let the OLD process report the NEW build the moment something
+ * first asked -- and the first thing to ask is the deploy's own build.sha
+ * check. That is a false pass in the gate whose entire purpose is to prove the
+ * new build is serving. Seen on the production promotion of e71c4a4: build.sha
+ * read as the new commit while version, bound at module load, still read
+ * 2026.09.5. One process; the App Service plan has capacity 1.
+ *
+ * Reading here binds this to the same moment as `import packageJson`, so the
+ * two cannot disagree and a stale process can only report what it started with.
+ * ronl-business-api's equivalent has always done this, by accident of style.
  */
+const loaded: BuildInfo = readBuildInfo();
+
 export function getBuildInfo(): BuildInfo {
-  cached ??= readBuildInfo();
-  return cached;
+  return loaded;
 }
