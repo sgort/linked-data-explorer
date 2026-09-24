@@ -1,45 +1,56 @@
 name: Deploy Backend to Production
 
 on:
-  # NO pull_request trigger here, deliberately -- issue #46 asked for this to be
-  # decided rather than left to drift, and the acc workflow got the opposite
+  # Called by promote-to-production.yml, which runs the three production
+  # deploys in order and decides which of them a promotion needs (#210).
+  #
+  # There is NO `push` trigger any more. It was here until #210, and it is what
+  # made the three deploys race: all three started at once on a promotion, so
+  # the sites could finish serving new pages against a backend that had not
+  # deployed yet. The path filter that used to sit on it now lives in
+  # scripts/promotion-targets.mjs, which answers for all three in one place --
+  # a filter per workflow cannot express "the sites wait for the backend".
+  #
+  # NO pull_request trigger either, deliberately -- issue #46 asked for this to
+  # be decided rather than left to drift, and the acc workflow got the opposite
   # answer.
   #
-  # Two reasons, in order of weight:
+  # main is promoted from acc, so a pull request here carries content that
+  # already ran lint, typecheck and the full suite on its acc pull request; a
+  # second pre-merge run would re-test the same commits. The acc workflow is
+  # where pre-merge verification belongs; see the note on its triggers. If main
+  # ever stops being promoted from acc, revisit this.
   #
-  # 1. This job declares `environment: production`, which carries
-  #    required_reviewers and a branch policy. A pull_request trigger would
-  #    make every pull request to main wait on a human approval BEFORE the
-  #    tests could run -- an approval gate in front of the check meant to
-  #    inform it, which is exactly backwards.
+  # This used to give a second, heavier reason first: that `environment:
+  # production` carried required_reviewers, so a pull_request trigger would put
+  # a human approval in front of the very tests meant to inform it. That
+  # reviewer was removed on 24 September 2026 (#210) -- it gated the one path
+  # already carrying the most automated checks while both production SITE
+  # workflows deployed with no approval at all. The reason is recorded as gone
+  # rather than deleted, because ronl-business-api's own production workflow
+  # cited this one, and the shape is worth knowing before copying either.
   #
-  # 2. main is promoted from acc. A pull request here carries content that
-  #    already ran lint, typecheck and the full suite on its acc pull request,
-  #    so a second pre-merge run would re-test the same commits.
-  #
-  # The acc workflow is where pre-merge verification belongs; see the note on
-  # its triggers. If main ever stops being promoted from acc, revisit this.
-  push:
-    branches:
-      - main
-    paths:
-      - 'packages/backend/**'
-      - '.github/workflows/azure-backend-production.yml'
-      # The root lockfile and manifest, so a lockfile-only promotion redeploys
-      # rather than leaving production on the previous tree. See the acc
-      # workflow and #97.
-      - 'package-lock.json'
-      - 'package.json'
-      # .nvmrc sets the Node version this workflow builds, tests and ships on.
-      # Without it here, a Node bump built and deployed nothing (#119).
-      - '.nvmrc'
+  # The two site workflows DO keep a pull_request trigger, and that asymmetry
+  # is also a decision (#210): a preview site is a page to look at before
+  # promoting, while a preview backend on production would be a second live API
+  # against production data.
+  workflow_call:
+    secrets:
+      AZURE_WEBAPP_PUBLISH_PROFILE_PROD:
+        required: true
   workflow_dispatch:
 
 # Same serialisation as the acc workflow, but production runs QUEUE
 # rather than cancel: interrupting a live production deployment to
 # start another is worse than waiting for it.
+#
+# Named explicitly rather than with `github.workflow`: in a called workflow
+# that expression resolves to the CALLER's name, so all three production
+# deploys would share one group and queue behind each other -- and a direct
+# workflow_dispatch of this workflow would land in a different group than the
+# same deploy started by a promotion.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: deploy-backend-production-${{ github.ref }}
   cancel-in-progress: false
 
 # Default to read-only; jobs opt into more only where required.
