@@ -2,6 +2,132 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.09.7",
+      "status": "Released",
+      "date": "24 sep 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "09c475a",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "A promotion runs the three production deploys in order instead of racing them",
+          "details": [
+            "Each production workflow used to trigger itself on a push to main with its own paths: filter, and the three started at once. On the v2026.09.6 promotion the ROPA site finished deploying to production before the backend had started building — production served new pages against the previous API for several minutes, under three green checks. Nothing broke, and nothing would have caught it either.",
+            "promote-to-production.yml is now the only thing a push to main starts. It calls the three deploys as reusable workflows: a changes job decides what is needed, the backend goes first, then the two sites in parallel. A failed backend stops both sites; a skipped one does not, so each site checks the backend's result against a positive list rather than just \"not failed\".",
+            "The path filters had to leave the triggers — a filter per workflow cannot express \"the sites wait for the backend\". They live in scripts/promotion-targets.mjs, with a test beside it that the promotion's own changes job runs before using the script. Four of its checks are a drift guard: the two site workflows still carry those paths on the pull_request trigger that builds the production preview, and the test fails if the two stop agreeing. It fails safe towards deploying everything — a promotion whose commit range cannot be read is not a promotion that changed nothing."
+          ]
+        },
+        {
+          "sha": "e14a79a",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "The production-site preview on a promotion pull request is a decision, not an oversight",
+          "details": [
+            "The two production site workflows carry a pull_request trigger on main, so opening a promotion pull request deploys a preview of the production site built from acc. That was recorded as an open question; it is now recorded as kept, deliberately. The point is to look at the real thing before promoting rather than infer it from an acceptance build.",
+            "The costs are written down with the decision: a public URL on a production resource serving unreleased code, an environment slot on the production app, and a teardown that depends on the close job running — which GitHub will not run while a pull request has a merge conflict. The backend is excluded on purpose, and that asymmetry is the decision rather than an oversight: a preview site is a page to look at, a preview backend on production would be a second live API against production data."
+          ]
+        },
+        {
+          "sha": "48576bc",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Every deploy check runs, instead of the first failure hiding the rest",
+          "details": [
+            "\"Verify v1 endpoints\" ran five hard assertions, each exiting on failure, so the first to fail stopped the rest from running. On the v2026.09.6 promotion the OpenAPI/health version comparison failed inside the deploy's stale window and exited — so the native-binding assertion below it never executed, and had the binding been broken nothing would have said so. A soft consistency check suppressed a hard correctness one.",
+            "Each exit now records a failure and the step fails at the end if any of them did, so every assertion runs and the log shows all the failures rather than the first. Collecting rather than reordering, deliberately: reordering only changes which check gets to mask the rest."
+          ]
+        },
+        {
+          "sha": "a66ca3f",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "The two production site deploy jobs have names that can be told apart",
+          "details": [
+            "Both production site workflows named their deploy job \"Build and Deploy Job\". Required checks are matched by job name, so while both answered to one name neither could be required, referenced, or distinguished in a check list — the v2026.09.6 promotion pull request showed two identical rows. They are now \"Build and Deploy Production Frontend\" and \"Build and Deploy Production ROPA Site\".",
+            "The same defect was fixed on the ACC side earlier; the production pair was never renamed with it. This changes no ruleset — main requires audit and scan only — so it is a precondition rather than a fix in itself: it is what makes requiring, sequencing or referencing these jobs possible at all."
+          ]
+        },
+        {
+          "sha": "389118c",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "build-info.json is read at module load, closing a false pass in the deploy gate",
+          "details": [
+            "getBuildInfo() read the file lazily, on first use, and its comment said the file \"cannot change without a redeploy, which restarts the process\". It can. A zip deploy overwrites build-info.json while the previous process is still serving, and the restart comes afterwards — so the old process read the new file the first time anything asked, and the first thing to ask is the deploy's own build.sha check. That is a false pass in the gate whose entire purpose is to prove the new build is serving.",
+            "Seen on the v2026.09.6 promotion: two seconds apart, one process reported /v1/openapi.json at 2026.09.6 and /v1/health at 2026.09.5. version comes from an import bound at module load and still read the previous release; build.sha was read from disk afterwards and got the new one. The App Service plan is B1 with capacity 1, so two instances cannot explain it — an earlier guess that they might was wrong.",
+            "The read now happens at module load, so both answers are bound at the same moment and a stale process reports itself as stale."
+          ]
+        },
+        {
+          "sha": "46c3775",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "lint-staged 16 to 17",
+          "details": [
+            "A major bump to the tool the pre-commit hook runs. Verified beyond the suite by staging a deliberately mis-formatted file and running the hook end to end: prettier and eslint --fix both ran, the file was reformatted and restaged, and the hook exited 0."
+          ]
+        },
+        {
+          "sha": "7e6282f",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Frontend dependencies: @types/react 19.3, @types/node and autoprefixer",
+          "details": [
+            "Type and tooling updates only — nothing that ships at runtime. @types/react and @types/react-dom move 19.2 to 19.3, which is the one here that could have surfaced type errors; typecheck, the full suite and the production build are clean."
+          ]
+        },
+        {
+          "sha": "afc740d",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Backend dependencies: @types/n3 and typescript-eslint 8.70",
+          "details": [
+            "A types patch and a typescript-eslint minor. Lint is clean on the new version, which is the check that matters for an eslint bump — a minor there can introduce rules that fail an existing tree."
+          ]
+        },
+        {
+          "sha": "3cf10c0",
+          "author": "Steven Gort",
+          "type": "refactor",
+          "subject": "Shared DSO constants move out of shared.tsx",
+          "details": [
+            "shared.tsx exported constants, a type and a helper next to the Section component, which react-refresh/only-export-components flags six times: Fast Refresh cannot hot-swap a module that exports non-components. They move unchanged to tokens.ts; shared.tsx keeps Section."
+          ]
+        },
+        {
+          "sha": "4d12443",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Thuisbatterij processes in swimlanes, with Dutch names and a missing-info form",
+          "details": [
+            "Both processes get a pool and Aanvrager/Behandelaar/Systeem lanes, matching the shape the RIPx.y processes already have. Element ids are unchanged; names become Dutch.",
+            "\"Aanvullende gegevens opvragen\" pointed at an embedded HTML form that never existed, so nothing could set supplementReceived; it now uses a deployable form-js form. Seeds are bumped so the Modeler replaces cached copies."
+          ]
+        },
+        {
+          "sha": "c515682",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "The register records zizmor-action v0.6.4 and the validator's Node 24.21.0",
+          "details": [
+            "The audit job failed on the action-bump branch because the workflow pinned v0.6.4 while SECURITY-PIPELINE.md still recorded v0.6.3. That is the documented drift rather than a fault in the bump: Renovate rewrites a workflow pin and its version comment together and never touches the register, so every action-bump pull request fails the register half until it is updated by hand — on the bump's own branch, so the check is green on the pull request rather than only on acc afterwards.",
+            "The action-and-image pairing the file warns about held: v0.6.4 ran the pinned 1.29.0 image without complaint, so this does not drag in the image bump that has to move with the action."
+          ]
+        },
+        {
+          "sha": "07ef51e",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "zizmor-action 0.6.4 and the validator's Node to 24.21.0",
+          "details": [
+            "The workflow pin itself, paired with the register rows above. Nothing in the repository's own supply-chain posture changes; this keeps the auditor and the Node it runs on current."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.09.6",
       "status": "Released",
       "date": "23 sep 2026",
