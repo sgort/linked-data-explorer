@@ -2,6 +2,521 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.09.6",
+      "status": "Released",
+      "date": "23 sep 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "5115cd1",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "The native binding is verified on the deployed app, not just on the runner",
+          "details": [
+            "\"Prepare deployment package\" already asserted that require('libxmljs2') loads, but it runs on the runner — so it proves the binary matches the Node that built it. Nothing proved it loads on the host. Those are the same question only while the two agree, and on 23 September they stopped agreeing: the Node 24 move left a Node-22 binary answering on a Node-24 host, and DMN validation returned NODE_MODULE_VERSION 127 against a required 137 while health, build.sha, the shape layers and /v1/dmns all reported fine.",
+            "Both backend workflows now POST a minimal DMN to /v1/dmns/validate on the deployed app and fail on the native-load signature. Read-only — that endpoint validates content and deploys nothing — and it fails only on a message naming NODE_MODULE_VERSION or \"was compiled against\", never on a DMN that is merely invalid, so it cannot start failing because the XSD tightens or the fixture drifts."
+          ]
+        },
+        {
+          "sha": "20c86d8",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Node moves to 24.21.0",
+          "details": [
+            "One line in .nvmrc, 22.23.2 to 24.21.0, which every deploy workflow reads. Held open since 19 September because merging it alone would have built the backend on Node 24 and run it on a NODE|22-lts App Service; the decision recorded against #119 is that Azure offers major-level runtimes only, so the control is the ordering — switch the App Service first, then merge."
+          ]
+        },
+        {
+          "sha": "e9a2284",
+          "author": "Steven Gort",
+          "type": "other",
+          "subject": "The child-activity fan-out is capped, and stops writing after teardown",
+          "details": [
+            "Opening an activity fired one request per child simultaneously — 24 at once for a 23-child parent. The backend cache removed the repeat cost; this removes the burst. Five workers pull from a shared cursor, so the same work arrives in waves, and allSettled semantics are kept: a failing child never blocks the rest, and one that resolves without an omschrijving still falls back to its URN. Names now appear as each child resolves rather than when the slowest does.",
+            "The component had no cancellation guard at all — not a flag, not an AbortController — so an in-flight fan-out could write names for an activity the user had already left. That was latent while everything raced to finish at once; a pool drains over time, which would have made it real."
+          ]
+        },
+        {
+          "sha": "3c6d3f2",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Six weak assertions are made to bite",
+          "details": [
+            "Each named a behaviour it could not fail on. The TTL boundary at exactly ttlMs was pinned by nothing, so the > versus >= choice was free; an entry aged exactly the TTL is now asserted live, because expiring it there would quietly shave time off every advertised TTL. clear() with no key asserted one key was gone rather than the cache being empty. The cache-hit test compared an object with itself, so it could not fail for the reason its name gave.",
+            "The wId assertion checked a prefix, so a truncation past that point would have passed. The openTags guard stays and is now commented as deliberately unreachable, with tests pinning the outward guarantee instead — decisionTable is never counted as a decision, prefixed or not — so the protection survives whichever mechanism enforces it."
+          ]
+        },
+        {
+          "sha": "76b4071",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The regelingen search pages, honours the date, and names what failed",
+          "details": [
+            "The search read only page one. mnre1034 already returns a full page of 100, so an authority's instrument could fall off it and be reported as \"no regeling of type …\" — a wrong answer rather than an error. It now pages by page.totalPages, sequentially, capped at 10, and a cap-truncated search is recorded distinctly from a genuine miss.",
+            "getToepasbareRegels ignored the validity date, so a dossier for a past date paired a historical legal source with current executable rules, then took toepasbareRegels[0] with no ordering guarantee. The date now threads through in the same dd-MM-yyyy the other RTR-side calls use, and the pick is by most recent begindatum rather than by position.",
+            "Three of the four fan-out legs recorded failures without saying which item failed; documentComponent, dmn and toepasbareRegels now carry the wId, the rule identifier and the functioneleStructuurRef respectively. Also: stats() no longer counts expired entries."
+          ]
+        },
+        {
+          "sha": "5b50eb4",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Frontend dependencies updated",
+          "details": [
+            "A routine Renovate refresh of the frontend's dependency ranges, held for the 14-day cooldown like everything else."
+          ]
+        },
+        {
+          "sha": "978ba52",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "The CI posture page records 23 September",
+          "details": [
+            "The first real promotion sequenced by a workflow rather than by hand, with its timings: the backend ran 16:53:18 to 17:00:09 and all three site jobs started four seconds after it completed, where previously they would have finished about five minutes before the backend they depend on. Also the App Service runtime decision — Azure offers major-level Node runtimes only, so the control is the ordering — and the container-image split by whether a repository actually applies the file.",
+            "Plus the exception that this repository is: `switch first, then merge` is complete only for a pure-JavaScript backend, and libxmljs2 builds against NAN rather than N-API, so its binary is bound to NODE_MODULE_VERSION."
+          ]
+        },
+        {
+          "sha": "cfc627a",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "A taxonomy node's empty dossier points at its children",
+          "details": [
+            "An activity that groups others carries no rules of its own, so its dossier is correctly empty — but that told the reader nothing about where the rules actually are. The Dossier now carries childActivityUrns, taken from the RTR response step 1 already fetches, so it costs no extra upstream calls.",
+            "Where both rule sets are absent and children exist, the Quality Profile tab says so and lists them as links that load the child's own profile. An activity with children and rules of its own is not a taxonomy node and does not get the notice. For Rijksmonumentenactiviteit that means the empty dossier now points at RijksmonArchMonument and RijkmonMonument, which carry a Conclusie and Indieningsvereisten each."
+          ]
+        },
+        {
+          "sha": "25465da",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "The per-bestuurslaag lookup and the Quality Profile tab are documented",
+          "details": [
+            "The method doc said --authority was required for a national activity and that its absence returned a 400. Both became false with the fix. It also described the regeling lookup as omgevingsplan-only, which was the defect underneath — each bestuurslaag has its own core instrument, and looking for an omgevingsplan at provincie, waterschap or rijk level finds nothing.",
+            "Adds the per-level table, the multi-candidate probe and its cap, taxonomy nodes as a named edge case, and wording that distinguishes a regeling checked and found not to annotate an activity from one that could not be fetched at all. The API doc gains a section for the Quality Profile tab."
+          ]
+        },
+        {
+          "sha": "222a09f",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The production level-derivation path is covered, and provenance stops overclaiming",
+          "details": [
+            "Every test built bestuursorgaan without a bestuurslaag field, so all of them exercised the code-prefix fallback while production takes the other branch — the RTR does supply bestuurslaag. A case where the two disagree now pins which wins, and bestuurslaag is validated against the known levels instead of being trusted through a bare type assertion.",
+            "When a candidate regeling could not be fetched, the summary still said none of them annotate the activity — asserting a negative about a document that was never read. Checked-and-not-matching is now reported separately from could-not-be-fetched, and each fetch failure names its candidate. A reader can tell \"we looked and it is not there\" from \"we could not look\", which is what makes a partial dossier honest rather than broken."
+          ]
+        },
+        {
+          "sha": "7c43411",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "A legal source resolves per bestuurslaag, and national activities are no longer rejected",
+          "details": [
+            "The dossier refused any mnre URN without an authority parameter. That guard was ours, not a DSO requirement, and it rejected activities that needed nothing: RijksmonArchMonument carries its own Conclusie and Indieningsvereisten and scores 23/23 semantic, yet returned 400. The advice it gave was also wrong — no municipality can supply a national activity's legal source.",
+            "The lookup also hardcoded regelingtype_003, the gemeente instrument, so for any provincie, waterschap or rijk activity it searched for a document type that authority never publishes. Each bestuurslaag has its own: Omgevingsplan, Omgevingsverordening, Waterschapsverordening, AMvB. The level comes from bestuursorgaan.bestuurslaag, falling back to the authority code prefix, and an explicit authority still overrides it. Where several regelingen of the right type exist — the Rijk publishes two AMvBs — they are tried in order, capped at three because each annotation graph can be megabytes."
+          ]
+        },
+        {
+          "sha": "a37d0d9",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The Level select stays in step with the preserved authority",
+          "details": [
+            "The Authority select's options come from authoritiesByLevel(level) while its value is authorityOin, which now survives a tab switch. level did not: it was ActiviteitenTab-local and reset on every remount. So choosing provincie and an authority within it, then returning to Activities, left the select showing a value that was not among its own options — blank, while the list below still showed that authority's activities. Lifting level alongside the others needs no new restore logic; it simply stops being reset."
+          ]
+        },
+        {
+          "sha": "e20d91f",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "A comparison fetches with the compared authority, and the authority survives a tab switch",
+          "details": [
+            "The Compare fetch passed the primary activity's bevoegd-gezag code for the compared URN. The backend treats authority as an override, so comparing Lelystad with Steenwijkerland searched Lelystad's regelingen for a Steenwijkerland activity: the compared card read \"Steenwijkerland — Omgevingsplan gemeente Lelystad\" with 0/10 rules traced, for an activity that has two. Only the legal-source half was affected; the matrix columns were already correct.",
+            "Returning to the Activities tab no longer clears the selected authority. Adds a Clear compare control beside Dossier .md, shown only while a comparison is active."
+          ]
+        },
+        {
+          "sha": "a803f25",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "A quality-profile teaser in the detail panel, and a Dossier .md download",
+          "details": [
+            "The activity detail panel gains a compact quality-profile section, summing both rule sets into one decision-naming and one input-naming row. That is the only place the two are combined: it is a teaser pointing at the tab, not a score, and the tab itself still keeps them separate.",
+            "It renders from cache only. The dossier call fans out across three upstream APIs including Ozon, so selecting an activity must never trigger it — there is a test asserting exactly that, because the failure mode is a detail panel that feels broken. renderDossier moves to scripts/dossier-render.mjs, imported by both the CLI and the browser, with a test asserting the two references are the same function object rather than merely producing equal output, so the two cannot drift apart."
+          ]
+        },
+        {
+          "sha": "5ada7cd",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "The Quality Profile tab",
+          "details": [
+            "Renders the selected activity's quality profile with the evidence behind every number: per-item naming classes, each input's question, and the legal-source articles. Scorecard is the default layout; Compare uses the matrix, which keeps the two authorities in separate columns.",
+            "Conclusie and Indieningsvereisten are always shown separately and never blended into one score, and a rule set that is absent says so rather than reporting zeros — zeros would read as measured-and-empty. The authority filter sends the bevoegd-gezag code, not the OIN: the backend matches it against bevoegdGezag, so an OIN would have silently failed the national-activity path that needs it."
+          ]
+        },
+        {
+          "sha": "7bcebaa",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "The activity selection is shared across DSO Explorer tabs",
+          "details": [
+            "selectedUrn, the active validity date and authorityOin move from ActiviteitenTab up into DsoExplorer, so a tab other than Activities can read the current selection. Switching tabs no longer clears it; changing Level or Authority, clicking Load, and closing the detail panel all still do.",
+            "ActivityDetailPanel gains an onLoaded callback so the selected activity's name reaches the shell whichever way it was selected — row click, pasted URN, or parent/child navigation."
+          ]
+        },
+        {
+          "sha": "21057d5",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "A frontend client for the activity dossier endpoint",
+          "details": [
+            "Mirrors the backend Dossier and QualityProfile types and adds getActiviteitDossier, with an in-memory cache keyed env|datum|urn so switching to the Quality Profile tab is instant. The dossier call fans out across three upstream APIs including Ozon, so it is slow enough that an uncached tab switch would be felt. The cache stores the promise rather than the resolved value, so concurrent calls for the same key dedupe, and evicts on failure so a retry is not permanently blocked by one bad response."
+          ]
+        },
+        {
+          "sha": "8dd19ee",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "The evidence behind the quality profile's counts is shown",
+          "details": [
+            "The profile reported counts without saying which items scored how, so \"3/7 semantic, 4 opaque\" could not be audited by the municipality whose data it describes. The per-item naming classes, each input's question and the legal-source articles now travel with the numbers."
+          ]
+        },
+        {
+          "sha": "5284b7e",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The datum format contract, GUID detection, cache eviction and cross-layer scoring",
+          "details": [
+            "The datum parameter was forwarded unchanged to two upstreams using different date formats: the RTR expects dd-MM-yyyy, Ozon expects YYYY-MM-dd. No value satisfied both, and the failure was silent — the annotations leg was caught into provenance.failures while legalSource.available stayed true, rendering a real regeling title above \"0 juridische regels\". The route keeps dd-MM-yyyy and converts before calling Ozon.",
+            "GUID detection required separators, but IMOW URN local names are 32 contiguous hex characters, so GUID-named activities scored as semantic — the exact case the quality profile exists to surface. The tag scanner hardcoded the dmn: prefix, silently reporting an un-prefixed DMN as having nothing opaque. Cross-layer consistency compared two layers where the design defines three. And the TTL cache never evicted entries that were not read again, retaining an 8.7 MB annotation graph per municipality for the process lifetime."
+          ]
+        },
+        {
+          "sha": "0f2dc11",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The dossier CLI runs on Windows, and the new modules' branches are covered",
+          "details": [
+            "A path-handling fix in scripts/dso-dossier.mjs, and coverage for the branches the four new modules had left untested — the dossier service, the Ozon client, the quality service and the TTL cache, together about 350 lines of new test."
+          ]
+        },
+        {
+          "sha": "3e8afda",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "The activity dossier method and a worked example",
+          "details": [
+            "docs/dso-activity-dossier.md sets out how an activity's chain is assembled and scored, and docs/examples/dossier-houtopstandvellen-gm0995.md is the rendered output for a real activity, so the method can be read against a concrete result rather than in the abstract."
+          ]
+        },
+        {
+          "sha": "c90bf15",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "CDATA is preserved in rendered article text",
+          "details": [
+            "Article text arrives wrapped in CDATA and was being lost in the Markdown render. The renderer now preserves it, and the render tests are tightened around the cases that let it through."
+          ]
+        },
+        {
+          "sha": "8a56377",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "An activity dossier and its quality profile render to Markdown",
+          "details": [
+            "scripts/dso-dossier.mjs turns a dossier into a readable document — legal source, annotations, decision criteria, submission requirements and the quality profile — so a result can be circulated and reviewed outside the app."
+          ]
+        },
+        {
+          "sha": "3affa5b",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "The activity dossier is exposed with its quality profile",
+          "details": [
+            "The composite route that joins the three upstream legs into one Dossier and returns it with its QualityProfile, described in the OpenAPI document alongside the passthrough routes it builds on."
+          ]
+        },
+        {
+          "sha": "1028d8a",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Activity-identity resolvability is derived, not assumed",
+          "details": [
+            "The quality profile treated an activity's identity as resolvable by construction. It is now derived from what the lookup actually returned, so an identity that cannot be resolved scores as such rather than being credited."
+          ]
+        },
+        {
+          "sha": "17a6a4a",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "An activity's legibility and recoverability are scored",
+          "details": [
+            "quality.service.ts scores the assembled chain on two separate axes — how legible the rules are, and how far a reader can recover the reasoning from the published material. Kept apart deliberately: blending them into one number would hide which of the two is weak."
+          ]
+        },
+        {
+          "sha": "c71a815",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "The dossier join is made falsifiable with real decoy annotations",
+          "details": [
+            "The join's tests used a fixture clean enough that a wrong join would still have passed. The fixture now carries real decoy annotations from the production graph — nearly 600 lines of them — so a join that matches the wrong thing fails."
+          ]
+        },
+        {
+          "sha": "41674e4",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "An activity's legal source, annotation and rule sets are assembled",
+          "details": [
+            "dossier.service.ts is the join: it takes an IMOW activity and assembles its legal source, its annotations, and both rule sets into a single Dossier. The join is isolated in one service by design, so the fan-out across three upstream APIs has exactly one place that knows how the pieces fit together."
+          ]
+        },
+        {
+          "sha": "09daf82",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "The Ozon routes are asserted to conform to their OpenAPI operations",
+          "details": [
+            "The three passthrough routes are checked against the operations that describe them, so the document and the implementation cannot drift apart silently."
+          ]
+        },
+        {
+          "sha": "c59a597",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "The three Ozon Presenteren routes the dossier needs are proxied",
+          "details": [
+            "The chain spans a sixth DSO API that this backend did not proxy: Omgevingsdocumenten Presenteren (Ozon). Three passthrough routes are added, described in the OpenAPI document, with the existing DSO keys authenticating against it."
+          ]
+        },
+        {
+          "sha": "68a187f",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "An Omgevingsdocumenten Presenteren v8 client",
+          "details": [
+            "ozon.service.ts, the client for Ozon v8.5.2, with the quirks the plan front-loaded: the full OGC Content-Crs value, the slash-to-underscore identificatie transform, and environment-specific toepasbare-regel ids."
+          ]
+        },
+        {
+          "sha": "2b41d9b",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "dsoFetch defaults to POST when a body is supplied",
+          "details": [
+            "A one-line correction with its test: supplying a body no longer silently issues a GET."
+          ]
+        },
+        {
+          "sha": "d6b9c11",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Ozon base URLs, and dsoFetch learns POST bodies and extra headers",
+          "details": [
+            "The shared DSO fetch helper gains what the Ozon calls need — a request body and additional headers — and the Ozon base URLs join the configuration beside the existing DSO ones."
+          ]
+        },
+        {
+          "sha": "3916cc6",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Shared cache stats and clears are verified against the DMN caches",
+          "details": [
+            "The cache routes report and clear across the named registry. This pins that the DMN caches are actually part of that registry, rather than the endpoints reporting on a subset while appearing to cover everything."
+          ]
+        },
+        {
+          "sha": "2fc238d",
+          "author": "Steven Gort",
+          "type": "other",
+          "subject": "Activity detail is cached, removing the fan-out's repeat cost",
+          "details": [
+            "The DSO Explorer's child-activity fan-out asked for the same details repeatedly. Caching the activity-detail lookup removes the repeat cost; the burst itself is capped separately."
+          ]
+        },
+        {
+          "sha": "260aff1",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "A shared TTL cache utility with a named registry",
+          "details": [
+            "Replaces a second hand-rolled cache with one utility, registered by name so the cache routes can report and clear across every cache rather than a hardcoded list. Front-loaded deliberately: it is independently valuable and lands before any dossier code."
+          ]
+        },
+        {
+          "sha": "1de56a6",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Implementation plan for the activity dossier",
+          "details": [
+            "Ten tasks, TDD throughout, front-loading the independently valuable work: the shared TTL cache and the activity-detail caching land before any dossier code. Global constraints carry the quirks each task inherits — both GUID separators, CDATA question text, the slash-to-underscore identificatie transform, the full OGC Content-Crs value, and environment-specific toepasbare-regel ids."
+          ]
+        },
+        {
+          "sha": "a3f3d19",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Design for the activity dossier, quality profile and shared cache",
+          "details": [
+            "The design for assembling an IMOW activity's full chain — legal source, annotations, decision criteria, submission requirements — as a single call, and for scoring how legible that chain is. The chain spans a sixth DSO API this repository does not proxy, Omgevingsdocumenten Presenteren v8.5.2; the existing DSO keys already authenticate against it. Three passthrough routes plus one composite route, with the join isolated in a single service."
+          ]
+        },
+        {
+          "sha": "1461153",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "The CI posture page records 19–22 September and drops 14 closed rows",
+          "details": [
+            "Four days of work across all three repositories were unrecorded, and section 6 was carrying rows for fourteen issues that are closed. Adds the dated section and removes them, each checked against the GitHub API rather than inferred."
+          ]
+        },
+        {
+          "sha": "f712a4d",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The e2e fixture bundle declares and ships the decisions it depends on",
+          "details": [
+            "The manifest described bpmn, forms, documents and subProcesses, and shipped no .dmn at all — while every process in the bundle calls decisions. A stack rebuilt from the documented bundle therefore deployed cleanly, served its start forms cleanly, and then failed at the first business rule task with \"no decision definition deployed with key 'AwbCompletenessCheck'\". One key at a time, four rounds of the same discovery, with nothing in the bundle to suggest a DMN was ever involved."
+          ]
+        },
+        {
+          "sha": "33f3d48",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "The Thuisbatterij bundle is seeded into the Modeler",
+          "details": [
+            "The Thuisbatterij files sat in public/examples/flevoland/ but stopped there: fetchable by URL and invisible in the app, with no entry in the version registry, no block in the BPMN Modeler's seeding, no form definitions and no document template. It was the only bundle in public/examples with no way into the UI, which left deploying it a file-shuffling exercise rather than the Modeler flow kapvergunning and zorgtoeslag already have."
+          ]
+        },
+        {
+          "sha": "d6dc88c",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Thuisbatterij forms are bound to their deployment",
+          "details": [
+            "Thuisbatterij was the one bundle still on camunda:formRefBinding=\"latest\" for all three forms. With latest, Operaton resolves a form by key across deployments, and on a long-lived engine that key is not unique. On ACC that form key sits in 53 deployments — 50 untenanted from June and July, 3 under flevoland — so the start form 500s and the citizen dashboard shows \"Formulier kon niet worden geladen\" with no field ever rendering. Kapvergunning is immune purely because its forms are already deployment-bound."
+          ]
+        },
+        {
+          "sha": "f3eb715",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Tenant-scoped processes reach the shared, untenanted DMNs",
+          "details": [
+            "Operaton resolves a business rule task's decisionRef inside the process instance's own tenant. A process deployed under tenant-id 'flevoland' therefore cannot see a DMN deployed without one, and the engine refuses to instantiate it at all — surfacing as a 500 from process start and an unexplained \"De aanvraag kon niet worden ingediend\" on the ACC citizen dashboard. Kapvergunning was broken this way; Thuisbatterij had the same defect one step further in, pinned to a tenant id."
+          ]
+        },
+        {
+          "sha": "930d4da",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Lock-file maintenance",
+          "details": [
+            "The weekly refresh of package-lock.json. Every version it introduced was at least 14 days old when the branch was written, measured against the npm registry's own publish dates."
+          ]
+        },
+        {
+          "sha": "2cda481",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "A change to .nvmrc builds and deploys",
+          "details": [
+            ".nvmrc sets the Node version every deploy workflow builds, tests and ships on, and no path filter included it. A Node bump therefore built nothing, tested nothing and deployed nothing: the new Node reached the next unrelated deploy untested. Once the build checks became required on acc, such a pull request also showed every required build check skipped and was mergeable. Found on #80, which changes .nvmrc alone."
+          ]
+        },
+        {
+          "sha": "e188dde",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "The build checks now required on acc are written down",
+          "details": [
+            "SECURITY-PIPELINE.md records which checks gate acc and main, why the build checks are safe to require now that each workflow filters in a changes job rather than on its trigger, and that renaming one of those jobs means updating the ruleset in the same change. Being documentation only, the pull request was also the test: every changes job reported relevant false and every build check skipped."
+          ]
+        },
+        {
+          "sha": "a31dfac",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "ACC deploy workflows filter in a job, so their build checks can be required",
+          "details": [
+            "A required check must report on every pull request. A workflow its pull_request trigger filters out never starts and reports nothing, so a required build check would leave any pull request that does not touch its paths waiting forever. A job skipped by its own if: reports success instead.",
+            "Each ACC deploy workflow drops the path filter from its trigger and gains a changes job, which asks the GitHub API for the pull request's files — renames under both names — and matches them against one pattern mirroring the push filter. The build and close jobs run when relevant, and also when changes did not succeed, so a failed lookup means a full build rather than a free pass. The two jobs both named Build and Deploy Job become Build and Deploy Frontend and Build and Deploy ROPA Site, since required checks are matched by job name."
+          ]
+        },
+        {
+          "sha": "3f9e42f",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "A 14-day package-manager cooldown in .npmrc",
+          "details": [
+            "Renovate's minimumReleaseAge covers only the updates Renovate proposes. Lock-file maintenance hands the refresh to npm, where the transitive tree moves, and Renovate documents that its own cooldown cannot apply there. A root .npmrc now sets min-release-age=14.",
+            "Measured before writing it: npm 11.10 or newer honours the setting on install and update and refuses an exact pin to a younger version with ETARGET; npm ci ignores it on purpose, so CI cannot fail on it; npm 10.9.8 ignores it without a warning. scripts/check-deps.sh now warns, without failing, when npm is older than 11.10."
+          ]
+        },
+        {
+          "sha": "398aea8",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "The directory npm leaves behind is empty, not full of hidden entries",
+          "details": [
+            "The comment added with the un-hoisted guard said the runner's packages/backend/node_modules holds hidden npm bookkeeping. The run that passed logged its contents, and it was empty: npm 10 leaves the directory behind with nothing in it. The guard was right either way, since it counts only real package entries; the explanation was not."
+          ]
+        },
+        {
+          "sha": "a646f61",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Only real packages count as un-hoisted backend dependencies",
+          "details": [
+            "The guard failed whenever packages/backend/node_modules existed, so the first run of the new packaging step failed on a correct install: \"added 350 packages\", then the guard, listing nothing. It now fails only on a non-hidden entry, which is what a real un-hoisted package would be, and always logs what the directory holds."
+          ]
+        },
+        {
+          "sha": "fb97d16",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "The backend deploy installs its dependencies from the lockfile",
+          "details": [
+            "Both backend workflows assembled deploy/ with package.json and no lockfile, then ran npm install --production there, re-resolving every caret range at deploy time with no cooldown. The shipped artifact could carry versions no test ran against and no lockfile records.",
+            "The step now runs npm ci --omit=dev --workspace=@linked-data-explorer/backend in a staging copy holding the root manifest and lockfile and the backend's manifest, and copies that node_modules into deploy/. Measured: 349 packages, each at the root lockfile's version and integrity hash. Install scripts still run, since libxmljs2 is native; the step checks that its binding loads, and fails if a production dependency lands un-hoisted where the copy would drop it."
+          ]
+        },
+        {
+          "sha": "52e94f1",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "The runner image is pinned to ubuntu-24.04",
+          "details": [
+            "All twelve jobs across the eight workflows run on ubuntu-24.04 instead of ubuntu-latest, a label GitHub moves to a new Ubuntu release on its own schedule. A change of OS release now arrives as a diff in this repository. That pins the release, not the image — GitHub rebuilds it about weekly and a hosted runner cannot be pinned by digest — so Node, actions and npm packages stay pinned separately."
+          ]
+        },
+        {
+          "sha": "8a85abd",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "The frontend builds on the runner, and Node is read from one .nvmrc",
+          "details": [
+            "Both frontend workflows now run build:acc / build:prod on the runner, from the tree npm ci installed, and upload packages/frontend/dist with skip_app_build: true. Until now Oryx built the shipped bundle inside the floating staticappsclient:stable container with npm install, on a Node it chose itself — so the code that passed the tests and the code that shipped were different builds.",
+            "All four deploy workflows read one exact Node version from .nvmrc. The frontend moves from 20.20.2 to 22 because its pin now decides what ships. zizmor.yml keeps its own literal, which its validator needs."
+          ]
+        },
+        {
+          "sha": "de9c927",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The deploy target comes from the backend, and the outbound-guard follow-ups are finished",
+          "details": [
+            "The deploy modal and the exported README now ask the backend which Operaton it deploys to, instead of the frontend's build-time VITE_OPERATON_BASE_URL, which is removed. A failure is not cached, so the modal names the target once the backend is reachable again.",
+            "The outbound client pins the http adapter and HTTP/1 on every request, and a refused redirect surfaces as EOUTBOUNDREFUSED. Also: the unreachable ::/128 and ::1/128 entries are removed, test-connection gets its own request schema with apiToken optional, and the credential-leak test searches the whole call."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.09.5",
       "status": "Released",
       "date": "19 sep 2026",

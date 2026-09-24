@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Download,
   ExternalLink,
+  Gauge,
   Loader2,
   Search,
   TreePine,
@@ -26,6 +27,7 @@ import {
   DsoActiviteit,
   DsoActiviteitDetail,
   DsoBegrip,
+  DsoDossier,
   DsoEnv,
   DsoRegelbeheerobject,
   DsoToepasbareRegel,
@@ -33,9 +35,12 @@ import {
   fetchFormScaffold,
   fetchToepasbareRegels,
   getActiviteitDetail,
+  getActiviteitDossier,
   getActiviteiten,
   getActiviteitenByOin,
+  getCachedActiviteitDossier,
   getWerkzaamheidDetail,
+  IdClass,
   searchBegrippen,
   sttrDownloadUrl,
   suggereerWerkzaamheden,
@@ -46,8 +51,11 @@ import {
 } from '../../services/dsoService';
 import { FormService } from '../../services/formService';
 import { FormSchema } from '../../types';
+import QualityProfileTab from './QualityProfileTab';
+import { Section } from './shared';
+import { NAMING_META, NAMING_ORDER, TONE_TEXT, toneForRatio, TYPERING_META } from './tokens';
 
-type Tab = 'begrippen' | 'werkzaamheden' | 'activiteiten';
+type Tab = 'begrippen' | 'werkzaamheden' | 'activiteiten' | 'quality';
 
 // ── Concepts tab ────────────────────────────────────────────────────────────
 
@@ -570,36 +578,6 @@ function buildCpsvEditorImportUrl(params: {
   return `${CPSV_EDITOR_URL.replace(/\/$/, '')}/?${q.toString()}`;
 }
 
-const TYPERING_META: Record<string, { label: string; color: string }> = {
-  indieningsvereisten: {
-    label: 'Submission requirements',
-    color: 'bg-blue-100 text-blue-700 border-blue-200',
-  },
-  Indieningsvereisten: {
-    label: 'Submission requirements',
-    color: 'bg-blue-100 text-blue-700 border-blue-200',
-  },
-  conclusie: {
-    label: 'Decision criteria',
-    color: 'bg-purple-100 text-purple-700 border-purple-200',
-  },
-  Conclusie: {
-    label: 'Decision criteria',
-    color: 'bg-purple-100 text-purple-700 border-purple-200',
-  },
-  maatregelen: { label: 'Measures', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  Maatregelen: { label: 'Measures', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-};
-
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div>
-    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-      {title}
-    </p>
-    {children}
-  </div>
-);
-
 // ── Applicable Rules (STTR) ──────────────────────────────────────────────────
 
 const ApplicableRuleRow: React.FC<{
@@ -840,48 +818,249 @@ const ApplicableRulesSection: React.FC<{
   );
 };
 
+// ── Quality profile teaser (README §2) ──────────────────────────────────────
+//
+// A preview of the Quality Profile tab's figures, inside the Activities
+// detail panel. Unlike the tab itself, this ONE place sums both rule sets'
+// items into a single figure per row — it is a teaser, not a score, and the
+// tab it links to still never blends Conclusie and Indieningsvereisten.
+
+type TeaserDim = 'decisionNaming' | 'inputNaming';
+const TEASER_ROWS: { key: TeaserDim; label: string }[] = [
+  { key: 'decisionNaming', label: 'Decision naming' },
+  { key: 'inputNaming', label: 'Input naming' },
+];
+
+/** Both rule sets' naming items for one dimension, combined — see the note above. */
+function combinedNamingItems(
+  ruleSets: DsoDossier['qualityProfile']['ruleSets'],
+  dim: TeaserDim
+): { class: IdClass }[] {
+  const items: { class: IdClass }[] = [];
+  for (const rsq of [ruleSets.conclusie, ruleSets.indieningsvereisten]) {
+    if (rsq) items.push(...rsq[dim].items);
+  }
+  return items;
+}
+
+const TeaserRow: React.FC<{ label: string; items: { class: IdClass }[] }> = ({ label, items }) => {
+  const total = items.length;
+  const semantic = items.filter((i) => i.class === 'semantic').length;
+  const ratio = total ? semantic / total : null;
+  const tone = toneForRatio(ratio);
+  return (
+    <div className="grid grid-cols-[120px_1fr_auto] gap-2.5 items-center text-xs">
+      <span className="text-slate-400">{label}</span>
+      <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden flex">
+        {total > 0 &&
+          NAMING_ORDER.map((cls) => {
+            const count = items.filter((i) => i.class === cls).length;
+            if (count === 0) return null;
+            return (
+              <div
+                key={cls}
+                className={NAMING_META[cls].bar}
+                style={{ width: `${(count / total) * 100}%` }}
+              />
+            );
+          })}
+      </div>
+      <span className={`font-medium ${TONE_TEXT[tone]}`}>
+        {semantic}/{total} semantic
+      </span>
+    </div>
+  );
+};
+
+const QualityProfileTeaser: React.FC<{ dossier: DsoDossier; onOpenQualityProfile: () => void }> = ({
+  dossier,
+  onOpenQualityProfile,
+}) => (
+  <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
+    {TEASER_ROWS.map(({ key, label }) => (
+      <TeaserRow
+        key={key}
+        label={label}
+        items={combinedNamingItems(dossier.qualityProfile.ruleSets, key)}
+      />
+    ))}
+    <button
+      onClick={onOpenQualityProfile}
+      className="text-xs text-blue-600 hover:underline inline-flex items-center gap-0.5"
+    >
+      Open in Quality Profile <ChevronRight size={12} />
+    </button>
+  </div>
+);
+
+/**
+ * The "Quality profile" section of the Activities detail panel (README §2).
+ *
+ * Reads the dossier cache only — never calls `getActiviteitDossier` just
+ * because an activity was selected, since that call fans out across three
+ * upstream APIs including Ozon. If nothing is cached yet (the Quality
+ * Profile tab was never opened for this activity), this offers a "Load
+ * quality profile" affordance instead; only clicking it fetches.
+ */
+const QualityProfileSection: React.FC<{
+  urn: string;
+  datum?: string;
+  env: DsoEnv;
+  authorityCode?: string;
+  onOpenQualityProfile: () => void;
+}> = ({ urn, datum, env, authorityCode, onOpenQualityProfile }) => {
+  const [dossier, setDossier] = useState<DsoDossier | undefined>(() =>
+    getCachedActiviteitDossier(urn, env, datum)
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // A new activity (or a different env/datum) may already have its own
+  // cached dossier — re-check the cache rather than carrying over the
+  // previous activity's state or an in-flight load's result.
+  useEffect(() => {
+    setDossier(getCachedActiviteitDossier(urn, env, datum));
+    setLoading(false);
+    setError(null);
+  }, [urn, env, datum]);
+
+  const handleLoad = () => {
+    setLoading(true);
+    setError(null);
+    getActiviteitDossier(urn, env, datum, authorityCode)
+      .then(setDossier)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
+      .finally(() => setLoading(false));
+  };
+
+  return (
+    <Section title="Quality profile">
+      {dossier ? (
+        <QualityProfileTeaser dossier={dossier} onOpenQualityProfile={onOpenQualityProfile} />
+      ) : loading ? (
+        <p className="text-xs text-slate-400 flex items-center gap-1.5">
+          <Loader2 size={12} className="animate-spin" /> Loading…
+        </p>
+      ) : (
+        <div className="space-y-1">
+          <button onClick={handleLoad} className="text-xs text-blue-600 hover:underline">
+            Load quality profile
+          </button>
+          {error && <p className="text-[10px] text-red-600">{error}</p>}
+        </div>
+      )}
+    </Section>
+  );
+};
+
+// Child-activity names cost one upstream request each (the RTR returns bare
+// hrefs, no `omschrijving`) — see issue #196. Fetching every child at once
+// means an activity with N children fires N simultaneous requests just to
+// render one detail panel. This pool caps how many of those requests are in
+// flight together.
+//
+// 5 is the middle of the 4-6 range the issue suggests: enough that a panel
+// with a handful of children still fills in near-instantly, low enough that
+// a 23-child activity (the example in #196) goes out in five short waves
+// instead of one burst.
+const CHILD_NAME_POOL_SIZE = 5;
+
+/**
+ * Resolves child-activity names with at most `poolSize` requests in flight
+ * at once, calling `onResolved` as each one settles so the caller can fill
+ * the panel in progressively rather than waiting on the slowest child.
+ *
+ * Keeps `Promise.allSettled` semantics: a failing child is swallowed here
+ * and simply never calls `onResolved` for that URN, so it never affects the
+ * others. `isCancelled` is checked before every new request is started and
+ * again before every state update, so a torn-down caller (unmount, or a
+ * change of urn/datum/env) stops both queuing further work and writing
+ * results for work already in flight.
+ */
+function resolveChildNamesWithPool(
+  childUrns: string[],
+  datum: string | undefined,
+  env: DsoEnv,
+  poolSize: number,
+  isCancelled: () => boolean,
+  onResolved: (childUrn: string, name: string | null) => void
+): void {
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < childUrns.length) {
+      if (isCancelled()) return;
+      const childUrn = childUrns[nextIndex];
+      nextIndex += 1;
+      try {
+        const child = await getActiviteitDetail(childUrn, datum, env);
+        if (isCancelled()) return;
+        onResolved(childUrn, child.omschrijving ?? null);
+      } catch {
+        // One failing child must never stop the others from resolving —
+        // matches the previous Promise.allSettled behaviour.
+      }
+    }
+  }
+
+  const workerCount = Math.min(poolSize, childUrns.length);
+  for (let i = 0; i < workerCount; i++) {
+    void worker();
+  }
+}
+
 const ActivityDetailPanel: React.FC<{
   urn: string;
   datum?: string;
   env: DsoEnv;
+  authorityOin?: string;
   onClose: () => void;
   onNavigate: (urn: string) => void;
-}> = ({ urn, datum, env, onClose, onNavigate }) => {
+  onLoaded?: (name: string) => void;
+  onOpenQualityProfile: () => void;
+}> = ({ urn, datum, env, authorityOin, onClose, onNavigate, onLoaded, onOpenQualityProfile }) => {
   const [detail, setDetail] = useState<DsoActiviteitDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [childNames, setChildNames] = useState<Record<string, string>>({});
 
+  // The dossier route's `authority` query param is a bevoegd-gezag CODE
+  // (e.g. "gm0995"), never an OIN — see the identical resolution in
+  // QualityProfileTab. `authorityOin` is the Activities tab's Authority
+  // <select> value, keyed by OIN.
+  const authorityCode = authorityOin ? findAuthorityByOin(authorityOin)?.code : undefined;
+
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
     setDetail(null);
     setChildNames({});
     getActiviteitDetail(urn, datum, env)
       .then((d) => {
+        if (cancelled) return;
         setDetail(d as DsoActiviteitDetail);
-        // Fetch child names in parallel after parent loads
+        onLoaded?.(d.omschrijving ?? d.urn);
+        // Fetch child names with a bounded pool after the parent loads —
+        // see resolveChildNamesWithPool and issue #196.
         const children = d._links?.onderliggendeActiviteiten ?? [];
         if (children.length > 0) {
-          Promise.allSettled(
-            children.map((c) =>
-              getActiviteitDetail(urnFromHref(c.href), datum, env).then((child) => ({
-                urn: urnFromHref(c.href),
-                name: child.omschrijving ?? null,
-              }))
-            )
-          ).then((results) => {
-            const names: Record<string, string> = {};
-            results.forEach((r) => {
-              if (r.status === 'fulfilled' && r.value.name) {
-                names[r.value.urn] = r.value.name;
-              }
-            });
-            setChildNames(names);
-          });
+          const childUrns = children.map((c) => urnFromHref(c.href));
+          resolveChildNamesWithPool(
+            childUrns,
+            datum,
+            env,
+            CHILD_NAME_POOL_SIZE,
+            () => cancelled,
+            (childUrn, name) => {
+              if (cancelled || !name) return;
+              setChildNames((prev) => ({ ...prev, [childUrn]: name }));
+            }
+          );
         }
       })
       .catch((e) => {
+        if (cancelled) return;
         const msg = e instanceof Error ? e.message : 'Failed to load';
         setError(
           msg.includes('404')
@@ -889,8 +1068,14 @@ const ActivityDetailPanel: React.FC<{
             : msg
         );
       })
-      .finally(() => setLoading(false));
-  }, [urn, datum, env]);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [urn, datum, env, onLoaded]);
 
   return (
     <div className="flex flex-col h-full border-l border-slate-200 bg-white w-1/3 flex-shrink-0">
@@ -983,6 +1168,15 @@ const ActivityDetailPanel: React.FC<{
                 Refinable: <strong>{detail.verfijnbaar ? 'Yes' : 'No'}</strong>
               </p>
             </Section>
+
+            {/* Quality profile teaser (README §2) */}
+            <QualityProfileSection
+              urn={detail.urn}
+              datum={datum}
+              env={env}
+              authorityCode={authorityCode}
+              onOpenQualityProfile={onOpenQualityProfile}
+            />
 
             {/* Rule objects */}
             {detail.regelBeheerObjecten && detail.regelBeheerObjecten.length > 0 ? (
@@ -1101,18 +1295,46 @@ const ActiviteitRow: React.FC<{
   </button>
 );
 
-const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
+const ActiviteitenTab: React.FC<{
+  env: DsoEnv;
+  // Selection is lifted into DsoExplorer so the Quality Profile tab can read
+  // the same activity, validity date and authority without ActiviteitenTab
+  // being mounted. Switching tabs must not clear this state. `level` is
+  // lifted for a different reason: it never leaves this tab, but it drives
+  // the Authority select's option list, and that select's `value` is the
+  // lifted `authorityOin` — leaving `level` local meant it reset to
+  // 'gemeente' on every remount while `authorityOin` didn't, so the select
+  // could show a value that wasn't among its own options.
+  selectedUrn: string | null;
+  onSelectUrn: (urn: string | null) => void;
+  selectedDatum: string | undefined;
+  onSelectedDatumChange: (datum: string | undefined) => void;
+  authorityOin: string;
+  onAuthorityOinChange: (oin: string) => void;
+  level: AuthorityLevel;
+  onLevelChange: (level: AuthorityLevel) => void;
+  onSelectedNameChange: (name: string | undefined) => void;
+  onOpenQualityProfile: () => void;
+}> = ({
+  env,
+  selectedUrn,
+  onSelectUrn,
+  selectedDatum,
+  onSelectedDatumChange,
+  authorityOin,
+  onAuthorityOinChange,
+  level,
+  onLevelChange,
+  onSelectedNameChange,
+  onOpenQualityProfile,
+}) => {
   const [datum, setDatum] = useState('');
-  const [activeDatum, setActiveDatum] = useState<string | undefined>(undefined);
   const [result, setResult] = useState<ActiviteitenResult | null>(null);
   const [oinMode, setOinMode] = useState(false);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedUrn, setSelectedUrn] = useState<string | null>(null);
   const [urnInput, setUrnInput] = useState('');
-  const [level, setLevel] = useState<AuthorityLevel>('gemeente');
-  const [authorityOin, setAuthorityOin] = useState('');
   // Client-side name filter — only meaningful when an authority is fixed,
   // since OIN mode loads the authority's full activity set in one call.
   const [nameFilter, setNameFilter] = useState('');
@@ -1126,6 +1348,15 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
     return `${d}-${m}-${y}`;
   };
 
+  // Inverse of toDsoDate — used only to redisplay the "Valid on" field on
+  // remount (see the mount effect below), since `selectedDatum` is lifted
+  // and stored in DSO format (dd-mm-yyyy).
+  const fromDsoDate = (dso: string | undefined) => {
+    if (!dso) return '';
+    const [d, m, y] = dso.split('-');
+    return `${y}-${m}-${d}`;
+  };
+
   const load = useCallback(
     async (d: string, p: number) => {
       setLoading(true);
@@ -1136,14 +1367,14 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
         const dsoDate = toDsoDate(d);
         const res = await getActiviteiten(dsoDate, p, env);
         setResult(res);
-        setActiveDatum(dsoDate);
+        onSelectedDatumChange(dsoDate);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load');
       } finally {
         setLoading(false);
       }
     },
-    [env]
+    [env, onSelectedDatumChange]
   );
 
   const loadByOin = useCallback(
@@ -1153,7 +1384,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
       try {
         const res = await getActiviteitenByOin(oin, env, dsoDate);
         setResult(res);
-        setActiveDatum(dsoDate);
+        onSelectedDatumChange(dsoDate);
         setOinMode(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load');
@@ -1161,19 +1392,38 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
         setLoading(false);
       }
     },
-    [env]
+    [env, onSelectedDatumChange]
   );
 
   useEffect(() => {
-    setSelectedUrn(null);
-    setAuthorityOin('');
-    setOinMode(false);
-    load('', 1);
+    // Note: selectedUrn is intentionally left alone here. It is owned by
+    // DsoExplorer now, and this effect re-runs every time this tab is
+    // remounted (including on a tab switch back to Activities) — clearing
+    // it here would defeat the point of lifting it. authorityOin and level
+    // are spared the same way now: both are lifted into DsoExplorer, and
+    // the user asked for their authority choice (and the level that
+    // produced its option list) to survive a round trip through the
+    // Quality Profile tab exactly like the selection does. Changing Level
+    // or Authority still clears both (see handleLevelChange /
+    // handleAuthorityChange) — this is only about the tab remounting with
+    // no user action in between.
+    if (authorityOin) {
+      // An authority was already selected when this tab remounted —
+      // restore ITS list (and the "Valid on" field that produced it)
+      // instead of falling back to the unfiltered date-based list, which
+      // would silently drop the filter the user had left in place.
+      setDatum(fromDsoDate(selectedDatum));
+      loadByOin(authorityOin, selectedDatum);
+    } else {
+      setOinMode(false);
+      load('', 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
   const handleLoad = () => {
     setPage(1);
-    setSelectedUrn(null);
+    onSelectUrn(null);
     if (authorityOin) {
       loadByOin(authorityOin, toDsoDate(datum));
     } else {
@@ -1184,9 +1434,9 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 
   const handleLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newLevel = e.target.value as AuthorityLevel;
-    setLevel(newLevel);
-    setAuthorityOin('');
-    setSelectedUrn(null);
+    onLevelChange(newLevel);
+    onAuthorityOinChange('');
+    onSelectUrn(null);
     setNameFilter('');
     setOinMode(false);
     setResult(null);
@@ -1194,8 +1444,8 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 
   const handleAuthorityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const oin = e.target.value;
-    setAuthorityOin(oin);
-    setSelectedUrn(null);
+    onAuthorityOinChange(oin);
+    onSelectUrn(null);
     setNameFilter('');
     if (!oin) {
       setOinMode(false);
@@ -1213,7 +1463,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
 
   const goPage = (p: number) => {
     setPage(p);
-    setSelectedUrn(null);
+    onSelectUrn(null);
     load(datum, p);
   };
 
@@ -1298,7 +1548,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
                 value={nameFilter}
                 onChange={(e) => {
                   setNameFilter(e.target.value);
-                  setSelectedUrn(null);
+                  onSelectUrn(null);
                 }}
                 placeholder={`Filter ${selectedAuthority ? shortName(selectedAuthority) : 'location'} activities by name…`}
                 className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -1320,14 +1570,14 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
             value={urnInput}
             onChange={(e) => setUrnInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && urnInput.trim()) setSelectedUrn(urnInput.trim());
+              if (e.key === 'Enter' && urnInput.trim()) onSelectUrn(urnInput.trim());
             }}
             placeholder="Paste URN to inspect directly…"
             className="flex-1 px-2.5 py-1.5 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
           <button
             onClick={() => {
-              if (urnInput.trim()) setSelectedUrn(urnInput.trim());
+              if (urnInput.trim()) onSelectUrn(urnInput.trim());
             }}
             disabled={!urnInput.trim()}
             className="px-3 py-1.5 bg-slate-700 text-white text-xs rounded-lg hover:bg-slate-800 disabled:opacity-40 transition-colors"
@@ -1368,7 +1618,7 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
                 key={a.urn}
                 act={a}
                 selected={selectedUrn === a.urn}
-                onClick={() => setSelectedUrn(a.urn === selectedUrn ? null : a.urn)}
+                onClick={() => onSelectUrn(a.urn === selectedUrn ? null : a.urn)}
               />
             ))}
         </div>
@@ -1377,10 +1627,13 @@ const ActiviteitenTab: React.FC<{ env: DsoEnv }> = ({ env }) => {
         {selectedUrn && (
           <ActivityDetailPanel
             urn={selectedUrn}
-            datum={activeDatum}
+            datum={selectedDatum}
             env={env}
-            onClose={() => setSelectedUrn(null)}
-            onNavigate={(urn) => setSelectedUrn(urn)}
+            authorityOin={authorityOin}
+            onClose={() => onSelectUrn(null)}
+            onNavigate={(urn) => onSelectUrn(urn)}
+            onLoaded={onSelectedNameChange}
+            onOpenQualityProfile={onOpenQualityProfile}
           />
         )}
       </div>
@@ -1429,6 +1682,23 @@ interface DsoExplorerProps {
 const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
   const [tab, setTab] = useState<Tab>('begrippen');
 
+  // Selection shared across tabs — see ActiviteitenTab's props. Lifted here so
+  // the Quality Profile tab can read the activity selected in Activities
+  // without either tab needing to know about the other.
+  const [selectedUrn, setSelectedUrn] = useState<string | null>(null);
+  const [selectedDatum, setSelectedDatum] = useState<string | undefined>(undefined);
+  const [authorityOin, setAuthorityOin] = useState('');
+  const [selectedName, setSelectedName] = useState<string | undefined>(undefined);
+  // Also lifted so it survives ActiviteitenTab remounting on a tab switch —
+  // see the comment on ActiviteitenTab's props for why it must track
+  // authorityOin rather than reset independently of it.
+  const [level, setLevel] = useState<AuthorityLevel>('gemeente');
+
+  const handleSelectUrn = useCallback((urn: string | null) => {
+    setSelectedUrn(urn);
+    if (urn === null) setSelectedName(undefined);
+  }, []);
+
   const tabCls = (t: Tab) =>
     `flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
       tab === t
@@ -1469,13 +1739,46 @@ const DsoExplorer: React.FC<DsoExplorerProps> = ({ env = 'pre' }) => {
           <TreePine size={14} />
           Activities
         </button>
+        <button className={tabCls('quality')} onClick={() => setTab('quality')}>
+          <Gauge size={14} />
+          Quality Profile
+          {selectedUrn && tab !== 'quality' && (
+            <span className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded px-1.5 py-px max-w-[220px] truncate">
+              {selectedName ?? selectedUrn}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
         {tab === 'begrippen' && <BegrippenTab env={env} />}
         {tab === 'werkzaamheden' && <WerkzaamhedenTab env={env} />}
-        {tab === 'activiteiten' && <ActiviteitenTab env={env} />}
+        {tab === 'activiteiten' && (
+          <ActiviteitenTab
+            env={env}
+            selectedUrn={selectedUrn}
+            onSelectUrn={handleSelectUrn}
+            selectedDatum={selectedDatum}
+            onSelectedDatumChange={setSelectedDatum}
+            authorityOin={authorityOin}
+            onAuthorityOinChange={setAuthorityOin}
+            level={level}
+            onLevelChange={setLevel}
+            onSelectedNameChange={setSelectedName}
+            onOpenQualityProfile={() => setTab('quality')}
+          />
+        )}
+        {tab === 'quality' && (
+          <QualityProfileTab
+            selectedUrn={selectedUrn}
+            selectedDatum={selectedDatum}
+            authorityOin={authorityOin}
+            env={env}
+            onGoToActivities={() => setTab('activiteiten')}
+            onSelectUrn={handleSelectUrn}
+          />
+        )}
       </div>
     </div>
   );

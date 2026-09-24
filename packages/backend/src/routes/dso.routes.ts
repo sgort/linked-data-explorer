@@ -2,6 +2,9 @@
 
 import { Router, Request, Response } from 'express';
 import * as dsoService from '../services/dso.service';
+import * as ozonService from '../services/ozon.service';
+import { buildDossier } from '../services/dossier.service';
+import { profileDossier } from '../services/quality.service';
 import { logger } from '../utils/logger';
 import { sendProblem } from '../utils/problem';
 import packageJson from '../../package.json';
@@ -65,6 +68,46 @@ router.post('/activiteiten/zoek', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /v1/dso/activiteiten/:urn/dossier
+ * The full chain: legal source, annotation, decision criteria, submission
+ * requirements, plus the quality profile.
+ *
+ * Declared before `/activiteiten/:urn` by convention, grouping the two
+ * `/activiteiten/:urn*` routes together — not because ordering is
+ * load-bearing here. A 2-segment route (`/activiteiten/:urn`) cannot match
+ * this route's 3-segment path (`/activiteiten/:urn/dossier`) regardless of
+ * declaration order, so the routes would resolve identically either way.
+ */
+router.get('/activiteiten/:urn/dossier', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const datum = typeof req.query['datum'] === 'string' ? req.query['datum'] : undefined;
+    const authority =
+      typeof req.query['authority'] === 'string' ? req.query['authority'] : undefined;
+
+    const data = await buildDossier({
+      urn: req.params['urn'] as string,
+      env: getEnv(req),
+      datum,
+      authority,
+    });
+
+    res
+      .status(200)
+      .json({ success: true, data: { ...data, qualityProfile: profileDossier(data) } });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    logger.error('[DSO Routes] GET /activiteiten/:urn/dossier failed', { error: msg });
+    const status = msg.includes('404') ? 404 : 502;
+    sendProblem(res, req, {
+      status,
+      title: status === 404 ? 'Not found' : 'Upstream request failed',
+      detail: msg,
+    });
+  }
+});
+
+/**
  * GET /v1/dso/activiteiten/:urn
  * Fetch a single activity by URN from the RTR.
  *
@@ -75,7 +118,9 @@ router.get('/activiteiten/:urn', async (req: Request, res: Response) => {
   res.set('API-Version', packageJson.version);
 
   try {
-    const urn = decodeURIComponent(req.params.urn);
+    // Express already decodes path params — a second decodeURIComponent here
+    // would corrupt a URN containing a literal `%` (e.g. `%25` -> `%`).
+    const urn = req.params.urn;
     const datum = req.query.datum as string | undefined;
 
     const data = await dsoService.getActiviteit(urn, datum, getEnv(req));
@@ -225,7 +270,9 @@ router.post('/werkzaamheden/suggereer', async (req: Request, res: Response) => {
 router.get('/werkzaamheden/:urn', async (req: Request, res: Response) => {
   res.set('API-Version', packageJson.version);
   try {
-    const urn = decodeURIComponent(req.params.urn);
+    // Express already decodes path params — see the identical comment on
+    // GET /activiteiten/:urn above.
+    const urn = req.params.urn;
     const data = await dsoService.getWerkzaamheidDetail(urn, getEnv(req));
     res.status(200).json({ success: true, data });
   } catch (error) {
@@ -340,6 +387,87 @@ router.get('/toepasbare-regels/:id/form-scaffold', async (req: Request, res: Res
     const msg = error instanceof Error ? error.message : 'Form scaffold extraction failed';
     const status = msg.includes('404') ? 404 : 502;
     logger.error('[DSO Routes] GET /toepasbare-regels/:id/form-scaffold failed', { error: msg });
+    sendProblem(res, req, {
+      status,
+      title: status === 404 ? 'Not found' : 'Upstream request failed',
+      detail: msg,
+    });
+  }
+});
+
+/**
+ * POST /v1/dso/regelingen/zoek
+ * Find an authority's regelingen. Body: { bevoegdGezag?: string[], typeBevoegdGezag?: string[] }
+ */
+router.post('/regelingen/zoek', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const { bevoegdGezag, typeBevoegdGezag, size } = req.body as {
+      bevoegdGezag?: string[];
+      typeBevoegdGezag?: string[];
+      size?: number;
+    };
+    if (!bevoegdGezag?.length && !typeBevoegdGezag?.length) {
+      sendProblem(res, req, {
+        status: 400,
+        title: 'Invalid request',
+        detail: 'bevoegdGezag or typeBevoegdGezag is required',
+      });
+      return;
+    }
+    const data = await ozonService.zoekRegelingen({ bevoegdGezag, typeBevoegdGezag }, getEnv(req), {
+      size,
+    });
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    logger.error('[DSO Routes] POST /regelingen/zoek failed', { error: msg });
+    const status = msg.includes('404') ? 404 : 502;
+    sendProblem(res, req, {
+      status,
+      title: status === 404 ? 'Not found' : 'Upstream request failed',
+      detail: msg,
+    });
+  }
+});
+
+/**
+ * GET /v1/dso/regelingen/:id/annotaties
+ * The regeltekst annotation graph for one regeling.
+ */
+router.get('/regelingen/:id/annotaties', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const geldigOp = typeof req.query['geldigOp'] === 'string' ? req.query['geldigOp'] : undefined;
+    const data = await ozonService.getRegeltekstAnnotaties(req.params.id, getEnv(req), {
+      geldigOp,
+    });
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    logger.error('[DSO Routes] GET /regelingen/:id/annotaties failed', { error: msg });
+    const status = msg.includes('404') ? 404 : 502;
+    sendProblem(res, req, {
+      status,
+      title: status === 404 ? 'Not found' : 'Upstream request failed',
+      detail: msg,
+    });
+  }
+});
+
+/**
+ * GET /v1/dso/regelingen/:id/documentstructuur/:wId
+ * One document component (an article or lid) with its STOP/IMOP content.
+ */
+router.get('/regelingen/:id/documentstructuur/:wId', async (req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  try {
+    const data = await ozonService.getDocumentComponent(req.params.id, req.params.wId, getEnv(req));
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'DSO request failed';
+    logger.error('[DSO Routes] GET /regelingen/:id/documentstructuur/:wId failed', { error: msg });
+    const status = msg.includes('404') ? 404 : 502;
     sendProblem(res, req, {
       status,
       title: status === 404 ? 'Not found' : 'Upstream request failed',

@@ -17,12 +17,14 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 5, // v5: formRefBinding=deployment (tenant-safe form resolution)
-  example_tree_felling: 8, // v8: formRefBinding=deployment (tenant-safe form resolution)
-  example_awb_zorgtoeslag: 4, // v4: formRefBinding=deployment (tenant-safe form resolution)
-  example_zorgtoeslag_provisional: 6, // v6: formRefBinding=deployment (tenant-safe form resolution)
+  example_awb_process: 6, // v6: decisionRefTenantId=${null} (shared untenanted DMNs)
+  example_tree_felling: 9, // v9: decisionRefTenantId=${null} (shared untenanted DMNs)
+  example_awb_zorgtoeslag: 5, // v5: decisionRefTenantId=${null} (shared untenanted DMNs)
+  example_zorgtoeslag_provisional: 7, // v7: decisionRefTenantId=${null} (shared untenanted DMNs)
   example_zorgtoeslag_final: 6, // v6: formRefBinding=deployment (tenant-safe form resolution)
   example_hr_capacity_nl: 2, // v2: formRefBinding=deployment (tenant-safe form resolution)
+  example_thuisbatterij_aanvraag: 2, // v2: swimlanes + Dutch names
+  example_thuisbatterij_decision: 2, // v2: swimlanes + Dutch names
 
   // Camunda Forms
   example_kapvergunning_start: 4, // v4: force re-seed for ACC users with stale localStorage from v1.6.0 testing
@@ -32,6 +34,10 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_zorgtoeslag_provisional_start: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_provisional_review: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_final_review: 4, // v4: force re-seed (see above)
+  example_thuisbatterij_start: 1,
+  example_thuisbatterij_review: 1,
+  example_thuisbatterij_notify_applicant: 1,
+  example_thuisbatterij_missing_info: 1,
 
   // HR-capacity Dutch forms (multilingualism release)
   example_hr_capacity_intake_nl: 1,

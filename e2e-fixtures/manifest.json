@@ -1,17 +1,61 @@
 {
+  "sharedDecisions": {
+    "note": "Decisions are deployed ONCE and WITHOUT an Organization. Every businessRuleTask in this bundle carries camunda:decisionRefTenantId=\"${null}\", so a tenant-scoped process resolves the SHARED, untenanted decision. Setting the Organization field when importing these — the natural thing to do, since the BPMN beside them is tenant-scoped — deploys them where the engine will not look, and every process fails at its first business rule task with \"no decision definition deployed with key 'X' and tenant-id 'null'\".",
+    "files": {
+      "flevoland/awb-completeness-check.dmn": [
+        "AwbCompletenessCheck"
+      ],
+      "flevoland/archives-act-retention.dmn": [
+        "ArchivesActRetention"
+      ],
+      "flevoland/tree-felling-decision.dmn": [
+        "TreeFellingDecision"
+      ],
+      "flevoland/replacement-tree-decision.dmn": [
+        "ReplacementTreeDecision"
+      ],
+      "flevoland/RechtEnHoogteSubsidieThuisbatterij.dmn": [
+        "RechtOpSubsidieThuisbatterij",
+        "BehaalbareHoogteSubsidie",
+        "BerekenBasisHoogteSubsidie",
+        "BerekenBeschikbaarSubsidiePlafond",
+        "SubsidieConstantenThuisbatterij",
+        "jaarGebondenBudget"
+      ]
+    },
+    "external": {
+      "zorgtoeslag_resultaat": "Ships with the zorgtoeslag rules set, not with this bundle: it lives in a 23-decision file (def_zorgtoeslag_temporal_demo) with its own lifecycle. Declared here so a stack rebuilt from this manifest knows it is required, and where it does NOT come from."
+    },
+    "source": "Downloaded from the untenanted decision definitions deployed on operaton.open-regels.nl, the same engine the ACC backend uses — the convention the Thuisbatterij bundle set. Verified 22 September 2026: all seven keys present there, every one with tenantId null."
+  },
   "flevoland": [
     {
       "processDefinitionKey": "AwbShellProcess",
       "bpmn": "AwbShellProcess.bpmn",
-      "forms": ["kapvergunning-start.form", "awb-notify-applicant.form"],
-      "documents": ["example_treefelling_beschikking.document"],
+      "forms": [
+        "kapvergunning-start.form",
+        "awb-notify-applicant.form"
+      ],
+      "documents": [
+        "example_treefelling_beschikking.document"
+      ],
+      "decisions": [
+        "ArchivesActRetention",
+        "AwbCompletenessCheck"
+      ],
       "source": "packages/frontend/public/examples/flevoland/AwbShellProcess.bpmn (seeded, unchanged)",
       "subProcesses": [
         {
           "processDefinitionKey": "TreeFellingPermitSubProcessE2E",
           "bpmn": "TreeFellingPermitSubProcessE2E.bpmn",
-          "forms": ["tree-felling-review.form"],
+          "forms": [
+            "tree-felling-review.form"
+          ],
           "documents": [],
+          "decisions": [
+            "ReplacementTreeDecision",
+            "TreeFellingDecision"
+          ],
           "source": "based on packages/frontend/public/examples/flevoland/TreeFellingPermitSubProcess.bpmn, renamed to TreeFellingPermitSubProcessE2E (id + filename) to give this fixture its own Operaton key, distinct from the seeded example — LDE's own catalog otherwise conflates the two by shared process id, silently redeploying stale content; called via AwbShellProcess's callActivity calledElement=\"TreeFellingPermitSubProcessE2E\" — deployed together with the shell in one LDE Modeler action, not separately"
         }
       ]
@@ -33,7 +77,11 @@
         "rip-psu-execution.form",
         "rip-overleg-vo.form"
       ],
-      "documents": ["rip-intake-report.document", "rip-pdp.document", "rip-psu-report.document"],
+      "documents": [
+        "rip-intake-report.document",
+        "rip-pdp.document",
+        "rip-psu-report.document"
+      ],
       "source": "authored in examples/organizations/flevoland/rip-phase-21/ (BPMN + 12 forms + 3 documents); process renamed RipPhase1Process -> RipR21Process, directory renamed rip-phase1-swimlanes -> rip-phase-21 once the competing rip-phase1/ draft was deleted"
     },
     {
@@ -58,21 +106,67 @@
         "rip-hoeveelheidsbepaling.document"
       ],
       "source": "authored in examples/organizations/flevoland/rip-phase-22/ from rip-phases-left/R2 Planvoorbereiding/R2_2 - VO.pdf (rev. 21-11-2024)"
+    },
+    {
+      "processDefinitionKey": "ThuisbatterijSubsidieAanvraagProcess",
+      "bpmn": "ThuisbatterijSubsidieAanvraagProcess.bpmn",
+      "forms": [
+        "recht-en-hoogte-subsidie-thuisbatterij.form",
+        "awb-notify-applicant-thuisbatterij.form",
+        "thuisbatterij-aanvullende-gegevens.form"
+      ],
+      "documents": [
+        "thuisbatterij_subsidie_beschikking.document"
+      ],
+      "decisions": [
+        "ArchivesActRetention",
+        "AwbCompletenessCheck"
+      ],
+      "source": "taken from the flevoland-tenant bundle deployed on operaton.open-regels.nl (deployment 8803912d, 2026-09-21), not from examples/organizations/flevoland/thuisbatterij/ — that folder's -main/-subprocess pair and its two forms have drifted behind what is actually deployed. Every businessRuleTask carries camunda:decisionRefTenantId=\"${null}\" so the tenant-scoped process resolves the SHARED, untenanted DMNs; the deployed copy pinned decisionRefTenantId=\"46\" instead, which tied it to one organisation's tenant. RechtEnHoogteSubsidieThuisbatterij.dmn holds all six decisions and MUST be deployed WITHOUT a tenant-id.",
+      "subProcesses": [
+        {
+          "processDefinitionKey": "ThuisbatterijSubsidieDecisionSubProcessE2E",
+          "bpmn": "ThuisbatterijSubsidieDecisionSubProcessE2E.bpmn",
+          "forms": [
+            "thuisbatterij-subsidie-review.form"
+          ],
+          "documents": [],
+          "decisions": [
+            "BehaalbareHoogteSubsidie",
+            "RechtOpSubsidieThuisbatterij"
+          ],
+          "source": "based on the deployed ThuisbatterijSubsidieDecisionSubProcess.bpmn, renamed to ThuisbatterijSubsidieDecisionSubProcessE2E (id + filename) to give this fixture its own Operaton key, distinct from the deployed example — same convention as TreeFellingPermitSubProcessE2E; called via ThuisbatterijSubsidieAanvraagProcess's callActivity, deployed together with it in one LDE Modeler action."
+        }
+      ]
     }
   ],
   "toeslagen": [
     {
       "processDefinitionKey": "AwbZorgtoeslagProcess",
       "bpmn": "AwbZorgtoeslagProcess.bpmn",
-      "forms": ["zorgtoeslag-provisional-start.form", "zorgtoeslag-notify-applicant.form"],
-      "documents": ["example_zorgtoeslag_provisional_beschikking.document"],
+      "forms": [
+        "zorgtoeslag-provisional-start.form",
+        "zorgtoeslag-notify-applicant.form"
+      ],
+      "documents": [
+        "example_zorgtoeslag_provisional_beschikking.document"
+      ],
+      "decisions": [
+        "ArchivesActRetention",
+        "AwbCompletenessCheck"
+      ],
       "source": "packages/frontend/public/examples/toeslagen/AwbZorgtoeslagProcess.bpmn (seeded, unchanged)",
       "subProcesses": [
         {
           "processDefinitionKey": "ZorgtoeslagProvisionalSubProcessE2E",
           "bpmn": "ZorgtoeslagProvisionalSubProcessE2E.bpmn",
-          "forms": ["zorgtoeslag-provisional-review.form"],
+          "forms": [
+            "zorgtoeslag-provisional-review.form"
+          ],
           "documents": [],
+          "decisions": [
+            "zorgtoeslag_resultaat"
+          ],
           "source": "based on packages/frontend/public/examples/toeslagen/ZorgtoeslagProvisionalSubProcess.bpmn, renamed to ZorgtoeslagProvisionalSubProcessE2E (id + filename) to give this fixture its own Operaton key, distinct from the seeded example — LDE's own catalog otherwise conflates the two by shared process id, silently redeploying stale content; called via AwbZorgtoeslagProcess's callActivity calledElement=\"ZorgtoeslagProvisionalSubProcessE2E\" — deployed together with the shell in one LDE Modeler action, not separately"
         }
       ]

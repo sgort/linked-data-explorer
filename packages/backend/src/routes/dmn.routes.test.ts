@@ -654,6 +654,7 @@ describe('#142 POST /api/dmns/process/deploy target', () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INVALID_INPUT');
     expect(mockDeployProcess).not.toHaveBeenCalled();
+    expectToMatchOperation(res, 'post', '/dmns/process/deploy');
   });
 
   test('the configured operatonUrl is accepted, and credentials in the body are not passed on', async () => {
@@ -663,12 +664,20 @@ describe('#142 POST /api/dmns/process/deploy target', () => {
       .send({
         ...body,
         operatonUrl: config.operaton.baseUrl,
-        operatonUsername: 'u',
-        operatonPassword: 'p',
+        operatonUsername: 'sentinel-username',
+        operatonPassword: 'sentinel-password',
       });
     expect(res.status).toBe(200);
-    expect(mockDeployProcess.mock.calls[0]).not.toContain('u');
-    expect(mockDeployProcess.mock.calls[0]).not.toContain('p');
+    // A deep search of the whole serialized call, not just array membership
+    // (#167): membership alone would miss a credential nested inside one of
+    // the call's object/array arguments rather than passed as a bare string.
+    // Distinctive sentinel values (rather than the previous 'u'/'p') so the
+    // check cannot pass by accident on a substring that turns up anyway --
+    // JSON.stringify renders the omitted boardOwner as the literal `null`,
+    // which itself contains "u".
+    const serializedCall = JSON.stringify(mockDeployProcess.mock.calls[0]);
+    expect(serializedCall).not.toContain('sentinel-username');
+    expect(serializedCall).not.toContain('sentinel-password');
   });
 
   test('the bundle record carries the configured Operaton URL', async () => {
@@ -677,6 +686,48 @@ describe('#142 POST /api/dmns/process/deploy target', () => {
     expect(mockRecordDeployedBundle).toHaveBeenCalledWith(
       expect.objectContaining({ operatonUrl: config.operaton.baseUrl })
     );
+  });
+});
+
+describe('#165 GET /dmns/process/deploy-target', () => {
+  let originalBaseUrl: string;
+
+  beforeEach(() => {
+    originalBaseUrl = config.operaton.baseUrl;
+  });
+
+  afterEach(() => {
+    config.operaton.baseUrl = originalBaseUrl;
+  });
+
+  // versionMiddleware (app-wide in index.ts) so expectToMatchOperation can
+  // check the API-Version header on the 200.
+  function makeVersionedApp() {
+    const app = express();
+    app.use(versionMiddleware);
+    app.use('/v1/dmns', dmnRoutes);
+    return app;
+  }
+
+  test('answers the configured Operaton base URL', async () => {
+    config.operaton.baseUrl = 'https://operaton.example/engine-rest';
+    const res = await request(makeVersionedApp()).get('/v1/dmns/process/deploy-target');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      success: true,
+      data: { operatonUrl: 'https://operaton.example/engine-rest' },
+    });
+    expectToMatchOperation(res, 'get', '/dmns/process/deploy-target');
+  });
+
+  test('answers 503 when no Operaton is configured', async () => {
+    config.operaton.baseUrl = '';
+    const res = await request(makeVersionedApp()).get('/v1/dmns/process/deploy-target');
+
+    expect(res.status).toBe(503);
+    expect(res.body.code).toBe('OPERATON_NOT_CONFIGURED');
+    expectToMatchOperation(res, 'get', '/dmns/process/deploy-target');
   });
 });
 

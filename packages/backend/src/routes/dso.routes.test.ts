@@ -21,8 +21,26 @@ jest.mock('../services/dso.service', () => ({
   extractDmnFromSttr: jest.fn(),
   extractFormScaffoldFromSttr: jest.fn(),
 }));
+jest.mock('../services/ozon.service', () => ({
+  __esModule: true,
+  zoekRegelingen: jest.fn(),
+  getRegeltekstAnnotaties: jest.fn(),
+  getDocumentComponent: jest.fn(),
+  toOzonPathId: (s: string) => s.replace(/\//g, '_'),
+}));
+jest.mock('../services/dossier.service', () => ({
+  __esModule: true,
+  buildDossier: jest.fn(),
+}));
+jest.mock('../services/quality.service', () => ({
+  __esModule: true,
+  profileDossier: jest.fn(),
+}));
 
 import * as dsoService from '../services/dso.service';
+import * as ozonService from '../services/ozon.service';
+import * as dossierService from '../services/dossier.service';
+import * as qualityService from '../services/quality.service';
 import dsoRoutes from './dso.routes';
 import packageJson from '../../package.json';
 import { versionMiddleware } from '../middleware/version.middleware';
@@ -30,6 +48,9 @@ import { errorHandler } from '../middleware/error.middleware';
 import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const svc = dsoService as unknown as Record<string, jest.Mock>;
+const ozon = ozonService as unknown as Record<string, jest.Mock>;
+const dossier = dossierService as unknown as Record<string, jest.Mock>;
+const quality = qualityService as unknown as Record<string, jest.Mock>;
 
 function makeApp() {
   const app = express();
@@ -38,9 +59,25 @@ function makeApp() {
   return app;
 }
 
+// Item 17: was two identical local copies, one per OpenAPI-conformance
+// describe block below (activiteiten/begrippen/werkzaamheden, and
+// regelingen). No shared state between them, so nothing stopped them
+// drifting apart; a single file-scope helper used by both removes that risk.
+function makeDocumentedApp() {
+  const app = express();
+  app.use(express.json());
+  app.use(versionMiddleware); // app-wide in index.ts
+  app.use('/v1/dso', dsoRoutes);
+  app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
+  return app;
+}
+
 beforeEach(() => {
   for (const fn of Object.values(svc)) {
     if (typeof fn === 'function') fn.mockReset();
+  }
+  for (const fn of Object.values(ozon)) {
+    if (typeof fn === 'function' && 'mockReset' in fn) fn.mockReset();
   }
 });
 
@@ -186,6 +223,21 @@ describe('GET /v1/dso/activiteiten/:urn', () => {
     expect(svc.getActiviteit).toHaveBeenCalledWith('urn-a', '01-01-2026', 'pre');
   });
 
+  // Express already decodes path params once. A second decodeURIComponent
+  // in the route corrupts a URN carrying a literal `%` — `%25` (a
+  // percent-encoded `%`) becomes a bare `%` on the first (correct) decode,
+  // then `%` alone throws / silently mangles further chars on a second pass.
+  // This URN's raw form contains a literal `%25` substring, which must
+  // survive the round trip unchanged.
+  test('does not double-decode a URN containing a percent-encoded-looking sequence', async () => {
+    svc.getActiviteit.mockResolvedValue({});
+    const rawUrn = 'nl.imow-gm0995.activiteit.100%25Compleet';
+
+    await request(makeApp()).get(`/v1/dso/activiteiten/${encodeURIComponent(rawUrn)}`);
+
+    expect(svc.getActiviteit).toHaveBeenCalledWith(rawUrn, undefined, 'pre');
+  });
+
   test('translates an upstream 404 into a 404', async () => {
     svc.getActiviteit.mockRejectedValue(new Error('DSO responded 404 Not Found'));
 
@@ -198,6 +250,79 @@ describe('GET /v1/dso/activiteiten/:urn', () => {
     svc.getActiviteit.mockRejectedValue(new Error('DSO responded 500'));
 
     const res = await request(makeApp()).get('/v1/dso/activiteiten/urn-a');
+
+    expect(res.status).toBe(502);
+  });
+});
+
+describe('GET /v1/dso/activiteiten/:urn/dossier', () => {
+  const URN = 'nl.imow-gm0995.activiteit.HoutopstandVellen';
+
+  beforeEach(() => {
+    dossier.buildDossier.mockReset();
+    quality.profileDossier.mockReset();
+    dossier.buildDossier.mockResolvedValue({ urn: URN, provenance: { env: 'prod' } });
+    quality.profileDossier.mockReturnValue({ urn: URN, activityIdentity: 'semantic' });
+  });
+
+  test('returns the dossier with its quality profile attached', async () => {
+    const res = await request(makeApp())
+      .get(`/v1/dso/activiteiten/${URN}/dossier`)
+      .set('X-Dso-Env', 'prod');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.urn).toBe(URN);
+    expect(res.body.data.qualityProfile.activityIdentity).toBe('semantic');
+    // Proves profileDossier was actually invoked with the dossier buildDossier
+    // produced, not merely that some object carrying a qualityProfile key came
+    // back — a route that hand-built `{ qualityProfile: ... }` without calling
+    // profileDossier would fail this.
+    expect(quality.profileDossier).toHaveBeenCalledWith({ urn: URN, provenance: { env: 'prod' } });
+  });
+
+  test('passes env, datum and authority through', async () => {
+    await request(makeApp())
+      .get(`/v1/dso/activiteiten/${URN}/dossier?datum=22-09-2026&authority=gm0995`)
+      .set('X-Dso-Env', 'prod');
+
+    expect(dossier.buildDossier).toHaveBeenCalledWith({
+      urn: URN,
+      env: 'prod',
+      datum: '22-09-2026',
+      authority: 'gm0995',
+    });
+  });
+
+  test('does not collide with the activity detail route', async () => {
+    svc.getActiviteit.mockResolvedValue({ urn: URN });
+
+    await request(makeApp()).get(`/v1/dso/activiteiten/${URN}/dossier`);
+
+    expect(svc.getActiviteit).not.toHaveBeenCalled();
+    expect(dossier.buildDossier).toHaveBeenCalled();
+  });
+
+  // buildDossier no longer throws to reject a national activity for lacking
+  // an authority — that guard was removed. Nothing in the dossier chain maps
+  // to 400 any more, including an error message that happens to mention
+  // "authority" (e.g. a genuinely failed upstream call), so this now answers
+  // 502 like any other upstream failure.
+  test('an error mentioning "authority" no longer answers 400', async () => {
+    dossier.buildDossier.mockRejectedValue(
+      new Error('Ozon responded 503: authority lookup unavailable')
+    );
+
+    const res = await request(makeApp()).get(
+      '/v1/dso/activiteiten/nl.imow-mnre1034.activiteit.X/dossier'
+    );
+
+    expect(res.status).toBe(502);
+  });
+
+  test('an upstream failure answers 502', async () => {
+    dossier.buildDossier.mockRejectedValue(new Error('DSO responded 500: boom'));
+
+    const res = await request(makeApp()).get(`/v1/dso/activiteiten/${URN}/dossier`);
 
     expect(res.status).toBe(502);
   });
@@ -348,6 +473,15 @@ describe('werkzaamheden search', () => {
 
     expect(res.status).toBe(200);
     expect(svc.getWerkzaamheidDetail).toHaveBeenCalledWith('urn:nl:imow:werkzaamheid:1', 'pre');
+  });
+
+  test('GET /werkzaamheden/:urn does not double-decode a URN containing a percent-encoded-looking sequence', async () => {
+    svc.getWerkzaamheidDetail.mockResolvedValue({});
+    const rawUrn = 'nl.imow-gm0995.werkzaamheid.100%25Compleet';
+
+    await request(makeApp()).get(`/v1/dso/werkzaamheden/${encodeURIComponent(rawUrn)}`);
+
+    expect(svc.getWerkzaamheidDetail).toHaveBeenCalledWith(rawUrn, 'pre');
   });
 
   test('GET /werkzaamheden/:urn translates an upstream 404', async () => {
@@ -537,15 +671,6 @@ describe('GET /v1/dso/toepasbare-regels/:id/form-scaffold', () => {
 });
 
 describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match their OpenAPI description', () => {
-  function makeDocumentedApp() {
-    const app = express();
-    app.use(express.json());
-    app.use(versionMiddleware); // app-wide in index.ts
-    app.use('/v1/dso', dsoRoutes);
-    app.use(errorHandler); // app-wide in index.ts; answers malformed JSON bodies
-    return app;
-  }
-
   // Realistic HAL-shaped fixtures (embedded arrays, _links, paging), not the
   // bare-bones placeholders used by the handler tests above, so the loosely
   // typed `data` object is actually exercised with more than one key and more
@@ -893,6 +1018,79 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
     expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}');
   });
 
+  // A realistic Dossier (Task 6) and QualityProfile (Task 7) shape, not a
+  // bare-bones placeholder, so the documented `data` schema is exercised with
+  // nested objects and arrays, not just a single flat key.
+  const DOSSIER = {
+    urn: 'nl.imow-gm0995.activiteit.HoutopstandVellen',
+    omschrijving: 'Kappen van bomen',
+    bestuursorgaan: { code: 'gm0995', oin: '00000001005024249000' },
+    legalSource: {
+      available: true,
+      regelingIdentificatie: 'akn/nl/act/gm0995/2020/omgevingsplan',
+      regelingTitel: 'Omgevingsplan gemeente Lelystad',
+      juridischeRegels: [],
+    },
+    annotation: {
+      identificatie: 'act-1',
+      naam: 'Kappen van bomen',
+      groep: null,
+      symboolcode: null,
+      bovenliggendeActiviteitRef: null,
+    },
+    decisionCriteria: null,
+    submissionRequirements: null,
+    provenance: {
+      env: 'pre',
+      datum: null,
+      regelingIdentificatie: 'akn/nl/act/gm0995/2020/omgevingsplan',
+      fetchedAt: '2026-09-22T00:00:00.000Z',
+      failures: [],
+    },
+  };
+
+  const QUALITY_PROFILE = {
+    urn: DOSSIER.urn,
+    activityIdentity: 'semantic',
+    legalTraceability: { rules: 0, withWId: 0, withArticleText: 0 },
+    crossLayerConsistency: { sharedObjects: [] },
+    ruleSets: { conclusie: null, indieningsvereisten: null },
+  };
+
+  test('GET /activiteiten/:urn/dossier 200, as documented', async () => {
+    dossier.buildDossier.mockResolvedValue(DOSSIER);
+    quality.profileDossier.mockReturnValue(QUALITY_PROFILE);
+
+    const res = await request(makeDocumentedApp()).get(
+      `/v1/dso/activiteiten/${encodeURIComponent(DOSSIER.urn)}/dossier`
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}/dossier');
+  });
+
+  test('GET /activiteiten/:urn/dossier 404, as documented', async () => {
+    dossier.buildDossier.mockRejectedValue(new Error('DSO responded 404 Not Found'));
+
+    const res = await request(makeDocumentedApp()).get(
+      `/v1/dso/activiteiten/${encodeURIComponent(DOSSIER.urn)}/dossier`
+    );
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}/dossier');
+  });
+
+  test('GET /activiteiten/:urn/dossier 502, as documented', async () => {
+    dossier.buildDossier.mockRejectedValue(new Error('DSO responded 500: boom'));
+
+    const res = await request(makeDocumentedApp()).get(
+      `/v1/dso/activiteiten/${encodeURIComponent(DOSSIER.urn)}/dossier`
+    );
+
+    expect(res.status).toBe(502);
+    expectToMatchOperation(res, 'get', '/dso/activiteiten/{urn}/dossier');
+  });
+
   test('GET /begrippen 200, as documented', async () => {
     svc.getBegrippen.mockResolvedValue(BEGRIPPEN_LIST);
 
@@ -1163,5 +1361,195 @@ describe('/v1/dso activiteiten, begrippen and werkzaamheden operations match the
 
     expect(res.status).toBe(502);
     expectToMatchOperation(res, 'get', '/dso/toepasbare-regels/{id}/form-scaffold');
+  });
+});
+
+describe('POST /v1/dso/regelingen/zoek', () => {
+  test('passes the body and env through and returns the envelope', async () => {
+    ozon.zoekRegelingen.mockResolvedValue({ _embedded: { regelingen: [] } });
+
+    const res = await request(makeApp())
+      .post('/v1/dso/regelingen/zoek')
+      .set('X-Dso-Env', 'prod')
+      .send({ bevoegdGezag: ['gm0995'] });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, data: { _embedded: { regelingen: [] } } });
+    expect(ozon.zoekRegelingen).toHaveBeenCalledWith(
+      { bevoegdGezag: ['gm0995'] },
+      'prod',
+      expect.anything()
+    );
+  });
+
+  test('400 when bevoegdGezag and typeBevoegdGezag are both absent', async () => {
+    const res = await request(makeApp()).post('/v1/dso/regelingen/zoek').send({});
+
+    expect(res.status).toBe(400);
+    expect(ozon.zoekRegelingen).not.toHaveBeenCalled();
+  });
+
+  test('502 carries the upstream message', async () => {
+    ozon.zoekRegelingen.mockRejectedValue(new Error('DSO responded 500: boom'));
+
+    const res = await request(makeApp())
+      .post('/v1/dso/regelingen/zoek')
+      .send({ bevoegdGezag: ['gm0995'] });
+
+    expect(res.status).toBe(502);
+  });
+});
+
+describe('GET /v1/dso/regelingen/:id/annotaties', () => {
+  test('returns the annotation graph', async () => {
+    ozon.getRegeltekstAnnotaties.mockResolvedValue({
+      activiteiten: [],
+      regelteksten: [],
+      regelsVoorIedereen: [],
+      locaties: [],
+    });
+
+    const res = await request(makeApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/annotaties'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('an upstream 404 passes through as 404', async () => {
+    ozon.getRegeltekstAnnotaties.mockRejectedValue(new Error('DSO responded 404: not found'));
+
+    const res = await request(makeApp()).get('/v1/dso/regelingen/_absent/annotaties');
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /v1/dso/regelingen/:id/documentstructuur/:wId', () => {
+  test('returns the document component', async () => {
+    ozon.getDocumentComponent.mockResolvedValue({ _embedded: { documentComponenten: [] } });
+
+    const res = await request(makeApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/gm0995_x__art_15.2'
+    );
+
+    expect(res.status).toBe(200);
+    expect(ozon.getDocumentComponent).toHaveBeenCalledWith(
+      '_akn_nl_act_gm0995_2020_omgevingsplan',
+      'gm0995_x__art_15.2',
+      'pre'
+    );
+  });
+
+  test('an upstream 404 passes through as 404', async () => {
+    ozon.getDocumentComponent.mockRejectedValue(new Error('DSO responded 404: not found'));
+
+    const res = await request(makeApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/_absent'
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  test('502 carries the upstream message', async () => {
+    ozon.getDocumentComponent.mockRejectedValue(new Error('DSO responded 500: boom'));
+
+    const res = await request(makeApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/gm0995_x__art_15.2'
+    );
+
+    expect(res.status).toBe(502);
+  });
+});
+
+describe('/v1/dso regelingen operations match their OpenAPI description', () => {
+  const REGELINGEN_ZOEK_RESULT = {
+    _embedded: {
+      regelingen: [
+        {
+          identificatie: 'akn/nl/act/gm0995/2020/omgevingsplan',
+          naam: 'Omgevingsplan gemeente Lelystad',
+        },
+      ],
+    },
+    _links: { self: { href: '/regelingen/_zoek?size=100' } },
+  };
+
+  const REGELING_ANNOTATIES = {
+    activiteiten: [{ identificatie: 'act-1', naam: 'Kappen van bomen' }],
+    regelteksten: [{ identificatie: 'regeltekst-1', wId: 'gm0995_x__art_15.2' }],
+    regelsVoorIedereen: [],
+    locaties: [],
+  };
+
+  const REGELING_DOCUMENT_COMPONENT = {
+    _links: {
+      self: {
+        href: '/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/gm0995_x__art_15.2',
+      },
+    },
+    identificatie: 'gm0995_x__art_15.2',
+    tekst: '<al>Artikel 15.2 tekst</al>',
+  };
+
+  test('POST /regelingen/zoek 200, as documented', async () => {
+    ozon.zoekRegelingen.mockResolvedValue(REGELINGEN_ZOEK_RESULT);
+
+    const res = await request(makeDocumentedApp())
+      .post('/v1/dso/regelingen/zoek')
+      .send({ bevoegdGezag: ['gm0995'] });
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/dso/regelingen/zoek');
+  });
+
+  test('POST /regelingen/zoek 400, as documented', async () => {
+    const res = await request(makeDocumentedApp()).post('/v1/dso/regelingen/zoek').send({});
+
+    expect(res.status).toBe(400);
+    expectToMatchOperation(res, 'post', '/dso/regelingen/zoek');
+  });
+
+  test('GET /regelingen/:id/annotaties 200, as documented', async () => {
+    ozon.getRegeltekstAnnotaties.mockResolvedValue(REGELING_ANNOTATIES);
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/annotaties'
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/regelingen/{id}/annotaties');
+  });
+
+  test('GET /regelingen/:id/annotaties 404, as documented', async () => {
+    ozon.getRegeltekstAnnotaties.mockRejectedValue(new Error('DSO responded 404: not found'));
+
+    const res = await request(makeDocumentedApp()).get('/v1/dso/regelingen/_absent/annotaties');
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/regelingen/{id}/annotaties');
+  });
+
+  test('GET /regelingen/:id/documentstructuur/:wId 200, as documented', async () => {
+    ozon.getDocumentComponent.mockResolvedValue(REGELING_DOCUMENT_COMPONENT);
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/gm0995_x__art_15.2'
+    );
+
+    expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'get', '/dso/regelingen/{id}/documentstructuur/{wId}');
+  });
+
+  test('GET /regelingen/:id/documentstructuur/:wId 404, as documented', async () => {
+    ozon.getDocumentComponent.mockRejectedValue(new Error('DSO responded 404: not found'));
+
+    const res = await request(makeDocumentedApp()).get(
+      '/v1/dso/regelingen/_akn_nl_act_gm0995_2020_omgevingsplan/documentstructuur/_absent'
+    );
+
+    expect(res.status).toBe(404);
+    expectToMatchOperation(res, 'get', '/dso/regelingen/{id}/documentstructuur/{wId}');
   });
 });

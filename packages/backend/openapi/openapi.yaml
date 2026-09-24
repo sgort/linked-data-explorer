@@ -1844,8 +1844,7 @@ paths:
               required: [config]
               properties:
                 config:
-                  type: object
-                  description: TriplyDB connection settings (`baseUrl`, `account`, `dataset`, `apiToken`).
+                  $ref: '#/components/schemas/TriplyDbTestConnectionConfig'
       responses:
         '200':
           description: The dataset answered.
@@ -2550,6 +2549,49 @@ paths:
           description: >-
             Deployment failed (code PROCESS_DEPLOY_FAILED; the message carries
             Operaton's error text).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dmns/process/deploy-target:
+    get:
+      operationId: getDmnProcessDeployTarget
+      tags: [Discovery]
+      summary: The Operaton `POST /dmns/process/deploy` actually deploys to
+      description: >-
+        Read-only. Names the backend's own configured Operaton -- the target
+        `POST /dmns/process/deploy` always deploys to -- so a caller (the
+        deploy modal) can show it instead of relying on its own separate,
+        build-time configuration, which can drift from it (#165). Takes no
+        input.
+      responses:
+        '200':
+          description: The configured Operaton base URL.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [operatonUrl]
+                    properties:
+                      operatonUrl:
+                        type: string
+                        description: The backend's configured `OPERATON_BASE_URL`.
+                  timestamp:
+                    type: string
+                    format: date-time
+        '503':
+          description: >-
+            No Operaton is configured -- `OPERATON_BASE_URL` is empty (code
+            OPERATON_NOT_CONFIGURED).
           content:
             application/problem+json:
               schema:
@@ -3762,6 +3804,326 @@ paths:
             The upstream API could not be reached, or answered with a
             failure other than "not found". Also covers a malformed URN
             that cannot be percent-decoded.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dso/activiteiten/{urn}/dossier:
+    get:
+      operationId: getDsoActiviteitDossier
+      tags: [Integrations]
+      summary: An activity's assembled dossier and quality profile
+      description: >-
+        Joins the activity's legal source, annotation, decision criteria and
+        submission requirements across the RTR, Ozon Presenteren and
+        Uitvoeren Gegevens, and attaches a `qualityProfile` scoring how
+        legible and recoverable the chain is. `data` carries the assembled
+        dossier plus that profile.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: urn
+          in: path
+          required: true
+          description: The activity's URN.
+          schema:
+            type: string
+        - name: datum
+          in: query
+          required: false
+          description: Date as dd-MM-yyyy. Defaults to today when omitted.
+          schema:
+            type: string
+            format: dd-MM-yyyy
+            examples: ['01-01-2026']
+        - name: authority
+          in: query
+          required: false
+          description: >-
+            The authority (bevoegd gezag) code, e.g. `gm0995`, whose
+            regeling to scan. Optional: without it, the activity's own
+            bestuursorgaan is used. Overrides the authority — and the
+            instrument level derived from it — the activity itself carries;
+            useful because a national (mnre) activity can also be annotated
+            in another authority's plan, such as a municipal omgevingsplan.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The assembled dossier, with its quality profile attached.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The assembled dossier, plus a qualityProfile field.
+        '404':
+          description: No activity exists for this URN.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: >-
+            An upstream API in the chain could not be reached, or answered
+            with a failure other than "not found".
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dso/regelingen/zoek:
+    post:
+      operationId: zoekDsoRegelingen
+      tags: [Integrations]
+      summary: Find an authority's regelingen
+      description: >-
+        Proxies the Omgevingsdocumenten Presenteren (Ozon) API's regelingen
+        search. `data` is the upstream response, unchanged.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: At least one of bevoegdGezag or typeBevoegdGezag is required.
+              properties:
+                bevoegdGezag:
+                  type: array
+                  items:
+                    type: string
+                  description: OIN or gemeentecode values to filter by authority.
+                  examples: [['gm0995']]
+                typeBevoegdGezag:
+                  type: array
+                  items:
+                    type: string
+                  description: Authority type codes to filter by.
+                size:
+                  type: integer
+                  description: Page size. Defaults to 100.
+      responses:
+        '200':
+          description: The matching regelingen.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '400':
+          description: Both bevoegdGezag and typeBevoegdGezag were absent.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                missingFilter:
+                  value:
+                    {
+                      type: 'about:blank',
+                      status: 400,
+                      title: 'Invalid request',
+                      detail: 'bevoegdGezag or typeBevoegdGezag is required',
+                      instance: '/v1/dso/regelingen/zoek',
+                    }
+        '502':
+          description: The upstream API could not be reached, or answered with a failure.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dso/regelingen/{id}/annotaties:
+    get:
+      operationId: getDsoRegelingAnnotaties
+      tags: [Integrations]
+      summary: The regeltekst annotation graph for one regeling
+      description: >-
+        Proxies the Ozon API's regeltekstannotaties. `data` is the upstream
+        response, unchanged; it is not a HAL collection, but a single object
+        with sibling arrays (activiteiten, regelteksten, regelsVoorIedereen,
+        locaties).
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: The regeling's identificatie.
+          schema:
+            type: string
+        - name: geldigOp
+          in: query
+          required: false
+          description: >-
+            Validity date as YYYY-MM-dd. Left out of the upstream call when
+            omitted, rather than defaulting to today.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The regeling's annotation graph.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '404':
+          description: No regeling exists for this id.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found".
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dso/regelingen/{id}/documentstructuur/{wId}:
+    get:
+      operationId: getDsoDocumentComponent
+      tags: [Integrations]
+      summary: One document component (article or lid) of a regeling
+      description: >-
+        Proxies the Ozon API's documentstructuur read for a single component,
+        carrying its STOP/IMOP content. `data` is the upstream response,
+        unchanged.
+      parameters:
+        - name: x-dso-env
+          in: header
+          required: false
+          description: >-
+            `prod` here or in the `env` query parameter selects the production
+            DSO environment. Any other value in both, or their absence,
+            selects pre-production. Neither overrides the other.
+          schema:
+            type: string
+        - name: env
+          in: query
+          required: false
+          description: >-
+            `prod` here or in the `x-dso-env` header selects the production
+            DSO environment. Any other value in both, including a typo, or
+            their absence, selects pre-production.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: The regeling's identificatie.
+          schema:
+            type: string
+        - name: wId
+          in: path
+          required: true
+          description: The document component's wId.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The document component.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    description: The upstream API's response, unchanged.
+        '404':
+          description: No document component exists for this id and wId.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: >-
+            The upstream API could not be reached, or answered with a
+            failure other than "not found".
           content:
             application/problem+json:
               schema:
@@ -5676,10 +6038,12 @@ components:
         title:
           type: [string, 'null']
           description: Null for rulesets other than the primary one.
-    TriplyDbConfig:
+    TriplyDbConfigBase:
       type: object
-      description: TriplyDB connection settings supplied by the caller (#142).
-      required: [baseUrl, account, dataset, apiToken]
+      description: >-
+        Fields shared by every TriplyDB connection settings schema (#142,
+        #167).
+      required: [baseUrl, account, dataset]
       properties:
         baseUrl:
           type: string
@@ -5688,8 +6052,26 @@ components:
           type: string
         dataset:
           type: string
-        apiToken:
-          type: string
+    TriplyDbConfig:
+      description: TriplyDB connection settings supplied by the caller (#142).
+      allOf:
+        - $ref: '#/components/schemas/TriplyDbConfigBase'
+        - type: object
+          required: [apiToken]
+          properties:
+            apiToken:
+              type: string
+    TriplyDbTestConnectionConfig:
+      description: >-
+        TriplyDB connection settings to test (#167). Unlike `TriplyDbConfig`,
+        `apiToken` is optional: a wrong or missing token surfaces as a failed
+        connection (503), not a 400.
+      allOf:
+        - $ref: '#/components/schemas/TriplyDbConfigBase'
+        - type: object
+          properties:
+            apiToken:
+              type: string
     SparqlResults:
       type: object
       description: >-

@@ -7,6 +7,7 @@ import logger from '../utils/logger';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { sendProblem } from '../utils/problem';
+import { allCacheStats, clearNamedCaches } from '../utils/ttl-cache';
 
 const router = Router();
 
@@ -22,7 +23,7 @@ router.get('/stats', async (req: Request, res: Response) => {
   try {
     logger.info('Cache stats request');
 
-    const stats = sparqlService.getCacheStats();
+    const stats = { ...sparqlService.getCacheStats(), ...allCacheStats() };
 
     res.json({
       success: true,
@@ -51,9 +52,11 @@ router.delete('/clear', async (req: Request, res: Response) => {
     if (endpoint) {
       logger.info('Clearing cache for specific endpoint', { endpoint });
       sparqlService.clearCache(endpoint);
+      clearNamedCaches(endpoint);
     } else {
       logger.info('Clearing all caches');
       sparqlService.clearCache();
+      clearNamedCaches();
     }
 
     res.json({

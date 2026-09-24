@@ -15,17 +15,8 @@ on:
   pull_request:
     branches:
       - acc
-    paths:
-      - 'packages/backend/**'
-      - '.github/workflows/azure-backend-acc.yml'
-      # The root lockfile and manifest, because every workspace resolves through
-      # them. Without these, a lockfile-only change -- Renovate's lock-file
-      # maintenance above all -- was built, tested and deployed by nothing: #92
-      # moved 338 packages, 82 of them runtime, and CI ran audit and scan alone.
-      # A backend-only bump reaches this workflow too, because the lockfile is
-      # shared and a hoisted dependency can move under either workspace. #97.
-      - 'package-lock.json'
-      - 'package.json'
+    # No path filter here, deliberately: see the `changes` job. Filtering the
+    # trigger would leave this workflow's required check unreported.
   push:
     branches:
       - acc
@@ -34,6 +25,9 @@ on:
       - '.github/workflows/azure-backend-acc.yml'
       - 'package-lock.json'
       - 'package.json'
+      # .nvmrc sets the Node version this workflow builds, tests and ships on.
+      # Without it here, a Node bump built and deployed nothing (#119).
+      - '.nvmrc'
   workflow_dispatch:
 
 # Serialise deployments to one environment. Keyed on the pull-request
@@ -50,10 +44,58 @@ permissions:
   contents: read
 
 jobs:
+  # Which files did this pull request change? The path filter used to sit on the
+  # pull_request trigger, and a workflow its trigger filters out never starts, so
+  # it reports no check at all. A required check that never reports waits
+  # forever, and a pull request that does not touch these paths could never
+  # merge. A job skipped by its own `if:` reports success instead. So the filter
+  # lives here, and the jobs below are skipped rather than never started, which
+  # is what lets their checks be required (#119).
+  #
+  # Fail-safe: the jobs below run when this job did NOT succeed, not only when it
+  # says "relevant". An API failure here means a full build, never a free pass.
+  # push keeps its trigger filter; nothing is required on a push.
+  changes:
+    permissions:
+      pull-requests: read
+    runs-on: ubuntu-24.04
+    outputs:
+      relevant: ${{ steps.filter.outputs.relevant }}
+    steps:
+      - name: Match the changed files against this workflow's paths
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          # The paths under push: above, as one regular expression. Keep the two in step.
+          # Why the root lockfile and manifest are in the pattern (moved here
+          # from the pull_request path filter, #119):
+          # The root lockfile and manifest, because every workspace resolves through
+          # them. Without these, a lockfile-only change -- Renovate's lock-file
+          # maintenance above all -- was built, tested and deployed by nothing: #92
+          # moved 338 packages, 82 of them runtime, and CI ran audit and scan alone.
+          # A backend-only bump reaches this workflow too, because the lockfile is
+          # shared and a hoisted dependency can move under either workspace. #97.
+          PATTERN: '^(\.nvmrc$|packages/backend/|\.github/workflows/azure-backend-acc\.yml$|package-lock\.json$|package\.json$)'
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Renames count under both names, as GitHub's own path filter does.
+          files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)')
+          if printf '%s\n' "$files" | grep -qE "$PATTERN"; then relevant=true; else relevant=false; fi
+          echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
+          echo "Changed files relevant to this workflow: $relevant"
+
   deploy:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.relevant == 'true') }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: acceptance
       url: https://acc.backend.linkeddata.open-regels.nl
@@ -67,7 +109,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22.23.2'
+          # Read from .nvmrc, shared with the frontend workflows since #119.
+          # Its major matches the App Service runtime, NODE|22-lts.
+          node-version-file: .nvmrc
 
       - name: Install dependencies
         working-directory: packages/backend
@@ -102,13 +146,16 @@ jobs:
           grep -n "v1/health" dist/routes/index.js || echo "ERROR: v1 routes not found!"
           grep -n "sparqlService" dist/routes/health.routes.js || echo "ERROR: sparqlService not found!"
 
-      # Everything from here on deploys. On a pull request the job stops after
-      # lint, typecheck, tests and build -- which is the point of #46: get the
-      # verdict before the merge, not after it. Gating each step rather than
-      # splitting the job keeps the check name `Deploy Backend to Acceptance`
-      # stable, so no ruleset or branch-protection entry has to change.
+      # Everything after this step deploys. On a pull request the job stops
+      # after packaging -- which is the point of #46: get the verdict before the
+      # merge, not after it. Gating each step rather than splitting the job
+      # keeps the check name `Deploy Backend to Acceptance` stable, so no
+      # ruleset or branch-protection entry has to change.
+      #
+      # Packaging itself runs on pull requests too, since #119: it installs the
+      # artifact's dependencies from the lockfile, and a lockfile that cannot
+      # produce them should fail the pull request, not the deploy.
       - name: Prepare deployment package
-        if: github.event_name != 'pull_request'
         working-directory: packages/backend
         env:
           BUILD_SHA: ${{ github.sha }}
@@ -168,9 +215,59 @@ jobs:
           echo "SHACL shapes:"
           ls -R deploy/shapes/
           
-          # Install production dependencies in deploy folder
+          # Install production dependencies FROM THE LOCKFILE (#119). This used
+          # to be `npm install --production` in deploy/, which had package.json
+          # and no lockfile, so it re-resolved every caret range at deploy time:
+          # the artifact could ship versions no test ran against and no lockfile
+          # records, with no cooldown. ICTU recommendations 3 and 4.
+          #
+          # The only lockfile is the workspace root's, and `npm ci` in deploy/
+          # cannot use it: it describes every workspace. So the install runs in a
+          # staging copy holding the root manifest and lockfile and the backend's
+          # manifest alone, filtered to the backend workspace with production
+          # dependencies only. `npm ci` refuses a lockfile that does not satisfy
+          # the manifests, rather than resolving around it. Measured before this
+          # landed: 349 packages, every one at the root lockfile's version and
+          # integrity hash. The frontend's manifest is left out on purpose -- with
+          # it present, npm also installs four of the frontend's packages.
+          #
+          # Scripts are NOT ignored: libxmljs2 is native and builds or fetches
+          # its binary in its install script. The root postinstall needs its
+          # script copied in; the root prepare is `husky || true`, and husky is
+          # a devDependency, so it no-ops.
+          stage="$RUNNER_TEMP/backend-prod"
+          rm -rf "$stage"
+          mkdir -p "$stage/packages/backend" "$stage/scripts"
+          cp ../../package.json ../../package-lock.json "$stage/"
+          cp ../../scripts/write-deps-marker.mjs "$stage/scripts/"
+          cp package.json "$stage/packages/backend/"
+          (cd "$stage" && npm ci --omit=dev --workspace=@linked-data-explorer/backend --no-audit --no-fund)
+
+          # A production dependency the backend needs at a version other than
+          # the hoisted one would be installed under packages/backend/node_modules,
+          # and would not reach the artifact from here. None does today; fail
+          # rather than ship without it on the day one does. Only real package
+          # entries count, not the directory: on the runner npm 10 leaves it
+          # behind EMPTY, and the first version of this check failed a correct
+          # install on that alone. Hidden entries are ignored too, since npm
+          # bookkeeping such as .bin is not a dependency. Its contents are logged
+          # either way, so the next surprise names itself.
+          nested="$stage/packages/backend/node_modules"
+          if [ -d "$nested" ]; then
+            echo "packages/backend/node_modules holds: $(ls -A "$nested" | xargs)"
+            if find "$nested" -mindepth 1 -maxdepth 1 ! -name ".*" | grep -q .; then
+              echo "❌ Backend production dependencies installed un-hoisted; the packaging below would drop them:"
+              find "$nested" -mindepth 1 -maxdepth 1 ! -name ".*"
+              exit 1
+            fi
+          fi
+          # The workspace's own link, pointing back into the staging copy.
+          rm -rf "$stage/node_modules/@linked-data-explorer"
+          cp -r "$stage/node_modules" deploy/
+          node -e "require('./deploy/node_modules/libxmljs2')" && echo "libxmljs2 native binding loads"
+          echo "Production dependencies: $(ls deploy/node_modules | wc -l) top-level entries"
+
           cd deploy
-          npm install --production --omit=dev
           
           # Tell Azure not to rebuild (we already built)
           echo "[config]" > .deployment
@@ -291,6 +388,91 @@ jobs:
             echo "✅ /v1/dmns endpoint working!"
           else
             echo "⚠️ /v1/dmns returned HTTP $v1_dmns"
+          fi
+
+          # The NATIVE BINDING, against the deployed app (#80 fallout, 23 Sep 2026).
+          #
+          # "Prepare deployment package" already asserts `require('libxmljs2')`
+          # loads -- but it runs on the RUNNER, so it proves the binary matches the
+          # Node that BUILT it. Nothing proved it loads on the HOST, and those are
+          # different questions the moment the two disagree.
+          #
+          # They disagreed on 23 September. #80 moved .nvmrc 22.23.2 -> 24.21.0 and
+          # the App Service was switched to NODE|24-lts. The deploy went fully green
+          # -- health 200, `build.sha` equal to the merge commit, every shape layer
+          # loaded, /v1/dmns answering -- and DMN validation was broken for every
+          # user, returning:
+          #
+          #   BASE-ERR Unexpected error: The module '.../libxmljs2/build/Release/
+          #   xmljs.node' was compiled against a different Node.js version using
+          #   NODE_MODULE_VERSION 127. This version of Node.js requires 137.
+          #
+          # libxmljs2 builds against NAN rather than N-API, so its binary is bound
+          # to NODE_MODULE_VERSION: 127 on Node 22, 137 on Node 24. The JavaScript
+          # was the new build and said so; only the .node file was stale, most
+          # likely a race between the zip deploy writing files and the app
+          # restarting and caching the module it found. An App Service restart
+          # cleared it.
+          #
+          # `build.sha` (#122) cannot catch this and is not at fault: it answers
+          # WHICH COMMIT'S JAVASCRIPT is running, and that answer was correct. The
+          # native binary is not described by a commit sha.
+          #
+          # So this asks the deployed app to do the one thing that needs the
+          # binding. Read-only -- /v1/dmns/validate validates content and deploys
+          # nothing -- and it fails ONLY on the native-load signature, never on a
+          # DMN that is merely invalid, so it cannot start failing because the XSD
+          # or this fixture drifts.
+          probe_dmn=$(mktemp)
+          cat > "$probe_dmn" <<'PROBE_DMN'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+                       id="deployProbe" name="deployProbe"
+                       namespace="http://open-regels.nl/deploy-probe">
+            <decision id="probe" name="probe">
+              <decisionTable id="probeTable" hitPolicy="UNIQUE">
+                <input id="probeIn">
+                  <inputExpression id="probeInExpr" typeRef="number"><text>x</text></inputExpression>
+                </input>
+                <output id="probeOut" typeRef="string"/>
+                <rule id="probeRule">
+                  <inputEntry id="probeInEntry"><text>&gt; 0</text></inputEntry>
+                  <outputEntry id="probeOutEntry"><text>"ok"</text></outputEntry>
+                </rule>
+              </decisionTable>
+            </decision>
+          </definitions>
+          PROBE_DMN
+
+          # Retry briefly, for the same reason the build check above does: a slow
+          # first response must not fail a deploy that is already live.
+          native_body=""
+          for attempt in $(seq 1 5); do
+            native_body=$(jq -Rs '{content: .}' < "$probe_dmn" \
+              | curl -s -m 20 -X POST "https://acc.backend.linkeddata.open-regels.nl/v1/dmns/validate" \
+                  -H 'Content-Type: application/json' --data-binary @- || true)
+            printf '%s' "$native_body" | jq -e '.data.layers.base' >/dev/null 2>&1 && break
+            echo "Attempt $attempt/5: /v1/dmns/validate did not return a base layer"
+            [ "$attempt" -lt 5 ] && sleep 10
+          done
+
+          native_error=$(printf '%s' "$native_body" \
+            | jq -r '[.data.layers.base.issues[]? | select((.message // "") | test("NODE_MODULE_VERSION|was compiled against"))] | .[0].message // ""' 2>/dev/null || true)
+
+          if [ -n "$native_error" ]; then
+            echo "❌ The libxmljs2 native binding does not load on the deployed app:"
+            printf '   %s\n' "$native_error"
+            echo "   DMN validation is broken for every user, while health, build.sha"
+            echo "   and the shape layers all report fine. Usually the App Service"
+            echo "   runtime major and the Node the artifact was built on disagree,"
+            echo "   or a restart cached a stale .node -- try restarting the app."
+            exit 1
+          elif printf '%s' "$native_body" | jq -e '.data.layers.base' >/dev/null 2>&1; then
+            echo "✅ libxmljs2 native binding works on the deployed app"
+          else
+            echo "❌ /v1/dmns/validate did not answer with a base layer after 5 attempts"
+            printf '%s' "$native_body" | head -c 400
+            exit 1
           fi
 
       - name: Deployment success

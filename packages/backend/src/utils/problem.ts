@@ -59,6 +59,7 @@ const CODE_TITLES = {
   MALFORMED_BODY: 'Malformed request body',
   PAYLOAD_TOO_LARGE: 'Request body too large',
   INVALID_BODY: 'Invalid request body',
+  OPERATON_NOT_CONFIGURED: 'Operaton not configured',
 } as const satisfies Record<string, string>;
 
 /** A `code` this API answers with; each has a stable title above. */

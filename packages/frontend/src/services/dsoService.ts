@@ -332,3 +332,213 @@ export async function fetchFormScaffold(
   const params = new URLSearchParams({ formId });
   return get<FormScaffold>(`/v1/dso/toepasbare-regels/${identifier}/form-scaffold?${params}`, env);
 }
+
+// ---------------------------------------------------------------------------
+// Dossier — Quality Profile
+// ---------------------------------------------------------------------------
+//
+// Frontend copies of the backend `Dossier` and `QualityProfile` shapes
+// (packages/backend/src/services/dossier.service.ts and quality.service.ts).
+// Mirrored field-for-field, including nullability.
+
+export interface ResolvedLocatie {
+  identificatie: string;
+  naam: string | null;
+}
+
+export interface JuridischeRegelEntry {
+  identificatie: string;
+  kwalificatie: string | null;
+  idealisatie: string | null;
+  regeltekstRef: string;
+  wId: string | null;
+  locaties: ResolvedLocatie[];
+  articleText: string | null;
+}
+
+export interface LegalSource {
+  available: boolean;
+  regelingIdentificatie: string | null;
+  regelingTitel: string | null;
+  juridischeRegels: JuridischeRegelEntry[];
+}
+
+export interface Annotation {
+  identificatie: string | null;
+  naam: string | null;
+  groep: string | null;
+  symboolcode: string | null;
+  bovenliggendeActiviteitRef: string | null;
+}
+
+export interface RuleSet {
+  typering: 'Conclusie' | 'Indieningsvereisten';
+  identifier: number;
+  sttrVersie: number | null;
+  begindatum: string | null;
+  toestemming: string | null;
+  functioneleStructuurRef: string;
+  viewerUrl: string;
+  dmn: string | null;
+}
+
+export interface Provenance {
+  env: DsoEnv;
+  datum: string | null;
+  regelingIdentificatie: string | null;
+  fetchedAt: string;
+  failures: { step: string; detail: string }[];
+}
+
+export interface Dossier {
+  urn: string;
+  omschrijving: string | null;
+  bestuursorgaan: { code: string; oin: string | null } | null;
+  legalSource: LegalSource;
+  annotation: Annotation;
+  rtrLocaties: string[];
+  decisionCriteria: RuleSet | null;
+  submissionRequirements: RuleSet | null;
+  /**
+   * URNs of this activity's own children (RTR `_links.onderliggendeActiviteiten`),
+   * in RTR order. Empty when there are none. See
+   * packages/backend/src/services/dossier.service.ts's `Dossier` for why
+   * this is free — it is already on the step-1 RTR response.
+   */
+  childActivityUrns: string[];
+  provenance: Provenance;
+}
+
+export type IdClass = 'semantic' | 'opaque-resolvable' | 'opaque-dangling';
+
+export interface NamingSplit {
+  total: number;
+  semantic: number;
+  opaque: number;
+}
+
+export interface DecisionNamingItem {
+  name: string;
+  class: IdClass;
+}
+
+export interface InputNamingItem {
+  name: string;
+  class: IdClass;
+  /** The input's own `vraagTekst`, resolved through its `uitvoeringsregelRef`; `null` if unresolved. */
+  question: string | null;
+}
+
+export interface DecisionNamingSplit extends NamingSplit {
+  items: DecisionNamingItem[];
+}
+
+export interface InputNamingSplit extends NamingSplit {
+  items: InputNamingItem[];
+}
+
+/**
+ * The per-DMN measurements for ONE rule set. `null` when the rule set itself
+ * is absent, or its DMN could not be extracted — never zero counts, which
+ * would say "measured and found nothing" for a rule set never measured.
+ */
+export interface RuleSetQuality {
+  decisionNaming: DecisionNamingSplit;
+  inputNaming: InputNamingSplit;
+  labelCoverage: { inputs: number; withQuestion: number };
+  refResolvability: { total: number; resolved: number; dangling: number };
+}
+
+export interface QualityProfile {
+  urn: string;
+  activityIdentity: IdClass;
+  legalTraceability: { rules: number; withWId: number; withArticleText: number };
+  crossLayerConsistency: { sharedObjects: string[] };
+  ruleSets: {
+    conclusie: RuleSetQuality | null;
+    indieningsvereisten: RuleSetQuality | null;
+  };
+}
+
+/** What `GET /v1/dso/activiteiten/:urn/dossier` returns: the Dossier plus its quality profile. */
+export interface DsoDossier extends Dossier {
+  qualityProfile: QualityProfile;
+}
+
+/**
+ * Keyed `env|datum|urn`, with `datum` collapsed to `''` when absent so an
+ * undefined datum can never collide with — or be mistaken for — a real one.
+ *
+ * The dossier call fans out across the RTR, two Ozon calls and Uitvoeren
+ * Gegevens, so this cache exists purely to make tab switching instant; the
+ * backend already caches the upstream calls themselves. No TTL: a stale
+ * entry is cleared explicitly, via `clearActiviteitDossierCache`.
+ */
+const dossierCache = new Map<string, Promise<DsoDossier>>();
+
+/**
+ * Mirrors `dossierCache`, but holds the resolved value rather than the
+ * in-flight promise — so a caller that must never trigger the (expensive,
+ * Ozon-fanning-out) dossier fetch itself can still read an already-cached
+ * result synchronously. See `getCachedActiviteitDossier`.
+ */
+const dossierResolvedCache = new Map<string, DsoDossier>();
+
+function dossierCacheKey(env: DsoEnv, datum: string | undefined, urn: string): string {
+  return `${env}|${datum ?? ''}|${urn}`;
+}
+
+/** Clears the in-memory dossier cache. For tests, and for a future refresh affordance. */
+export function clearActiviteitDossierCache(): void {
+  dossierCache.clear();
+  dossierResolvedCache.clear();
+}
+
+/**
+ * Synchronous "is it cached?" read of the dossier cache — never fetches.
+ *
+ * For UI that must not trigger `getActiviteitDossier`'s call just by
+ * rendering (e.g. the Activities detail panel's Quality profile teaser,
+ * which would otherwise fan out across three upstream APIs including Ozon
+ * merely because the user selected an activity). Returns `undefined` until
+ * something else — the Quality Profile tab, or an explicit "Load quality
+ * profile" click — has actually fetched and resolved this exact
+ * env/datum/urn.
+ */
+export function getCachedActiviteitDossier(
+  urn: string,
+  env: DsoEnv = 'pre',
+  datum?: string
+): DsoDossier | undefined {
+  return dossierResolvedCache.get(dossierCacheKey(env, datum, urn));
+}
+
+export async function getActiviteitDossier(
+  urn: string,
+  env: DsoEnv = 'pre',
+  datum?: string,
+  authority?: string
+): Promise<DsoDossier> {
+  const key = dossierCacheKey(env, datum, urn);
+  const cached = dossierCache.get(key);
+  if (cached) return cached;
+
+  const params = new URLSearchParams();
+  if (datum) params.set('datum', datum);
+  if (authority) params.set('authority', authority);
+
+  const promise = get<DsoDossier>(
+    `/v1/dso/activiteiten/${encodeURIComponent(urn)}/dossier?${params}`,
+    env
+  );
+  dossierCache.set(key, promise);
+  promise
+    .then((d) => {
+      dossierResolvedCache.set(key, d);
+    })
+    .catch(() => {
+      // A failed fetch must not poison the cache — drop it so the next call retries.
+      dossierCache.delete(key);
+    });
+  return promise;
+}

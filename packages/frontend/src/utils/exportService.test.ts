@@ -6,6 +6,7 @@ import { DmnModel } from '../types';
 import { ExportFormat, ExportOptions } from '../types/export.types';
 
 const getFormatById = vi.hoisted(() => vi.fn());
+const getDeployTarget = vi.hoisted(() => vi.fn());
 
 vi.mock('./exportFormats', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./exportFormats')>();
@@ -14,6 +15,12 @@ vi.mock('./exportFormats', async (importOriginal) => {
     getFormatById: (id: ExportFormat) => getFormatById(id),
   };
 });
+
+// #165: the README's Operaton references come from the backend, via
+// deployTargetService, not VITE_OPERATON_BASE_URL any more.
+vi.mock('../services/deployTargetService', () => ({
+  getDeployTarget: () => getDeployTarget(),
+}));
 
 import * as exportFormats from './exportFormats';
 import { exportChain, validateChainForExport } from './exportService';
@@ -52,6 +59,8 @@ beforeEach(() => {
   lastBlob = null;
 
   getFormatById.mockImplementation((id: ExportFormat) => exportFormats.EXPORT_FORMATS[id] ?? null);
+  getDeployTarget.mockReset();
+  getDeployTarget.mockResolvedValue(null);
 
   createObjectURL = (blob: Blob) => {
     lastBlob = blob;
@@ -398,7 +407,7 @@ describe('exportChain — package (ZIP)', () => {
   }
 
   test('documents deploy commands against the configured Operaton instance', async () => {
-    vi.stubEnv('VITE_OPERATON_BASE_URL', 'https://operaton.example.org/engine-rest');
+    getDeployTarget.mockResolvedValue('https://operaton.example.org/engine-rest');
 
     const readme = await readmeFor(['age-check'], { age: 42 }, [dmn()]);
 
@@ -409,9 +418,31 @@ describe('exportChain — package (ZIP)', () => {
   });
 
   test('uses a placeholder URL when Operaton is not configured', async () => {
-    vi.stubEnv('VITE_OPERATON_BASE_URL', '');
+    getDeployTarget.mockResolvedValue(null);
     const readme = await readmeFor(['age-check'], {}, [dmn()]);
     expect(readme).toContain('<YOUR_OPERATON_URL>/engine-rest');
+  });
+
+  // #165: unlike the curl examples above (which always fall back to a
+  // placeholder), the Cockpit link is a real navigation step meant to work
+  // today -- with no known deploy target it is left out entirely, cleanly,
+  // rather than pointing at the placeholder, and the remaining steps renumber.
+  test('omits the Cockpit navigation step when Operaton is not configured', async () => {
+    getDeployTarget.mockResolvedValue(null);
+    const readme = await readmeFor(['age-check'], {}, [dmn()]);
+    expect(readme).not.toContain('/operaton/app/cockpit/');
+    expect(readme).toContain('View it in Operaton Cockpit:\n1. Go to "Processes" section');
+  });
+
+  // exportAsPackage is already async; getDeployTarget() itself never rejects
+  // (it resolves null on failure), but this guards the export against a
+  // regression there too -- it must still succeed, README and all (#165).
+  test('the export still succeeds when the deploy-target lookup fails outright', async () => {
+    getDeployTarget.mockRejectedValue(new Error('network down'));
+
+    const result = await exportChain(['age-check'], {}, [dmn()], options({ format: 'package' }));
+
+    expect(result.success).toBe(true);
   });
 
   test('renders the chain test data and per-DMN input/output counts', async () => {

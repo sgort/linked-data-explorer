@@ -81,28 +81,78 @@ worse-understood risk than the one it removes.
 **Four of the six deployment workflows sit behind this.** It is the single
 largest unpinned surface in the repository and it is not closeable from here.
 
-### 2. `npm install --production --omit=dev` in the backend deploy step
+What it can reach was narrowed in #119. The two frontend workflows used to hand
+it the **build** — Oryx ran `npm install` inside this container, on a Node
+version it chose itself — so the shipped bundle came from a floating image.
+They now build on the runner from `npm ci` and pass `skip_app_build: true`, so
+the container only uploads `packages/frontend/dist`. It still runs, unpinned,
+on every deploy; it no longer decides what is in the artifact. The two
+`ropa-site` workflows are unchanged — see §5.
 
-Both backend workflows build with `npm ci`, then assemble a `deploy/` folder and
-run a **second, lockfile-less install** inside it:
+### 2. ~~`npm install --production --omit=dev` in the backend deploy step~~ — closed in #119
 
-- `azure-backend-acc.yml:95`
-- `azure-backend-production.yml:86`
+Both backend workflows built with `npm ci`, then assembled a `deploy/` folder and
+ran a **second, lockfile-less install** inside it. `npm install` in a folder
+without a lockfile resolves ranges fresh at deploy time, so the code shipped to
+Azure could contain dependency versions that no build step ever saw and no
+lockfile records.
 
-`npm ci` requires a lockfile and installs it exactly. `npm install` in a folder
-without one resolves ranges fresh at deploy time — so the code shipped to Azure
-can contain dependency versions that no build step ever saw and no lockfile
-records. This is a real gap, inside the deploy path, and it is fixable: copying
-the workspace lockfile into `deploy/` and using `npm ci --omit=dev` would close
-it. Left alone deliberately, because the pinning work was scoped to be
-behaviour-preserving.
+This section once proposed copying the workspace lockfile into `deploy/` and
+running `npm ci --omit=dev` there. That doesn't work in this monorepo: the only
+lockfile is the root one, and it describes every workspace. What the workflows do
+instead is run `npm ci --omit=dev --workspace=@linked-data-explorer/backend` in a
+staging copy that holds the root `package.json` and `package-lock.json` plus the
+backend's manifest, then copy the resulting `node_modules` into `deploy/`.
+Measured before it landed: 349 packages, every one at the root lockfile's
+version and integrity hash.
 
-### 3. `node-version` floats within a major
+The step fails if a production dependency is installed un-hoisted, under
+`packages/backend/node_modules`, because the copy would not carry it. On the ACC
+workflow it runs on pull requests too, so a lockfile that can't produce the
+artifact fails before the merge.
 
-`'22'` in the backend workflows, `'20'` in the frontend. `setup-node` resolves
-these to whatever patch the runner has cached. Pinning to an exact patch would
-trade a small supply-chain surface for routine breakage as runners roll forward,
-and the Node distribution is not the threat model this policy was written for.
+### 3. Node — pinned now, recorded here for its history
+
+This section used to record `'22'` and `'20'` as floating majors. They were
+pinned to exact literals in August 2026 — `22.23.2` for the backend, `20.20.2`
+for the frontend — which then drifted apart by hand (#113). Since #119 all four
+deploy workflows read one exact version from `.nvmrc`, maintained by Renovate's
+`nvm` manager. The frontend moved from 20 to 22 in the same change, because that
+is when its pin started to decide what ships: before, Oryx built the bundle on
+22.22.0 regardless.
+
+`zizmor.yml` keeps its own literal, `24.20.0`, deliberately: its
+`renovate-config-validator` step needs Node 24.
+
+**The App Service host runtime cannot be pinned exactly, and that is now a
+decision rather than an omission.** `az webapp list-runtimes --os linux`
+returns, for Node, exactly `NODE|22-lts`, `NODE|24-lts` and `NODE|26` —
+major-level only. There is no exact version, no digest, and no setting that
+takes one, so "pin at the highest precision the platform allows" is satisfied
+by naming the major and nothing more.
+
+What remains reachable is keeping that major in step with `.nvmrc`'s, and
+**the ordering is part of the pin**: switch the App Service first, then merge
+the `.nvmrc` bump. No pull-request check runs against an App Service, so
+nothing enforces this.
+
+`ronl-linkeddata-backend-acc` moved to `NODE|24-lts` on 23 September, ahead of
+#80; `ronl-linkeddata-backend-prod` is still `NODE|22-lts` and coherent with
+the artifact it runs, and moves with the promotion that carries a Node 24
+build.
+
+**And the ordering alone is not enough here**, because this backend ships a
+native module. `libxmljs2` builds against NAN rather than N-API, so its
+`xmljs.node` is bound to `NODE_MODULE_VERSION` — 127 on Node 22, 137 on Node
+24. Between switching the runtime and deploying an artifact rebuilt on the new
+major, the binary does not match the host; the same is true in reverse if the
+merge comes first. That is not merely an interruption: on 23 September the
+deploy reported success — health, `build.sha`, the shape layers and
+`/v1/dmns` all green — while DMN validation returned `BASE-ERR` for every
+user. The deploy workflows now POST a minimal DMN to `/v1/dmns/validate` after
+the build check and fail on that signature, because the build-time
+`require('libxmljs2')` assertion runs on the runner and proves only that the
+binary matches the Node that built it.
 
 ### 4. `zizmor-action`'s `version: '1.29.0'` input
 
@@ -140,6 +190,26 @@ build environment is Microsoft's and unpinnable, but with no dependency manifest
 there is nothing for it to resolve. Worth stating precisely, because
 "unpinned build environment" and "unpinned dependencies" are not the same claim.
 
+### 6. The runner image: `ubuntu-24.04`, a version label, not a digest
+
+Every job ran on `ubuntu-latest` until #119, a label GitHub moves to a new
+Ubuntu release on its own schedule. Every job now names `ubuntu-24.04`, so a
+change of OS release arrives as a diff in this repository rather than a
+silent change under all twelve jobs at once. ICTU recommendation 2.
+
+That pins the **release**, not the image. GitHub rebuilds `ubuntu-24.04` about
+weekly with new preinstalled tools and security updates, and a hosted runner
+cannot be pinned to a digest. What the jobs depend on is pinned separately
+anyway: Node through `.nvmrc`, actions by digest, and npm packages by the
+lockfile. So the weekly rebuild changes the environment around the build, not
+the inputs to it.
+
+Renovate's `github-actions` manager reads a versioned `runs-on` label as a
+`github-runner` dependency (its `github-runners` datasource), which it could not
+do for `ubuntu-latest`. So a newer Ubuntu release should arrive as a Renovate
+update rather than by hand. Confirm on the Dependency Dashboard (#36) that
+`ubuntu-24.04` is listed before relying on that.
+
 ## Version currency
 
 All seven `actions/checkout` references now pin **v7.0.1**, converged in
@@ -167,6 +237,16 @@ than floating. `renovate.json` supplies the other half:
   annotate it as pending.
 - **`vulnerabilityAlerts` with `minimumReleaseAge: null`** — the fast lane. A
   fix for a known advisory must not wait out the cooldown.
+- **`.npmrc` with `min-release-age=14`** — the same cooldown, applied by npm
+  itself, since #119. Renovate's `minimumReleaseAge` covers only the updates
+  Renovate proposes. Lock-file maintenance hands the refresh to npm, which is
+  where the transitive tree moves, and Renovate documents that its own cooldown
+  cannot apply there. For its own update pull requests Renovate uses whichever
+  cutoff is stricter, and if npm answers `ETARGET` on a security fix it retries
+  without the cutoff. Two limits, both measured: `npm ci` ignores the setting on
+  purpose, and npm older than 11.10 ignores it without a warning. The second
+  covers Node 22's bundled npm 10, so `scripts/check-deps.sh` warns about it at
+  dev-server start and push.
 - **Three workspace groups** — `backend`, `frontend`, `ropa-site`. An update
   that breaks one deployable should not be entangled with the other two.
 - **`Azure/static-web-apps-deploy` disabled.** It is pinned to the newest commit
@@ -264,14 +344,31 @@ here is enforced by being written down. It is written down because otherwise the
 only account of what gates `acc` and `main` lives in a settings page nobody reads
 until something is already stuck.
 
-| Ruleset                 | Id         | Ref               | Required checks | Merge methods |
-| ----------------------- | ---------- | ----------------- | --------------- | ------------- |
-| `acc supply-chain gate` | `21794157` | `refs/heads/acc`  | `audit`, `scan` | merge only    |
-| `main promotion gate`   | `22630654` | `refs/heads/main` | `audit`, `scan` | merge only    |
+| Ruleset                 | Id         | Ref               | Required checks                                                                      | Merge methods |
+| ----------------------- | ---------- | ----------------- | ------------------------------------------------------------------------------------ | ------------- |
+| `acc supply-chain gate` | `21794157` | `refs/heads/acc`  | `audit`, `scan`, `deploy`, `Build and Deploy Frontend`, `Build and Deploy ROPA Site` | merge only    |
+| `main promotion gate`   | `22630654` | `refs/heads/main` | `audit`, `scan`                                                                      | merge only    |
 
 `audit` is `zizmor.yml`; `scan` is `semgrep.yml`, added to both on 2026-09-11.
 Both workflows trigger on `pull_request` with no branch or path filter, which is
 what makes them safe to require: neither can go missing on any base.
+
+The three build checks on `acc` were added for #119, so a red build or test run
+blocks a merge — a dependency pull request above all. They are the jobs of
+`azure-backend-acc.yml`, `azure-frontend-acc.yml` and `azure-ropa-site-acc.yml`,
+whose `pull_request` triggers used to be path-filtered. A workflow its trigger
+filters out reports no check, and a required check that never reports blocks
+forever, so the filter moved into a `changes` job in each workflow (#184): the
+build job is skipped on an unrelated pull request, and a skipped job counts as
+passed. If `changes` fails, the build runs anyway. Two things follow:
+
+- **Required checks match by job name.** Both deploy jobs used to be called
+  `Build and Deploy Job`; they were renamed so each can be required on its own.
+  Rename one of these jobs and the ruleset waits for a name that no longer
+  reports. Update the ruleset in the same change.
+- **`main` requires `audit` and `scan` only, deliberately.** The backend
+  production workflow has no `pull_request` trigger (#46), and promotion carries
+  commits that already passed these checks on `acc`.
 
 **The two rulesets differ in one parameter, deliberately.**
 `require_extra_approval_for_unattributed_changes` is `true` on `acc` and `false`

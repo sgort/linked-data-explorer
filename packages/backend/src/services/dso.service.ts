@@ -3,8 +3,19 @@
 import { XMLParser } from 'fast-xml-parser';
 import { config } from '../utils/config';
 import { logger } from '../utils/logger';
+import { createTtlCache } from '../utils/ttl-cache';
 
 const DEFAULT_PAGE_SIZE = 20;
+
+/**
+ * Activity detail is the hottest DSO read: the DSO Explorer's child-activity
+ * fan-out calls it once per child and discards the names on every re-render.
+ * Five minutes matches the house default in `sparql.service.ts`.
+ *
+ * Staleness is accepted deliberately — DSO activity data does change, so
+ * `DELETE /v1/cache/clear` is the escape hatch.
+ */
+const activiteitCache = createTtlCache<unknown>({ name: 'dso-activiteit', ttlMs: 5 * 60 * 1000 });
 
 export type DsoEnv = 'pre' | 'prod';
 
@@ -12,21 +23,42 @@ function getDsoConfig(env: DsoEnv = 'pre') {
   return env === 'prod' ? config.dsoProd : config.dso;
 }
 
+export interface DsoFetchInit {
+  method?: 'GET' | 'POST';
+  body?: unknown;
+  headers?: Record<string, string>;
+}
+
 /**
  * Internal fetch helper for all DSO API calls.
  * Attaches the x-api-key header and enforces the configured timeout.
+ *
+ * Exported so `ozon.service.ts` shares one timeout, key-attachment and error
+ * contract with the five original APIs.
  */
-async function dsoFetch(url: string, env: DsoEnv = 'pre'): Promise<unknown> {
+export async function dsoFetch(
+  url: string,
+  env: DsoEnv = 'pre',
+  init: DsoFetchInit = {}
+): Promise<unknown> {
   const dsoConfig = getDsoConfig(env);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), config.dso.timeout);
 
   try {
     const response = await fetch(url, {
+      method: init.method ?? (init.body !== undefined ? 'POST' : 'GET'),
       headers: {
         'x-api-key': dsoConfig.apiKey,
         Accept: 'application/hal+json',
+        ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        // Deliberately spread last: ozon.service.ts is the only caller that
+        // supplies `init.headers`, and it needs its own `Content-Crs` to come
+        // through. Defaults win unless a caller explicitly names the same
+        // header — see the pinning test in dso.service.test.ts.
+        ...init.headers,
       },
+      ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
       signal: controller.signal,
     });
 
@@ -278,13 +310,31 @@ export async function getActiviteit(
 ): Promise<unknown> {
   const d = new Date();
   const today = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+  const effectiveDatum = datum ?? today;
+
+  const cacheKey = `${env}|${urn}|${effectiveDatum}`;
+  const cached = activiteitCache.get(cacheKey);
+  if (cached !== undefined) {
+    logger.info('[DSO] activiteit detail from cache', { env, urn, datum: effectiveDatum });
+    return cached;
+  }
 
   const params = new URLSearchParams();
-  params.set('datum', datum ?? today);
+  params.set('datum', effectiveDatum);
 
   const url = `${getDsoConfig(env).rtrBaseUrl}/activiteiten/${encodeURIComponent(urn)}?${params}`;
-  logger.info('[DSO] GET activiteit detail', { env, urn, datum: datum ?? today });
-  return dsoFetch(url, env);
+  logger.info('[DSO] GET activiteit detail', { env, urn, datum: effectiveDatum });
+  const data = await dsoFetch(url, env);
+  // Cached by reference (see the cache comment above), so a caller mutating
+  // its own copy would otherwise poison every later read of this key.
+  // `dossier.service.ts` never does this today — it builds new objects — but
+  // nothing stops the next consumer. A shallow Object.freeze is a cheap
+  // top-level guard (O(1), no traversal) on data that is fetched hot; it
+  // will not catch a caller mutating a nested object/array, but a full deep
+  // clone or deep freeze on every hit was judged not worth the cost here.
+  if (data !== null && typeof data === 'object') Object.freeze(data);
+  activiteitCache.set(cacheKey, data);
+  return data;
 }
 
 /**
@@ -445,16 +495,24 @@ async function dsoFetchXml(url: string, env: DsoEnv = 'pre'): Promise<string> {
 }
 
 /**
- * GET /toepasbareRegels?functioneleStructuurRef=...
+ * GET /toepasbareRegels?functioneleStructuurRef=...&datum=dd-MM-yyyy
  * Returns the metadata list for a given functioneleStructuurRef.
+ *
+ * `datum` is optional and, like every other RTR-side call in this file, in
+ * dd-MM-yyyy — the upstream's own self-href on this endpoint comes back with
+ * exactly that format (`…?…&datum=22-09-2026&…`). Left out, the upstream
+ * presumably defaults to "today", same as the sibling RTR calls; omitting it
+ * keeps every existing caller (which never passed a date) unaffected.
  */
 export async function getToepasbareRegels(
   functioneleStructuurRef: string,
-  env: DsoEnv = 'pre'
+  env: DsoEnv = 'pre',
+  datum?: string
 ): Promise<unknown> {
   const params = new URLSearchParams({ functioneleStructuurRef });
+  if (datum) params.set('datum', datum);
   const url = `${getDsoConfig(env).uitvoerenGegevensBaseUrl}/toepasbareRegels?${params}`;
-  logger.info('[DSO] GET toepasbareRegels', { env, functioneleStructuurRef });
+  logger.info('[DSO] GET toepasbareRegels', { env, functioneleStructuurRef, datum });
   return dsoFetch(url, env);
 }
 

@@ -3,12 +3,16 @@ import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 
 import {
+  clearActiviteitDossierCache,
   dmnDownloadUrl,
+  type DsoDossier,
   fetchFormScaffold,
   fetchToepasbareRegels,
   getActiviteitDetail,
+  getActiviteitDossier,
   getActiviteiten,
   getActiviteitenByOin,
+  getCachedActiviteitDossier,
   getWerkzaamheidDetail,
   searchBegrippen,
   sttrDownloadUrl,
@@ -444,5 +448,302 @@ describe('fetchFormScaffold', () => {
     const result = await fetchFormScaffold(1, 'form-1');
     expect(url).toContain('formId=form-1');
     expect(result.id).toBe('form-1');
+  });
+});
+
+describe('getActiviteitDossier', () => {
+  // Shape-faithful to reference/dossier-houtopstandvellen-*.md: both rule
+  // sets present, item arrays populated, and one input with `question: null`
+  // (opaque-dangling) alongside one with a resolved question.
+  const dossierFixture: DsoDossier = {
+    urn: 'urn:1',
+    omschrijving: 'Vellen houtopstand',
+    bestuursorgaan: { code: 'gm0995', oin: '00000001823288624000' },
+    legalSource: {
+      available: true,
+      regelingIdentificatie: 'reg-1',
+      regelingTitel: 'Omgevingsplan gemeente Voorbeeld',
+      juridischeRegels: [
+        {
+          identificatie: 'jr-1',
+          kwalificatie: 'vergunningplicht',
+          idealisatie: null,
+          regeltekstRef: 'rt-1',
+          wId: 'nl.regelgeving-art_15.2__para_5',
+          locaties: [{ identificatie: 'loc-1', naam: 'Werkingsgebied A' }],
+          articleText: 'De omgevingsvergunning wordt verleend indien...',
+        },
+      ],
+    },
+    annotation: {
+      identificatie: 'ann-1',
+      naam: 'Vellen houtopstand',
+      groep: 'kapactiviteit',
+      symboolcode: null,
+      bovenliggendeActiviteitRef: null,
+    },
+    rtrLocaties: ['loc-1'],
+    childActivityUrns: [],
+    decisionCriteria: {
+      typering: 'Conclusie',
+      identifier: 114233,
+      sttrVersie: 2,
+      begindatum: '30-07-2026',
+      toestemming: 'omgevingsvergunning',
+      functioneleStructuurRef: 'fs-conclusie',
+      viewerUrl: 'https://omgevingswet.overheid.nl/registratie-toepasbare-regels/id/concept-1',
+      dmn: '<definitions/>',
+    },
+    submissionRequirements: {
+      typering: 'Indieningsvereisten',
+      identifier: 114234,
+      sttrVersie: 2,
+      begindatum: '30-07-2026',
+      toestemming: 'omgevingsvergunning',
+      functioneleStructuurRef: 'fs-indiening',
+      viewerUrl: 'https://omgevingswet.overheid.nl/registratie-toepasbare-regels/id/concept-2',
+      dmn: '<definitions/>',
+    },
+    provenance: {
+      env: 'pre',
+      datum: null,
+      regelingIdentificatie: 'reg-1',
+      fetchedAt: '2026-09-22T10:00:00.000Z',
+      failures: [],
+    },
+    qualityProfile: {
+      urn: 'urn:1',
+      activityIdentity: 'semantic',
+      legalTraceability: { rules: 1, withWId: 1, withArticleText: 1 },
+      crossLayerConsistency: { sharedObjects: [] },
+      ruleSets: {
+        conclusie: {
+          decisionNaming: {
+            total: 2,
+            semantic: 1,
+            opaque: 1,
+            items: [
+              { name: 'GoedTeKeuren', class: 'semantic' },
+              { name: '3f1a2b4c5d6e7f8091a2b3c4d5e6f708', class: 'opaque-resolvable' },
+            ],
+          },
+          inputNaming: {
+            total: 2,
+            semantic: 1,
+            opaque: 1,
+            items: [
+              { name: 'Omtrek', class: 'semantic', question: 'Wat is de omtrek?' },
+              {
+                name: '3f1a2b4c5d6e7f8091a2b3c4d5e6f708',
+                class: 'opaque-dangling',
+                question: null,
+              },
+            ],
+          },
+          labelCoverage: { inputs: 2, withQuestion: 1 },
+          refResolvability: { total: 1, resolved: 1, dangling: 0 },
+        },
+        indieningsvereisten: {
+          decisionNaming: {
+            total: 1,
+            semantic: 0,
+            opaque: 1,
+            items: [{ name: '9f8e7d6c5b4a39281706f5e4d3c2b1a0', class: 'opaque-dangling' }],
+          },
+          inputNaming: {
+            total: 1,
+            semantic: 0,
+            opaque: 1,
+            items: [
+              {
+                name: '9f8e7d6c5b4a39281706f5e4d3c2b1a0',
+                class: 'opaque-dangling',
+                question: null,
+              },
+            ],
+          },
+          labelCoverage: { inputs: 1, withQuestion: 0 },
+          refResolvability: { total: 0, resolved: 0, dangling: 0 },
+        },
+      },
+    },
+  };
+
+  afterEach(() => {
+    clearActiviteitDossierCache();
+  });
+
+  test('fetches the dossier at the right path with the datum param and X-Dso-Env header, for pre and prod', async () => {
+    const captured: { url: string; envHeader: string | null }[] = [];
+    server.use(
+      http.get('*/v1/dso/activiteiten/:urn/dossier', ({ request }) => {
+        captured.push({ url: request.url, envHeader: request.headers.get('X-Dso-Env') });
+        return HttpResponse.json({ success: true, data: dossierFixture });
+      })
+    );
+
+    await getActiviteitDossier('urn:1', 'pre', '30-07-2026');
+    await getActiviteitDossier('urn:1', 'prod', '30-07-2026');
+
+    expect(captured).toHaveLength(2);
+    expect(captured[0].url).toContain('/v1/dso/activiteiten/urn%3A1/dossier');
+    expect(captured[0].url).toContain('datum=30-07-2026');
+    expect(captured[0].envHeader).toBe('pre');
+    expect(captured[1].envHeader).toBe('prod');
+  });
+
+  test('sends the authority param when supplied, and omits it when not', async () => {
+    const urls: string[] = [];
+    server.use(
+      http.get('*/v1/dso/activiteiten/:urn/dossier', ({ request }) => {
+        urls.push(request.url);
+        return HttpResponse.json({ success: true, data: dossierFixture });
+      })
+    );
+
+    await getActiviteitDossier('urn:with-authority', 'pre', undefined, 'gm0995');
+    await getActiviteitDossier('urn:without-authority', 'pre');
+
+    expect(urls[0]).toContain('authority=gm0995');
+    expect(urls[1]).not.toContain('authority=');
+  });
+
+  test('a second call with the same env/datum/urn makes no second fetch', async () => {
+    let callCount = 0;
+    server.use(
+      http.get('*/v1/dso/activiteiten/:urn/dossier', () => {
+        callCount += 1;
+        return HttpResponse.json({ success: true, data: dossierFixture });
+      })
+    );
+
+    const first = await getActiviteitDossier('urn:cache', 'pre', '30-07-2026');
+    const second = await getActiviteitDossier('urn:cache', 'pre', '30-07-2026');
+
+    expect(callCount).toBe(1);
+    expect(second).toEqual(first);
+  });
+
+  test('a different env, a different datum and a different urn each make a new fetch', async () => {
+    let callCount = 0;
+    server.use(
+      http.get('*/v1/dso/activiteiten/:urn/dossier', () => {
+        callCount += 1;
+        return HttpResponse.json({ success: true, data: dossierFixture });
+      })
+    );
+
+    await getActiviteitDossier('urn:x', 'pre', '30-07-2026');
+    await getActiviteitDossier('urn:x', 'prod', '30-07-2026'); // different env
+    await getActiviteitDossier('urn:x', 'pre', '01-01-2026'); // different datum
+    await getActiviteitDossier('urn:y', 'pre', '30-07-2026'); // different urn
+
+    expect(callCount).toBe(4);
+  });
+
+  test('an undefined datum produces a stable cache key, distinct from a real date', async () => {
+    let callCount = 0;
+    server.use(
+      http.get('*/v1/dso/activiteiten/:urn/dossier', () => {
+        callCount += 1;
+        return HttpResponse.json({ success: true, data: dossierFixture });
+      })
+    );
+
+    await getActiviteitDossier('urn:no-datum', 'pre');
+    await getActiviteitDossier('urn:no-datum', 'pre'); // same undefined datum -> cache hit
+    await getActiviteitDossier('urn:no-datum', 'pre', '30-07-2026'); // a real date -> new fetch
+
+    expect(callCount).toBe(2);
+  });
+
+  test('clearing the cache forces a refetch', async () => {
+    let callCount = 0;
+    server.use(
+      http.get('*/v1/dso/activiteiten/:urn/dossier', () => {
+        callCount += 1;
+        return HttpResponse.json({ success: true, data: dossierFixture });
+      })
+    );
+
+    await getActiviteitDossier('urn:clear', 'pre');
+    clearActiviteitDossierCache();
+    await getActiviteitDossier('urn:clear', 'pre');
+
+    expect(callCount).toBe(2);
+  });
+
+  test('throws HTTP {status} on a non-ok response, and does not cache the failure', async () => {
+    let callCount = 0;
+    server.use(
+      http.get('*/v1/dso/activiteiten/:urn/dossier', () => {
+        callCount += 1;
+        return new HttpResponse(null, { status: 502 });
+      })
+    );
+
+    await expect(getActiviteitDossier('urn:error', 'pre')).rejects.toThrow('HTTP 502');
+    await expect(getActiviteitDossier('urn:error', 'pre')).rejects.toThrow('HTTP 502');
+    expect(callCount).toBe(2);
+  });
+
+  test('throws when the envelope reports success: false', async () => {
+    server.use(
+      http.get('*/v1/dso/activiteiten/:urn/dossier', () =>
+        HttpResponse.json({ success: false, data: null })
+      )
+    );
+    await expect(getActiviteitDossier('urn:fail', 'pre')).rejects.toThrow('DSO request failed');
+  });
+
+  describe('getCachedActiviteitDossier — synchronous, never fetches', () => {
+    test('is undefined before anything has resolved this env/datum/urn', () => {
+      expect(getCachedActiviteitDossier('urn:never-fetched', 'pre')).toBeUndefined();
+    });
+
+    test('reads the value back once getActiviteitDossier has resolved, for the same key', async () => {
+      server.use(
+        http.get('*/v1/dso/activiteiten/:urn/dossier', () =>
+          HttpResponse.json({ success: true, data: dossierFixture })
+        )
+      );
+
+      expect(getCachedActiviteitDossier('urn:cached-sync', 'pre', '30-07-2026')).toBeUndefined();
+
+      const resolved = await getActiviteitDossier('urn:cached-sync', 'pre', '30-07-2026');
+
+      expect(getCachedActiviteitDossier('urn:cached-sync', 'pre', '30-07-2026')).toEqual(resolved);
+      // A different env, datum or urn is a different cache key.
+      expect(getCachedActiviteitDossier('urn:cached-sync', 'prod', '30-07-2026')).toBeUndefined();
+      expect(getCachedActiviteitDossier('urn:cached-sync', 'pre', '01-01-2026')).toBeUndefined();
+      expect(getCachedActiviteitDossier('urn:other', 'pre', '30-07-2026')).toBeUndefined();
+    });
+
+    test('stays undefined for a fetch that fails', async () => {
+      server.use(
+        http.get(
+          '*/v1/dso/activiteiten/:urn/dossier',
+          () => new HttpResponse(null, { status: 502 })
+        )
+      );
+
+      await expect(getActiviteitDossier('urn:cached-fail', 'pre')).rejects.toThrow('HTTP 502');
+
+      expect(getCachedActiviteitDossier('urn:cached-fail', 'pre')).toBeUndefined();
+    });
+
+    test('clearActiviteitDossierCache clears the resolved cache too', async () => {
+      server.use(
+        http.get('*/v1/dso/activiteiten/:urn/dossier', () =>
+          HttpResponse.json({ success: true, data: dossierFixture })
+        )
+      );
+      await getActiviteitDossier('urn:cached-clear', 'pre');
+      expect(getCachedActiviteitDossier('urn:cached-clear', 'pre')).toBeTruthy();
+
+      clearActiviteitDossierCache();
+
+      expect(getCachedActiviteitDossier('urn:cached-clear', 'pre')).toBeUndefined();
+    });
   });
 });

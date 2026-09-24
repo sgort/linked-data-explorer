@@ -5,6 +5,7 @@
 
 import JSZip from 'jszip';
 
+import { getDeployTarget } from '../services/deployTargetService';
 import { DmnModel } from '../types';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ChainExportData, ExportFormat, ExportOptions, ExportResult } from '../types/export.types';
@@ -250,7 +251,13 @@ async function exportAsPackage(
     }
 
     // 3. Add README
-    const readme = generateReadme(data, chainDmns);
+    // getDeployTarget() is contracted to resolve null rather than reject on
+    // failure; `.catch` is defense in depth so the export keeps working even
+    // if that contract is ever broken (#165) -- this whole function's own
+    // try/catch would otherwise turn an unreachable backend into a failed
+    // export.
+    const deployTarget = await getDeployTarget().catch(() => null);
+    const readme = generateReadme(data, chainDmns, deployTarget);
     zip.file('README.md', readme);
 
     // 4. Generate ZIP
@@ -276,18 +283,39 @@ async function exportAsPackage(
 }
 
 /**
- * Generate README for ZIP package
+ * Generate README for ZIP package.
+ *
+ * @param deployTarget The Operaton the backend deploys to (#165), from
+ *   `getDeployTarget()` — `null` when none is configured or the backend
+ *   could not be reached, in which case the Cockpit link is left out below
+ *   and every other reference falls back to a placeholder, as before.
  */
-function generateReadme(data: ChainExportData, chainDmns: DmnModel[]): string {
-  // Get Operaton URL from environment (fallback to placeholder)
-  const operatonUrl = import.meta.env.VITE_OPERATON_BASE_URL
-    ? import.meta.env.VITE_OPERATON_BASE_URL.replace(/\/engine-rest$/, '')
+function generateReadme(
+  data: ChainExportData,
+  chainDmns: DmnModel[],
+  deployTarget: string | null
+): string {
+  const operatonUrl = deployTarget
+    ? deployTarget.replace(/\/engine-rest$/, '')
     : '<YOUR_OPERATON_URL>';
 
   const operatonApiUrl = `${operatonUrl}/engine-rest`;
 
   // Generate process ID (same logic as in exportToBpmn)
   const processId = `chain-${data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+
+  // The "Navigate to Cockpit" step is a real link meant to work today, unlike
+  // the curl examples above (which fall back to a placeholder regardless) --
+  // so with no known deploy target it is left out entirely rather than
+  // pointing at the placeholder, and the remaining steps renumber (#165).
+  const cockpitSteps = [
+    ...(deployTarget ? [`Navigate to ${operatonUrl}/operaton/app/cockpit/`] : []),
+    'Go to "Processes" section',
+    `Find your process: \`${processId}\``,
+    'View the process diagram showing all DMN tasks',
+  ]
+    .map((step, i) => `${i + 1}. ${step}`)
+    .join('\n');
 
   // Individual deploy commands (used in Alternative section)
   const individualDeployCommands = chainDmns
@@ -473,10 +501,7 @@ The included \`chain.bpmn\` file provides a visual representation of your DMN ch
 ✅ **BPMN is now in Operaton!**
 
 View it in Operaton Cockpit:
-1. Navigate to ${operatonUrl}/operaton/app/cockpit/
-2. Go to "Processes" section
-3. Find your process: \`${processId}\`
-4. View the process diagram showing all DMN tasks
+${cockpitSteps}
 
 ### Features
 
