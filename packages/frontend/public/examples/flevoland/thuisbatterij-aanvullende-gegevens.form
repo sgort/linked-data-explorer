@@ -1,0 +1,74 @@
+{
+  "components": [
+    {
+      "text": "# Aanvullende gegevens opvragen (Awb 4:5)\nDe aanvraag is niet volledig. Leg vast welke gegevens ontbreken en tot wanneer de aanvrager deze kan aanvullen. Registreer daarna of de aanvulling binnen de hersteltermijn is ontvangen.",
+      "id": "Field_001_tbag",
+      "type": "text",
+      "layout": { "row": "Row_001_tbag", "columns": null }
+    },
+    {
+      "label": "Dossiernummer",
+      "id": "Field_002_tbag",
+      "key": "dossierReference",
+      "type": "textfield",
+      "layout": { "row": "Row_002_tbag", "columns": 8 },
+      "disabled": true
+    },
+    {
+      "label": "Datum ontvangst",
+      "id": "Field_003_tbag",
+      "key": "receiptDate",
+      "type": "textfield",
+      "layout": { "row": "Row_002_tbag", "columns": 8 },
+      "disabled": true
+    },
+    {
+      "label": "Ontbrekende gegevens",
+      "id": "Field_004_tbag",
+      "key": "ontbrekendeGegevens",
+      "type": "textarea",
+      "layout": { "row": "Row_003_tbag", "columns": null },
+      "validate": { "required": true }
+    },
+    {
+      "subtype": "date",
+      "dateLabel": "Hersteltermijn tot",
+      "id": "Field_005_tbag",
+      "key": "hersteltermijnDatum",
+      "type": "datetime",
+      "layout": { "row": "Row_004_tbag", "columns": 8 },
+      "validate": { "required": true }
+    },
+    {
+      "label": "Aanvulling binnen hersteltermijn ontvangen",
+      "id": "Field_006_tbag",
+      "key": "supplementReceived",
+      "type": "checkbox",
+      "defaultValue": false,
+      "layout": { "row": "Row_005_tbag", "columns": null }
+    },
+    {
+      "label": "Toelichting",
+      "id": "Field_007_tbag",
+      "key": "aanvullingToelichting",
+      "type": "textarea",
+      "layout": { "row": "Row_006_tbag", "columns": null }
+    },
+    {
+      "action": "submit",
+      "label": "Verzenden",
+      "id": "Field_008_tbag",
+      "type": "button",
+      "layout": { "row": "Row_007_tbag", "columns": null }
+    }
+  ],
+  "id": "thuisbatterij-aanvullende-gegevens",
+  "type": "default",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.43.1"
+  },
+  "schemaVersion": 19,
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0"
+}

@@ -65,6 +65,15 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     organization: 'flevoland',
   },
   {
+    id: 'example_thuisbatterij_missing_info',
+    name: 'Thuisbatterij Aanvullende Gegevens (Example)',
+    description:
+      'Caseworker form for requesting missing information on a Thuisbatterij subsidy application (Awb 4:5)',
+    path: '/examples/flevoland/thuisbatterij-aanvullende-gegevens.form',
+    language: 'nl',
+    organization: 'flevoland',
+  },
+  {
     id: 'example_zorgtoeslag_notify_applicant',
     name: 'Zorgtoeslag Notify Applicant (Example)',
     description: 'Phase 6 notification form for the AWB Zorgtoeslag process (Awb 3:6)',
