@@ -143,8 +143,7 @@ build.
 
 **And the ordering alone is not enough here**, because this backend ships a
 native module. `libxmljs2` builds against NAN rather than N-API, so its
-`xmljs.node` is bound to `NODE_MODULE_VERSION` — 127 on Node 22, 137 on Node
-24. Between switching the runtime and deploying an artifact rebuilt on the new
+`xmljs.node` is bound to `NODE_MODULE_VERSION` — 127 on Node 22, 137 on Node 24. Between switching the runtime and deploying an artifact rebuilt on the new
 major, the binary does not match the host; the same is true in reverse if the
 merge comes first. That is not merely an interruption: on 23 September the
 deploy reported success — health, `build.sha`, the shape layers and
@@ -366,9 +365,25 @@ passed. If `changes` fails, the build runs anyway. Two things follow:
   `Build and Deploy Job`; they were renamed so each can be required on its own.
   Rename one of these jobs and the ruleset waits for a name that no longer
   reports. Update the ruleset in the same change.
+
+  The two PRODUCTION site workflows carried the same collision until #210 and
+  are now `Build and Deploy Production Frontend` and `Build and Deploy
+Production ROPA Site`. Nothing requires them today -- `main` asks for
+  `audit` and `scan` only -- so this changes no ruleset. It is a
+  precondition: while both answered to one name they could not be required,
+  referenced or told apart in a check list, and a promotion pull request showed
+  two identical rows.
+
 - **`main` requires `audit` and `scan` only, deliberately.** The backend
   production workflow has no `pull_request` trigger (#46), and promotion carries
   commits that already passed these checks on `acc`.
+
+  The two site production workflows DO have one, on `main`. So a promotion pull
+  request builds them and deploys a preview to the production Static Web App --
+  environment `209` on `ropa-flevoland-prod` during the v2026.09.6 promotion,
+  with `default` still serving `main`. Whether that is a feature worth keeping
+  or an asymmetry to remove is #210; recorded here because this section
+  otherwise reads as though production has no `pull_request` triggers at all.
 
 **The two rulesets differ in one parameter, deliberately.**
 `require_extra_approval_for_unattributed_changes` is `true` on `acc` and `false`
