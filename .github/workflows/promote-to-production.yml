@@ -1,0 +1,196 @@
+name: Promote to Production
+
+# One workflow that runs the three production deploys IN ORDER, instead of
+# three workflows that started at once and raced (#210).
+#
+# Before this, each production workflow triggered itself on a push to main with
+# its own `paths:` filter. On the v2026.09.6 promotion the ROPA site finished
+# deploying to production before the backend had started building -- so for
+# several minutes production served new pages against the previous API. Nothing
+# broke, and nothing would have caught it either.
+#
+# The order is: backend first, then the two sites together. A site calling an
+# API older than itself is the failure worth preventing; two sites deploying at
+# once is not, since neither depends on the other.
+#
+# ronl-business-api solved the same problem the same way in its own #177, which
+# is where this shape comes from. The difference here is that the two site
+# workflows keep their own `pull_request` trigger for the production preview
+# (#210), so they are reachable two ways: called by this workflow on a
+# promotion, and triggered directly by a promotion pull request. Those are
+# different runs doing different things, and the concurrency groups -- which
+# name each app rather than using `github.workflow` -- keep them apart.
+
+on:
+  # NO paths filter, deliberately -- the same choice ronl-business-api made.
+  # This workflow must start on every push to main, because it is what decides
+  # which deploys are needed. A filter here would mean the decision itself
+  # never runs, and `changes` would never get to say "none".
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report which deploys are needed, then stop without deploying'
+        type: boolean
+        default: true
+
+# Queue promotions rather than cancelling them: a promotion half-applied is
+# worse than one that waits. Matches the called workflows, which queue for the
+# same reason.
+concurrency:
+  group: promote-to-production-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Decide which deploys are needed
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      backend: ${{ steps.targets.outputs.backend }}
+      frontend: ${{ steps.targets.outputs.frontend }}
+      ropa_site: ${{ steps.targets.outputs.ropa_site }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Both ends of the range have to exist locally to be diffed.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      # The decision script gates every production deploy, so its own test runs
+      # before it does. Neither needs an install: both are dependency-free, and
+      # this step is what keeps that true.
+      - name: Test the decision script
+        run: node scripts/promotion-targets.test.mjs
+
+      - name: Which deploys does this promotion need?
+        id: targets
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # Fail safe towards deploying everything, never towards deploying
+          # nothing. A promotion whose range cannot be read is not a promotion
+          # that changed nothing. Three cases reach this: workflow_dispatch,
+          # which carries no `before`; a first push or force-push, whose
+          # `before` is all zeros; and a `before` this clone cannot resolve.
+          if [ -z "$BEFORE" ] \
+            || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] \
+            || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            echo "No readable commit range (before='${BEFORE:-unset}') -- deploying everything."
+            node scripts/promotion-targets.mjs --all
+            exit 0
+          fi
+
+          # --no-renames on purpose: with rename detection a moved file appears
+          # under its new name only, so a file moved OUT of packages/backend/
+          # would not deploy the backend it was removed from. GitHub's own path
+          # filters count both names; so does this.
+          git diff --name-only --no-renames "$BEFORE" "$AFTER" > "$RUNNER_TEMP/changed.txt"
+          echo "$(wc -l < "$RUNNER_TEMP/changed.txt") changed file(s) in ${BEFORE}..${AFTER}"
+          node scripts/promotion-targets.mjs < "$RUNNER_TEMP/changed.txt"
+
+      - name: Summary
+        env:
+          BACKEND: ${{ steps.targets.outputs.backend }}
+          FRONTEND: ${{ steps.targets.outputs.frontend }}
+          ROPA_SITE: ${{ steps.targets.outputs.ropa_site }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          {
+            echo "| Deploy | This promotion |"
+            echo "| --- | --- |"
+            echo "| Backend (backend.linkeddata.open-regels.nl) | $BACKEND |"
+            echo "| Frontend (linkeddata.open-regels.nl) | $FRONTEND |"
+            echo "| ROPA site | $ROPA_SITE |"
+            if [ "$DRY_RUN" = "true" ]; then
+              echo
+              echo "**Dry run -- nothing above is deployed.** Everything up to the call"
+              echo "was exercised: the range, the decision script and its test, the three"
+              echo "workflow references and their secrets. Re-dispatch with \`dry_run\`"
+              echo "unticked to deploy."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # -- Two things that hold for all three calls below -----------------------
+  #
+  # `$/` rather than `./`. GitHub's self-repository syntax (July 2026) resolves
+  # against THIS repository at this commit; the workspace-relative `./` form
+  # resolves against the runner's filesystem, so it can pick up something an
+  # earlier step wrote there. zizmor's self-repository audit flags the latter.
+  #
+  # `dry_run` is how this workflow gets proven without promoting anything. The
+  # three calls are resolved when the run is PARSED, before any job starts, so
+  # a dry run still fails loudly on a bad reference, a missing secret or an
+  # unsatisfiable `needs` graph -- it just deploys nothing. It defaults to true
+  # so a manual dispatch errs towards saying what it would do.
+
+  # -- The backend goes first, and alone ------------------------------------
+  #
+  # This is the whole point of the workflow: the backend must be serving the
+  # promoted commit before any site that calls it is deployed.
+  #
+  # The `if` runs this job when `changes` did NOT succeed as well as when it
+  # said true -- a failure there must mean a full deploy, never a free pass.
+  # `!cancelled()` is what lets the job run at all after a failed need; without
+  # it GitHub skips the job regardless of what the condition says.
+  backend:
+    name: backend
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true) && (needs.changes.result != 'success' || needs.changes.outputs.backend == 'true') }}
+    permissions:
+      contents: read
+    uses: $/.github/workflows/azure-backend-production.yml
+    secrets:
+      AZURE_WEBAPP_PUBLISH_PROFILE_PROD: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
+
+  # -- Then the two sites, together -----------------------------------------
+  #
+  # They do not depend on each other, only on the backend, so they run in
+  # parallel -- the promotion is no slower than it was, only ordered.
+  #
+  # `needs.backend.result` is checked against a positive list rather than
+  # `!= 'failure'`: a skipped backend (nothing backend-shaped changed) and a
+  # successful one both mean the deployed backend serves what these sites
+  # expect, while `cancelled` means nobody knows and the sites must not go.
+  #
+  # `pull-requests: write` is granted here because a called workflow cannot
+  # hold more permission than its caller, and the Azure SWA action asks for it
+  # to comment on pull requests. On a promotion there is no pull request to
+  # comment on; the grant exists so the called job's own declaration is
+  # satisfiable.
+  frontend:
+    name: frontend
+    needs: [changes, backend]
+    if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true) && contains(fromJSON('["success","skipped"]'), needs.backend.result) && (needs.changes.result != 'success' || needs.changes.outputs.frontend == 'true') }}
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: $/.github/workflows/azure-frontend-production.yml
+    secrets:
+      AZURE_STATIC_WEB_APPS_API_TOKEN_WITTY_BEACH_0A7CFA203: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WITTY_BEACH_0A7CFA203 }}
+
+  ropa_site:
+    name: ropa-site
+    needs: [changes, backend]
+    if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.dry_run != true) && contains(fromJSON('["success","skipped"]'), needs.backend.result) && (needs.changes.result != 'success' || needs.changes.outputs.ropa_site == 'true') }}
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: $/.github/workflows/azure-ropa-site-prod.yml
+    secrets:
+      AZURE_STATIC_WEB_APPS_API_TOKEN_ROPA_PROD: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ROPA_PROD }}
