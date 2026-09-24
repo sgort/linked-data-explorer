@@ -80,6 +80,17 @@ export interface DmnNamingStats {
 }
 
 /**
+ * The DMN elements this service measures, and the only values `matchTag`
+ * accepts. A closed union rather than `string` so the tag name interpolated
+ * into `matchTag`'s RegExps is a compile-time literal, never data — which is
+ * what makes those RegExps safe, and what the nosemgrep directives on them
+ * rely on. Same shape as `RonlAttr` in the frontend's `ronlAttributes.ts`,
+ * for the same rule and the same reason. Adding a member is fine; widening
+ * this to `string` is what the directives forbid.
+ */
+type MeasuredTag = 'decision' | 'uitvoeringsregel' | 'inputData';
+
+/**
  * The rest of this codebase deliberately treats the `dmn:` prefix as
  * optional (see `dso.service.ts`'s `/<(?:dmn:)?definitions/` and the
  * `(?:\w+:)?` matches throughout `normalizeDmnForOperaton`) — an
@@ -95,8 +106,13 @@ export interface DmnNamingStats {
  * its nested `<dmn:extensionElements>`/`uitv:uitvoeringsregelRef`, and inside
  * `<uitv:uitvoeringsregel>` for its `uitv:vraagTekst`.
  */
-function matchTag(xml: string, tag: string): { open: string; inner: string }[] {
+function matchTag(xml: string, tag: MeasuredTag): { open: string; inner: string }[] {
   const out: { open: string; inner: string }[] = [];
+  // `tag` is a MeasuredTag literal, so the interpolation is a compile-time
+  // constant, never data; `\w+:` and the literal name are linear, with no
+  // nested quantifier to backtrack on. Stops being true the moment this
+  // parameter widens back to `string` -- change the type, not this comment.
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const re = new RegExp(`<(?:\\w+:)?${tag}\\s`, 'g');
   let m: RegExpExecArray | null;
   while ((m = re.exec(xml))) {
@@ -126,6 +142,9 @@ function matchTag(xml: string, tag: string): { open: string; inner: string }[] {
     let inner = '';
     if (!/\/>\s*$/.test(open)) {
       const rest = xml.slice(end + 1);
+      // Same reasoning as the opening-tag RegExp above: `tag` is a
+      // MeasuredTag literal, and the pattern is linear.
+      // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
       const closeMatch = new RegExp(`<\\/(?:\\w+:)?${tag}>`).exec(rest);
       if (closeMatch) {
         inner = rest.slice(0, closeMatch.index);
