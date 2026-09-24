@@ -83,10 +83,41 @@ Explorer's rows were re-verified the same day.
 | **Install checked at start**  | ✅ `start`            | ✅ `dev`, three scripts   | ✅ `dev`                  |
 | **Install checked at push**   | ✅ pre-push           | ✅ pre-push               | ✅ pre-push               |
 | **Orphaned previews checked** | ✅ `check-previews`   | ❌ none orphaned today    | ✅ `check-previews`       |
+| **Preview on a promotion PR** | ✅ production SWA     | ✅ sites only, decided    | ❌ none, #87              |
 
 Nothing in that table is uniform by accident. Each application has a different
 build shape, and the differences below are re-derived per repository rather than
 copied.
+
+**The last row is the one where the three genuinely disagree, and RONL Business
+API is the outlier.** A pull request that promotes `acc` to `main` builds and
+deploys a preview of the PRODUCTION site in both ttl-editor
+(`azure-static-web-apps-white-sky-02b674303.yml`) and Linked Data Explorer
+(`azure-frontend-production.yml`, `azure-ropa-site-prod.yml`). In RONL Business
+API no production workflow carries a `pull_request` trigger at all.
+
+Both positions are now decisions rather than accidents, and they answer
+different questions:
+
+- **Linked Data Explorer keeps it** (linked-data-explorer#210, 24 September
+  2026): a promotion pull request produces a preview of the real production
+  site, built from `acc`, so it can be looked at before anything is promoted
+  rather than inferred from an acceptance build. ttl-editor has the same shape.
+- **RONL Business API excludes it** (ronl-business-api#87): `main` is promoted
+  from `acc`, so the content has already run its suite there, and re-running it
+  on the promotion says nothing new.
+
+The costs are real and belong with the decision. A preview on a production
+Static Web App is a public URL serving unreleased code, and it holds an
+environment slot on the production app — the ceiling `check-previews` exists
+for, which Linked Data Explorer still does not have. The teardown depends on the
+close job running, and GitHub does not run `pull_request` workflows while a pull
+request has a merge conflict, closing included: that is how eight previews leaked
+in RONL Business API on 12 September 2026.
+
+The BACKEND is excluded everywhere, and that asymmetry is deliberate in both
+repositories that have one. A preview site is a page to look at; a preview
+backend on production would be a second live API against production data.
 
 ### What changed on 23 September 2026
 
