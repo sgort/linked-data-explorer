@@ -28,15 +28,8 @@ import {
   RuleSet,
   RuleSetQuality,
 } from '../../services/dsoService';
-import {
-  NAMING_META,
-  NAMING_ORDER,
-  Section,
-  Tone,
-  TONE_TEXT,
-  toneForRatio,
-  TYPERING_META,
-} from './shared';
+import { Section } from './shared';
+import { NAMING_META, NAMING_ORDER, Tone, TONE_TEXT, toneForRatio, TYPERING_META } from './tokens';
 
 // ── Design tokens local to this tab (README "Design tokens") ────────────────
 //
