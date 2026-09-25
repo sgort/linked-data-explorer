@@ -120,6 +120,23 @@
     },
     {
       "description": [
+        "ubuntu 26.04 is deferred. The runner pins exist to stop the image drifting",
+        "under us (ICTU recommendation 2), not to be on the newest release: today",
+        "`ubuntu-latest` still resolves to 24.04, so taking 26.04 would put every",
+        "job ahead of GitHub’s own default for no benefit, on an image the rest of",
+        "the ecosystem has not settled on. Checked on 2026-09-24: the ubuntu26",
+        "images are published and the `ubuntu-26.04` label carries no beta marker,",
+        "so this is a choice rather than an impossibility.",
+        "Revisit when `ubuntu-latest` moves to 26.04, and move deliberately then —",
+        "one pull request, all workflows at once, the way 24.04 arrived."
+      ],
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["ubuntu"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": [
         "Major updates wait in the Dependency Dashboard (#36) as checkboxes and hold",
         "no slot in prConcurrentLimit until someone ticks one. The queue competing",
         "with lock-file maintenance was almost entirely majors - npm 12 and two",
