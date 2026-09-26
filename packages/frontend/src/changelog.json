@@ -2,6 +2,124 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.09.8",
+      "status": "Released",
+      "date": "26 sep 2026",
+      "scope": "backend",
+      "commits": [
+        {
+          "sha": "e2cb5cc",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Every release now ships with its own SBOM, committed and uploaded",
+          "details": [
+            "ICTU recommendation 10 asks for SBOMs of released versions, kept analysable: when an advisory lands against something that shipped months ago, the question is what that version contained, and only a document written at the time answers it. scripts/write-sbom.mjs (npm run sbom) writes docs/sbom/<name>-<version>.cdx.json — CycloneDX, production dependencies only, read from the lockfile without installing. It is now a step in bump-release, after the version bump, since the filename carries the version.",
+            "sbom.yml runs on a push to main, on demand, and on pull requests that touch the tooling. A promotion to main is the release here, so it uploads the document as an artifact and asserts the released version has one. Two copies because neither suffices alone: artifacts expire after ninety days on a public repository, so the committed copy is the durable one; the artifact is what a scanner can fetch without a checkout.",
+            "Three modes: writing; --check, strict, for where the release is cut; and --verify-release for the promotion, where a missing document fails but drift only warns, because a promotion carries every commit merged since the release. Both comparisons parse the JSON and ignore serialNumber and timestamp, so Prettier reformatting the file changes nothing."
+          ]
+        },
+        {
+          "sha": "bf62026",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The lockfile-sync check no longer fails on a clean checkout",
+          "details": [
+            "The new step failed on every pull request, and not for the reason it exists: npm ci --dry-run still runs lifecycle scripts, and the root postinstall copies package-lock.json into node_modules, which a dry run never creates. On a clean checkout that is ENOENT, reported under a step named \"Lockfile matches package.json\" — precisely the confusion the step was added to remove. It passed locally only because that machine already had node_modules.",
+            "--ignore-scripts skips the postinstall. Whether the lockfile satisfies package.json is decided before any script runs, so the check keeps its meaning."
+          ]
+        },
+        {
+          "sha": "d9200ba",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "A lockfile that disagrees with package.json now fails under its own name",
+          "details": [
+            "npm ci already refused such a lockfile, but only as an EUSAGE error inside \"Install dependencies for the formatter\", three steps into a job about pinning. It happened on 25 September 2026 in ronl-business-api: three dependency pull requests merged back to back, each green against its own base, produced a lockfile matching no package.json.",
+            "An npm ci --dry-run step now runs before that install, costs seconds, and fails with the cause in its own name. What it cannot catch is recorded next to it: it proves consistency with the pull request's own base, not with a base that has moved since. Merge dependency pull requests one at a time, rebasing each onto the merged acc first."
+          ]
+        },
+        {
+          "sha": "faae5f8",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "The ubuntu 26.04 runner major is deferred, with its reason recorded",
+          "details": [
+            "ICTU recommendation 7 asks for a major to be assessed and the decision recorded. ubuntu 26.04 was assessed on 24 September 2026 and held by a Renovate rule carrying its reason and the condition that ends it: the runner pins exist to stop the image drifting, and ubuntu-latest still resolves to 24.04. Revisit when it moves.",
+            "The other queued majors — react-router-dom 7, vitest 5, jsdom 30, vite 8, typescript 7, eslint 10, React and the grouped workspace majors — are deliberately not disabled. They stay behind Dependency Dashboard approval, where a person sees them."
+          ]
+        },
+        {
+          "sha": "bd79d04",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Renovate never offers a new major's X.0.0 release",
+          "details": [
+            "ICTU recommendation 7 also asks to wait for the first or second patch of a major. Majors already wait for Dependency Dashboard approval; nothing said which version may be offered once approved. An allowedVersions rule for the npm manager now excludes X.0.0, so the earliest a major can arrive is X.0.1.",
+            "Scoped to npm because the same pattern against Docker tags or runner images would mean something else. Validated with renovate-config-validator --strict and against fourteen versions; every major queued today is unaffected. The cost is recorded in the rule: a package that never patches its X.0.0 needs a per-package exception."
+          ]
+        },
+        {
+          "sha": "bd88c6e",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The daily audit's job is named dependency-audit, so it no longer collides with the required audit check",
+          "details": [
+            "audit is zizmor.yml's job and a required status check. Required checks match by name, so a second job of that name made the context ambiguous — one passing and one failing check under one name, which no ruleset can satisfy. Its first run blocked sgort/ronl-business-api#206 outright. SECURITY-PIPELINE.md now names the check alongside the rest of the audit's specification."
+          ]
+        },
+        {
+          "sha": "18eae21",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The daily audit runs its script from a path the branch checkouts cannot remove",
+          "details": [
+            "The audit loop checks out origin/acc and origin/main in turn, replacing the working tree — including scripts/audit-tree.mjs itself. The first run lost the script at the first checkout, and node's missing-module exit was read as \"a high or critical advisory was found\".",
+            "The script is now copied to $RUNNER_TEMP before the loop. Each iteration resets its own status and anything above 2 is clamped to 2, so \"the audit could not run\" can never be mistaken for a finding or for a clean tree."
+          ]
+        },
+        {
+          "sha": "e02f8d5",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Dependencies are audited daily, on both acc and main",
+          "details": [
+            "Every other gate runs on a commit, so a new advisory against unchanged code was seen by nothing, and Dependabot watches acc rather than the main that production deploys from. dependency-audit.yml runs at 05:17 UTC and on demand, reading each branch's lockfile with npm audit --package-lock-only. It fails on a high or critical advisory in production dependencies, reports the rest, and opens, updates and closes one tracking issue so a scheduled failure reaches someone. ICTU recommendation 10.",
+            "scripts/audit-tree.mjs groups findings by advisory rather than by package: on 24 September this repository's 28 moderate entries were three advisories, 24 of them the same @tiptap/core. An audit that cannot run exits 2 and is treated as a finding, never as a clean tree."
+          ]
+        },
+        {
+          "sha": "ad82797",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The quality service's tag matcher only accepts its three known tags",
+          "details": [
+            "Semgrep's detect-non-literal-regexp flagged both RegExps in matchTag, which interpolate its tag parameter. The parameter was string, so only the call sites kept data out of the pattern. It is now a MeasuredTag union of exactly 'decision', 'uitvoeringsregel' and 'inputData', so the compiler enforces what a comment used to assert.",
+            "Both lines carry a scoped nosemgrep naming the rule, why it is safe, and what would end that: widening the type back to string. Neither pattern has a nested quantifier, so there was no backtracking risk either way."
+          ]
+        },
+        {
+          "sha": "646d4ca",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The promotion drift guard's failure message uses a constant format string",
+          "details": [
+            "Semgrep unsafe-formatstring, low. With a second argument, console.error passes the first to util.format, so the interpolated workflow and target names became part of a format string — a %s in either would consume the path list. Not exploitable, since both come from a hardcoded array, but that assumption is what stops being true when someone derives the list from a directory read.",
+            "The values now go in as arguments behind a constant format string, with %j for the path list. A forced failure still reports correctly; npm run test:scripts passes."
+          ]
+        },
+        {
+          "sha": "ee59a3d",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "concurrently updated to v10",
+          "details": [
+            "Root dev dependency used to run the frontend and backend dev servers together. A tooling-only change; nothing it touches is deployed."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.09.7",
       "status": "Released",
       "date": "24 sep 2026",
