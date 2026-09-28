@@ -859,7 +859,18 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       </div>
 
       {showDeployModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        /*
+          z-[1100], not the z-50 the other dialogs use: this is the only one that
+          opens over a bpmn-js canvas, and bpmn-js ships its own stacking with
+          three digits. diagram-js.css puts .djs-context-pad at 100, .djs-popup
+          at 200 and .djs-hover-tooltip at 1000; properties-panel.css puts its
+          tooltip and its FEEL editor popup at 1001, both position:fixed. At
+          z-50 the dialog opened under all of them — with a task selected its
+          context pad sat on top of the modal and stayed clickable through the
+          backdrop. 1100 clears the highest, and nothing in this app's own CSS
+          sets z-index at all, so there is no other ceiling to respect.
+        */
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1100] p-4">
           {/*
             The resource list grows with the bundle — a RIP phase deploys 19-28
             files — so the dialog is capped at the viewport and split into three:
