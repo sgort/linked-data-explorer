@@ -3,5 +3,6 @@
 # stops here with the fix named (npm ci), instead of lint and check-format
 # running on the wrong tool versions and failing on files that are fine.
 npm run deps:check
+npm run check-rip-bpmn
 npm run lint
 npm run check-format
