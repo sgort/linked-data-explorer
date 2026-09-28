@@ -24,6 +24,7 @@
     "test:scripts": "node scripts/promotion-targets.test.mjs && node scripts/dso-dossier.test.mjs",
     "check-mirror": "bash scripts/check-mirror.sh",
     "check-rip-bpmn": "node scripts/check-rip-bpmn-copies.mjs",
+    "e2e:deploy-fixtures": "node scripts/deploy-e2e-fixtures.mjs",
     "authorities:generate": "node scripts/generate-dso-authorities.mjs",
     "dso:dossier": "node scripts/dso-dossier.mjs",
     "prepare": "husky || true",
