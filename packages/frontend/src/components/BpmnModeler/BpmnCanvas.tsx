@@ -20,6 +20,7 @@ import { getDeployTarget } from '../../services/deployTargetService';
 import { DocumentService } from '../../services/documentService';
 import { FormService } from '../../services/formService';
 import { DocumentTemplate } from '../../types/document.types';
+import { parseDocumentRefs } from '../../utils/documentRefs';
 import { getProblemDetail } from '../../utils/problem';
 import DmnTemplateSelector from './DmnTemplateSelector';
 import DocumentTemplateSelector from './DocumentTemplateSelector';
@@ -418,13 +419,18 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       }
 
       if (element.type === 'bpmn:UserTask') {
-        const documentRef = element.businessObject.get('ronl:documentRef');
-        if (!documentRef) return;
+        // A task may carry several documents (see utils/documentRefs.ts). One
+        // is named on the badge; more than one would not fit, so the badge
+        // counts them and the title lists them.
+        const documentRefs = parseDocumentRefs(element.businessObject.get('ronl:documentRef'));
+        if (documentRefs.length === 0) return;
         const badgeWidth = 130;
         const leftOffset = Math.round((element.width - badgeWidth) / 2);
+        const label =
+          documentRefs.length === 1 ? documentRefs[0] : `${documentRefs.length} documents`;
         overlays.add(element.id, 'document-linked', {
           position: { bottom: -36, left: leftOffset }, // below the form badge
-          html: `<div class="document-linked-badge" title="${documentRef}">📄 ${documentRef}</div>`,
+          html: `<div class="document-linked-badge" title="${documentRefs.join(', ')}">📄 ${label}</div>`,
         });
       }
     });
@@ -497,7 +503,10 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           // A signature task binds its template through signatureRef alone;
           // reading only documentRef left such a template out of the bundle.
           ...bpmnXml.matchAll(/ronl:signatureRef="([^"]+)"/g),
-        ].map((m) => m[1])
+          // documentRef holds a comma-separated list, so the captured group is
+          // split rather than used whole — otherwise a task with two documents
+          // contributes one id that matches no template and bundles neither.
+        ].flatMap((m) => parseDocumentRefs(m[1]))
       ),
     ];
 
@@ -636,7 +645,11 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
             // A signature task binds its template through signatureRef alone;
             // reading only documentRef left such a template out of the bundle.
             ...bpmnXml.matchAll(/ronl:signatureRef="([^"]+)"/g),
-          ].map((m) => m[1])
+            // documentRef holds a comma-separated list, so the captured group
+            // is split rather than used whole — otherwise a task with two
+            // documents contributes one id that matches no template and
+            // bundles neither.
+          ].flatMap((m) => parseDocumentRefs(m[1]))
         ),
       ];
 
