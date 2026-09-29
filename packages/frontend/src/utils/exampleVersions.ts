@@ -17,8 +17,8 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 6, // v6: decisionRefTenantId=${null} (shared untenanted DMNs)
-  example_tree_felling: 9, // v9: decisionRefTenantId=${null} (shared untenanted DMNs)
+  example_awb_process: 7, // v7: swimlanes + Dutch names + missing-info form
+  example_tree_felling: 10, // v10: swimlanes + Dutch names
   example_awb_zorgtoeslag: 5, // v5: decisionRefTenantId=${null} (shared untenanted DMNs)
   example_zorgtoeslag_provisional: 7, // v7: decisionRefTenantId=${null} (shared untenanted DMNs)
   example_zorgtoeslag_final: 6, // v6: formRefBinding=deployment (tenant-safe form resolution)
@@ -29,6 +29,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   // Camunda Forms
   example_kapvergunning_start: 4, // v4: force re-seed for ACC users with stale localStorage from v1.6.0 testing
   example_tree_felling_review: 4, // v4: force re-seed (see above)
+  example_kapvergunning_missing_info: 1,
   example_awb_notify_applicant: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_notify_applicant: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_provisional_start: 4, // v4: force re-seed (see above)

@@ -1,0 +1,75 @@
+{
+  "e2eFixture": true,
+  "components": [
+    {
+      "text": "# Aanvullende gegevens opvragen (Awb 4:5)\nDe aanvraag is niet volledig. Leg vast welke gegevens ontbreken en tot wanneer de aanvrager deze kan aanvullen. Registreer daarna of de aanvulling binnen de hersteltermijn is ontvangen.",
+      "id": "Field_001_kvag",
+      "type": "text",
+      "layout": { "row": "Row_001_kvag", "columns": null }
+    },
+    {
+      "label": "Dossiernummer",
+      "id": "Field_002_kvag",
+      "key": "dossierReference",
+      "type": "textfield",
+      "layout": { "row": "Row_002_kvag", "columns": 8 },
+      "disabled": true
+    },
+    {
+      "label": "Datum ontvangst",
+      "id": "Field_003_kvag",
+      "key": "receiptDate",
+      "type": "textfield",
+      "layout": { "row": "Row_002_kvag", "columns": 8 },
+      "disabled": true
+    },
+    {
+      "label": "Ontbrekende gegevens",
+      "id": "Field_004_kvag",
+      "key": "ontbrekendeGegevens",
+      "type": "textarea",
+      "layout": { "row": "Row_003_kvag", "columns": null },
+      "validate": { "required": true }
+    },
+    {
+      "subtype": "date",
+      "dateLabel": "Hersteltermijn tot",
+      "id": "Field_005_kvag",
+      "key": "hersteltermijnDatum",
+      "type": "datetime",
+      "layout": { "row": "Row_004_kvag", "columns": 8 },
+      "validate": { "required": true }
+    },
+    {
+      "label": "Aanvulling binnen hersteltermijn ontvangen",
+      "id": "Field_006_kvag",
+      "key": "supplementReceived",
+      "type": "checkbox",
+      "defaultValue": false,
+      "layout": { "row": "Row_005_kvag", "columns": null }
+    },
+    {
+      "label": "Toelichting",
+      "id": "Field_007_kvag",
+      "key": "aanvullingToelichting",
+      "type": "textarea",
+      "layout": { "row": "Row_006_kvag", "columns": null }
+    },
+    {
+      "action": "submit",
+      "label": "Verzenden",
+      "id": "Field_008_kvag",
+      "type": "button",
+      "layout": { "row": "Row_007_kvag", "columns": null }
+    }
+  ],
+  "id": "kapvergunning-aanvullende-gegevens",
+  "type": "default",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.43.1"
+  },
+  "schemaVersion": 19,
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0"
+}

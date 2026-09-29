@@ -32,6 +32,15 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     organization: 'flevoland',
   },
   {
+    id: 'example_kapvergunning_missing_info',
+    name: 'Kapvergunning Aanvullende Gegevens (Example)',
+    description:
+      'Caseworker form for requesting missing information on a tree felling permit application (Awb 4:5)',
+    path: '/examples/flevoland/kapvergunning-aanvullende-gegevens.form',
+    language: 'nl',
+    organization: 'flevoland',
+  },
+  {
     id: 'example_awb_notify_applicant',
     name: 'AWB Notify Applicant (Example)',
     description: 'Phase 6 notification form for the AWB Shell process (Awb 3:6)',
