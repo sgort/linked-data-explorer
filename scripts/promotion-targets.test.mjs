@@ -1,11 +1,29 @@
 import { promotionTargets, allTargets, TARGETS } from './promotion-targets.mjs';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const checks = [];
-const SCRIPT = new URL('./promotion-targets.mjs', import.meta.url).pathname;
+
+// fileURLToPath, not .pathname. On Windows a file URL's .pathname is
+// '/C:/Users/.../promotion-targets.mjs' -- the leading slash makes it not a
+// native path, so execFileSync(process.execPath, [SCRIPT, ...]) below could not
+// resolve it and every command-line check failed. The script itself was fine:
+// run by hand it answered correctly and exited 0. Linux CI passed throughout,
+// so only Windows contributors saw it (iou-architectuur#105).
+//
+// It also took dso-dossier.test.mjs down with it: test:scripts joins the two
+// with &&, so the second never ran on Windows.
+const SCRIPT = fileURLToPath(new URL('./promotion-targets.mjs', import.meta.url));
+
+// The regression guard for the above, and portable: with .pathname this is
+// false on Windows and true everywhere else, which is exactly how the bug hid.
+if (!existsSync(SCRIPT)) {
+  console.error(`FAIL: SCRIPT is not a usable path on this platform: ${SCRIPT}`);
+  process.exit(1);
+}
 
 /** promotionTargets(files) equals the expected map. */
 function expect(label, files, expected) {
