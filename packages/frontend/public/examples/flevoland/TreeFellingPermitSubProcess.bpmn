@@ -69,7 +69,7 @@
     </bpmn:laneSet>
 
     <!-- No form on StartEvent - variables come from AWB parent Call Activity -->
-    <bpmn:startEvent id="SubStart" name="Start behandeling">
+    <bpmn:startEvent id="SubStart" name="Start behandeling" ronl:awbPhase="4+5">
       <bpmn:outgoing>Flow_Sub_Start_Assess</bpmn:outgoing>
     </bpmn:startEvent>
 

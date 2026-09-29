@@ -30,7 +30,7 @@
         <bpmn:flowNodeRef>EndEvent_AWB</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
-    <bpmn:startEvent id="StartEvent_AWB" name="Aanvraag subsidie thuisbatterij ingediend" camunda:formRef="recht-en-hoogte-subsidie-thuisbatterij" camunda:formRefBinding="deployment">
+    <bpmn:startEvent id="StartEvent_AWB" name="Aanvraag subsidie thuisbatterij ingediend" camunda:formRef="recht-en-hoogte-subsidie-thuisbatterij" camunda:formRefBinding="deployment" ronl:awbPhase="1">
       <bpmn:outgoing>Flow_Start_Phase1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:scriptTask id="Task_Phase1_Identity" name="Fase 1: Rechtsbetrekking vaststellen (identificatie)" scriptFormat="javascript">
@@ -51,7 +51,7 @@ execution.setVariable("competentAuthority", "Provincie Flevoland");
 execution.setVariable("authenticationMethod", "DigiD/eHerkenning");
 execution.setVariable("phase1Complete", true);</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:scriptTask id="Task_Phase2_Receipt" name="Fase 2: Ontvangstbevestiging aanvraag (Awb 4:1)" scriptFormat="javascript">
+    <bpmn:scriptTask id="Task_Phase2_Receipt" name="Fase 2: Ontvangstbevestiging aanvraag (Awb 4:1)" scriptFormat="javascript" ronl:awbPhase="2">
       <bpmn:incoming>Flow_Phase1_Phase2</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase2_Phase3</bpmn:outgoing>
       <bpmn:script>// Phase 2: Acknowledge receipt of application (Awb 4:1).
@@ -69,7 +69,7 @@ var ref = "TB-FL-" + receiptDate.getFullYear() + "-" + Date.now().toString().sli
 execution.setVariable("dossierReference", ref);
 execution.setVariable("phase2Complete", true);</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:businessRuleTask id="Task_Phase3_Completeness" name="Fase 3: Ontvankelijkheidstoets (Awb 2:3)" camunda:resultVariable="completenessResult" camunda:decisionRef="AwbCompletenessCheck" camunda:mapDecisionResult="singleResult" camunda:decisionRefTenantId="${null}">
+    <bpmn:businessRuleTask id="Task_Phase3_Completeness" name="Fase 3: Ontvankelijkheidstoets (Awb 2:3)" camunda:resultVariable="completenessResult" camunda:decisionRef="AwbCompletenessCheck" camunda:mapDecisionResult="singleResult" camunda:decisionRefTenantId="${null}" ronl:awbPhase="3">
       <bpmn:incoming>Flow_Phase2_Phase3</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase3_Gateway</bpmn:outgoing>
     </bpmn:businessRuleTask>
@@ -98,7 +98,7 @@ execution.setVariable("subsidyAmount", 0);
 execution.setVariable("paymentRequired", false);
 execution.setVariable("chainProcessRequired", false);</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:callActivity id="Task_Phase45_Process" name="Fase 4+5: Beoordeling recht en hoogte subsidie" calledElement="ThuisbatterijSubsidieDecisionSubProcessE2E">
+    <bpmn:callActivity id="Task_Phase45_Process" name="Fase 4+5: Beoordeling recht en hoogte subsidie" calledElement="ThuisbatterijSubsidieDecisionSubProcessE2E" ronl:awbPhase="4+5">
       <bpmn:extensionElements>
         <camunda:in variables="all" />
         <camunda:out variables="all" />
@@ -107,12 +107,12 @@ execution.setVariable("chainProcessRequired", false);</bpmn:script>
       <bpmn:incoming>Flow_Recheck_Process</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase45_Phase6</bpmn:outgoing>
     </bpmn:callActivity>
-    <bpmn:userTask id="Task_Phase6_Notify" name="Fase 6: Aanvrager informeren over besluit (Awb 3:6)" camunda:formRef="awb-notify-applicant-thuisbatterij" camunda:formRefBinding="deployment" camunda:candidateGroups="caseworker" ronl:documentRef="thuisbatterij_subsidie_beschikking">
+    <bpmn:userTask id="Task_Phase6_Notify" name="Fase 6: Aanvrager informeren over besluit (Awb 3:6)" camunda:formRef="awb-notify-applicant-thuisbatterij" camunda:formRefBinding="deployment" camunda:candidateGroups="caseworker" ronl:documentRef="thuisbatterij_subsidie_beschikking" ronl:awbPhase="6">
       <bpmn:incoming>Flow_Phase45_Phase6</bpmn:incoming>
       <bpmn:incoming>Flow_Refuse_Notify</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase6_PaymentGateway</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:exclusiveGateway id="Gateway_Payment" name="Subsidie uitbetalen?">
+    <bpmn:exclusiveGateway id="Gateway_Payment" name="Subsidie uitbetalen?" ronl:awbPhase="7">
       <bpmn:incoming>Flow_Phase6_PaymentGateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Payment_Yes</bpmn:outgoing>
       <bpmn:outgoing>Flow_Payment_No</bpmn:outgoing>
@@ -127,7 +127,7 @@ execution.setVariable("paymentDate", new Date().toISOString());
 execution.setVariable("paymentAmount", amount);
 execution.setVariable("paymentReference", "PAY-" + Date.now().toString().slice(-8));</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:exclusiveGateway id="Gateway_Chain" name="Doorzetten naar subsidieadministratie?">
+    <bpmn:exclusiveGateway id="Gateway_Chain" name="Doorzetten naar subsidieadministratie?" ronl:awbPhase="8">
       <bpmn:incoming>Flow_Payment_No</bpmn:incoming>
       <bpmn:incoming>Flow_PaymentTask_Chain</bpmn:incoming>
       <bpmn:outgoing>Flow_Chain_Yes</bpmn:outgoing>
@@ -141,7 +141,7 @@ execution.setVariable("chainForwardDate", new Date().toISOString());
 execution.setVariable("chainForwardComplete", true);
 execution.setVariable("chainForwardTopic", "SubsidieThuisbatterijFlevoland");</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:businessRuleTask id="Task_ArchivesDMN" name="Archivering: bewaar- en vernietigingstermijn (Archiefwet)" camunda:resultVariable="archivingResult" camunda:decisionRef="ArchivesActRetention" camunda:mapDecisionResult="singleResult" camunda:decisionRefTenantId="${null}">
+    <bpmn:businessRuleTask id="Task_ArchivesDMN" name="Archivering: bewaar- en vernietigingstermijn (Archiefwet)" camunda:resultVariable="archivingResult" camunda:decisionRef="ArchivesActRetention" camunda:mapDecisionResult="singleResult" camunda:decisionRefTenantId="${null}" ronl:awbPhase="archivering">
       <bpmn:incoming>Flow_Chain_No</bpmn:incoming>
       <bpmn:incoming>Flow_ChainTask_Archives</bpmn:incoming>
       <bpmn:outgoing>Flow_ArchivesDMN_Record</bpmn:outgoing>
