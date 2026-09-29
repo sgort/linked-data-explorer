@@ -99,6 +99,15 @@ const EXAMPLE_FORMS: ReadonlyArray<{
     organization: 'toeslagen',
   },
   {
+    id: 'example_zorgtoeslag_missing_info',
+    name: 'Zorgtoeslag Aanvullende Gegevens (Example)',
+    description:
+      'Caseworker form for requesting missing information on a Zorgtoeslag application (Awb 4:5)',
+    path: '/examples/toeslagen/zorgtoeslag-aanvullende-gegevens.form',
+    language: 'nl',
+    organization: 'toeslagen',
+  },
+  {
     id: 'example_zorgtoeslag_provisional_review',
     name: 'Zorgtoeslag Provisional Review (Example)',
     description: 'Caseworker review form for the Zorgtoeslag Provisional Entitlement subprocess',
