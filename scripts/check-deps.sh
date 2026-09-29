@@ -13,7 +13,7 @@ echo ""
 STALE=false
 MARKER="node_modules/.package-lock-installed.json"
 
-# Compares the lockfile against the snapshot scripts/write-deps-marker.sh
+# Compares the lockfile against the snapshot scripts/write-deps-marker.mjs
 # (the root "postinstall" script) takes after every install, ignoring this
 # repository's OWN version numbers.
 #
