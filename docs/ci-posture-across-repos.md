@@ -209,8 +209,14 @@ promotion. Every previous one was a script run from a laptop.
 than an open question.** #119 asked to pin the floating `NODE|22-lts` exactly
 where the platform allows, or record why not. `az webapp list-runtimes --os
 linux` returns, for Node, exactly `NODE|22-lts`, `NODE|24-lts` and `NODE|26` —
-major-level only, no exact version, no digest, no setting that takes one. All
-four App Services across both repositories run `NODE|22-lts`.
+major-level only, no exact version, no digest, no setting that takes one.
+
+This repository's two App Services run `NODE|24-lts`, since the Node 24 move in
+#80; ronl-business-api's two run `NODE|22-lts`, deliberately, per its Renovate
+deferral. Read from Azure with `az webapp config show --query linuxFxVersion` on
+27 September 2026. This paragraph said all four ran `NODE|22-lts`, contradicting
+line 128 of this same file — "Node 24 on both tiers" — until
+iou-architectuur#105.
 
 What remains reachable is keeping the App Service's major in step with
 `.nvmrc`'s, and **the ordering is part of the pin**: switch the App Service
