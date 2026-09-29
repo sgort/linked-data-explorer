@@ -147,6 +147,7 @@
       "bpmn": "AwbZorgtoeslagProcess.bpmn",
       "forms": [
         "zorgtoeslag-provisional-start.form",
+        "zorgtoeslag-aanvullende-gegevens.form",
         "zorgtoeslag-notify-applicant.form"
       ],
       "documents": [
