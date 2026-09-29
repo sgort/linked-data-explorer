@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_ZorgtoeslagProvisional" targetNamespace="http://example.com/zorgtoeslag" exporter="Camunda Modeler" exporterVersion="5.43.1">
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:ronl="http://ronl.nl/schema/1.0" id="Definitions_ZorgtoeslagProvisional" targetNamespace="http://example.com/zorgtoeslag" exporter="Camunda Modeler" exporterVersion="5.43.1">
   <bpmn:collaboration id="Collaboration_Zorgtoeslag_Provisional">
     <bpmn:participant id="Participant_Zorgtoeslag_Provisional" name="Zorgtoeslag — Beoordeling voorlopige aanspraak" processRef="ZorgtoeslagProvisionalSubProcessE2E" />
   </bpmn:collaboration>
@@ -21,7 +21,7 @@
         <bpmn:flowNodeRef>SubEnd</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
-    <bpmn:startEvent id="SubStart" name="Start behandeling">
+    <bpmn:startEvent id="SubStart" name="Start behandeling" ronl:awbPhase="4+5">
       <bpmn:outgoing>Flow_Sub_Start_Validate</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:scriptTask id="Sub_ValidateApplication" name="Aanvraaggegevens valideren" scriptFormat="javascript">

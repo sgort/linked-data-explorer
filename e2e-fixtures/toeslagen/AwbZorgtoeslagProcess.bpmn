@@ -29,7 +29,7 @@
         <bpmn:flowNodeRef>EndEvent_AWB</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
-    <bpmn:startEvent id="StartEvent_AWB" name="Aanvraag ingediend" camunda:formRef="zorgtoeslag-provisional-start" camunda:formRefBinding="deployment">
+    <bpmn:startEvent id="StartEvent_AWB" name="Aanvraag ingediend" camunda:formRef="zorgtoeslag-provisional-start" camunda:formRefBinding="deployment" ronl:awbPhase="1">
       <bpmn:outgoing>Flow_Start_Phase1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:scriptTask id="Task_Phase1_Identity" name="Fase 1: Rechtsbetrekking vaststellen (identificatie)" scriptFormat="javascript">
@@ -53,7 +53,7 @@
         execution.setVariable("authenticationMethod", "DigiD");
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:scriptTask id="Task_Phase2_Receipt" name="Fase 2: Ontvangstbevestiging aanvraag (Awb 4:1)" scriptFormat="javascript">
+    <bpmn:scriptTask id="Task_Phase2_Receipt" name="Fase 2: Ontvangstbevestiging aanvraag (Awb 4:1)" scriptFormat="javascript" ronl:awbPhase="2">
       <bpmn:incoming>Flow_Phase1_Phase2</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase2_Phase3</bpmn:outgoing>
       <bpmn:script>
@@ -74,7 +74,7 @@
         execution.setVariable("phase2Complete", true);
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:businessRuleTask id="Task_Phase3_Completeness" name="Fase 3: Ontvankelijkheidstoets (Awb 2:3)" camunda:resultVariable="completenessResult" camunda:decisionRef="AwbCompletenessCheck" camunda:decisionRefTenantId="${null}" camunda:mapDecisionResult="singleResult">
+    <bpmn:businessRuleTask id="Task_Phase3_Completeness" name="Fase 3: Ontvankelijkheidstoets (Awb 2:3)" camunda:resultVariable="completenessResult" camunda:decisionRef="AwbCompletenessCheck" camunda:decisionRefTenantId="${null}" camunda:mapDecisionResult="singleResult" ronl:awbPhase="3">
       <bpmn:incoming>Flow_Phase2_Phase3</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase3_Gateway</bpmn:outgoing>
     </bpmn:businessRuleTask>
@@ -103,7 +103,7 @@
         execution.setVariable("chainProcessRequired", false);
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:callActivity id="Task_Phase45_Process" name="Fase 4+5: Behandeling en besluit" calledElement="ZorgtoeslagProvisionalSubProcessE2E">
+    <bpmn:callActivity id="Task_Phase45_Process" name="Fase 4+5: Behandeling en besluit" calledElement="ZorgtoeslagProvisionalSubProcessE2E" ronl:awbPhase="4+5">
       <bpmn:extensionElements>
         <camunda:in variables="all" />
         <camunda:out variables="all" />
@@ -112,12 +112,12 @@
       <bpmn:incoming>Flow_Recheck_Process</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase45_Phase6</bpmn:outgoing>
     </bpmn:callActivity>
-    <bpmn:userTask id="Task_Phase6_Notify" name="Fase 6: Aanvrager informeren over besluit (Awb 3:6)" camunda:formRef="zorgtoeslag-notify-applicant" camunda:formRefBinding="deployment" camunda:candidateGroups="caseworker" ronl:documentRef="example_zorgtoeslag_provisional_beschikking">
+    <bpmn:userTask id="Task_Phase6_Notify" name="Fase 6: Aanvrager informeren over besluit (Awb 3:6)" camunda:formRef="zorgtoeslag-notify-applicant" camunda:formRefBinding="deployment" camunda:candidateGroups="caseworker" ronl:documentRef="example_zorgtoeslag_provisional_beschikking" ronl:awbPhase="6">
       <bpmn:incoming>Flow_Phase45_Phase6</bpmn:incoming>
       <bpmn:incoming>Flow_Refuse_Notify</bpmn:incoming>
       <bpmn:outgoing>Flow_Phase6_PaymentGateway</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:exclusiveGateway id="Gateway_Payment" name="Betaling vereist?">
+    <bpmn:exclusiveGateway id="Gateway_Payment" name="Betaling vereist?" ronl:awbPhase="7">
       <bpmn:incoming>Flow_Phase6_PaymentGateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Payment_Yes</bpmn:outgoing>
       <bpmn:outgoing>Flow_Payment_No</bpmn:outgoing>
@@ -132,7 +132,7 @@
         execution.setVariable("paymentDate", new Date().toISOString());
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:exclusiveGateway id="Gateway_Chain" name="Doorzetten naar ketenproces?">
+    <bpmn:exclusiveGateway id="Gateway_Chain" name="Doorzetten naar ketenproces?" ronl:awbPhase="8">
       <bpmn:incoming>Flow_Payment_No</bpmn:incoming>
       <bpmn:incoming>Flow_PaymentTask_Chain</bpmn:incoming>
       <bpmn:outgoing>Flow_Chain_Yes</bpmn:outgoing>
@@ -149,7 +149,7 @@
         execution.setVariable("chainProcessKey", "ZorgtoeslagFinalSubProcess");
       </bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:businessRuleTask id="Task_ArchivesDMN" name="Bewaartermijn bepalen (Archiefwet)" camunda:resultVariable="archivesResult" camunda:decisionRef="ArchivesActRetention" camunda:decisionRefTenantId="${null}" camunda:mapDecisionResult="singleResult">
+    <bpmn:businessRuleTask id="Task_ArchivesDMN" name="Bewaartermijn bepalen (Archiefwet)" camunda:resultVariable="archivesResult" camunda:decisionRef="ArchivesActRetention" camunda:decisionRefTenantId="${null}" camunda:mapDecisionResult="singleResult" ronl:awbPhase="archivering">
       <bpmn:incoming>Flow_Chain_No</bpmn:incoming>
       <bpmn:incoming>Flow_ChainTask_Archives</bpmn:incoming>
       <bpmn:outgoing>Flow_ArchivesDMN_Record</bpmn:outgoing>
