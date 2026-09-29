@@ -34,6 +34,7 @@
       "bpmn": "AwbShellProcess.bpmn",
       "forms": [
         "kapvergunning-start.form",
+        "kapvergunning-aanvullende-gegevens.form",
         "awb-notify-applicant.form"
       ],
       "documents": [
