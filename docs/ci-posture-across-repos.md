@@ -26,7 +26,7 @@ an archive entry says otherwise.
 | repository           | `acc` at  | `main` at | release      |
 | -------------------- | --------- | --------- | ------------ |
 | ttl-editor           | `8611de8` | `7d154ba` | `2026.09.7`  |
-| linked-data-explorer | `8c9a507` | `4148c9a` | `2026.09.8`  |
+| linked-data-explorer | `e17f24e` | `4148c9a` | `2026.09.8`  |
 | ronl-business-api    | `3062afe` | `2443adc` | `2026.09.13` |
 
 ---
@@ -58,28 +58,28 @@ head commit's push runs — so requiring them would have hung real promotions. T
 of RONL Business API's past promotions genuinely carry no PA Demo check. The
 ceiling is not caution; it is the trigger configuration.
 
-|                                 | ttl-editor                 | linked-data-explorer       | ronl-business-api            |
-| ------------------------------- | -------------------------- | -------------------------- | ---------------------------- |
-| **Build id in the changelog**   | ✅                         | ✅                         | ✅ exercised in PROD         |
-| **check-supply-chain**          | ✅ blocking, 17 refs       | ✅ blocking, 31 refs       | ✅ blocking, 39 refs         |
-| **Semgrep Code + SCA**          | ✅ required                | ✅ required                | ✅ required on `acc`         |
-| **Build checks required**       | ✅ `acc`                   | ✅ `acc`                   | ✅ `acc`                     |
-| **Per-file 80% branch floor**   | ✅ 1 runner                | ✅ 2 runners               | ✅ 5 runners                 |
-| **Response-schema conformance** | ❌ n/a                     | ✅ 20 route test files     | ✅ all 133 operations, gated |
-| **Formatting checked in CI**    | ✅                         | ✅                         | ✅                           |
-| **Tests run before merge**      | ✅                         | ✅                         | ✅                           |
-| **Renovate lock-file maint.**   | ✅                         | ✅                         | ✅                           |
-| **One Node version**            | ✅ `.nvmrc` `24.20.0`      | ✅ `.nvmrc` `24.21.0`      | ✅ `.nvmrc` `22.23.2`        |
-| **`acc` ruleset**               | ✅ 4 rules, 3 checks       | ✅ 4 rules, 5 checks       | ✅ 4 rules, 6 checks         |
-| **`main` ruleset**              | ✅ 4 rules, `audit`+`scan` | ✅ 4 rules, `audit`+`scan` | ✅ 4 rules, `audit`+`scan`   |
-| **Classic protection**          | ✅ none, either branch     | ✅ none, either branch     | ✅ none, either branch       |
-| **Merge method**                | ✅ ruleset: merge only     | ✅ ruleset: merge only     | ✅ ruleset: merge only       |
-| **Mirror checked at release**   | ✅ `check-mirror`          | ✅ `check-mirror`          | ✅ `check-mirror`            |
-| **Mirror in sync**              | ✅ both                    | ✅ both                    | ✅ both                      |
-| **Install checked at start**    | ✅ `start`                 | ✅ `dev`, three scripts    | ✅ `dev`                     |
-| **Install checked at push**     | ✅ pre-push                | ✅ pre-push                | ✅ pre-push                  |
-| **Orphaned previews checked**   | ✅ `check-previews`        | ❌ none, none orphaned     | ✅ `check-previews`          |
-| **Preview on a promotion PR**   | ✅ production SWA          | ✅ sites only, decided     | ❌ none, decided (#87)       |
+|                                 | ttl-editor                 | linked-data-explorer        | ronl-business-api            |
+| ------------------------------- | -------------------------- | --------------------------- | ---------------------------- |
+| **Build id in the changelog**   | ✅                         | ✅                          | ✅ exercised in PROD         |
+| **check-supply-chain**          | ✅ blocking, 17 refs       | ✅ blocking, 31 refs        | ✅ blocking, 39 refs         |
+| **Semgrep Code + SCA**          | ✅ required                | ✅ required                 | ✅ required on `acc`         |
+| **Build checks required**       | ✅ `acc`                   | ✅ `acc`                    | ✅ `acc`                     |
+| **Per-file 80% branch floor**   | ✅ 1 runner                | ✅ 2 runners                | ✅ 5 runners                 |
+| **Response-schema conformance** | ❌ n/a                     | ✅ 20 route test files      | ✅ all 133 operations, gated |
+| **Formatting checked in CI**    | ✅                         | ✅                          | ✅                           |
+| **Tests run before merge**      | ✅                         | ✅                          | ✅                           |
+| **Renovate lock-file maint.**   | ✅                         | ✅                          | ✅                           |
+| **One Node version**            | ✅ `.nvmrc` `24.20.0`      | ⚠️ `.nvmrc` `24.21.0`, #221 | ✅ `.nvmrc` `22.23.2`        |
+| **`acc` ruleset**               | ✅ 4 rules, 3 checks       | ✅ 4 rules, 5 checks        | ✅ 4 rules, 6 checks         |
+| **`main` ruleset**              | ✅ 4 rules, `audit`+`scan` | ✅ 4 rules, `audit`+`scan`  | ✅ 4 rules, `audit`+`scan`   |
+| **Classic protection**          | ✅ none, either branch     | ✅ none, either branch      | ✅ none, either branch       |
+| **Merge method**                | ✅ ruleset: merge only     | ✅ ruleset: merge only      | ✅ ruleset: merge only       |
+| **Mirror checked at release**   | ✅ `check-mirror`          | ✅ `check-mirror`           | ✅ `check-mirror`            |
+| **Mirror in sync**              | ✅ both                    | ✅ both                     | ✅ both                      |
+| **Install checked at start**    | ✅ `start`                 | ✅ `dev`, three scripts     | ✅ `dev`                     |
+| **Install checked at push**     | ✅ pre-push                | ✅ pre-push                 | ✅ pre-push                  |
+| **Orphaned previews checked**   | ✅ `check-previews`        | ❌ none, none orphaned      | ✅ `check-previews`          |
+| **Preview on a promotion PR**   | ✅ production SWA          | ✅ sites only, decided      | ❌ none, decided (#87)       |
 
 "4 rules" is `deletion`, `non_fast_forward`, `pull_request` — zero approvals,
 `allowed_merge_methods: ["merge"]` — and `required_status_checks`, identical on
@@ -203,13 +203,27 @@ Business API overtook it.
 |                     |                                                                                                                   |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | Deploy target       | App Service (backend) + Static Web Apps (frontend, ROPA site)                                                     |
-| App Service runtime | `NODE\|24-lts` both tiers, read from Azure 27 September 2026                                                      |
-| Node                | `.nvmrc` `24.21.0`, one file                                                                                      |
+| App Service runtime | `NODE\|24-lts` both tiers, read from Azure 27 September 2026 and again on 30 September                            |
+| Node                | `.nvmrc` `24.21.0` for five workflows; `24.21.0` literal in `zizmor.yml`; **`24.20.0`** in two more               |
 | Coverage floor      | 2 runners — `packages/backend/jest.config.js`, `packages/frontend/vite.config.ts`                                 |
 | Pinned references   | 31                                                                                                                |
 | `acc` ruleset       | `21794157` — 4 rules, checks `audit`, `scan`, `deploy`, `Build and Deploy Frontend`, `Build and Deploy ROPA Site` |
 | `main` ruleset      | `22630654` — 4 rules, checks `audit`, `scan`                                                                      |
+| On a clock          | `dependency-audit.yml`, daily, both branches                                                                      |
+| At a release        | `sbom.yml`, on a push to `main`                                                                                   |
 | Outside CI          | `check-mirror.sh`, `check-deps.sh` — **no `check-previews.sh`**                                                   |
+
+**Its Node version is not one version today.** Five workflows read `.nvmrc`
+(`24.21.0`) and `zizmor.yml` carries the same number as a literal, but
+`dependency-audit.yml` and `sbom.yml` set `node-version: '24.20.0'`. They were
+written on 24 and 26 September as ports of ttl-editor's, which is on `24.20.0`,
+a day or more after this repository's `.nvmrc` had moved to `24.21.0` in #80 —
+so the literal was never this repository's version. Renovate has already
+proposed the fix: #221, opened a minute after the audit merged on 24 September,
+moves both to `24.21.0`. Until it merges, the daily audit and the release SBOM
+run one patch behind the build they describe. Neither step builds or ships
+anything, so the cost is accuracy rather than risk; the lesson is that a literal
+copied between repositories carries the source's version, not the target's.
 
 **It is the only one that sequences its promotion.** `promote-to-production.yml`
 (#210, 24 September) deploys the backend, then the two sites, in order. The
@@ -234,9 +248,9 @@ September. Corrected in #236.
 
 Its accepted gaps: `GraphView.tsx` at 82.26% — one branch of slack, and the
 branches are d3's, which is a decision rather than a backlog item; no
-`check-previews`, with close jobs still inside the deploy workflows; and
-changelog entry `1.9.12` still carrying the legacy `Latest` status, visible in
-production.
+`check-previews`, with close jobs still inside the deploy workflows; and two
+changelog entries, `1.9.12` and `1.9.0`, still carrying the legacy `Latest`
+status, visible in production.
 
 ### RONL Business API — `ronl-business-api`
 
@@ -1297,9 +1311,18 @@ but "clean" means different things:
 |                               | files measured | lowest branch coverage     |
 | ----------------------------- | -------------- | -------------------------- |
 | ronl-business-api backend     | —              | comfortable                |
-| linked-data-explorer backend  | 49             | `sparql.service.ts` 82.85% |
-| linked-data-explorer frontend | 68             | `GraphView.tsx` 82.26%     |
-| ttl-editor                    | 42             | `ConceptsTab.jsx` 80.56%   |
+| linked-data-explorer backend  | 52             | `sparql.service.ts` 82.85% |
+| linked-data-explorer frontend | 75             | `GraphView.tsx` 82.26%     |
+| ttl-editor                    | 33             | `ConceptsTab.jsx` 80.56%   |
+
+Re-measured on 30 September 2026 — Linked Data Explorer at `e17f24e` (backend
+1824 tests in 69 suites, frontend 1271 in 76 files), ttl-editor at `8611de8` —
+all counted by the rule below: files carrying at least one branch. Linked Data
+Explorer's lowest files have not moved; its counts grew with the code.
+ttl-editor's earlier 41 fits every file in the report (42 now, 33 with a
+branch), not the rule this table uses. In the frontend, `DocumentComposer/AssetLibrary.tsx` (85.71%, 18/21) now
+has the same one branch of slack as `GraphView.tsx`: small files have coarse
+margins.
 
 The Linked Data Explorer frontend row is the one that moved. At `04cc38c` it read
 **exactly 80.00%** — zero margin, the first uncovered branch added anywhere in that
@@ -1857,13 +1880,15 @@ nothing:
 
 | repository           | `acc`             | `main`            |
 | -------------------- | ----------------- | ----------------- |
-| ttl-editor           | ✅ `4a20e91` both | ✅ `e1c482e` both |
-| linked-data-explorer | ✅ `0a52f9d` both | ✅ `01fcd67` both |
+| ttl-editor           | ✅ `8611de8` both | ✅ `7d154ba` both |
+| linked-data-explorer | ✅ `e17f24e` both | ✅ `4148c9a` both |
 | ronl-business-api    | ✅ `e187086` both | ✅ `311d732` both |
 
-All three rows were verified by `ls-remote` against both remotes on 15 September
-2026, after each repository's last merge that day, and each was a fast-forward push
-from GitHub's refs. The paragraphs below describe earlier passes.
+The ttl-editor and Linked Data Explorer rows were verified by `ls-remote`
+against both remotes on 30 September 2026; neither needed a push. RONL Business
+API's row is still the 15 September pass, which was verified the same way after
+that repository's last merge that day, as a fast-forward push from GitHub's refs.
+The paragraphs below describe earlier passes.
 
 Linked Data Explorer's row is as of 2026-09-11, and a tick here means synced at
 the last check, not kept in sync. The mirror is pushed by hand, so every merge
@@ -2004,31 +2029,32 @@ point where that is now noticed rather than discovered six months later.
 
 ## 6. Open work
 
-| repository                       | issue | what                                                                                                                                                                                                                                                                               |
-| -------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ronl-business-api                | —     | Semgrep `scan` is required on `acc` since #119; 25 findings still to triage after lock-file maintenance: 9 Supply Chain, none reachable, 16 Code                                                                                                                                   |
-| linked-data-explorer             | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                                                                                                                                                                                                                |
-| ttl-editor                       | —     | two files sit within one branch of the floor, with no ratchet left to absorb a slip; `useDsoImport.js` has slack in the suite (92.16%) but none of its own (80.39% alone), re-measured 30 Sep                                                                                      |
-| ttl-editor                       | #131  | **closed 30 Sep**: `main` now has a ruleset (`24227117`) requiring `audit` + `scan`. The original reasoning — a required check that never reports wedges the pull request — held for the deploy job and not for these two, which push to `acc` and `main` unfiltered               |
-| ttl-editor                       | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                                                                                                                                                                                                             |
-| linked-data-explorer             | #97   | confirmed on 22 Sep: the refresh ran in all three and introduced no version younger than 14 days (201 packages measured). Remaining: `renovate/stability-days` reports the branch as held anyway, and all three merged over it                                                     |
-| linked-data-explorer             | #119  | the gaps against ICTU's dependency guideline, tracked for all three repositories                                                                                                                                                                                                   |
-| all three                        | —     | nothing keeps the mirrors synced _between_ releases; `check-mirror` only observes                                                                                                                                                                                                  |
-| ronl-business-api                | #196  | the three `deployment/vm/` compose files carry unpinned tags, one of them `:latest`, and nothing in the repository applies them — so a digest there would be unverifiable. ACC only; production is being replaced                                                                  |
-| ronl-business-api                | —     | only `main` was sequenced by #177; `acc`'s four deploy workflows still race a push, and its ruleset names four build jobs by name                                                                                                                                                  |
-| linked-data-explorer             | —     | **closed 24 Sep**: it was a THREE-way race, and the v2026.09.6 promotion ran it — the ROPA site finished deploying before the backend started building. `promote-to-production.yml` now sequences all three (#210)                                                                 |
-| linked-data-explorer             | #80   | unblocked 23 Sep: Azure offers major-level Node runtimes only, so an exact App Service pin is not available; the control is the ORDERING — switch both backends to the new major first, then merge. Nothing enforces it                                                            |
-| linked-data-explorer             | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod                                                                                                                                                                                             |
-| linked-data-explorer             | —     | no `check-previews`, and close jobs still inside the deploy workflows; none orphaned today                                                                                                                                                                                         |
-| ttl-editor                       | #117  | a stale Renovate pull request with a live preview, open since 10 Sep. No longer conflicted — mergeable and clean on 30 Sep — so its close job can run and it is no longer expected to orphan the preview                                                                           |
-| ttl-editor, linked-data-explorer | —     | zizmor 1.30.1 and `zizmor-action` v0.6.4, due about 23 Sep: in ttl-editor still not taken on 30 Sep — the action at v0.6.3, zizmor at `1.29.0`, and the action's Renovate pull request (#166) open since 23 Sep. The zizmor register rows by hand in both                          |
-| ronl-business-api                | —     | 8 Dependabot alerts no routine update closes, from 7 on 14 Sep: `minimatch` (typescript-eslint 8), `react-router` ×2 (v7), `qs` ×2 (Express 5 or an override), `adm-zip` ×2 and `elliptic` (no fix)                                                                                |
-| ronl-business-api                | #261  | **the sharpest open item.** An allow-listed machine client can write `municipality` — the single label every `/v1` tenant check reads — on both `start` and `complete`. `/v1` refuses it with `400 RESERVED_VARIABLE`; `/v1/m2m` does not. Bounded only by the `azp` allow-list    |
-| ronl-business-api                | #262  | whether `OPERATON_M2M_BASE_URL` really equals `OPERATON_BASE_URL` on ACC and PROD. The runbook says yes; the running configuration said otherwise. It decides #261's blast radius                                                                                                  |
-| ronl-business-api                | #263  | `GET /v1/m2m/process/history` filters via a request body on a GET. RFC 9110 permits it and clients may silently drop it, so a filter that is dropped returns the unfiltered history rather than an error                                                                           |
-| ronl-business-api                | #216  | the error envelope is this API's own, not RFC 9457 problem details. Documented truthfully with three Spectral rules disabled and the reason recorded; migrating is breaking for every consumer                                                                                     |
-| iou-architectuur                 | #105  | two of twenty-one findings remain, both decisions: the Redis licence row (which Redis, which version behind the pinned digest, and whether "government-compatible open source" still holds — Redis moved to RSALv2/SSPLv1 at 7.4), and an English page duplicated under `docs/nl/` |
-| all three                        | —     | the `acc` deploy workflows have **no `paths:` filter on `pull_request`** and one on `push`. That is why an `acc` ruleset can require every build job while a `main` one cannot — worth keeping in mind before requiring anything new on a promotion                                |
+| repository                       | issue | what                                                                                                                                                                                                                                                                                           |
+| -------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ronl-business-api                | —     | Semgrep `scan` is required on `acc` since #119; 25 findings still to triage after lock-file maintenance: 9 Supply Chain, none reachable, 16 Code                                                                                                                                               |
+| linked-data-explorer             | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness. `DocumentComposer/AssetLibrary.tsx` (85.71%, 18/21) has the same one branch, re-measured 30 Sep                                                                                                                           |
+| ttl-editor                       | —     | two files sit within one branch of the floor, with no ratchet left to absorb a slip; `useDsoImport.js` has slack in the suite (92.16%) but none of its own (80.39% alone), re-measured 30 Sep                                                                                                  |
+| ttl-editor                       | #131  | **closed 30 Sep**: `main` now has a ruleset (`24227117`) requiring `audit` + `scan`. The original reasoning — a required check that never reports wedges the pull request — held for the deploy job and not for these two, which push to `acc` and `main` unfiltered                           |
+| ttl-editor                       | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                                                                                                                                                                                                                         |
+| linked-data-explorer             | #97   | **closed 23 Sep**, after the refresh was confirmed in all three with no version younger than 14 days (201 packages measured). Noted at closing: `renovate/stability-days` reported the branch as held anyway, and all three merged over it                                                     |
+| linked-data-explorer             | #119  | the gaps against ICTU's dependency guideline, tracked for all three repositories                                                                                                                                                                                                               |
+| all three                        | —     | nothing keeps the mirrors synced _between_ releases; `check-mirror` only observes                                                                                                                                                                                                              |
+| ronl-business-api                | #196  | the three `deployment/vm/` compose files carry unpinned tags, one of them `:latest`, and nothing in the repository applies them — so a digest there would be unverifiable. ACC only; production is being replaced                                                                              |
+| ronl-business-api                | —     | only `main` was sequenced by #177; `acc`'s four deploy workflows still race a push, and its ruleset names four build jobs by name                                                                                                                                                              |
+| linked-data-explorer             | —     | **closed 24 Sep**: it was a THREE-way race, and the v2026.09.6 promotion ran it — the ROPA site finished deploying before the backend started building. `promote-to-production.yml` now sequences all three (#210)                                                                             |
+| linked-data-explorer             | #80   | **merged 23 Sep**: Node 24 ships, and both App Services read the `24-lts` runtime on 30 Sep. Azure offers major-level runtimes only, so the control for the next major is still the ORDERING — switch both backends first, then merge. Nothing enforces it                                     |
+| linked-data-explorer             | —     | changelog entries `1.9.12` and `1.9.0` still carry the legacy `Latest` status, visible in prod                                                                                                                                                                                                 |
+| linked-data-explorer             | #221  | `dependency-audit.yml` and `sbom.yml` pin Node `24.20.0` against `.nvmrc`'s `24.21.0`, copied from ttl-editor. Renovate's fix has been open since 24 Sep                                                                                                                                       |
+| linked-data-explorer             | —     | no `check-previews`, and close jobs still inside the deploy workflows. None orphaned on 30 Sep: the acceptance frontend holds three previews, for #223, #226 and #230, all open                                                                                                                |
+| ttl-editor                       | #117  | a stale Renovate pull request with a live preview, open since 10 Sep. No longer conflicted — mergeable and clean on 30 Sep — so its close job can run and it is no longer expected to orphan the preview                                                                                       |
+| ttl-editor, linked-data-explorer | —     | zizmor 1.30.1 and `zizmor-action` v0.6.4, due about 23 Sep. On 30 Sep Linked Data Explorer has the action at v0.6.4 and ttl-editor still at v0.6.3, with its Renovate pull request (#166) open since 23 Sep; zizmor itself is still `1.29.0` in both. The zizmor register rows by hand in both |
+| ronl-business-api                | —     | 8 Dependabot alerts no routine update closes, from 7 on 14 Sep: `minimatch` (typescript-eslint 8), `react-router` ×2 (v7), `qs` ×2 (Express 5 or an override), `adm-zip` ×2 and `elliptic` (no fix)                                                                                            |
+| ronl-business-api                | #261  | **the sharpest open item.** An allow-listed machine client can write `municipality` — the single label every `/v1` tenant check reads — on both `start` and `complete`. `/v1` refuses it with `400 RESERVED_VARIABLE`; `/v1/m2m` does not. Bounded only by the `azp` allow-list                |
+| ronl-business-api                | #262  | whether `OPERATON_M2M_BASE_URL` really equals `OPERATON_BASE_URL` on ACC and PROD. The runbook says yes; the running configuration said otherwise. It decides #261's blast radius                                                                                                              |
+| ronl-business-api                | #263  | `GET /v1/m2m/process/history` filters via a request body on a GET. RFC 9110 permits it and clients may silently drop it, so a filter that is dropped returns the unfiltered history rather than an error                                                                                       |
+| ronl-business-api                | #216  | the error envelope is this API's own, not RFC 9457 problem details. Documented truthfully with three Spectral rules disabled and the reason recorded; migrating is breaking for every consumer                                                                                                 |
+| iou-architectuur                 | #105  | two of twenty-one findings remain, both decisions: the Redis licence row (which Redis, which version behind the pinned digest, and whether "government-compatible open source" still holds — Redis moved to RSALv2/SSPLv1 at 7.4), and an English page duplicated under `docs/nl/`             |
+| all three                        | —     | the `acc` deploy workflows have **no `paths:` filter on `pull_request`** and one on `push`. That is why an `acc` ruleset can require every build job while a `main` one cannot — worth keeping in mind before requiring anything new on a promotion                                            |
 
 **Closed on 22 September 2026.** For RONL Business API, ten rows from the table
 above: #34, #35 and #129 in one pull request
@@ -2311,6 +2337,23 @@ the full suite with coverage (763 tests, 62 files). Five claims moved:
 - **The 24–25 September #119 work** — a daily audit, the first-release rule, the
   recorded deferrals and the lockfile-sync step — was missing from this page. It
   now has its own entry below.
+
+**Linked Data Explorer re-checked the same way**, at `e17f24e` / `4148c9a`:
+rulesets and classic protection from the API (unchanged, and none classic),
+eleven workflows, `check-supply-chain` (31 references), the App Service
+runtimes from Azure (`24-lts` on both), the acceptance frontend's previews (three,
+all on open pull requests), both mirror heads by `ls-remote` (already in sync),
+and both coverage runners (1824 backend tests, 1271 frontend). Six claims moved:
+
+- **"One Node version, one file"** — `dependency-audit.yml` and `sbom.yml` pin
+  `24.20.0`, a patch behind `.nvmrc`. Copied from ttl-editor; #221 fixes it.
+- **#80 "unblocked"** — merged on 23 September.
+- **#97** — closed on 23 September; the row read as if it were open.
+- **`1.9.12` alone carries `Latest`** — `1.9.0` does too.
+- **Files measured, 49 and 68** — 52 and 75, the lowest files unchanged.
+  ttl-editor's row moves from 41 to 33 once counted by the table's own rule.
+- **The §5 mirror table** — still showed the 15 September heads for all three.
+  The ttl-editor and Linked Data Explorer rows now show today's.
 
 ### What changed on 29 September 2026
 
