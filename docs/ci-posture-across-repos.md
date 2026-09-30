@@ -151,12 +151,21 @@ gate is most visible.
 |                   |                                                                      |
 | ----------------- | -------------------------------------------------------------------- |
 | Deploy target     | Static Web Apps — `orange-beach` (`acc`), `white-sky` (`main`)       |
-| Node              | `.nvmrc` `24.20.0`, one file                                         |
+| Node              | `.nvmrc` `24.20.0` for both deploys; the same literal in three more  |
 | Coverage floor    | 1 runner, `vite.config.mjs`, 80% branches per file                   |
 | Pinned references | 17, across `check-supply-chain`                                      |
 | `acc` ruleset     | `21728745` — 4 rules, checks `audit`, `scan`, `Build and deploy ACC` |
 | `main` ruleset    | `24227117` — 4 rules, checks `audit`, `scan`                         |
+| On a clock        | `dependency-audit.yml`, daily, both branches                         |
+| At a release      | `sbom.yml`, on a push to `main`                                      |
 | Outside CI        | `check-mirror.sh`, `check-deps.sh`, `check-previews.sh`              |
+
+**"One Node version" is one version, not one file.** The two Static Web Apps
+workflows read `.nvmrc`; `zizmor.yml`, `dependency-audit.yml` and `sbom.yml`
+each set `node-version: '24.20.0'` literally. `zizmor.yml` says why: that step
+needs Node 24 whatever the application runs on, so it is deliberately its own
+literal, and Renovate's node manager keeps them current. They agree today;
+nothing but Renovate keeps them agreeing.
 
 **Its `main` had no ruleset at all until 30 September 2026.** Classic protection
 was the only gate there — a pull request, zero approvals, `enforce_admins: true`,
@@ -182,8 +191,8 @@ no dependency had changed". All three use the same comparison; this is where its
 rationale is recorded.
 
 Its accepted gaps: Semgrep `scan` cannot pass on a forked pull request (#128),
-and three files sit within one branch of the coverage floor with no ratchet left
-to absorb a slip.
+and two files sit within one branch of the coverage floor with no ratchet left
+to absorb a slip — a third's margin is borrowed from other test files (§3).
 
 ### Linked Data Explorer — `linked-data-explorer`
 
@@ -1290,7 +1299,7 @@ but "clean" means different things:
 | ronl-business-api backend     | —              | comfortable                |
 | linked-data-explorer backend  | 49             | `sparql.service.ts` 82.85% |
 | linked-data-explorer frontend | 68             | `GraphView.tsx` 82.26%     |
-| ttl-editor                    | 41             | `useDsoImport.js` 80.39%   |
+| ttl-editor                    | 42             | `ConceptsTab.jsx` 80.56%   |
 
 The Linked Data Explorer frontend row is the one that moved. At `04cc38c` it read
 **exactly 80.00%** — zero margin, the first uncovered branch added anywhere in that
@@ -1319,6 +1328,21 @@ files — `useDsoImport.js` 80.39% (41/51), `ConceptsTab.jsx` 80.56% (29/36),
 failing. While the ratchet existed those files were merely near the floor; now
 that the pins are gone there is nothing to absorb a regression, and a single added
 `?.` or `||` default in any of them turns CI red.
+
+**Re-measured on 30 September 2026, at `8611de8`, and one of the three has moved
+in a way that is easy to misread.** In the full suite — which is what CI gates
+on, 763 tests in 62 files — `ConceptsTab.jsx` and `ChangelogTab.jsx` are
+unchanged, but `useDsoImport.js` reads **92.16% (47/51)**. Its own test file,
+run alone, still gives **80.39% (41/51)**. The six extra branches come from other
+test files exercising the hook since the DSO-import fix of 18 September
+(`1d01186`). So in CI it has slack, but the slack is not its own: a change to
+those other tests can take it back to the floor with nothing in
+`useDsoImport.test.js` having moved. The rule this repository already learned
+the hard way applies: when a file's isolated number and its suite number
+differ, something outside its test file is contributing coverage. Early in
+September `useEditorState.js` read 83.33% locally and 50% on CI, because
+App-rendering tests made live TriplyDB requests and coverage depended on which
+finished first.
 
 Worth noting what the branch column does _not_ see. `ConceptsTab.jsx` reads 80.56%
 on branches and **71.62% on statements, 63.33% on functions**; `App.jsx` reads
@@ -1984,7 +2008,7 @@ point where that is now noticed rather than discovered six months later.
 | -------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ronl-business-api                | —     | Semgrep `scan` is required on `acc` since #119; 25 findings still to triage after lock-file maintenance: 9 Supply Chain, none reachable, 16 Code                                                                                                                                   |
 | linked-data-explorer             | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                                                                                                                                                                                                                |
-| ttl-editor                       | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip                                                                                                                                                                                              |
+| ttl-editor                       | —     | two files sit within one branch of the floor, with no ratchet left to absorb a slip; `useDsoImport.js` has slack in the suite (92.16%) but none of its own (80.39% alone), re-measured 30 Sep                                                                                      |
 | ttl-editor                       | #131  | **closed 30 Sep**: `main` now has a ruleset (`24227117`) requiring `audit` + `scan`. The original reasoning — a required check that never reports wedges the pull request — held for the deploy job and not for these two, which push to `acc` and `main` unfiltered               |
 | ttl-editor                       | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                                                                                                                                                                                                             |
 | linked-data-explorer             | #97   | confirmed on 22 Sep: the refresh ran in all three and introduced no version younger than 14 days (201 packages measured). Remaining: `renovate/stability-days` reports the branch as held anyway, and all three merged over it                                                     |
@@ -1996,8 +2020,8 @@ point where that is now noticed rather than discovered six months later.
 | linked-data-explorer             | #80   | unblocked 23 Sep: Azure offers major-level Node runtimes only, so an exact App Service pin is not available; the control is the ORDERING — switch both backends to the new major first, then merge. Nothing enforces it                                                            |
 | linked-data-explorer             | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod                                                                                                                                                                                             |
 | linked-data-explorer             | —     | no `check-previews`, and close jobs still inside the deploy workflows; none orphaned today                                                                                                                                                                                         |
-| ttl-editor                       | #117  | a stale, conflicted Renovate pull request with a live preview, expected to orphan it on close for `check-previews` to catch                                                                                                                                                        |
-| ttl-editor, linked-data-explorer | —     | zizmor 1.30.1 and `zizmor-action` v0.6.4 due about 23 Sep: the action first in ttl-editor; the zizmor register rows by hand in both                                                                                                                                                |
+| ttl-editor                       | #117  | a stale Renovate pull request with a live preview, open since 10 Sep. No longer conflicted — mergeable and clean on 30 Sep — so its close job can run and it is no longer expected to orphan the preview                                                                           |
+| ttl-editor, linked-data-explorer | —     | zizmor 1.30.1 and `zizmor-action` v0.6.4, due about 23 Sep: in ttl-editor still not taken on 30 Sep — the action at v0.6.3, zizmor at `1.29.0`, and the action's Renovate pull request (#166) open since 23 Sep. The zizmor register rows by hand in both                          |
 | ronl-business-api                | —     | 8 Dependabot alerts no routine update closes, from 7 on 14 Sep: `minimatch` (typescript-eslint 8), `react-router` ×2 (v7), `qs` ×2 (Express 5 or an override), `adm-zip` ×2 and `elliptic` (no fix)                                                                                |
 | ronl-business-api                | #261  | **the sharpest open item.** An allow-listed machine client can write `municipality` — the single label every `/v1` tenant check reads — on both `start` and `complete`. `/v1` refuses it with `400 RESERVED_VARIABLE`; `/v1/m2m` does not. Bounded only by the `azp` allow-list    |
 | ronl-business-api                | #262  | whether `OPERATON_M2M_BASE_URL` really equals `OPERATON_BASE_URL` on ACC and PROD. The runbook says yes; the running configuration said otherwise. It decides #261's blast radius                                                                                                  |
@@ -2272,6 +2296,22 @@ byte-identical, and ttl-editor differs only in an echo string. The error was
 comparing `package-lock.json` between two commits when the check compares the
 lockfile against the install marker. Different questions.
 
+**ttl-editor re-checked against its own state the same afternoon**, at `8611de8`
+/ `7d154ba`: rulesets and classic protection from the API, the Node pins and
+workflows from the YAML, `check-supply-chain` (17 references), `check-previews`
+(six previews, all on open pull requests), both mirror heads by `ls-remote`, and
+the full suite with coverage (763 tests, 62 files). Five claims moved:
+
+- **"One Node version, one file"** — three workflows repeat `24.20.0` as a
+  literal beside `.nvmrc`. One version, four places.
+- **Three files one branch from the floor** — two. `useDsoImport.js` has slack in
+  the suite that its own tests do not give it (§3).
+- **#117 "conflicted"** — mergeable and clean.
+- **zizmor "due about 23 Sep"** — still not taken in ttl-editor; #166 open.
+- **The 24–25 September #119 work** — a daily audit, the first-release rule, the
+  recorded deferrals and the lockfile-sync step — was missing from this page. It
+  now has its own entry below.
+
 ### What changed on 29 September 2026
 
 **RONL Business API closed #200** — a published OpenAPI description — after seven
@@ -2357,6 +2397,45 @@ open half of linked-data-explorer#119.
 
 RONL Business API promoted `acc` to `main` as **v2026.09.12**; Linked Data
 Explorer released **v2026.09.8**; ttl-editor released **v2026.09.7**.
+
+### What changed on 24–25 September 2026
+
+**Four more halves of linked-data-explorer#119, landed in ttl-editor and Linked
+Data Explorer as matching pairs.** RONL Business API was not re-checked for this
+entry.
+
+| change                                                                                                                                                          | ttl-editor                                           | linked-data-explorer                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------- |
+| **a daily dependency audit** of both `acc` and `main` — `dependency-audit.yml`, `scripts/audit-tree.mjs` (ICTU recommendation 10)                               | [#167](https://github.com/sgort/ttl-editor/pull/167) | [#220](https://github.com/sgort/linked-data-explorer/pull/220) |
+| **never a new major's first release** — `allowedVersions: "!/^\d+\.0\.0$/"` for the npm manager, so a major arrives at X.0.1 at the earliest (recommendation 7) | [#168](https://github.com/sgort/ttl-editor/pull/168) | [#222](https://github.com/sgort/linked-data-explorer/pull/222) |
+| **the assessed deferrals recorded as rules** — `ubuntu-26.04` held until `ubuntu-latest` moves                                                                  | [#169](https://github.com/sgort/ttl-editor/pull/169) | [#224](https://github.com/sgort/linked-data-explorer/pull/224) |
+| **a lockfile-sync step** — `npm ci --dry-run --ignore-scripts` in the `audit` job, before the formatter's install                                               | [#170](https://github.com/sgort/ttl-editor/pull/170) | [#225](https://github.com/sgort/linked-data-explorer/pull/225) |
+
+**The audit's job is `dependency-audit`, not `audit`, and that is load-bearing.**
+Required checks match by name, and `audit` is zizmor's job and required in every
+ruleset here. A second job of that name made the context ambiguous — one passing
+and one failing check under one name, which no ruleset can satisfy — and blocked
+a pull request the first time the workflow ran.
+
+**The schedule is 05:17 UTC; the runs are not.** In ttl-editor the scheduled runs
+from 25 to 29 September started between 09:55 and 11:44 UTC. GitHub queues
+scheduled workflows, so "daily" is the guarantee and the hour is not.
+
+**The lockfile-sync step failed on every pull request the day it merged, for the
+wrong reason.** `npm ci --dry-run` still runs lifecycle scripts, and ttl-editor's
+root `postinstall` copies `package-lock.json` into a `node_modules` a dry run
+never creates — ENOENT, reported under a step named for lockfile agreement. It had
+passed where it was written because that machine already had `node_modules`.
+`--ignore-scripts` fixed it without changing what the step decides. What it
+cannot catch is written beside it: it checks the pull request's own merge commit,
+so a pull request green against a stale base still merges into one that has
+moved. Merge dependency pull requests one at a time.
+
+**A deferral is a disabled rule carrying its reason and its end condition, and
+ttl-editor keeps only three**: Tailwind 4 and ESLint 10, which predate #119, and
+`ubuntu-26.04` from #169. Every other major waits behind Dependency Dashboard
+approval rather than being disabled, because a disabled update is one nobody
+sees.
 
 ### What changed on 24 September 2026
 
