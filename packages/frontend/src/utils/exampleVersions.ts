@@ -22,7 +22,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_awb_zorgtoeslag: 6, // v6: swimlanes + Dutch names + missing-info form
   example_zorgtoeslag_provisional: 8, // v8: swimlanes + Dutch names
   example_zorgtoeslag_final: 7, // v7: swimlanes + Dutch names
-  example_hr_capacity_nl: 2, // v2: formRefBinding=deployment (tenant-safe form resolution)
+  example_hr_capacity_nl: 3, // v3: swimlanes
   example_thuisbatterij_aanvraag: 2, // v2: swimlanes + Dutch names
   example_thuisbatterij_decision: 2, // v2: swimlanes + Dutch names
 
