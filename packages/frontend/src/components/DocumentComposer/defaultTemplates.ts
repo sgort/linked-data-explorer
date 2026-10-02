@@ -2938,6 +2938,281 @@ export const THUISBATTERIJ_SUBSIDIE_BESCHIKKING: DocumentTemplate = {
   },
 };
 
+// Mirrors public/examples/flevoland/besluitvorming-gedelegeerd/besluit-gb-besluit.document,
+// the copy LDE deploys and RBA renders for ValidSign. Inline because the Vite
+// dev server rejects imports from public/; defaultTemplates.test.ts pins the
+// two as identical.
+export const BESLUIT_GB_BESLUIT: DocumentTemplate = {
+  id: 'besluit-gb-besluit',
+  name: 'Besluit onder gedelegeerde bevoegdheid',
+  description:
+    'Besluit genomen onder gedelegeerde bevoegdheid, ter ondertekening door de gemachtigde ondertekenaar via ValidSign.',
+  processKey: 'GedelegeerdBesluitProcess',
+  serviceId: 'GedelegeerdBesluit',
+  schemaVersion: 1,
+  readonly: false,
+  status: 'example',
+  language: 'nl',
+  organization: 'flevoland',
+  createdAt: '2026-10-02T09:00:00.000Z',
+  updatedAt: '2026-10-02T09:00:00.000Z',
+  assets: [],
+  bindings: [
+    {
+      id: 'b1',
+      placeholder: '{{onderwerp}}',
+      variableKey: 'onderwerp',
+      source: 'process',
+      label: 'Onderwerp',
+    },
+    {
+      id: 'b2',
+      placeholder: '{{besluitType}}',
+      variableKey: 'besluitType',
+      source: 'process',
+      label: 'Type besluit',
+    },
+    {
+      id: 'b3',
+      placeholder: '{{voorgesteldBesluit}}',
+      variableKey: 'voorgesteldBesluit',
+      source: 'process',
+      label: 'Besluit',
+    },
+    {
+      id: 'b4',
+      placeholder: '{{motivering}}',
+      variableKey: 'motivering',
+      source: 'process',
+      label: 'Motivering',
+    },
+    {
+      id: 'b5',
+      placeholder: '{{financieleGevolgen}}',
+      variableKey: 'financieleGevolgen',
+      source: 'process',
+      label: 'Financiële gevolgen (€)',
+    },
+    {
+      id: 'b6',
+      placeholder: '{{ondertekenaar}}',
+      variableKey: 'ondertekenaar',
+      source: 'process',
+      label: 'Gemachtigde ondertekenaar',
+    },
+  ],
+  zones: {
+    letterhead: {
+      blocks: [
+        {
+          id: 'lh_org_name',
+          type: 'text',
+          label: 'Organisatienaam',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'heading',
+                attrs: { level: 1 },
+                content: [{ type: 'text', text: 'Provincie Flevoland' }],
+              },
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    marks: [{ type: 'italic' }],
+                    text: 'Besluit onder gedelegeerde bevoegdheid',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        { id: 'lh_separator', type: 'separator', label: 'Separator' },
+      ],
+    },
+    contactInformation: {
+      blocks: [
+        {
+          id: 'ci_address',
+          type: 'text',
+          label: 'Contactgegevens',
+          content: {
+            type: 'doc',
+            content: [
+              { type: 'paragraph', content: [{ type: 'text', text: 'Provincie Flevoland' }] },
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'Postbus 55, 8200 AB Lelystad' }],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    reference: {
+      blocks: [
+        {
+          id: 'ref_header',
+          type: 'text',
+          label: 'Onderwerp en type besluit',
+          content: {
+            type: 'doc',
+            content: [
+              { type: 'paragraph', content: [{ type: 'text', text: 'Onderwerp: {{onderwerp}}' }] },
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'Type besluit: {{besluitType}}' }],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    body: {
+      blocks: [
+        {
+          id: 'body_title',
+          type: 'text',
+          label: 'Titel',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'heading',
+                attrs: { level: 2 },
+                content: [{ type: 'text', text: 'Besluit onder gedelegeerde bevoegdheid' }],
+              },
+            ],
+          },
+        },
+        {
+          id: 'body_mandaat',
+          type: 'text',
+          label: 'Reikwijdte',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Besluiten tot het aangaan, wijzigen, beëindigen verplichtingen d.m.v. opdrachtbon, -brief, overeenkomst of anderszins voor: het leveren van zaken, verrichten van diensten en uitvoeren van werken.',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: 'body_besluit',
+          type: 'text',
+          label: 'Besluit',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Besluit' }],
+              },
+              { type: 'paragraph', content: [{ type: 'text', text: '{{voorgesteldBesluit}}' }] },
+            ],
+          },
+        },
+        {
+          id: 'body_motivering',
+          type: 'text',
+          label: 'Motivering',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Motivering' }],
+              },
+              { type: 'paragraph', content: [{ type: 'text', text: '{{motivering}}' }] },
+            ],
+          },
+        },
+        {
+          id: 'body_financieel',
+          type: 'text',
+          label: 'Financiële gevolgen',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'Financiële gevolgen: € {{financieleGevolgen}}' }],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    closing: {
+      blocks: [
+        {
+          id: 'cl_bezwaar',
+          type: 'text',
+          label: 'Bezwaar',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Tegen dit besluit kan een belanghebbende binnen zes weken na de dag van bekendmaking bezwaar maken (artikel 6:7 Awb).',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+    signOff: {
+      blocks: [
+        {
+          id: 'so_namens',
+          type: 'text',
+          label: 'Ondertekening',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'Namens deze, de gemachtigde ondertekenaar,' }],
+              },
+            ],
+          },
+        },
+        { id: 'so_spacer', type: 'spacer', label: 'Ruimte handtekening' },
+        {
+          id: 'so_name',
+          type: 'text',
+          label: 'Naam ondertekenaar',
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', marks: [{ type: 'bold' }], text: '{{ondertekenaar}}' }],
+              },
+              { type: 'paragraph', content: [{ type: 'text', text: 'Provincie Flevoland' }] },
+            ],
+          },
+        },
+      ],
+    },
+    annex: null,
+  },
+};
+
 export const DEFAULT_TEMPLATES: DocumentTemplate[] = [
   TREE_FELLING_BESCHIKKING,
   ZORGTOESLAG_PROVISIONAL_BESCHIKKING,
@@ -2946,4 +3221,5 @@ export const DEFAULT_TEMPLATES: DocumentTemplate[] = [
   HR_CAPACITY_BOARD_DECISION_NOTIFICATION_NL,
   HR_CAPACITY_HANDOVER_NL,
   THUISBATTERIJ_SUBSIDIE_BESCHIKKING,
+  BESLUIT_GB_BESLUIT,
 ];

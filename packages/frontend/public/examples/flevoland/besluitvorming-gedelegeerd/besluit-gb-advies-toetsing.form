@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-advies-toetsing",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_15",
+      "type": "text",
+      "text": "# Advies en toetsing"
+    },
+    {
+      "id": "Field_Text_16",
+      "type": "text",
+      "text": "Toets het voorgestelde besluit en geef advies."
+    },
+    {
+      "id": "Field_Ro_17",
+      "type": "textfield",
+      "label": "Onderwerp",
+      "key": "onderwerp",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ro_18",
+      "type": "textarea",
+      "label": "Voorgesteld besluit",
+      "key": "voorgesteldBesluit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ro_19",
+      "type": "number",
+      "label": "Financiële gevolgen (€)",
+      "key": "financieleGevolgen",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Cb_20",
+      "type": "checkbox",
+      "label": "Getoetst aan wet- en regelgeving",
+      "key": "toetsWetgeving",
+      "defaultValue": false
+    },
+    {
+      "id": "Field_Cb_21",
+      "type": "checkbox",
+      "label": "Getoetst aan provinciaal beleid",
+      "key": "toetsBeleid",
+      "defaultValue": false
+    },
+    {
+      "id": "Field_Cb_22",
+      "type": "checkbox",
+      "label": "Getoetst aan de begroting",
+      "key": "toetsBegroting",
+      "defaultValue": false
+    },
+    {
+      "id": "Field_Cb_23",
+      "type": "checkbox",
+      "label": "Het besluit valt binnen de gedelegeerde bevoegdheid",
+      "key": "binnenMandaat",
+      "defaultValue": true
+    },
+    {
+      "id": "Field_Cb_24",
+      "type": "checkbox",
+      "label": "Het besluit is politiek gevoelig",
+      "key": "politiekGevoelig",
+      "defaultValue": false
+    },
+    {
+      "id": "Field_Ta_25",
+      "type": "textarea",
+      "label": "Advies",
+      "key": "advies",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Submit_26",
+      "type": "button",
+      "action": "submit",
+      "label": "Advies vastleggen"
+    }
+  ]
+}

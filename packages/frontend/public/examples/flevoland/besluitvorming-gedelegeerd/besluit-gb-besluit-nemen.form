@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-besluit-nemen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_64",
+      "type": "text",
+      "text": "# Neem besluit"
+    },
+    {
+      "id": "Field_Text_65",
+      "type": "text",
+      "text": "Het besluit valt buiten de gedelegeerde bevoegdheid of is geëscaleerd."
+    },
+    {
+      "id": "Field_Ro_66",
+      "type": "textfield",
+      "label": "Onderwerp",
+      "key": "onderwerp",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ro_67",
+      "type": "textarea",
+      "label": "Voorgesteld besluit",
+      "key": "voorgesteldBesluit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ro_68",
+      "type": "textarea",
+      "label": "Reden van escalatie",
+      "key": "escalatieReden",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Radio_69",
+      "type": "radio",
+      "label": "Besluit",
+      "key": "besluitUitkomst",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Besluit genomen",
+          "value": "genomen"
+        },
+        {
+          "label": "Besluit afgewezen",
+          "value": "afgewezen"
+        }
+      ]
+    },
+    {
+      "id": "Field_Ta_70",
+      "type": "textarea",
+      "label": "Toelichting",
+      "key": "besluitToelichting"
+    },
+    {
+      "id": "Field_Submit_71",
+      "type": "button",
+      "action": "submit",
+      "label": "Besluit vastleggen"
+    }
+  ]
+}
