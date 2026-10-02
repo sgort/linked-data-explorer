@@ -1,7 +1,10 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { describe, expect, test } from 'vitest';
 
 import { DocumentTemplate, ZONE_ORDER, ZoneId } from '../../types/document.types';
 import {
+  BESLUIT_GB_BESLUIT,
   DEFAULT_TEMPLATES,
   DVTP_CONSENT_RECEIPT,
   emptyDoc,
@@ -86,6 +89,7 @@ describe('DEFAULT_TEMPLATES', () => {
       HR_CAPACITY_BOARD_DECISION_NOTIFICATION_NL,
       HR_CAPACITY_HANDOVER_NL,
       THUISBATTERIJ_SUBSIDIE_BESCHIKKING,
+      BESLUIT_GB_BESLUIT,
     ]);
   });
 
@@ -144,4 +148,42 @@ describe('DEFAULT_TEMPLATES', () => {
       expect(Array.isArray(template.assets)).toBe(true);
     }
   );
+});
+
+describe('BESLUIT_GB_BESLUIT', () => {
+  test('is the signable besluit of the gedelegeerde-bevoegdheid bundle', () => {
+    expect(BESLUIT_GB_BESLUIT.id).toBe('besluit-gb-besluit');
+    expect(BESLUIT_GB_BESLUIT.processKey).toBe('GedelegeerdBesluitProcess');
+    expect(BESLUIT_GB_BESLUIT.language).toBe('nl');
+    expect(BESLUIT_GB_BESLUIT.organization).toBe('flevoland');
+  });
+
+  test('carries the default Dutch besluit text in its body', () => {
+    expect(JSON.stringify(BESLUIT_GB_BESLUIT.zones.body)).toContain(
+      'Besluiten tot het aangaan, wijzigen, beëindigen verplichtingen d.m.v. opdrachtbon, -brief, overeenkomst of anderszins voor: het leveren van zaken, verrichten van diensten en uitvoeren van werken.'
+    );
+  });
+
+  test('has a text block opening its signOff zone, where ValidSign anchors the signature field', () => {
+    expect(BESLUIT_GB_BESLUIT.zones.signOff?.blocks[0].type).toBe('text');
+  });
+});
+
+describe('BESLUIT_GB_BESLUIT and its deployable file', () => {
+  // Vite refuses imports from public/ in the dev server (vitest and tsc do
+  // not), so the template is inline and this pins it to the public copy the
+  // Modeler deploys and RBA renders for ValidSign.
+  const file = join(
+    __dirname,
+    '../../../public/examples/flevoland/besluitvorming-gedelegeerd/besluit-gb-besluit.document'
+  );
+
+  test('is identical to the public .document file', () => {
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(BESLUIT_GB_BESLUIT);
+  });
+
+  test('is not imported from public/, which the Vite dev server rejects', () => {
+    const source = readFileSync(join(__dirname, 'defaultTemplates.ts'), 'utf8');
+    expect(source).not.toMatch(/from '[^']*\/public\//);
+  });
 });

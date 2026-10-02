@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-archiveren",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_78",
+      "type": "text",
+      "text": "# Archiveer"
+    },
+    {
+      "id": "Field_Ro_79",
+      "type": "textfield",
+      "label": "Zaaknummer",
+      "key": "zaaknummer",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ro_80",
+      "type": "textfield",
+      "label": "Kenmerk",
+      "key": "kenmerk",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Select_81",
+      "type": "select",
+      "label": "Bewaartermijn",
+      "key": "bewaartermijn",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "5 jaar",
+          "value": "5"
+        },
+        {
+          "label": "10 jaar",
+          "value": "10"
+        },
+        {
+          "label": "20 jaar",
+          "value": "20"
+        },
+        {
+          "label": "Permanent",
+          "value": "permanent"
+        }
+      ]
+    },
+    {
+      "id": "Field_Cb_82",
+      "type": "checkbox",
+      "label": "Toegankelijk opgeslagen",
+      "key": "toegankelijkOpgeslagen",
+      "defaultValue": false,
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Submit_83",
+      "type": "button",
+      "action": "submit",
+      "label": "Archiveren"
+    }
+  ]
+}

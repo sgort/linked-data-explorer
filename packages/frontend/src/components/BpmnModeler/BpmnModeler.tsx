@@ -408,6 +408,33 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         updated.push(hrCapacityNlExample);
       }
 
+      // --- Besluitvorming onder gedelegeerde bevoegdheid (NL) ---
+      const besluitGbId = 'example_besluit_gb';
+      if (getStoredVersion(besluitGbId) < EXAMPLE_VERSIONS[besluitGbId]) {
+        const xml = await fetch(
+          '/examples/flevoland/besluitvorming-gedelegeerd/GedelegeerdBesluitProcess.bpmn'
+        ).then((r) => r.text());
+        const besluitGbExample: BpmnProcess = {
+          id: besluitGbId,
+          name: 'Besluitvorming onder gedelegeerde bevoegdheid (Voorbeeld, NL)',
+          description:
+            'Besluit voorbereiden, toetsen en ondertekenen onder gedelegeerde bevoegdheid, met escalatie naar de bevoegde bestuursautoriteit. Ondertekening via ValidSign.',
+          xml,
+          createdAt: '2026-10-02T09:00:00.000Z',
+          updatedAt: new Date().toISOString(),
+          linkedDmnTemplates: ['GedelegeerdBesluitRoute'],
+          readonly: false,
+          status: 'example',
+          bpmnProcessId: 'GedelegeerdBesluitProcess',
+          processRole: 'standalone',
+          language: 'nl',
+          organization: 'flevoland',
+        };
+        BpmnService.saveProcess(besluitGbExample);
+        setStoredVersion(besluitGbId, EXAMPLE_VERSIONS[besluitGbId]);
+        updated.push(besluitGbExample);
+      }
+
       // --- Asylum Migration (inline WIP, no version tracking needed) ---
       const asylumId = 'wip_asylum_migration';
       if (!BpmnService.getProcess(asylumId)) {
