@@ -25,6 +25,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_hr_capacity_nl: 4, // v4: phase markers + decisionRefTenantId=${null}
   example_thuisbatterij_aanvraag: 2, // v2: swimlanes + Dutch names
   example_thuisbatterij_decision: 2, // v2: swimlanes + Dutch names
+  example_besluit_gb: 1,
 
   // Camunda Forms
   example_kapvergunning_start: 4, // v4: force re-seed for ACC users with stale localStorage from v1.6.0 testing
@@ -40,6 +41,18 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_thuisbatterij_review: 1,
   example_thuisbatterij_notify_applicant: 1,
   example_thuisbatterij_missing_info: 1,
+  example_besluit_gb_sjabloon_kiezen: 1,
+  example_besluit_gb_sjabloon_invullen: 1,
+  example_besluit_gb_advies_toetsing: 1,
+  example_besluit_gb_voorwaarden: 1,
+  example_besluit_gb_memorandum: 1,
+  example_besluit_gb_akkoord: 1,
+  example_besluit_gb_indienen: 1,
+  example_besluit_gb_ondertekenen: 1,
+  example_besluit_gb_escalatie: 1,
+  example_besluit_gb_besluit_nemen: 1,
+  example_besluit_gb_registreren: 1,
+  example_besluit_gb_archiveren: 1,
 
   // HR-capacity Dutch forms (multilingualism release)
   example_hr_capacity_intake_nl: 1,
