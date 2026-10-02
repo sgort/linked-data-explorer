@@ -50,10 +50,10 @@ Systeem                                              → Beslisregels toepassen 
                                          → ◇ Akkoord? nee ───────────────┤
                                                       ja ─┐              │
         nee ──────────────────────────────────────────────┤              │
-Aanvrager/Indiener               6 Dien besluit in ◄──────┘  Escaleren ◄─┘
-                                  voor ondertekening ◄─┐         │
-Gemachtigde onderteken.          Onderteken (ValidSign)│         │
-                                  → ◇ Ondertekend? nee ┘         │
+Aanvrager/Indiener               6 Dien besluit in ◄──────┘  Escaleren ◄─┤
+                                  voor ondertekening             │       │
+Gemachtigde onderteken.          Onderteken (ValidSign)          │       │
+                                  → ◇ Ondertekend? nee ──────────┼───────┘
 Bevoegde bestuursautor.                  │ ja         Neem besluit ◄┘
 Registratie & Beheer             Ontvang en registreer ◄────────┘
                                   → Archiveer → Einde
@@ -63,7 +63,7 @@ How the diagram's ambiguities are resolved:
 
 - The jurist's "Verstrek advies / akkoord" sits on the memorandum path. A refusal there escalates, which is the diagram's upward arrow to "Escaleren".
 - The toetsing outcome ("buiten gedelegeerde bevoegdheid") feeds the DMN, rather than jumping straight to "Neem besluit".
-- A signer who declines sends the case back to "6 Dien besluit in voor ondertekening", so the indiener can revise and resubmit. In BPMN terms this is a rework loop.
+- A signer who declines sends the case to "Escaleren naar bevoegde bestuursautoriteit". With good criteria upstream (advies, voorwaarden, memorandum), a decline is an incident, not a correction round: the indiener records why in "Escaleren" and the bevoegde bestuursautoriteit decides. Looping back to "6 Dien in" would re-sign an unchanged document, since that form cannot edit the besluit. (Decided 2 October 2026, after review; the first version looped back.)
 - Both endings, signed and decided by the authority, converge on "Ontvang en registreer".
 - The "Sjablonenoverzicht" becomes the options in step 1's form, not a separate element.
 
@@ -99,7 +99,7 @@ bevoegdheid", with `ronl:organization="flevoland"`, `ronl:language="nl"` and
 | `Gateway_Akkoord` | exclusive | Akkoord? | Juridisch | `${juridischAkkoord == "akkoord"}` → Dien in; `${juridischAkkoord == "niet-akkoord"}` → Escaleren |
 | `Task_DienIn` | user | 6. Dien het besluit in voor ondertekening | Indiener | `besluit-gb-indienen` |
 | `Task_Onderteken` | user | Onderteken het besluit | Ondertekenaar | `besluit-gb-ondertekenen` (fallback), `ronl:signatureRef="besluit-gb-besluit"` |
-| `Gateway_Ondertekend` | exclusive | Ondertekend? | Ondertekenaar | `${approvalStatus == "approved"}` → Registreer; `${approvalStatus == "rejected"}` → Dien in |
+| `Gateway_Ondertekend` | exclusive | Ondertekend? | Ondertekenaar | `${approvalStatus == "approved"}` → Registreer; `${approvalStatus == "rejected"}` → Escaleren |
 | `Task_Escaleren` | user | Escaleren naar bevoegde bestuursautoriteit | Indiener | `besluit-gb-escalatie` |
 | `Task_NeemBesluit` | user | Neem besluit | Bestuursautoriteit | `besluit-gb-besluit-nemen`, `ronl:documentRef="besluit-gb-besluit"` |
 | `Task_Registreer` | user | Ontvang en registreer | Registratie | `besluit-gb-registreren` |
@@ -126,9 +126,8 @@ The process declares its own phases, which RBA reads (sgort/ronl-business-api#29
 | 6 | `registratie` | `Task_Registreer` | Archiveer, the end event |
 
 Memorandum and Escalatie are optional branches, so a direct path skips them on
-the stepper, as Awb's Betaling and HR's Heroverweging already do. The
-declined-signature loop back to "6 Dien in" is a back edge, so it pulls no node
-into a later phase.
+the stepper, as Awb's Betaling and HR's Heroverweging already do. A declined
+signature moves forward into Escalatie; the process has no rework loop.
 
 ## Decision table: `GedelegeerdBesluitRoute`
 
@@ -261,7 +260,7 @@ with a `signOff` zone. It needs no RBA code.
 - the six lanes and their candidateGroups;
 - the six phases;
 - every node's phase;
-- the declined-signature edge being a back edge.
+- the declined signature leading to Escaleren, and no back edge.
 
 ## Verification
 

@@ -55,9 +55,12 @@ describe('setStoredVersion', () => {
 });
 
 describe('EXAMPLE_VERSIONS — besluitvorming gedelegeerd', () => {
-  test('versions the process and all twelve forms', () => {
+  test('versions the process at 2: a declined signature escalates', () => {
+    expect(EXAMPLE_VERSIONS.example_besluit_gb).toBe(2);
+  });
+
+  test('versions all twelve forms', () => {
     const ids = [
-      'example_besluit_gb',
       ...[
         'sjabloon_kiezen',
         'sjabloon_invullen',

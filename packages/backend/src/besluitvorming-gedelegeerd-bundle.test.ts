@@ -257,6 +257,17 @@ describe('GedelegeerdBesluitProcess (BPMN)', () => {
     );
   });
 
+  it('escalates a declined signature to the bevoegde bestuursautoriteit', () => {
+    // Re-submitting via "6 Dien in" would re-sign an unchanged document: that
+    // form cannot edit the besluit. The indiener explains the decline in
+    // "Escaleren" and the authority decides.
+    const declined = process.sequenceFlow.find(
+      (f: { '@_id': string }) => f['@_id'] === 'Flow_Ondertekend_Nee'
+    );
+    expect(declined['@_sourceRef']).toBe('Gateway_Ondertekend');
+    expect(declined['@_targetRef']).toBe('Task_Escaleren');
+  });
+
   it("keeps the schema's element order: laneSet, flow elements, no artifacts", () => {
     const body = xml.slice(xml.indexOf('<bpmn:process'), xml.indexOf('</bpmn:process>'));
     expect(body.indexOf('<bpmn:laneSet')).toBeLessThan(body.indexOf('<bpmn:startEvent'));

@@ -25,7 +25,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_hr_capacity_nl: 4, // v4: phase markers + decisionRefTenantId=${null}
   example_thuisbatterij_aanvraag: 2, // v2: swimlanes + Dutch names
   example_thuisbatterij_decision: 2, // v2: swimlanes + Dutch names
-  example_besluit_gb: 1,
+  example_besluit_gb: 2, // v2: a declined signature escalates instead of looping back
 
   // Camunda Forms
   example_kapvergunning_start: 4, // v4: force re-seed for ACC users with stale localStorage from v1.6.0 testing

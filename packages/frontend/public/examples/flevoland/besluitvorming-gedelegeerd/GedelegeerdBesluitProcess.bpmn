@@ -86,12 +86,12 @@
     <bpmn:userTask id="Task_DienIn" name="6. Dien het besluit in voor ondertekening" ronl:phase="ondertekening" camunda:formRef="besluit-gb-indienen" camunda:formRefBinding="deployment" camunda:candidateGroups="besluit-indiener">
       <bpmn:incoming>Flow_Memorandum_Nee</bpmn:incoming>
       <bpmn:incoming>Flow_Akkoord_Ja</bpmn:incoming>
-      <bpmn:incoming>Flow_Ondertekend_Nee</bpmn:incoming>
       <bpmn:outgoing>Flow_DienIn_Onderteken</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:userTask id="Task_Escaleren" name="Escaleren naar bevoegde bestuursautoriteit" ronl:phase="escalatie" camunda:formRef="besluit-gb-escalatie" camunda:formRefBinding="deployment" camunda:candidateGroups="besluit-indiener">
       <bpmn:incoming>Flow_Voorwaarden_Nee</bpmn:incoming>
       <bpmn:incoming>Flow_Akkoord_Nee</bpmn:incoming>
+      <bpmn:incoming>Flow_Ondertekend_Nee</bpmn:incoming>
       <bpmn:outgoing>Flow_Escaleren_NeemBesluit</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:userTask id="Task_NeemBesluit" name="Neem besluit" camunda:formRef="besluit-gb-besluit-nemen" camunda:formRefBinding="deployment" ronl:documentRef="besluit-gb-besluit" camunda:candidateGroups="besluit-bestuursautoriteit">
@@ -150,7 +150,7 @@
     <bpmn:sequenceFlow id="Flow_Ondertekend_Ja" name="ja" sourceRef="Gateway_Ondertekend" targetRef="Task_Registreer">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approvalStatus == &quot;approved&quot;}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_Ondertekend_Nee" name="nee" sourceRef="Gateway_Ondertekend" targetRef="Task_DienIn">
+    <bpmn:sequenceFlow id="Flow_Ondertekend_Nee" name="nee" sourceRef="Gateway_Ondertekend" targetRef="Task_Escaleren">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approvalStatus == &quot;rejected&quot;}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_Escaleren_NeemBesluit" sourceRef="Task_Escaleren" targetRef="Task_NeemBesluit" />
@@ -364,11 +364,11 @@
       <bpmndi:BPMNEdge id="Flow_Ondertekend_Nee_di" bpmnElement="Flow_Ondertekend_Nee">
         <di:waypoint x="2260" y="805" />
         <di:waypoint x="2260" y="780" />
-        <di:waypoint x="2200" y="780" />
-        <di:waypoint x="2200" y="150" />
-        <di:waypoint x="2180" y="150" />
+        <di:waypoint x="2210" y="780" />
+        <di:waypoint x="2210" y="270" />
+        <di:waypoint x="2230" y="270" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="2206" y="760" width="20" height="14" />
+          <dc:Bounds x="2216" y="760" width="20" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Escaleren_NeemBesluit_di" bpmnElement="Flow_Escaleren_NeemBesluit">
