@@ -57,5 +57,10 @@
   "license": "EUPL-1.2",
   "scarfSettings": {
     "enabled": false
+  },
+  "overrides": {
+    "libxmljs2": {
+      "node-gyp": "^13.0.2"
+    }
   }
 }
