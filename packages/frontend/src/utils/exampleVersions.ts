@@ -17,27 +17,42 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 6, // v6: decisionRefTenantId=${null} (shared untenanted DMNs)
-  example_tree_felling: 9, // v9: decisionRefTenantId=${null} (shared untenanted DMNs)
-  example_awb_zorgtoeslag: 5, // v5: decisionRefTenantId=${null} (shared untenanted DMNs)
-  example_zorgtoeslag_provisional: 7, // v7: decisionRefTenantId=${null} (shared untenanted DMNs)
-  example_zorgtoeslag_final: 6, // v6: formRefBinding=deployment (tenant-safe form resolution)
-  example_hr_capacity_nl: 2, // v2: formRefBinding=deployment (tenant-safe form resolution)
+  example_awb_process: 7, // v7: swimlanes + Dutch names + missing-info form
+  example_tree_felling: 10, // v10: swimlanes + Dutch names
+  example_awb_zorgtoeslag: 6, // v6: swimlanes + Dutch names + missing-info form
+  example_zorgtoeslag_provisional: 8, // v8: swimlanes + Dutch names
+  example_zorgtoeslag_final: 7, // v7: swimlanes + Dutch names
+  example_hr_capacity_nl: 4, // v4: phase markers + decisionRefTenantId=${null}
   example_thuisbatterij_aanvraag: 2, // v2: swimlanes + Dutch names
   example_thuisbatterij_decision: 2, // v2: swimlanes + Dutch names
+  example_besluit_gb: 2, // v2: a declined signature escalates instead of looping back
 
   // Camunda Forms
   example_kapvergunning_start: 4, // v4: force re-seed for ACC users with stale localStorage from v1.6.0 testing
   example_tree_felling_review: 4, // v4: force re-seed (see above)
+  example_kapvergunning_missing_info: 1,
   example_awb_notify_applicant: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_notify_applicant: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_provisional_start: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_provisional_review: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_final_review: 4, // v4: force re-seed (see above)
+  example_zorgtoeslag_missing_info: 1,
   example_thuisbatterij_start: 1,
   example_thuisbatterij_review: 1,
   example_thuisbatterij_notify_applicant: 1,
   example_thuisbatterij_missing_info: 1,
+  example_besluit_gb_sjabloon_kiezen: 1,
+  example_besluit_gb_sjabloon_invullen: 1,
+  example_besluit_gb_advies_toetsing: 1,
+  example_besluit_gb_voorwaarden: 1,
+  example_besluit_gb_memorandum: 1,
+  example_besluit_gb_akkoord: 1,
+  example_besluit_gb_indienen: 1,
+  example_besluit_gb_ondertekenen: 1,
+  example_besluit_gb_escalatie: 1,
+  example_besluit_gb_besluit_nemen: 1,
+  example_besluit_gb_registreren: 1,
+  example_besluit_gb_archiveren: 1,
 
   // HR-capacity Dutch forms (multilingualism release)
   example_hr_capacity_intake_nl: 1,

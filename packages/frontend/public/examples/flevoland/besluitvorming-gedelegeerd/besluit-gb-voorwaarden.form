@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-voorwaarden",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_27",
+      "type": "text",
+      "text": "# 4. Controleer de voorwaarden voor gedelegeerde bevoegdheid"
+    },
+    {
+      "id": "Field_Ro_28",
+      "type": "textarea",
+      "label": "Advies Juridische Zaken / Compliance",
+      "key": "advies",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Text_29",
+      "type": "text",
+      "text": "Voorwaarden: wet- en regelgeving, provinciaal beleid, begroting en geen politieke gevoeligheid."
+    },
+    {
+      "id": "Field_Cb_30",
+      "type": "checkbox",
+      "label": "Alle voorwaarden zijn vervuld",
+      "key": "voorwaardenVervuld",
+      "defaultValue": false
+    },
+    {
+      "id": "Field_Cb_31",
+      "type": "checkbox",
+      "label": "De aanleiding en overwegingen zijn duidelijk",
+      "key": "overwegingenDuidelijk",
+      "defaultValue": true
+    },
+    {
+      "id": "Field_Submit_32",
+      "type": "button",
+      "action": "submit",
+      "label": "Voorwaarden vastleggen"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-memorandum",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_33",
+      "type": "text",
+      "text": "# 5. Vul het memorandum in"
+    },
+    {
+      "id": "Field_Ta_34",
+      "type": "textarea",
+      "label": "Aanleiding",
+      "key": "aanleiding",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Ta_35",
+      "type": "textarea",
+      "label": "Overwegingen",
+      "key": "overwegingen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Ta_36",
+      "type": "textarea",
+      "label": "Risico's en aandachtspunten",
+      "key": "risicos"
+    },
+    {
+      "id": "Field_Ta_37",
+      "type": "textarea",
+      "label": "Financiële gevolgen (toelichting)",
+      "key": "financieleToelichting"
+    },
+    {
+      "id": "Field_Submit_38",
+      "type": "button",
+      "action": "submit",
+      "label": "Memorandum opslaan"
+    }
+  ]
+}

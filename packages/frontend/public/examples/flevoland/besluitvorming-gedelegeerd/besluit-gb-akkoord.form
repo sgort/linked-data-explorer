@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-akkoord",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_39",
+      "type": "text",
+      "text": "# Verstrek advies / akkoord"
+    },
+    {
+      "id": "Field_Ro_40",
+      "type": "textarea",
+      "label": "Aanleiding",
+      "key": "aanleiding",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ro_41",
+      "type": "textarea",
+      "label": "Overwegingen",
+      "key": "overwegingen",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ro_42",
+      "type": "textarea",
+      "label": "Risico's en aandachtspunten",
+      "key": "risicos",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Radio_43",
+      "type": "radio",
+      "label": "Akkoord",
+      "key": "juridischAkkoord",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Akkoord",
+          "value": "akkoord"
+        },
+        {
+          "label": "Niet akkoord — escaleren",
+          "value": "niet-akkoord"
+        }
+      ]
+    },
+    {
+      "id": "Field_Ta_44",
+      "type": "textarea",
+      "label": "Toelichting",
+      "key": "akkoordToelichting"
+    },
+    {
+      "id": "Field_Submit_45",
+      "type": "button",
+      "action": "submit",
+      "label": "Vastleggen"
+    }
+  ]
+}

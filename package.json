@@ -1,6 +1,6 @@
 {
   "name": "linked-data-explorer-monorepo",
-  "version": "2026.09.8",
+  "version": "2026.10.0",
   "private": true,
   "description": "Monorepo for Linked Data Explorer - RONL DMN Orchestration Platform",
   "workspaces": [
@@ -23,6 +23,8 @@
     "sbom": "node scripts/write-sbom.mjs",
     "test:scripts": "node scripts/promotion-targets.test.mjs && node scripts/dso-dossier.test.mjs",
     "check-mirror": "bash scripts/check-mirror.sh",
+    "check-rip-bpmn": "node scripts/check-rip-bpmn-copies.mjs",
+    "e2e:deploy-fixtures": "node scripts/deploy-e2e-fixtures.mjs",
     "authorities:generate": "node scripts/generate-dso-authorities.mjs",
     "dso:dossier": "node scripts/dso-dossier.mjs",
     "prepare": "husky || true",
@@ -55,5 +57,10 @@
   "license": "EUPL-1.2",
   "scarfSettings": {
     "enabled": false
+  },
+  "overrides": {
+    "libxmljs2": {
+      "node-gyp": "^13.0.2"
+    }
   }
 }

@@ -34,6 +34,7 @@
       "bpmn": "AwbShellProcess.bpmn",
       "forms": [
         "kapvergunning-start.form",
+        "kapvergunning-aanvullende-gegevens.form",
         "awb-notify-applicant.form"
       ],
       "documents": [
@@ -146,6 +147,7 @@
       "bpmn": "AwbZorgtoeslagProcess.bpmn",
       "forms": [
         "zorgtoeslag-provisional-start.form",
+        "zorgtoeslag-aanvullende-gegevens.form",
         "zorgtoeslag-notify-applicant.form"
       ],
       "documents": [

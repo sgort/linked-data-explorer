@@ -1,514 +1,331 @@
 # CI posture across the three applications
 
 Where the CPSV Editor (`ttl-editor`), Linked Data Explorer (`linked-data-explorer`)
-and RONL Business API (`ronl-business-api`) stand on three mechanisms that were
-rolled out across all of them in September 2026 — build provenance, supply-chain
-verification, and a per-file test-coverage floor.
+and RONL Business API (`ronl-business-api`) stand on the mechanisms rolled out
+across all of them through September 2026 — build provenance, supply-chain
+verification, a per-file test-coverage floor, code and dependency scanning, and
+the four checks that run outside CI because no runner can do them.
 
-A **fourth** now exists in all three: a Semgrep scan covering the npm dependency
-tree and the application code. ttl-editor and Linked Data Explorer require it to
-merge; RONL Business API adopted it on 12 September 2026 and runs it as a
-reporting check while its baseline is triaged — 435 findings at adoption, 25
-since its first lock-file maintenance on 14 September, none blocking. It
-is described under §2 rather than given a section of its own, because it is the
-other half of the supply chain that `check-supply-chain` was never able to see.
+**This page is the single documented source for all three.** Until 2026-09-11
+each repository carried its own copy; two had drifted in both directions, so
+ttl-editor's was deleted and its README now points here.
 
-A **fifth** exists in all three as of the same day, and is the only one that
-cannot run in CI: `scripts/check-mirror.sh`, called at each release, compares the
-GitLab mirror against GitHub and distinguishes _behind_ from _diverged_. §5
-explains why a runner cannot do it.
+Verified against each repository at the heads below, not written from memory —
+rulesets and branch protection read from the GitHub API, workflow triggers and
+steps parsed from the YAML, thresholds read from the config that declares them,
+mirror state from `ls-remote` against both remotes, pinned-reference counts from
+each repository's own `check-supply-chain`.
 
-A **sixth** runs outside CI as well, as of 14 September 2026:
-`scripts/check-deps.sh`, which stops a dev server from starting on an install
-that no longer matches `package-lock.json` and names `npm ci` as the fix. Since
-the same evening it also runs first in all three pre-push hooks. §2 covers it with
-the rest of the npm tree.
+Revised **30 September 2026**, after two days that closed nineteen of the
+twenty-one findings in
+[iou-architectuur#105](https://github.com/sgort/iou-architectuur/issues/105) and
+finished the branch-protection work in all three. §"Archive" holds the dated
+history, newest first; a claim here carries over from an earlier revision unless
+an archive entry says otherwise.
 
-A **seventh** runs outside CI as well, in ttl-editor as of 15 September 2026 and
-in RONL Business API as of 22 September: `scripts/check-previews.sh`, which lists
-the preview environments Azure holds against the pull requests GitHub has open,
-and prints a delete command for every orphan. §4 explains why a workflow alone
-could not keep them clean. Linked Data Explorer still has none.
-
-**This page is the single documented source for ttl-editor and Linked Data
-Explorer.** Until 2026-09-11 each repository carried its own copy; the two had
-drifted in both directions — each gaining sections the other lacked — so
-ttl-editor's copy was deleted and its README now points here.
-
-Verified against each repository's `acc` at the heads below, not written from
-memory — rulesets read from the API, workflow triggers and steps parsed from the
-YAML, thresholds read from the config that declares them, mirror state from
-`ls-remote` against both remotes.
-
-Revised **15 September 2026**: ttl-editor's and Linked Data Explorer's heads and
-mirror state re-verified that day. RONL Business API's head, mirror state, Semgrep
-counts, Static Web Apps plan and preview environments were re-verified the same
-day, after its v2026.09.8 release. Other rows carry over unless §"What changed on
-15 September 2026" says otherwise.
-
-Previously revised **14 September 2026**: repository heads and mirror state
-re-verified that day.
-
-Previously revised **12 September 2026**, after RONL Business API promoted `acc` to
-production for the first time since 17 July and then closed ten of the eleven
-alignment items it had been carrying — the eleventh being out of scope rather
-than skipped, and named in §"What changed" below. ttl-editor's and Linked Data
-Explorer's rows were re-verified the same day.
-
-| repository           | `acc` at  | `main` at |
-| -------------------- | --------- | --------- |
-| ttl-editor           | `4a20e91` | `e1c482e` |
-| linked-data-explorer | `0a52f9d` | `01fcd67` |
-| ronl-business-api    | `e187086` | `311d732` |
+| repository           | `acc` at  | `main` at | release      |
+| -------------------- | --------- | --------- | ------------ |
+| ttl-editor           | `8611de8` | `7d154ba` | `2026.09.7`  |
+| linked-data-explorer | `8a55d83` | `4148c9a` | `2026.09.8`  |
+| ronl-business-api    | `142d909` | `ae06c9e` | `2026.09.15` |
 
 ---
 
-## Summary
+## Executive summary
 
-|                               | ttl-editor            | linked-data-explorer      | ronl-business-api         |
-| ----------------------------- | --------------------- | ------------------------- | ------------------------- |
-| **Build id in the changelog** | ✅                    | ✅                        | ✅ exercised in PROD      |
-| **check-supply-chain**        | ✅ blocking           | ✅ blocking               | ✅ blocking               |
-| **Semgrep Code + SCA**        | ✅ required           | ✅ required               | ✅ required on `acc`, 25  |
-| **Build checks required**     | ✅ `acc`, #119        | ✅ `acc`, #119            | ✅ `acc`, #119            |
-| **Per-file 80% branch floor** | ✅ 1 runner           | ✅ 2 runners              | ✅ 5 runners              |
-| **Formatting checked in CI**  | ✅                    | ✅                        | ✅                        |
-| **Tests run before merge**    | ✅                    | ✅                        | ✅                        |
-| **Renovate lock-file maint.** | ✅                    | ✅                        | ✅                        |
-| **One Node version**          | ✅ single literal     | ✅ `.nvmrc`, one file     | ✅ `.nvmrc`, one file     |
-| **`acc` ruleset**             | PR + `audit` + `scan` | + `deletion`, `non-ff`    | ✅ + `deletion`, `non-ff` |
-| **`main` ruleset**            | ⚠️ classic, no checks | ✅ full, `audit` + `scan` | ✅ full, `audit`          |
-| **Mirror checked at release** | ✅ `check-mirror`     | ✅ `check-mirror`         | ✅ `check-mirror`         |
-| **Mirror in sync**            | ✅ both               | ✅ both                   | ✅ both                   |
-| **Install checked at start**  | ✅ `start`            | ✅ `dev`, three scripts   | ✅ `dev`                  |
-| **Install checked at push**   | ✅ pre-push           | ✅ pre-push               | ✅ pre-push               |
-| **Orphaned previews checked** | ✅ `check-previews`   | ❌ none orphaned today    | ✅ `check-previews`       |
-| **Preview on a promotion PR** | ✅ production SWA     | ✅ sites only, decided    | ❌ none, #87              |
+**The three are now uniform on every mechanism that can be made uniform, and the
+places they differ are recorded decisions rather than drift.** That was not true
+three weeks ago. On 9 September, Linked Data Explorer had an unprotected `main`,
+a production build id it had never exercised and a stale mirror — the three in
+that order, because each was a precondition for the next. RONL Business API
+closed the same three on 12 September, and until that day nothing in any of the
+three repositories compared a mirror against GitHub at all.
 
-Nothing in that table is uniform by accident. Each application has a different
-build shape, and the differences below are re-derived per repository rather than
-copied.
+Two things are worth reading before the table.
 
-**The last row is the one where the three genuinely disagree, and RONL Business
-API is the outlier.** A pull request that promotes `acc` to `main` builds and
-deploys a preview of the PRODUCTION site in both ttl-editor
-(`azure-static-web-apps-white-sky-02b674303.yml`) and Linked Data Explorer
-(`azure-frontend-production.yml`, `azure-ropa-site-prod.yml`). In RONL Business
-API no production workflow carries a `pull_request` trigger at all.
+**Every gate now lives in the same layer.** As of 29–30 September all six
+branches across the three repositories are governed by a ruleset alone — same
+four rules, `active`, **zero bypass actors** — with no classic branch protection
+anywhere. Before that, classic protection sat beside every ruleset saying
+`allow_force_pushes: true` on branches the rulesets were in fact protecting. It
+governed nothing and read as permissive, which is the worst combination a
+security control can have: a reader cannot tell which layer is the policy.
 
-Both positions are now decisions rather than accidents, and they answer
-different questions:
+**What a gate can require is bounded by what actually reports.** `main` requires
+`audit` and `scan` in all three and deliberately not the build or deploy jobs.
+Those are path-filtered on push, and a promotion pull request inherits only the
+head commit's push runs — so requiring them would have hung real promotions. Two
+of RONL Business API's past promotions genuinely carry no PA Demo check. The
+ceiling is not caution; it is the trigger configuration.
 
-- **Linked Data Explorer keeps it** (linked-data-explorer#210, 24 September
-  2026): a promotion pull request produces a preview of the real production
-  site, built from `acc`, so it can be looked at before anything is promoted
-  rather than inferred from an acceptance build. ttl-editor has the same shape.
+|                                 | ttl-editor                 | linked-data-explorer       | ronl-business-api              |
+| ------------------------------- | -------------------------- | -------------------------- | ------------------------------ |
+| **Build id in the changelog**   | ✅                         | ✅                         | ✅ exercised in PROD           |
+| **check-supply-chain**          | ✅ blocking, 17 refs       | ✅ blocking, 31 refs       | ✅ blocking, 39 refs           |
+| **Semgrep Code + SCA**          | ✅ required                | ✅ required                | ✅ required                    |
+| **Build checks required**       | ✅ `acc`                   | ✅ `acc`                   | ✅ `acc`                       |
+| **Per-file 80% branch floor**   | ✅ 1 runner                | ✅ 2 runners               | ✅ 5 runners, every file ≥ 85% |
+| **Response-schema conformance** | ❌ n/a                     | ✅ 20 route test files     | ✅ all 133 operations, gated   |
+| **Formatting checked in CI**    | ✅                         | ✅                         | ✅                             |
+| **Tests run before merge**      | ✅                         | ✅                         | ✅                             |
+| **Renovate lock-file maint.**   | ✅                         | ✅                         | ✅                             |
+| **One Node version**            | ✅ `.nvmrc` `24.20.0`      | ✅ `.nvmrc` `24.21.0`      | ✅ `.nvmrc` `22.23.2`          |
+| **`acc` ruleset**               | ✅ 4 rules, 3 checks       | ✅ 4 rules, 5 checks       | ✅ 4 rules, 6 checks           |
+| **`main` ruleset**              | ✅ 4 rules, `audit`+`scan` | ✅ 4 rules, `audit`+`scan` | ✅ 4 rules, `audit`+`scan`     |
+| **Classic protection**          | ✅ none, either branch     | ✅ none, either branch     | ✅ none, either branch         |
+| **Merge method**                | ✅ ruleset: merge only     | ✅ ruleset: merge only     | ✅ ruleset: merge only         |
+| **Mirror checked at release**   | ✅ `check-mirror`          | ✅ `check-mirror`          | ✅ `check-mirror`              |
+| **Mirror in sync**              | ✅ both                    | ✅ both                    | ✅ both                        |
+| **Install checked at start**    | ✅ `start`                 | ✅ `dev`, three scripts    | ✅ `dev`                       |
+| **Install checked at push**     | ✅ pre-push                | ✅ pre-push                | ✅ pre-push                    |
+| **Orphaned previews checked**   | ✅ `check-previews`        | ❌ none, none orphaned     | ✅ `check-previews`            |
+| **Preview on a promotion PR**   | ✅ production SWA          | ✅ sites only, decided     | ❌ none, decided (#87)         |
+
+"4 rules" is `deletion`, `non_fast_forward`, `pull_request` — zero approvals,
+`allowed_merge_methods: ["merge"]` — and `required_status_checks`, identical on
+all six branches. The check counts differ because the build shapes differ; §4
+lists them per repository.
+
+Nothing in that table is uniform by accident, and the differences below are
+re-derived per repository rather than copied.
+
+### Where the three still differ, and why
+
+**Preview on a promotion pull request.** RONL Business API is the outlier, and
+both positions are decisions:
+
+- **Linked Data Explorer and ttl-editor keep it** (linked-data-explorer#210, 24
+  September 2026): a promotion pull request produces a preview of the real
+  production site, built from `acc`, so it can be looked at before anything is
+  promoted rather than inferred from an acceptance build.
 - **RONL Business API excludes it** (ronl-business-api#87): `main` is promoted
-  from `acc`, so the content has already run its suite there, and re-running it
+  from `acc`, so the content has already run its suite there and re-running it
   on the promotion says nothing new.
 
-The costs are real and belong with the decision. A preview on a production
-Static Web App is a public URL serving unreleased code, and it holds an
-environment slot on the production app — the ceiling `check-previews` exists
-for, which Linked Data Explorer still does not have. The teardown depends on the
-close job running, and GitHub does not run `pull_request` workflows while a pull
-request has a merge conflict, closing included: that is how eight previews leaked
-in RONL Business API on 12 September 2026.
+The costs belong with the decision. A preview on a production Static Web App is
+a public URL serving unreleased code, and it holds an environment slot on the
+production app — the ceiling `check-previews` exists for, which Linked Data
+Explorer still does not have. The teardown depends on the close job running, and
+GitHub does not run `pull_request` workflows while a pull request has a merge
+conflict, closing included: that is how eight previews leaked in RONL Business
+API on 12 September 2026.
 
-The BACKEND is excluded everywhere, and that asymmetry is deliberate in both
+**The BACKEND is excluded everywhere**, and that asymmetry is deliberate in both
 repositories that have one. A preview site is a page to look at; a preview
 backend on production would be a second live API against production data.
 
-### What changed on 24 September 2026
+**Node major.** Linked Data Explorer and ttl-editor are on 24, RONL Business API
+on 22 — the last deliberately, per its Renovate deferral. The App Service
+runtimes follow: read from Azure on 27 September 2026, Linked Data Explorer's
+two are `NODE|24-lts` and RONL Business API's two are `NODE|22-lts`. Azure
+offers major-level runtimes only, so the control is the ORDERING — switch the
+App Service to the new major before merging a build on it — and nothing enforces
+that ordering.
 
-A promotion, and then the day spent on what the promotion showed.
+**Response-schema conformance** exists in the two repositories with a REST API
+and is not applicable to ttl-editor. RONL Business API is now the stricter of
+the two: every one of its 133 documented operations is compared against a real
+response, and a separate check fails the build if that ever stops being true.
 
-| repository           | change                                                                                                                                       | pull request                                                                     |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| linked-data-explorer | **v2026.09.6 released and promoted** — Node 24 on both tiers, and the first promotion to expose the production deploy race                    | [#204](https://github.com/sgort/linked-data-explorer/pull/204), [#209](https://github.com/sgort/linked-data-explorer/pull/209) |
-| linked-data-explorer | `buildInfo` reads the build file at module load instead of lazily, so an old process can no longer report a new file's contents               | [#211](https://github.com/sgort/linked-data-explorer/pull/211)                   |
-| linked-data-explorer | both production site deploy jobs renamed, so they can be told apart in a check list                                                           | [#212](https://github.com/sgort/linked-data-explorer/pull/212)                   |
-| linked-data-explorer | the backend deploy verification runs all five checks instead of exiting on the first, so the native-binding assertion is always reached       | [#213](https://github.com/sgort/linked-data-explorer/pull/213)                   |
-| linked-data-explorer | the production-site preview on a promotion pull request recorded as a decision rather than an open question                                   | [#214](https://github.com/sgort/linked-data-explorer/pull/214)                   |
-| linked-data-explorer | **the three production deploys sequenced** — `promote-to-production.yml` calls them in order, closing the last item of #210                   | —                                                                                |
-| linked-data-explorer | the required reviewer removed from the `production` environment                                                                              | —                                                                                |
-| ronl-business-api    | the comment claiming Linked Data Explorer's production environment carries required reviewers, corrected on the day that stopped being true   | [#202](https://github.com/sgort/ronl-business-api/pull/202)                      |
+### What is open
 
-**The race this page recorded as open was not theoretical, and the promotion is
-what proved it.** The row below said Linked Data Explorer had "the same four-way
-race on a push to `main`". It had a three-way one, and on the v2026.09.6
-promotion the ROPA site **finished deploying to production before the backend
-had started building** — production served new pages against the previous API
-for several minutes, under three green checks.
+Two findings remain in iou-architectuur#105, both decisions rather than fixes:
+the Redis licence row, and an English page duplicated under `docs/nl/`. §6 holds
+the per-repository work, of which the sharpest is
+ronl-business-api#261 — an allow-listed machine client can write the one
+variable every tenant check reads.
 
-`promote-to-production.yml` now takes #177's shape: one workflow on a push to
-`main`, a `changes` job that decides which deploys are needed, the backend
-first, then the two sites in parallel. The differences from RONL Business API
-are both consequences of decisions already on this page:
+---
 
-- **three deploys, not four**, and the two sites keep their own `pull_request`
-  trigger for the production preview. A called workflow and a preview build are
-  different runs with different concurrency groups, so the sequence does not
-  touch the preview and the preview does not enter the sequence.
-- **the decision lives in `scripts/promotion-targets.mjs` with a test beside
-  it**, rather than in a `run:` block. RONL Business API's `promotion-targets.sh`
-  was exercised against a case table by hand; this one is 24 checks run by the
-  promotion's own `changes` job before the script is used, four of which fail if
-  the script's patterns and the site workflows' `pull_request` path lists stop
-  agreeing.
+## The three applications
 
-**Three things the move to `workflow_call` changed inside the called
-workflows**, each of which would otherwise have misfired silently: in a called
-workflow `github.event_name` is the *caller's* event, so both sites' `== 'push'`
-gate would have skipped the deploy on a `workflow_dispatch` promotion;
-`github.workflow` is the *caller's* name, so the three concurrency groups would
-have collapsed into one and queued; and secrets do not cross the call, so each
-is declared and passed by name rather than with `secrets: inherit`.
+Each section is that repository's own posture, end to end. The thematic sections
+(§1–§6) explain the mechanisms; these explain the shapes they had to fit.
 
-**What is now genuinely uniform across the two repositories**: a promotion to
-production is one ordered run, it fails safe towards deploying everything when
-it cannot read its own commit range, and a failed backend stops the sites.
-ttl-editor has a single Static Web App and nothing to sequence.
+### CPSV Editor — `ttl-editor`
 
-### What changed on 23 September 2026
+**Shape: one Vite application, two Azure Static Web Apps, no backend.** Seven
+workflows. It is the simplest of the three and therefore the one where a missing
+gate is most visible.
 
-One day, and the first thing on this page that had never actually been run.
+|                   |                                                                      |
+| ----------------- | -------------------------------------------------------------------- |
+| Deploy target     | Static Web Apps — `orange-beach` (`acc`), `white-sky` (`main`)       |
+| Node              | `.nvmrc` `24.20.0` for both deploys; the same literal in three more  |
+| Coverage floor    | 1 runner, `vite.config.mjs`, 80% branches per file                   |
+| Pinned references | 17, across `check-supply-chain`                                      |
+| `acc` ruleset     | `21728745` — 4 rules, checks `audit`, `scan`, `Build and deploy ACC` |
+| `main` ruleset    | `24227117` — 4 rules, checks `audit`, `scan`                         |
+| On a clock        | `dependency-audit.yml`, daily, both branches                         |
+| At a release      | `sbom.yml`, on a push to `main`                                      |
+| Outside CI        | `check-mirror.sh`, `check-deps.sh`, `check-previews.sh`              |
 
-| repository        | change                                                                                                                                 | pull request                                                                                                             |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| ronl-business-api | **v2026.09.11 released and promoted** — the first promotion sequenced by a workflow rather than by hand                                | [#193](https://github.com/sgort/ronl-business-api/pull/193), [#194](https://github.com/sgort/ronl-business-api/pull/194) |
-| ronl-business-api | the local dev stack's images pinned by tag and index digest; `docker:pinDigests` added; the App Service runtime decision recorded      | [#197](https://github.com/sgort/ronl-business-api/pull/197)                                                              |
-| ronl-business-api | `/bump-release` runs the tests before it commits                                                                                       | [#190](https://github.com/sgort/ronl-business-api/pull/190)                                                              |
-| ronl-business-api | the vestigial `KEYCLOAK_CLIENT_SECRET` deleted from the production App Service, once `main` carried the commit that stopped reading it | —                                                                                                                        |
+**"One Node version" is one version, not one file.** The two Static Web Apps
+workflows read `.nvmrc`; `zizmor.yml`, `dependency-audit.yml` and `sbom.yml`
+each set `node-version: '24.20.0'` literally. `zizmor.yml` says why: that step
+needs Node 24 whatever the application runs on, so it is deliberately its own
+literal, and Renovate's node manager keeps them current. They agree today;
+nothing but Renovate keeps them agreeing.
 
-**The promotion ordering worked, and here is the evidence rather than the
-claim.** #177 replaced four racing deploy workflows with one sequenced
-promotion, and until this date it had only ever been exercised as a dry run. The
-first real promotion of `acc` to `main`:
+**Its `main` had no ruleset at all until 30 September 2026.** Classic protection
+was the only gate there — a pull request, zero approvals, `enforce_admins: true`,
+**no required checks**. So `main` was the one branch in the three repositories
+where a merge could land without `audit` or `scan` having passed. The ruleset was
+created, modelled on Linked Data Explorer's, and verified before the classic
+layer was retired; the order mattered, because reversing it would have left
+`main` briefly ungated.
 
-```
-changes           16:53:09 → 16:53:14
-backend / build   16:53:18 → 17:00:09   6m51s
-frontend          17:00:13 → 17:05:25
-pa-demo           17:00:13 → 17:02:56
-public-site       17:00:13 → 17:03:23
-```
+**Its `acc` ruleset was the last to permit squash and rebase** — repository
+settings forbade them, so the effect was right, but the rule did not live where
+the other two keep it (iou-architectuur#105 item 11). Tightened to
+`["merge"]` on 30 September. The same ruleset also lacked `deletion` and
+`non_fast_forward`: classic protection's `allow_deletions: false` was the only
+thing keeping `acc` from being deleted, which is why those two rules were added
+before that layer came off.
 
-All three site jobs started **four seconds after the backend completed**. Under
-the previous arrangement they would have started alongside it at 16:53:18 and
-finished around 17:03 — roughly five minutes _before_ the backend they depend
-on. The public site is the one that matters there: its build prerenders against
-the live API, so that window is exactly where a 404 gets baked into the deployed
-output rather than shown once.
+**`check-deps.sh` here is the reference implementation.** It compares the
+lockfile against the install marker by CONTENT, deliberately ignoring the
+repository's own `version` fields, with the reason written out: a byte
+comparison "would refuse to start the dev server after every release even though
+no dependency had changed". All three use the same comparison; this is where its
+rationale is recorded.
 
-Production reported `build.sha` matching the promoted commit, `run: 2` — the
-second automated production backend deploy, and the first inside a sequenced
-promotion. Every previous one was a script run from a laptop.
+Its accepted gaps: Semgrep `scan` cannot pass on a forked pull request (#128),
+and two files sit within one branch of the coverage floor with no ratchet left
+to absorb a slip — a third's margin is borrowed from other test files (§3).
 
-**The App Service runtime cannot be pinned, and that is now a decision rather
-than an open question.** #119 asked to pin the floating `NODE|22-lts` exactly
-where the platform allows, or record why not. `az webapp list-runtimes --os
-linux` returns, for Node, exactly `NODE|22-lts`, `NODE|24-lts` and `NODE|26` —
-major-level only, no exact version, no digest, no setting that takes one. All
-four App Services across both repositories run `NODE|22-lts`.
+### Linked Data Explorer — `linked-data-explorer`
 
-What remains reachable is keeping the App Service's major in step with
-`.nvmrc`'s, and **the ordering is part of the pin**: switch the App Service
-first, then merge the `.nvmrc` bump. No pull-request check runs against an App
-Service, so nothing enforces this and it has to be written where it gets read —
-`SECURITY-PIPELINE.md` for RONL Business API, and this page and #119 for the
-shared half. **That unblocks #80**, which has been held open since 19 September
-for precisely this reason.
+**Shape: a workspace monorepo — backend, frontend, ROPA site — one App Service
+and two Static Web Apps.** Eleven workflows, the most of the three until RONL
+Business API overtook it.
 
-**The rule has an exception, and Linked Data Explorer is it.** `switch first,
-then merge` is complete only for a pure-JavaScript backend. This repository's
-ships `libxmljs2`, which builds against NAN rather than N-API, so its
-`xmljs.node` is bound to `NODE_MODULE_VERSION` — 127 on Node 22, 137 on Node 24.
-Between switching the runtime and deploying an artifact rebuilt on the new
-major, the binary does not match the host and the backend will not start. The
-same is true in reverse if the merge comes first.
+|                     |                                                                                                                   |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Deploy target       | App Service (backend) + Static Web Apps (frontend, ROPA site)                                                     |
+| App Service runtime | `NODE\|24-lts` both tiers, read from Azure 27 September 2026 and again on 30 September                            |
+| Node                | `.nvmrc` `24.21.0` for five workflows; the same `24.21.0` literal in three more                                   |
+| Coverage floor      | 2 runners — `packages/backend/jest.config.js`, `packages/frontend/vite.config.ts`                                 |
+| Pinned references   | 31                                                                                                                |
+| `acc` ruleset       | `21794157` — 4 rules, checks `audit`, `scan`, `deploy`, `Build and Deploy Frontend`, `Build and Deploy ROPA Site` |
+| `main` ruleset      | `22630654` — 4 rules, checks `audit`, `scan`                                                                      |
+| On a clock          | `dependency-audit.yml`, daily, both branches                                                                      |
+| At a release        | `sbom.yml`, on a push to `main`                                                                                   |
+| Outside CI          | `check-mirror.sh`, `check-deps.sh` — **no `check-previews.sh`**                                                   |
 
-What makes that worth writing down is not the interruption — these are sandbox
-applications and an interruption costs nothing — but that **the deploy reports
-success while the application will not start**. The workflow does assert the
-binding loads:
+**Its Node version was two until 30 September.** Five workflows read `.nvmrc`
+(`24.21.0`) and `zizmor.yml` carries the same number as a literal, but
+`dependency-audit.yml` and `sbom.yml` were written on 24 and 26 September as
+ports of ttl-editor's, with its `24.20.0` — a day or more after this
+repository's `.nvmrc` had moved to `24.21.0` in #80. So the literal was never
+this repository's version. Renovate proposed the fix a minute after the audit
+merged (#221), and it sat for six days; it merged on 30 September (`f638ae0`).
+Neither step builds or ships anything, so the cost was accuracy rather than
+risk. The lesson stands: a literal copied between repositories carries the
+source's version, not the target's.
 
-```
-node -e "require('./deploy/node_modules/libxmljs2')" && echo "libxmljs2 native binding loads"
-```
+**It is the only one that sequences its promotion.** `promote-to-production.yml`
+(#210, 24 September) deploys the backend, then the two sites, in order. The
+problem it solved was a genuine three-way race, and the v2026.09.6 promotion
+demonstrated it: the ROPA site finished deploying before the backend started
+building. RONL Business API has the same workflow for `main` only; its four
+`acc` deploys still race a push.
 
-and that assertion runs on the RUNNER. It proves the binary matches the Node the
-runner built it with, which is exactly the axis that cannot see a runner-versus-host
-mismatch. So the one check in the pipeline that looks like it covers this is the
-reason the failure is quiet. Recovery is automatic — `.nvmrc` is in this
-workflow's paths filter and its `changes` pattern since #186, so the merge fires
-the deploy that rebuilds the binary — but someone watching a green run and a dead
-application needs this paragraph to know why.
+**It is also where the response-conformance helper was built** (its #129), and
+where RONL Business API's was ported from — 20 route test files calling one
+`expectToMatchOperation`. Three implementation details there are traps worth
+knowing: `#/components/schemas/X` has to be rewritten to `#/$defs/X` when the
+schema is compiled standalone; OpenAPI 3.1 is JSON Schema 2020-12, so `Ajv2020`
+and not the default export; and `strictSchema` stays ON, so a misspelled keyword
+fails loudly rather than validating everything.
 
-RONL Business API is unaffected: its backend has thirty runtime dependencies and
-none are native. The two `.node` files in its tree, `@rollup/rollup-linux-x64-gnu`
-and `@napi-rs/lzma`, are development-only and reach no deploy bundle.
+**Its documentation contradicted itself about its own runtime in four places.**
+`docs/ci-posture-across-repos.md` said "Node 24 on both tiers" in one line and
+"all four App Services run `NODE|22-lts`" in another; both backend workflows
+carried the same pair of contradictory comments. Azure settled it on 27
+September. Corrected in #236.
 
-**A floating tag is invisible to Renovate.** The container-image item on #119
-split cleanly once the question became _does this repository apply the file?_
-RONL Business API's `docker-compose.yml` — the local dev stack, applied from the
-tree by developers — now pins all five images by tag and **index** digest, with
-`docker:pinDigests` in `renovate.json` so they are maintained rather than merely
-set. The same rule that file already stated for actions: pinning without
-automated updates decays into an unpatched tree, which is worse than floating.
+Its accepted gaps: `GraphView.tsx` at 82.26% — one branch of slack, and the
+branches are d3's, which is a decision rather than a backlog item; no
+`check-previews`, with close jobs still inside the deploy workflows; and two
+changelog entries, `1.9.12` and `1.9.0`, still carrying the legacy `Latest`
+status, visible in production.
 
-Two of those five were `:latest`, and that is the finding worth carrying to the
-other two repositories. Renovate's docker-compose manager tracks a tag it can
-compare; `:latest` gives it nothing, so `alpine:latest` and
-`operaton/operaton:latest` appeared on no dashboard and in no pull request —
-they were the only images in the tree that nothing was watching at all. The
-three already on version tags were merely unpinned, which is a weaker problem.
+### RONL Business API — `ronl-business-api`
 
-The three compose files under `deployment/vm/` are deliberately **not** pinned,
-and that is the more interesting half. Nothing in that repository applies them:
-no workflow, no script reads them. A digest there would record a value no deploy
-consults, against a host whose running image cannot be read from the repository
-— a pin that cannot be verified is a pin that can be wrong with nothing saying
-so. Same shape as the backend deploy before #35, which sat outside every gate on
-the page describing it.
+**Shape: the largest — backend, frontend, public site, PA demo, PA cockpit,
+shared — two App Services and three Static Web Apps.** Thirteen workflows, five
+test runners, 2,300 backend tests.
 
-That became [ronl-business-api#196](https://github.com/sgort/ronl-business-api/issues/196),
-a sub-issue of #119: bring the VM deployment under control first, pin second. Two
-decisions narrowed it on the day it was opened. The VM's SSH is firewalled to a
-single fixed IP address, so a GitHub-hosted runner cannot reach it at all — which
-rules out lifting the existing hand-run script into a workflow, and points at the
-VM reconciling the files itself rather than anything pushing to it. And the scope
-is acceptance only, because the production side is being replaced by a new
-supplier's infrastructure.
+|                     |                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Deploy target       | 2 App Services + 3 Static Web Apps                                                                            |
+| App Service runtime | `NODE\|22-lts` both tiers, read from Azure 27 September 2026 and again on 30 September                        |
+| Node                | `.nvmrc` `22.23.2` for eight deploys; `24.21.0` literal in three tooling workflows                            |
+| Coverage floor      | 5 runners — backend, frontend, public-site, pa-demo, pa-cockpit; enforced at 80%, every file ≥ 85% since #295 |
+| Pinned references   | 39                                                                                                            |
+| `acc` ruleset       | `21741898` — 4 rules, checks `audit`, `scan`, `build`, and three ACC deploy jobs                              |
+| `main` ruleset      | `23019967` — 4 rules, checks `audit`, `scan`                                                                  |
+| Outside CI          | `check-mirror.sh`, `check-deps.sh`, `check-previews.sh`                                                       |
 
-### What changed on 19–22 September 2026
+**It is the only one with a published API contract, and the only one that proves
+the contract is true.** `GET /v1/openapi.json` describes all **133** operations
+(its #200, closed 29 September). Three checks keep it honest: a coverage gate
+comparing the document against the Express routes in both directions; per-response
+conformance on every operation; and
+`packages/backend/scripts/check-conformance-coverage.cjs`,
+which fails the build if any documented operation was never compared against a
+real response.
 
-Four days, and the end of two things this page had been describing as open since
-it was written: a backend deployed by hand, and a production promotion that raced
-itself.
+That third check is worth its own note, because the first two designs were
+wrong in ways that looked right. A static scan of the test sources undercounted
+twice — prettier wraps the call when the path is long, and one file drives
+eighteen operations from a table, passing the path as a variable. A Jest
+`globalTeardown` reported the gap and **exited 0 anyway**, because Jest prints an
+error thrown there without failing the run. It is a separate step after
+`jest &&` for that reason.
 
-| repository           | change                                                                                                                           | pull request                                                                                                                                                                                                                                                                                                                                                                  |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| all three            | the 14-day package-manager cooldown, the `ubuntu-24.04` runner pin, build checks required on `acc`, and `.nvmrc` in every filter | RBA [#158](https://github.com/sgort/ronl-business-api/pull/158)–[#162](https://github.com/sgort/ronl-business-api/pull/162), LDE [#179](https://github.com/sgort/linked-data-explorer/pull/179)–[#186](https://github.com/sgort/linked-data-explorer/pull/186), TTL [#158](https://github.com/sgort/ttl-editor/pull/158)–[#163](https://github.com/sgort/ttl-editor/pull/163) |
-| linked-data-explorer | the frontend builds on the runner; one exact `.nvmrc` for all four deploy workflows (closed #113)                                | [#179](https://github.com/sgort/linked-data-explorer/pull/179)                                                                                                                                                                                                                                                                                                                |
-| linked-data-explorer | the backend deploy installs from the root lockfile                                                                               | [#181](https://github.com/sgort/linked-data-explorer/pull/181)                                                                                                                                                                                                                                                                                                                |
-| ttl-editor           | both of those, in one pull request                                                                                               | [#160](https://github.com/sgort/ttl-editor/pull/160)                                                                                                                                                                                                                                                                                                                          |
-| ronl-business-api    | the backend deploys from the workflow, over OIDC, from the lockfile (closed #34, #35, #129)                                      | [#176](https://github.com/sgort/ronl-business-api/pull/176)                                                                                                                                                                                                                                                                                                                   |
-| ronl-business-api    | a preview environment is created only when a pull request asks for one                                                           | [#181](https://github.com/sgort/ronl-business-api/pull/181)                                                                                                                                                                                                                                                                                                                   |
-| ronl-business-api    | a pull request's preview may call the acceptance backend, matched on its app's stable slug (closed #37)                          | [#184](https://github.com/sgort/ronl-business-api/pull/184)                                                                                                                                                                                                                                                                                                                   |
-| ronl-business-api    | `check-previews`, ported from ttl-editor (closed #154)                                                                           | [#185](https://github.com/sgort/ronl-business-api/pull/185)                                                                                                                                                                                                                                                                                                                   |
-| ronl-business-api    | a promotion is one ordered run instead of four racing ones (closed #177)                                                         | [#187](https://github.com/sgort/ronl-business-api/pull/187)                                                                                                                                                                                                                                                                                                                   |
-| all three            | lock-file maintenance, merged one at a time with housekeeping between                                                            | RBA [#174](https://github.com/sgort/ronl-business-api/pull/174), LDE [#188](https://github.com/sgort/linked-data-explorer/pull/188), TTL [#164](https://github.com/sgort/ttl-editor/pull/164)                                                                                                                                                                                 |
+**Writing that contract found more than it documented.** Six issues came out of
+the documentation itself — #218, #219, #234, #237, #241 — and the conformance
+work found **fourteen** places where the published document did not describe what
+the API returns, plus five YAML flow-mapping bugs that had been silently
+truncating descriptions and injecting bogus schema keywords into the compiled
+schema. None were reachable by reading the document.
 
-**RONL Business API's backend is inside the gates at last.** Until 21 September it
-was deployed by `deploy-backend-to-acc.sh` and `deploy-backend-to-prod.sh`, run by
-hand from a local checkout — outside every gate on this page, and installing into a
-`deploy/` directory that had a `package.json` and no lockfile, so
-`npm install --production` re-resolved every caret range at deploy time. On
-2026-08-29 an acceptance deploy shipped `@anthropic-ai/sdk` 42 minor versions and
-`uuid` five majors ahead of anything a build had verified. #176 replaced both with a
-workflow step: `npm ci --omit=dev --workspace=@ronl/backend` in a staging copy of
-the root manifest and lockfile, `az webapp deploy` over an OIDC token, and a
-post-deploy check that polls `/v1/health` until `build.sha` matches the commit. The
-first unattended merge→deploy ran on 2026-09-20 and the sha matched. The scripts
-remain as break-glass. Closed #34, #35 and #129 together — the three RBA rows §6
-had carried longest.
+**Its `main` ruleset required only `audit` until 29 September.** `acc` required
+six checks; `main`, the branch that goes to production, required one. `scan` was
+added. `build` and the three ACC deploy jobs were deliberately not: they are
+path-filtered on push, and promotions #194 and #164 genuinely carry no PA Demo
+check, so requiring them would have hung both.
 
-**Four production workflows fired on the same push and nothing sequenced them.** A
-promotion to RBA's `main` started the backend and three Static Web App deploys at
-once. The backend job is the slowest of the four — it runs the full backend suite
-before it packages anything, while a Static Web App deploy is a build and an
-upload — so the frontends reliably finished FIRST, and a frontend calling a route
-the deployed backend did not serve yet got a 404. On the public site that is worse
-than transient: its build prerenders against the live API, so a prerender inside the
-window bakes the failure into the deployed output. The manual answer had been to
-disable the three site workflows before the merge and dispatch them by hand
-afterwards, written down in that repository's `docs/promote-ACC-to-PROD.md`. #187
-made the promotion one run: the four deploy workflows lost their `push` trigger and
-became reusable workflows called in order by `promote-to-production.yml`, which
-decides what changed from one script rather than from four `paths:` filters.
+**Its `.env.example` shipped TLS verification turned off.** Two live lines in the
+template every contributor copies: a CA path that existed on one machine, and
+`NODE_TLS_REJECT_UNAUTHORIZED=0`, which disables certificate verification for
+every outbound call the backend makes — Keycloak JWKS, Operaton, BRP, the LLM
+providers. Anyone not behind that corporate proxy got no benefit from the first
+and lost TLS verification without being told. Both commented out on 29 September
+(iou-architectuur#105 item 1).
 
-Worth noting for the other two: what made that affordable is that RBA's `main`
-requires only `audit`, so no job name was load-bearing. A reusable workflow's check
-reports as `<caller job> / <called job>`, which renames every required context.
-RBA's `acc` was left alone for exactly that reason — its ruleset names four build
-jobs — and Linked Data Explorer's `main` requires `audit` and `scan`, neither of
-which is a deploy job, so the same move is open there.
+**Its Node version is two, on purpose.** The eight deploy workflows read
+`.nvmrc` (`22.23.2`), matching the App Services' `NODE|22-lts`, per its
+Renovate deferral. `zizmor.yml`, `dependency-audit.yml` and `sbom.yml` set
+`24.21.0` literally: they build and ship nothing, and run tooling that wants
+Node 24 whatever the application runs on. So the summary's "one version" holds
+for everything that deploys, and the tooling literal is a second, deliberate one.
 
-**A preview cost more than it proved.** RBA #181 stopped creating a preview
-environment unless a pull request is labelled `preview` and changes something other
-than a manifest. The trigger was #154's finding that three Renovate security pull
-requests had claimed eight environments on 12 September, all eight of which then
-leaked; a dependency bump's preview renders the same pages as the last one, and the
-build is what verifies it. #185 then ported ttl-editor's `check-previews` to find
-the ones that leak anyway. It could not be copied byte for byte: ttl-editor derives
-each app from its workflow's file name, which RBA's naming does not allow, so the
-apps are found by `repositoryUrl` across every subscription — RBA's six span two of
-them, and ttl-editor's script reads only the logged-in one.
+**Every file in all five runners has sat at 85% branches or more since 30
+September** (#295, promoted as v2026.09.15). The enforced floor is still 80 in
+all five configs — 85 is the margin that was bought, not a threshold that is
+checked, so nothing yet stops a file from sliding back towards 80. 32 files sat
+between 80.00 and 85 before it, `edocs.service.ts` at exactly 80.00; it reads
+98.67% now.
 
-**A check that cannot ask must not report success.** Writing #185 surfaced a shape
-worth carrying into the other two. An expired Azure refresh token made
-`az staticwebapp list` fail, and with stderr discarded it returned an empty list —
-indistinguishable from a subscription holding no apps. The check was one step from
-reporting "no orphans" against a stack it had never examined. So: the session is
-proven with a real ARM call rather than `az account show`, which reads cached state
-and succeeds against a token that expired days ago; a subscription that cannot be
-read counts as unchecked and fails; and finding no apps at all fails too, because it
-means nothing was compared. `check-mirror` already had that rule.
-
-**The cooldown holds, and its status check says otherwise.** #119 left one thing to
-confirm: that the next lock-file maintenance in each repository contains no version
-younger than 14 days. Measured on 22 September against the npm registry's own
-`time` map, across every version the three refreshes introduced — RBA 62 packages,
-LDE 97, TTL 42 — **none was younger than 14 days**, and the youngest anywhere was
-exactly 14 days old when Renovate wrote the branch on 21 September. So the control
-works.
-
-The status check does not say so. All three pull requests carried
-`renovate/stability-days` as **pending**, reading "Updates have not met minimum
-release age requirement", and all three were merged over it. That is consistent
-with Renovate's documented behaviour — `lockFileMaintenance` does not honour
-`minimumReleaseAge`, so the branch is flagged rather than evaluated — but the
-practical effect is a red status on a branch that is in fact compliant. A gate that
-is wrong in the safe direction still teaches people to merge past it, which is how
-gates stop working. The measurement above is the thing to read; the status is not.
-
-### What changed on 15 September 2026
-
-All three repositories, and three findings about things no gate could see.
-
-| repository           | change                                                                                          | pull request                                                                                                                                                                          |
-| -------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ttl-editor           | the last four Semgrep findings answered in the source, not the dashboard                        | [#144](https://github.com/sgort/ttl-editor/pull/144)                                                                                                                                  |
-| ttl-editor           | zizmor's `version` input recorded as Renovate-maintained, with the merge order it needs         | [#144](https://github.com/sgort/ttl-editor/pull/144)                                                                                                                                  |
-| linked-data-explorer | the same correction; a Renovate group normally moves both together here                         | [#139](https://github.com/sgort/linked-data-explorer/pull/139)                                                                                                                        |
-| ttl-editor           | lock-file maintenance exempt from the pull-request limits                                       | [#145](https://github.com/sgort/ttl-editor/pull/145)                                                                                                                                  |
-| linked-data-explorer | the same, plus pre-1.0 minors held for approval and `engines` left alone                        | [#138](https://github.com/sgort/linked-data-explorer/pull/138)                                                                                                                        |
-| ttl-editor           | v2026.09.5 released and promoted to production                                                  | [#146](https://github.com/sgort/ttl-editor/pull/146), [#147](https://github.com/sgort/ttl-editor/pull/147)                                                                            |
-| ttl-editor           | previews closed by a workflow with no path filter; orphans checked at each release              | [#150](https://github.com/sgort/ttl-editor/pull/150)                                                                                                                                  |
-| ronl-business-api    | three Renovate updates, rebased and merged one at a time; one backend runtime change, `pg` 8.23 | [#149](https://github.com/sgort/ronl-business-api/pull/149), [#147](https://github.com/sgort/ronl-business-api/pull/147), [#148](https://github.com/sgort/ronl-business-api/pull/148) |
-| ronl-business-api    | v2026.09.8 released; the backend deployed to acceptance by the hand-run script                  | [#151](https://github.com/sgort/ronl-business-api/pull/151)                                                                                                                           |
-| ronl-business-api    | `/bump-release` versions `packages/pa-cockpit`, left at 1.0.0 across 49 commits                 | [#153](https://github.com/sgort/ronl-business-api/pull/153)                                                                                                                           |
-
-**Eight preview environments were still running for pull requests that had long
-closed**, four on each ttl-editor app, and nothing reported them: they were found by
-opening the Azure portal. There were two causes, and only one can be fixed inside a
-workflow. §4 has both, under "A path filter also filters the close, and a
-conflicted pull request closes silently". The same read of Azure found three more
-on RONL Business API's acceptance app.
-
-**zizmor's own version was never manual.** Both registers said Renovate could not
-see the `version:` input to `zizmor-action`. Renovate maps that action to the
-`ghcr.io/zizmorcore/zizmor` image, and had an update queued in both repositories.
-§2 has what follows, under "What the register check cannot see".
-
-**The Semgrep dashboard and the CLI counted different things.** ttl-editor's CLI
-reported `Findings: 0` on every scan while the dashboard's scan list showed 4 Code
-findings, because the list counts findings ignored in the dashboard and the CLI does
-not. Moving those four into the source took the list to 0 on `acc` and `main`. §2
-has the detail.
-
-### What changed on 14 September 2026
-
-One day across all three repositories, and three findings nobody had planned for.
-
-| repository           | change                                                                                           | pull request                                                                                                             |
-| -------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| ronl-business-api    | `deps:check` stops firing on every release bump, and names `npm ci`                              | [#128](https://github.com/sgort/ronl-business-api/pull/128)                                                              |
-| ronl-business-api    | lock-file maintenance exempt from the pull-request limits, after its first Monday opened nothing | [#133](https://github.com/sgort/ronl-business-api/pull/133)                                                              |
-| ronl-business-api    | the first lock-file maintenance: Semgrep 435 → 25, reachable Supply Chain 249 → 0                | [#134](https://github.com/sgort/ronl-business-api/pull/134)                                                              |
-| ronl-business-api    | Prettier pinned to exactly 3.9.6, after that refresh failed `check-format`                       | [#135](https://github.com/sgort/ronl-business-api/pull/135)                                                              |
-| ronl-business-api    | the lockfile check runs first in the pre-push hook                                               | [#137](https://github.com/sgort/ronl-business-api/pull/137)                                                              |
-| ronl-business-api    | minor updates of pre-1.0 packages held for approval, after one required ESLint 9                 | [#142](https://github.com/sgort/ronl-business-api/pull/142)                                                              |
-| ronl-business-api    | `engines` floors no longer raised to the newest release                                          | [#146](https://github.com/sgort/ronl-business-api/pull/146)                                                              |
-| ronl-business-api    | Node pinned exactly everywhere in CI: the config validator on 24.20.0, `.nvmrc` on 22.23.2       | [#139](https://github.com/sgort/ronl-business-api/pull/139), [#144](https://github.com/sgort/ronl-business-api/pull/144) |
-| linked-data-explorer | the lockfile check runs first in the pre-push hook                                               | [#127](https://github.com/sgort/linked-data-explorer/pull/127)                                                           |
-| linked-data-explorer | the same check, new here                                                                         | [#121](https://github.com/sgort/linked-data-explorer/pull/121)                                                           |
-| linked-data-explorer | Renovate's action bump, with the register moved on its own branch                                | [#104](https://github.com/sgort/linked-data-explorer/pull/104)                                                           |
-| linked-data-explorer | SHACL shapes shipped to production; validation fails closed; both backend deploys gate on it     | [#123](https://github.com/sgort/linked-data-explorer/pull/123)                                                           |
-| linked-data-explorer | that gate waits for the new build to answer                                                      | [#124](https://github.com/sgort/linked-data-explorer/pull/124)                                                           |
-| linked-data-explorer | promoted to production, no release cut                                                           | [#125](https://github.com/sgort/linked-data-explorer/pull/125)                                                           |
-| ttl-editor           | the same check, new here                                                                         | [#142](https://github.com/sgort/ttl-editor/pull/142)                                                                     |
-| ttl-editor           | the lockfile check runs first in the pre-push hook                                               | [#143](https://github.com/sgort/ttl-editor/pull/143)                                                                     |
-| ttl-editor           | Renovate's action bump, with the register moved on its own branch                                | [#141](https://github.com/sgort/ttl-editor/pull/141)                                                                     |
-| ttl-editor           | the first scheduled lock-file maintenance, six packages                                          | [#140](https://github.com/sgort/ttl-editor/pull/140)                                                                     |
-
-**Linked Data Explorer's production SHACL Validator had been checking nothing.**
-Every file reported Valid with all three shape layers _Not loaded_; the same
-file on acceptance was Invalid with 25 errors. Two faults had stacked: the shape
-files were only ever copied into the acceptance deploy package, and a layer that
-did not load counted as a layer with no errors. §4 has the workflow half, under
-"A fix made in one environment's workflow is half a fix".
-
-**The deploy check written for it failed its first run, on a sound deploy.** It
-read the previous build, still answering after the deploy step had returned. §1
-records why, under "A post-deploy check has to know which build answered", and
-two issues track the exact fix: [linked-data-explorer#122](https://github.com/sgort/linked-data-explorer/issues/122) and
-[ronl-business-api#129](https://github.com/sgort/ronl-business-api/issues/129).
-
-**Nothing had checked a workstation's install against its lockfile**, in any of
-the three. §2 has the measurement and the check, under "The tree on a
-workstation".
-
-**Holding majors behind approval never kept a slot for lock-file maintenance.**
-RONL Business API's first scheduled refresh opened nothing: Renovate counts every
-open Renovate pull request against the limit, security ones included, and seven
-open security pull requests were already over it. §2 has the correction, under
-"Renovate maintains dependencies, not the tree".
-
-### What changed on 12 September 2026
-
-RONL Business API worked from an eleven-item list and closed **ten** of them in a
-day, in the order that made each one cheap — the eleventh being out of scope
-rather than skipped. The list is reproduced here because the **shape** of the
-work is the useful part, not the ticks: one item was passed over at the start and
-only came back last, which is the failure mode worth remembering.
-
-| item    |                                    | outcome                                                                  |
-| ------- | ---------------------------------- | ------------------------------------------------------------------------ |
-| **C1**  | `acc` ruleset: `deletion` + non-ff | ✅ closed last, a month after `main` got the same two rules              |
-| **C2**  | Backend tests before merge         | ✅ `pull_request` trigger added, #87 closed                              |
-| **C3**  | `check-supply-chain` blocking      | ✅ `continue-on-error` removed, #83 closed                               |
-| **C4**  | Formatting checked in CI           | ✅ `npm ci` + `check-format` in the `audit` job                          |
-| **C5**  | Semgrep Code + Supply Chain        | ✅ workflow + `.semgrepignore`; **`scan` deliberately not required yet** |
-| **C6**  | Renovate lock-file maintenance     | ✅ plus majors-behind-approval replacing the global flag                 |
-| **C7**  | One Node version                   | ✅ `.nvmrc` at an exact `22.22.0`, read by all eight deploy workflows    |
-| **C8**  | Mirror in sync                     | ✅ `check-mirror` in **all three** repositories, called at each release  |
-| **C9**  | Backend deploy in a workflow       | — out of scope, #34/#35 remain open                                      |
-| **C10** | Branch-floor loose ends            | ✅ #84 and #85 closed                                                    |
-| **C11** | Refresh `the-gate-has-teeth.md`    | ✅ three false claims corrected in place rather than deleted             |
-
-**C1 was the item to notice, and it closed last.** Work started at C2 and only
-came back to it at the end of the day, so for a month RONL Business API's two
-rulesets differed in a way nobody had decided — `main` carrying `deletion` and
-`non_fast_forward` from the day it was created during the promotion, `acc`
-carrying neither. Both now have all four rules.
-
-**They still differ in exactly one parameter, deliberately:**
-
-|        | `require_extra_approval_for_unattributed_changes` |
-| ------ | ------------------------------------------------- |
-| `acc`  | `true`                                            |
-| `main` | **`false`**                                       |
-
-`main`'s was set false on purpose: its promotion carried commits under three
-author identities against a ruleset requiring **zero** approvals, so the flag
-would have demanded an approval nobody could give. Preserved rather than
-harmonised when `acc` was updated, and now recorded in that repository's
-`SECURITY-PIPELINE.md` and `the-gate-has-teeth.md` as well, so the next person to
-compare them does not read it as drift.
-
-**Classic branch protection reports `allow_force_pushes: true` on both branches,
-and that is not a hole.** It never was for `main` either. The ruleset's
-`non_fast_forward` is what refuses the push; the classic setting is a vestigial
-second layer that the effective-rules view sees past.
-
-That distinction is why this row was checked with
-`gh api repos/…/rules/branches/<branch>`, which reports the **effective** rules
-from every ruleset at once. Reading one ruleset, or the classic protection
-endpoint alone, gives the wrong answer — an earlier draft of this very section
-claimed `acc` "can still be deleted", which the effective view disproved:
-deletion was already blocked, by the classic layer rather than the ruleset.
+Its accepted gaps: `deployment/vm/` compose files carrying unpinned tags, one
+`:latest`, which nothing in the repository applies (#196); the four `acc` deploy
+workflows still racing a push; and 3 Dependabot alerts no routine update closes
+— `minimatch` (high, dev only, needs `@typescript-eslint` 8) and `react-router`
+×2 (v7 only). A fourth, `dompurify` (low, fixed in 3.4.16), arrived on 30
+September and is an ordinary update.
 
 ---
 
@@ -760,11 +577,11 @@ All three run identical logic; the checkouts differ only in line endings.
 
 ### Where it runs
 
-|                      | step present | blocking | pinned refs            |
-| -------------------- | ------------ | -------- | ---------------------- |
-| ttl-editor           | ✅           | ✅       | 11 across 3 workflows  |
-| linked-data-explorer | ✅           | ✅       | 23 across 7 workflows  |
-| ronl-business-api    | ✅           | ✅       | 31 across 10 workflows |
+|                      | step present | blocking | pinned refs                           |
+| -------------------- | ------------ | -------- | ------------------------------------- |
+| ttl-editor           | ✅           | ✅       | 17 across 5 actions, all 7 workflows  |
+| linked-data-explorer | ✅           | ✅       | 31 across 6 actions, all 11 workflows |
+| ronl-business-api    | ✅           | ✅       | 39 across 6 actions, all 13 workflows |
 
 It is a **step in the existing `audit` job**, never a new job. The rulesets
 require the status check named `audit` — the job, not any individual step — so a
@@ -991,6 +808,22 @@ from 154 to 7, and none of the seven can be closed by a routine update. The 16 C
 findings are untouched. `scan` was made a required check on `acc` on 19 September
 2026, under #119, with the 25 still to triage: none is policy-blocking, so it
 blocks only new blocking findings and a scan that cannot run.
+
+**By 30 September the baseline was triaged.** The export that day held 17
+Supply Chain and 2 Code findings on `acc`. #286 cleared the 15 with a
+non-breaking fix in the lockfile alone; the two `react-router` findings need v7,
+were assessed as unreachable, and were to be marked as accepted risk. Read from the
+Semgrep platform the same afternoon: **0 open Supply Chain findings**. The Code
+side is 8 open findings, all in the two `check-og.mjs` build scripts that #283
+and #289 added that day, and all on `main`: #293 suppressed them inline on `acc`
+with a reason and the full rule id beside each, so the next promotion closes them.
+Open Dependabot alerts: 3.
+
+**The promotion did close them.** After v2026.09.15 reached `main` the same
+day, the platform read **0 open Code findings**. It also read one new Supply
+Chain finding on `main`: `dompurify`, low severity, first reported that day,
+which Dependabot reports too and which 3.4.16 fixes. A triaged baseline is a
+baseline at a date; the next advisory does not wait for it.
 
 Three things differed when it was ported to Linked Data Explorer, a monorepo:
 
@@ -1379,6 +1212,37 @@ Like `check-mirror`, it runs where the state it describes exists — on the
 developer's machine — and gates nothing in CI. The first start after each merge
 asks for `npm ci` once, because no snapshot has been written before.
 
+#### A worktree has no hooks, and says so nowhere
+
+On 19 September ttl-editor's runner-pin change (#158) was committed and pushed
+from a `git worktree`, and **neither hook ran**; both commands exited 0
+([ttl-editor#159](https://github.com/sgort/ttl-editor/issues/159)). All three
+repositories share the cause. husky 9 sets `core.hooksPath` to `.husky/_`, a
+relative path git resolves in whichever worktree it runs in. A worktree inherits
+that config but not the directory: `.husky/_/` is generated by `prepare` during
+`npm ci` and ignored by its own `.gitignore`. Git treats a hooks path that does
+not exist as no hooks, without a warning. Reproduced on 3 October with git 2.53:
+a pre-commit hook that refused in the main checkout was skipped in a fresh
+worktree of the same repository.
+
+The rule is the one this section already rests on: **run `npm ci` in a new
+worktree before committing from it.** It is also the only way `deps:check`
+passes there. ttl-editor's README states it under "Getting started".
+
+What a skipped hook costs is time, not safety. CI repeats every check the hooks
+make, and the required checks gate the merge; the hook's value is failing first
+and naming the cause, such as a stale install. Worktrees are also rarer now than
+when it happened: the assistant's working rules stopped creating them unasked on
+26 September, which removed the skill setups and worktree-isolated subagents
+that had produced them by default.
+
+A fix that fails loudly instead is possible and has not been taken: point
+`core.hooksPath` at the tracked `.husky/` (`prepare`:
+`git config core.hooksPath .husky`). The hook scripts would then exist in every
+worktree, and without an install `npx lint-staged` and `npm run deps:check`
+would fail visibly. It drops husky's wrapper — `node_modules/.bin` on the
+`PATH`, `HUSKY=0` — in all three at once, so it is listed in §6 rather than done.
+
 ---
 
 ## 3. The per-file 80% branch floor
@@ -1509,10 +1373,32 @@ but "clean" means different things:
 
 |                               | files measured | lowest branch coverage     |
 | ----------------------------- | -------------- | -------------------------- |
-| ronl-business-api backend     | —              | comfortable                |
-| linked-data-explorer backend  | 49             | `sparql.service.ts` 82.85% |
-| linked-data-explorer frontend | 68             | `GraphView.tsx` 82.26%     |
-| ttl-editor                    | 41             | `useDsoImport.js` 80.39%   |
+| ronl-business-api backend     | 89             | `pa-cache.ts` 86.36%       |
+| linked-data-explorer backend  | 52             | `sparql.service.ts` 82.85% |
+| linked-data-explorer frontend | 75             | `GraphView.tsx` 82.26%     |
+| ttl-editor                    | 33             | `ConceptsTab.jsx` 80.56%   |
+
+Re-measured on 30 September 2026, all counted by the rule below: files carrying
+at least one branch. Linked Data Explorer at `e17f24e` (backend 1824 tests in 69
+suites, frontend 1271 in 76 files): its lowest files have not moved, and its
+counts grew with the code. In its frontend,
+`DocumentComposer/AssetLibrary.tsx` (85.71%, 18/21) now has the same one branch
+of slack as `GraphView.tsx` — small files have coarse margins. ttl-editor at
+`8611de8`: its earlier 41 fits every file in the report (42 now, 33 with a
+branch), not the rule this table uses.
+
+**RONL Business API's backend row read "comfortable" and had never been
+measured.** Measured at `b958d9b`, it was not: `edocs.service.ts` sat at
+**exactly 80.00% (60/75)**, the same in the full run and with its own test file
+alone, and each of the other four runners had a file one uncovered branch from
+failing. #295 answered that the same day by bringing all 32 files between 80 and
+85 to 85 or above. At `142d909` (v2026.09.15), with 2370 backend tests, 1318
+frontend, 515 pa-cockpit, 106 pa-demo and 265 public-site, **no file in any of
+the five runners is under 85%**. The lowest are backend `pa-cache.ts` 86.36%
+(19/22), frontend `IouFeedbackSection.tsx` 85.00% (51/60), pa-cockpit
+`dossierbeheer.api.ts` 85.11% (40/47), public-site `useQueryState.ts` 87.50%
+(14/16) and pa-demo `DemoChangelogPanel.tsx` 87.50% (7/8). `edocs.service.ts`
+reads 98.67% (74/75). The enforced threshold is still 80.
 
 The Linked Data Explorer frontend row is the one that moved. At `04cc38c` it read
 **exactly 80.00%** — zero margin, the first uncovered branch added anywhere in that
@@ -1541,6 +1427,21 @@ files — `useDsoImport.js` 80.39% (41/51), `ConceptsTab.jsx` 80.56% (29/36),
 failing. While the ratchet existed those files were merely near the floor; now
 that the pins are gone there is nothing to absorb a regression, and a single added
 `?.` or `||` default in any of them turns CI red.
+
+**Re-measured on 30 September 2026, at `8611de8`, and one of the three has moved
+in a way that is easy to misread.** In the full suite — which is what CI gates
+on, 763 tests in 62 files — `ConceptsTab.jsx` and `ChangelogTab.jsx` are
+unchanged, but `useDsoImport.js` reads **92.16% (47/51)**. Its own test file,
+run alone, still gives **80.39% (41/51)**. The six extra branches come from other
+test files exercising the hook since the DSO-import fix of 18 September
+(`1d01186`). So in CI it has slack, but the slack is not its own: a change to
+those other tests can take it back to the floor with nothing in
+`useDsoImport.test.js` having moved. The rule this repository already learned
+the hard way applies: when a file's isolated number and its suite number
+differ, something outside its test file is contributing coverage. Early in
+September `useEditorState.js` read 83.33% locally and 50% on CI, because
+App-rendering tests made live TriplyDB requests and coverage depended on which
+finished first.
 
 Worth noting what the branch column does _not_ see. `ConceptsTab.jsx` reads 80.56%
 on branches and **71.62% on statements, 63.33% on functions**; `App.jsx` reads
@@ -1801,6 +1702,41 @@ asymmetry is deliberate here** — but "the production environment requires
 reviewers" is a true sentence that describes one third of what deploys, and
 reading it as coverage would be wrong.
 
+#### Where this ended up, 29–30 September 2026
+
+The narrative above is left in the tense it was written, because the sequence is
+the point. What it describes is no longer the current state, and the difference
+is worth naming rather than leaving a reader to infer it from the summary table:
+
+|                             | then                                          | now                                  |
+| --------------------------- | --------------------------------------------- | ------------------------------------ |
+| ttl-editor `main`           | classic only, **zero** required checks (#131) | ruleset `24227117`, `audit` + `scan` |
+| linked-data-explorer `main` | ruleset, `audit` then `audit` + `scan`        | unchanged                            |
+| ronl-business-api `main`    | ruleset, `audit` **alone**                    | `audit` + `scan`                     |
+| all three, `acc` and `main` | classic protection alongside every ruleset    | none, anywhere                       |
+
+Two of those corrections came from reading the layers against each other rather
+than from anything failing. The classic layer said `allow_force_pushes: true` on
+six branches whose rulesets were in fact refusing force pushes — so it governed
+nothing and read as permissive, and a reader could not tell which layer was the
+policy.
+
+**`audit` as the only required check on RONL Business API's `main` was right when
+it was set and stopped being right later.** The reason recorded above — every
+deploy workflow there is push-only, and a required check that never reports wedges
+the pull request permanently — applies to `build` and the deploy jobs, which are
+path-filtered. It does not apply to `scan`: `semgrep.yml` pushes to `acc` and
+`main` with no path filter, so it always reports. The gate was one check narrower
+than the evidence allowed for seventeen days.
+
+**What still cannot be required, and why, checked rather than assumed.** On the
+three most recent promotions in RONL Business API, `build` and the three ACC
+deploy checks are present on some and absent on others — #194 and #164 carry no
+PA Demo check at all, because the release did not touch that package and the
+workflow is path-filtered on push. A promotion pull request inherits the head
+commit's push runs, so requiring them would have hung both. The same reasoning
+holds in the other two.
+
 ### A workflow's own file in its `paths:` filter is a trigger
 
 Predicted from the content path alone, ropa-site should not have deployed on that
@@ -2020,13 +1956,14 @@ nothing:
 
 | repository           | `acc`             | `main`            |
 | -------------------- | ----------------- | ----------------- |
-| ttl-editor           | ✅ `4a20e91` both | ✅ `e1c482e` both |
-| linked-data-explorer | ✅ `0a52f9d` both | ✅ `01fcd67` both |
-| ronl-business-api    | ✅ `e187086` both | ✅ `311d732` both |
+| ttl-editor           | ✅ `8611de8` both | ✅ `7d154ba` both |
+| linked-data-explorer | ✅ `8a55d83` both | ✅ `4148c9a` both |
+| ronl-business-api    | ✅ `142d909` both | ✅ `ae06c9e` both |
 
-All three rows were verified by `ls-remote` against both remotes on 15 September
-2026, after each repository's last merge that day, and each was a fast-forward push
-from GitHub's refs. The paragraphs below describe earlier passes.
+All three rows were verified by `ls-remote` against both remotes at the end of
+30 September 2026 — Linked Data Explorer after #221, #223 and #226 merged, RONL
+Business API after v2026.09.15 was promoted. The paragraphs below describe
+earlier passes.
 
 Linked Data Explorer's row is as of 2026-09-11, and a tick here means synced at
 the last check, not kept in sync. The mirror is pushed by hand, so every merge
@@ -2167,25 +2104,33 @@ point where that is now noticed rather than discovered six months later.
 
 ## 6. Open work
 
-| repository                       | issue | what                                                                                                                                                                                                                           |
-| -------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ronl-business-api                | —     | Semgrep `scan` is required on `acc` since #119; 25 findings still to triage after lock-file maintenance: 9 Supply Chain, none reachable, 16 Code                                                                               |
-| linked-data-explorer             | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness                                                                                                                                                            |
-| ttl-editor                       | —     | three files sit within one branch of the floor, with no ratchet left to absorb a slip                                                                                                                                          |
-| ttl-editor                       | #131  | `main` has no required status checks — decided and kept, not an oversight                                                                                                                                                      |
-| ttl-editor                       | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                                                                                                                                                         |
-| linked-data-explorer             | #97   | confirmed on 22 Sep: the refresh ran in all three and introduced no version younger than 14 days (201 packages measured). Remaining: `renovate/stability-days` reports the branch as held anyway, and all three merged over it |
-| linked-data-explorer             | #119  | the gaps against ICTU's dependency guideline, tracked for all three repositories                                                                                                                                               |
-| all three                        | —     | nothing keeps the mirrors synced _between_ releases; `check-mirror` only observes                                                                                                                                              |
-| ronl-business-api                | #196  | the three `deployment/vm/` compose files carry unpinned tags, one of them `:latest`, and nothing in the repository applies them — so a digest there would be unverifiable. ACC only; production is being replaced              |
-| ronl-business-api                | —     | only `main` was sequenced by #177; `acc`'s four deploy workflows still race a push, and its ruleset names four build jobs by name                                                                                              |
-| linked-data-explorer             | —     | **closed 24 Sep**: it was a THREE-way race, and the v2026.09.6 promotion ran it — the ROPA site finished deploying before the backend started building. `promote-to-production.yml` now sequences all three (#210)                |
-| linked-data-explorer             | #80   | unblocked 23 Sep: Azure offers major-level Node runtimes only, so an exact App Service pin is not available; the control is the ORDERING — switch both backends to the new major first, then merge. Nothing enforces it        |
-| linked-data-explorer             | —     | changelog entry `1.9.12` still carries the legacy `Latest` status, now visible in prod                                                                                                                                         |
-| linked-data-explorer             | —     | no `check-previews`, and close jobs still inside the deploy workflows; none orphaned today                                                                                                                                     |
-| ttl-editor                       | #117  | a stale, conflicted Renovate pull request with a live preview, expected to orphan it on close for `check-previews` to catch                                                                                                    |
-| ttl-editor, linked-data-explorer | —     | zizmor 1.30.1 and `zizmor-action` v0.6.4 due about 23 Sep: the action first in ttl-editor; the zizmor register rows by hand in both                                                                                            |
-| ronl-business-api                | —     | 8 Dependabot alerts no routine update closes, from 7 on 14 Sep: `minimatch` (typescript-eslint 8), `react-router` ×2 (v7), `qs` ×2 (Express 5 or an override), `adm-zip` ×2 and `elliptic` (no fix)                            |
+| repository                       | issue | what                                                                                                                                                                                                                                                                                           |
+| -------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ronl-business-api                | —     | **triaged 30 Sep**: `scan` is required on both branches. After v2026.09.15: 0 open Code findings, and 1 Supply Chain finding on `main` — `dompurify`, low, first reported that day, with a routine fix                                                                                         |
+| linked-data-explorer             | —     | `GraphView.tsx` at 82.26%: one branch of slack, behind a d3 harness. `DocumentComposer/AssetLibrary.tsx` (85.71%, 18/21) has the same one branch, re-measured 30 Sep                                                                                                                           |
+| ttl-editor                       | —     | two files sit within one branch of the floor, with no ratchet left to absorb a slip; `useDsoImport.js` has slack in the suite (92.16%) but none of its own (80.39% alone), re-measured 30 Sep                                                                                                  |
+| ttl-editor                       | #131  | **closed 30 Sep**: `main` now has a ruleset (`24227117`) requiring `audit` + `scan`. The original reasoning — a required check that never reports wedges the pull request — held for the deploy job and not for these two, which push to `acc` and `main` unfiltered                           |
+| ttl-editor                       | #128  | Semgrep `scan` cannot pass on a forked pull request; accepted, tracked                                                                                                                                                                                                                         |
+| linked-data-explorer             | #97   | **closed 23 Sep**, after the refresh was confirmed in all three with no version younger than 14 days (201 packages measured). Noted at closing: `renovate/stability-days` reported the branch as held anyway, and all three merged over it                                                     |
+| linked-data-explorer             | #119  | the gaps against ICTU's dependency guideline, tracked for all three repositories                                                                                                                                                                                                               |
+| all three                        | —     | nothing keeps the mirrors synced _between_ releases; `check-mirror` only observes                                                                                                                                                                                                              |
+| all three                        | —     | git hooks are silently off in a worktree until `npm ci` runs there. Documented, and ttl-editor#159 closed on that basis; the fix that would fail loudly — `core.hooksPath` on the tracked `.husky/` — is not taken (§2, "A worktree has no hooks")                                             |
+| ronl-business-api                | #196  | the three `deployment/vm/` compose files carry unpinned tags, one of them `:latest`, and nothing in the repository applies them — so a digest there would be unverifiable. ACC only; production is being replaced                                                                              |
+| ronl-business-api                | —     | only `main` was sequenced by #177; `acc`'s four deploy workflows still race a push, and its ruleset names four build jobs by name                                                                                                                                                              |
+| linked-data-explorer             | —     | **closed 24 Sep**: it was a THREE-way race, and the v2026.09.6 promotion ran it — the ROPA site finished deploying before the backend started building. `promote-to-production.yml` now sequences all three (#210)                                                                             |
+| linked-data-explorer             | #80   | **merged 23 Sep**: Node 24 ships, and both App Services read the `24-lts` runtime on 30 Sep. Azure offers major-level runtimes only, so the control for the next major is still the ORDERING — switch both backends first, then merge. Nothing enforces it                                     |
+| linked-data-explorer             | —     | changelog entries `1.9.12` and `1.9.0` still carry the legacy `Latest` status, visible in prod                                                                                                                                                                                                 |
+| linked-data-explorer             | #221  | **merged 30 Sep** (`f638ae0`): `dependency-audit.yml` and `sbom.yml` now pin `24.21.0`, matching `.nvmrc`. They had carried ttl-editor's `24.20.0` since they were ported                                                                                                                      |
+| linked-data-explorer             | —     | no `check-previews`, and close jobs still inside the deploy workflows. None orphaned on 30 Sep: the acceptance frontend holds three previews, for #223, #226 and #230, all open                                                                                                                |
+| ttl-editor                       | #117  | a stale Renovate pull request with a live preview, open since 10 Sep. No longer conflicted — mergeable and clean on 30 Sep — so its close job can run and it is no longer expected to orphan the preview                                                                                       |
+| ttl-editor, linked-data-explorer | —     | zizmor 1.30.1 and `zizmor-action` v0.6.4, due about 23 Sep. On 30 Sep Linked Data Explorer has the action at v0.6.4 and ttl-editor still at v0.6.3, with its Renovate pull request (#166) open since 23 Sep; zizmor itself is still `1.29.0` in both. The zizmor register rows by hand in both |
+| ronl-business-api                | —     | 3 Dependabot alerts no routine update closes, down from 8: `minimatch` (high, dev only; typescript-eslint 8) and `react-router` ×2 (v7). A fourth, `dompurify` (low, 3.4.16), arrived 30 Sep and has a routine fix                                                                             |
+| ronl-business-api                | #261  | **the sharpest open item.** An allow-listed machine client can write `municipality` — the single label every `/v1` tenant check reads — on both `start` and `complete`. `/v1` refuses it with `400 RESERVED_VARIABLE`; `/v1/m2m` does not. Bounded only by the `azp` allow-list                |
+| ronl-business-api                | #262  | whether `OPERATON_M2M_BASE_URL` really equals `OPERATON_BASE_URL` on ACC and PROD. The runbook says yes; the running configuration said otherwise. It decides #261's blast radius                                                                                                              |
+| ronl-business-api                | #263  | `GET /v1/m2m/process/history` filters via a request body on a GET. RFC 9110 permits it and clients may silently drop it, so a filter that is dropped returns the unfiltered history rather than an error                                                                                       |
+| ronl-business-api                | #216  | the error envelope is this API's own, not RFC 9457 problem details. Documented truthfully with three Spectral rules disabled and the reason recorded; migrating is breaking for every consumer                                                                                                 |
+| iou-architectuur                 | #105  | two of twenty-one findings remain, both decisions: the Redis licence row (which Redis, which version behind the pinned digest, and whether "government-compatible open source" still holds — Redis moved to RSALv2/SSPLv1 at 7.4), and an English page duplicated under `docs/nl/`             |
+| all three                        | —     | the `acc` deploy workflows have **no `paths:` filter on `pull_request`** and one on `push`. That is why an `acc` ruleset can require every build job while a `main` one cannot — worth keeping in mind before requiring anything new on a promotion                                            |
 
 **Closed on 22 September 2026.** For RONL Business API, ten rows from the table
 above: #34, #35 and #129 in one pull request
@@ -2241,10 +2186,21 @@ unrecorded: **C1**, which gave `acc` the `deletion` and `non_fast_forward` rules
 `main` had carried since the promotion, and **C11**, which corrected three claims
 in that repository's `the-gate-has-teeth.md` that its own gates had falsified.
 
-**The first row is the one to read twice.** The Semgrep gap is deliberate — a
-gate required before its baseline is triaged is a gate that gets bypassed — but
-deliberate is not the same as done. One refresh took 435 findings to 25, and the
-25 do not triage themselves.
+**Closed on 29–30 September 2026.** Nineteen of the twenty-one findings in
+iou-architectuur#105, across all three repositories — see the archive entries for
+those two days. Also RONL Business API's #200 and #269, and ttl-editor's #131.
+The branch-protection work finished the same two days: every classic layer gone,
+a new ruleset on ttl-editor's `main`, `scan` added to RONL Business API's, and
+`deletion` + `non_fast_forward` added to ttl-editor's `acc` — that last one
+first, because it was the only thing standing between `acc` and deletion once the
+classic layer came off.
+
+**#261 is the row to read twice now.** Everything above it is either a decision
+or a cost; that one is a machine client able to rewrite the label every tenant
+check in the API reads. The Semgrep row below it is the older example of the same
+shape: the gap is deliberate — a gate required before its baseline is triaged is
+a gate that gets bypassed — but deliberate is not the same as done. One refresh
+took 435 findings to 25, and the 25 do not triage themselves.
 
 The ruleset gap that sat above it closed the same day, last of the eleven. It is
 worth remembering as a shape rather than a ticket: work that starts at item two
@@ -2379,3 +2335,653 @@ counted.
     pull request, security ones included, and the refresh is eligible only inside
     its schedule. `prConcurrentLimit: 0` and `prHourlyLimit: 0` on its own rule
     exempt that branch alone.
+
+---
+
+## Archive: what changed, by date
+
+Newest first. Each entry records what moved and, where it matters, what the
+previous claim had been — a corrected claim is more useful than a silently
+replaced one.
+
+### What changed on 3 October 2026
+
+One addition, nothing else revised; the heads in the table at the top are still
+those of 30 September. §2 gained "A worktree has no hooks, and says so nowhere"
+([ttl-editor#159](https://github.com/sgort/ttl-editor/issues/159)), and §6 a row
+for the loud-failure fix it describes but does not take.
+
+### What changed on 30 September 2026
+
+**Branch protection finished in all three, and the last two gaps were the
+inverse of each other.**
+
+ttl-editor's `main` had **no ruleset at all**; classic protection was its only
+gate, with no required checks. A `main promotion gate` (`24227117`) was created,
+modelled on Linked Data Explorer's — 4 rules, `audit` + `scan`, zero bypass
+actors — and verified before the classic layer was retired. Reversing that order
+would have left `main` briefly ungated.
+
+Its `acc` ruleset lacked `deletion` and `non_fast_forward`, so classic
+protection's `allow_deletions: false` was the only thing keeping `acc` from being
+deleted. Both rules were added before that layer came off. The delete step was
+gated on that check per repository rather than applied blind: a repository whose
+ruleset lacked either rule would have been refused rather than weakened.
+
+Its `acc` ruleset also still permitted squash and rebase while repository
+settings forbade them — the effect right, the rule in the wrong layer
+(iou-architectuur#105 item 11). Tightened to `["merge"]`, matching the other two.
+
+**Classic protection was then deleted from `acc` in all three.** It read
+identically everywhere: `allow_force_pushes: **true**`, `allow_deletions: false`,
+`enforce_admins: false`, zero approvals, **no required checks** — on the branch
+every merge actually lands on. Dead configuration that read as permissive. Item
+18 of iou-architectuur#105 had looked only at `main`.
+
+All six branches now carry the same four rules, `active`, zero bypass actors, no
+classic layer.
+
+**Linked Data Explorer closed items 4, 5, 6, 8, 10, 12 and the LDE half of 17**
+(#236, #237). Two were not what they said:
+
+- **Item 6** was already four-fifths fixed by #233–#235 the day before. The fifth
+  file references **three** forms that exist nowhere, not one, and the repository
+  had already written that folder off twice — in `e2e-fixtures/manifest.json` and
+  in the 2026-09-24 swimlanes plan. Neither statement was visible from inside the
+  folder, so a README now records it. Repairing one of three references would
+  have fixed a third of the problem while making a written-off file look
+  maintained.
+- **Item 5** was fixed with `fileURLToPath` and given a portable guard: the test
+  exits 1 if the resolved path does not exist, which is false on Windows with the
+  old `.pathname` and true everywhere else — exactly how the bug hid. The other
+  scripts were checked; `dso-dossier.test.mjs` uses `.href` and was already
+  correct.
+
+**A claim made the day before was retracted.** `check-deps.sh` in Linked Data
+Explorer was reported as comparing modification times, and its failure as a false
+positive. Both were wrong: it uses the same content comparison as the other two —
+hashing non-comment lines, Linked Data Explorer and RONL Business API are
+byte-identical, and ttl-editor differs only in an echo string. The error was
+comparing `package-lock.json` between two commits when the check compares the
+lockfile against the install marker. Different questions.
+
+**ttl-editor re-checked against its own state the same afternoon**, at `8611de8`
+/ `7d154ba`: rulesets and classic protection from the API, the Node pins and
+workflows from the YAML, `check-supply-chain` (17 references), `check-previews`
+(six previews, all on open pull requests), both mirror heads by `ls-remote`, and
+the full suite with coverage (763 tests, 62 files). Five claims moved:
+
+- **"One Node version, one file"** — three workflows repeat `24.20.0` as a
+  literal beside `.nvmrc`. One version, four places.
+- **Three files one branch from the floor** — two. `useDsoImport.js` has slack in
+  the suite that its own tests do not give it (§3).
+- **#117 "conflicted"** — mergeable and clean.
+- **zizmor "due about 23 Sep"** — still not taken in ttl-editor; #166 open.
+- **The 24–25 September #119 work** — a daily audit, the first-release rule, the
+  recorded deferrals and the lockfile-sync step — was missing from this page. It
+  now has its own entry below.
+
+**Linked Data Explorer re-checked the same way**, at `e17f24e` / `4148c9a`:
+rulesets and classic protection from the API (unchanged, and none classic),
+eleven workflows, `check-supply-chain` (31 references), the App Service
+runtimes from Azure (`24-lts` on both), the acceptance frontend's previews (three,
+all on open pull requests), both mirror heads by `ls-remote` (already in sync),
+and both coverage runners (1824 backend tests, 1271 frontend). Six claims moved:
+
+- **"One Node version, one file"** — `dependency-audit.yml` and `sbom.yml` pin
+  `24.20.0`, a patch behind `.nvmrc`. Copied from ttl-editor; #221 fixed it
+  the same evening, merged with #223 and #226, one at a time, each rebased by
+  Renovate onto the `acc` the previous one produced.
+- **#80 "unblocked"** — merged on 23 September.
+- **#97** — closed on 23 September; the row read as if it were open.
+- **`1.9.12` alone carries `Latest`** — `1.9.0` does too.
+- **Files measured, 49 and 68** — 52 and 75, the lowest files unchanged.
+  ttl-editor's row moves from 41 to 33 once counted by the table's own rule.
+- **The §5 mirror table** — still showed the 15 September heads for all three.
+  The ttl-editor and Linked Data Explorer rows now show today's.
+
+**RONL Business API re-checked the same way** later that day, at `b958d9b` /
+`ae4538b`, after v2026.09.14 was promoted: rulesets and classic protection from
+the API (unchanged, none classic), thirteen workflows, `check-supply-chain` (39
+references), the App Service runtimes (`NODE|22-lts` on both), `check-previews`
+(six apps, no previews), Dependabot and Semgrep from their APIs, both mirror heads
+by `ls-remote` (already in sync), and all five runners — backend 2310 tests in
+97 suites with all 133 operations conformance-checked, frontend 1268, pa-cockpit
+480, pa-demo 106, public-site 261. Five claims moved:
+
+- **Semgrep "25 still to triage"** — triaged: 0 open Supply Chain, 8 Code on
+  `main` only, already fixed on `acc`. The summary said "required on `acc`"; it
+  has been required on `main` too since 29 September.
+- **8 Dependabot alerts** — 3.
+- **"One file" for Node** — `.nvmrc` for every deploy, and a deliberate Node 24
+  literal in the three tooling workflows.
+- **Backend margin "comfortable"** — `edocs.service.ts` at exactly 80.00%. By
+  the end of the day #295 had brought every file in all five runners to 85% or
+  above, promoted as v2026.09.15; §3 has the numbers. The enforced floor is
+  still 80.
+- **§2's pinned-references table** — 11, 23 and 31, from before the September
+  workflows. Today's counts for all three are 17, 31 and 39.
+
+### What changed on 29 September 2026
+
+**RONL Business API closed #200** — a published OpenAPI description — after seven
+phases. All **133** operations described, `openapi/pending.json` deleted, and the
+last acceptance criterion (#269) met: every operation compared against a real
+response, with `scripts/check-conformance-coverage.cjs` failing the build if that
+stops being true.
+
+The conformance work found **fourteen** places where the published document did
+not describe what the API returns. Among them: `/admin/audit` documented as an
+array when it answers `{ items, pagination }`; `/public/zoeken` facets documented
+as an object when they are an ordered array of `[value, count]` pairs, where the
+ordering is the point; `/rip/phases/counts` values documented as integers when the
+service's own signature returns `{ wip, gereed }`; and the whole `/v1/pa` group
+documenting no role refusal at all, while `requireRoles('public-affairs')` guards
+every one of its 33 operations.
+
+It also found **five YAML flow-mapping bugs**. An unquoted description containing
+a comma inside a flow mapping is split at the comma and the tail becomes a key,
+so each had been silently truncating its own description AND injecting a bogus
+keyword into the compiled schema. Ajv refused to compile at all, which is why
+`strictSchema` stays on.
+
+**Nine of iou-architectuur#105's RONL Business API items closed** (#281, #282),
+and three were not as described:
+
+- **Item 15 was understated** — eight workflow comments claimed `.nvmrc` is "an
+  exact 22.22.0", not the five listed. The version was dropped from the sentence
+  rather than corrected, so it cannot go stale again.
+- **Item 17's RBA half was one line, not two.** Counting `uses:` with grep gave
+  45 against the headline's 39, which looked like a second staleness;
+  `check-supply-chain` reports 39, because the headline counts third-party actions
+  and grep counted local reusable-workflow references too. Line 42 was correct and
+  gated, and was left alone.
+- **`packages/backend/deploy/` still exists — at deploy time.** A first pass
+  rewrote three places to say the break-glass scripts stage "outside the
+  workspace", on the evidence that no such directory is tracked. It is not
+  tracked because `DEPLOY_DIR="$BACKEND_DIR/deploy"`: the scripts create it on
+  every run. Reverted.
+
+**Its `main` ruleset required only `audit`.** `scan` was added; `build` and the
+three ACC deploy jobs deliberately not, because they are path-filtered on push
+and promotions #194 and #164 genuinely carry no PA Demo check. Its classic `main`
+protection — the one that said `allow_force_pushes: true` — was deleted.
+
+**Linked Data Explorer put the AWB processes into swimlanes** (#233–#235) with
+Dutch task names and, incidentally, the missing-information form that
+iou-architectuur#105 item 6 was about.
+
+### What changed on 28 September 2026
+
+**RONL Business API released v2026.09.13** and closed three security-relevant
+findings from the weekly audit.
+
+- **#237** — `/v1/m2m`, eighteen operations built for consumers outside the
+  repository, was reachable by **any authenticated realm user, including a
+  citizen**. The audience could not distinguish a machine from a person: every
+  realm principal holds a token for `ronl-business-api`. The fix checks the
+  token's `azp` against an allow-list, `operaton-mcp-client` alone.
+- **#241** — the BRP proxy logged the full request body, burgerservicenummers
+  included, to the application log.
+- **#214** — `/v1/m2m` documented, which closed the pending list. It turned out
+  to be much less of a mirror of the `/v1` surface than the plan assumed: 200
+  where `/v1` answers 201, `{ taskId, claimed }` where `/v1` sends
+  `{ taskId, assignee }`, a filter body on a GET, and no `RESERVED_VARIABLE`
+  guard — the last raised as #261.
+
+Also that day: **sign-in with Flevoland's Entra ID**, brokered by Keycloak; the
+three files sitting at exactly 80.00% branches given margin (#256); and the first
+two thirds of the response-conformance work (#271, #272).
+
+A correction worth recording, because it was found by pointing a check at a
+different engine: an m2m-started case is **not** stamped `municipality: "m2m"`.
+It carries the process definition's own deployed tenant, and `m2m` is only the
+fallback for an untenanted definition. The earlier claim had been measured on an
+engine where every definition happened to be untenanted.
+
+### What changed on 26 September 2026
+
+**A release SBOM in all three**, committed and uploaded
+(linked-data-explorer#227, ttl-editor#171, ronl-business-api#239) — the last
+open half of linked-data-explorer#119.
+
+RONL Business API promoted `acc` to `main` as **v2026.09.12**; Linked Data
+Explorer released **v2026.09.8**; ttl-editor released **v2026.09.7**.
+
+### What changed on 24–25 September 2026
+
+**Four more halves of linked-data-explorer#119, landed in ttl-editor and Linked
+Data Explorer as matching pairs.** RONL Business API was not re-checked for this
+entry.
+
+| change                                                                                                                                                          | ttl-editor                                           | linked-data-explorer                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------- |
+| **a daily dependency audit** of both `acc` and `main` — `dependency-audit.yml`, `scripts/audit-tree.mjs` (ICTU recommendation 10)                               | [#167](https://github.com/sgort/ttl-editor/pull/167) | [#220](https://github.com/sgort/linked-data-explorer/pull/220) |
+| **never a new major's first release** — `allowedVersions: "!/^\d+\.0\.0$/"` for the npm manager, so a major arrives at X.0.1 at the earliest (recommendation 7) | [#168](https://github.com/sgort/ttl-editor/pull/168) | [#222](https://github.com/sgort/linked-data-explorer/pull/222) |
+| **the assessed deferrals recorded as rules** — `ubuntu-26.04` held until `ubuntu-latest` moves                                                                  | [#169](https://github.com/sgort/ttl-editor/pull/169) | [#224](https://github.com/sgort/linked-data-explorer/pull/224) |
+| **a lockfile-sync step** — `npm ci --dry-run --ignore-scripts` in the `audit` job, before the formatter's install                                               | [#170](https://github.com/sgort/ttl-editor/pull/170) | [#225](https://github.com/sgort/linked-data-explorer/pull/225) |
+
+**The audit's job is `dependency-audit`, not `audit`, and that is load-bearing.**
+Required checks match by name, and `audit` is zizmor's job and required in every
+ruleset here. A second job of that name made the context ambiguous — one passing
+and one failing check under one name, which no ruleset can satisfy — and blocked
+a pull request the first time the workflow ran.
+
+**The schedule is 05:17 UTC; the runs are not.** In ttl-editor the scheduled runs
+from 25 to 29 September started between 09:55 and 11:44 UTC. GitHub queues
+scheduled workflows, so "daily" is the guarantee and the hour is not.
+
+**The lockfile-sync step failed on every pull request the day it merged, for the
+wrong reason.** `npm ci --dry-run` still runs lifecycle scripts, and ttl-editor's
+root `postinstall` copies `package-lock.json` into a `node_modules` a dry run
+never creates — ENOENT, reported under a step named for lockfile agreement. It had
+passed where it was written because that machine already had `node_modules`.
+`--ignore-scripts` fixed it without changing what the step decides. What it
+cannot catch is written beside it: it checks the pull request's own merge commit,
+so a pull request green against a stale base still merges into one that has
+moved. Merge dependency pull requests one at a time.
+
+**A deferral is a disabled rule carrying its reason and its end condition, and
+ttl-editor keeps only three**: Tailwind 4 and ESLint 10, which predate #119, and
+`ubuntu-26.04` from #169. Every other major waits behind Dependency Dashboard
+approval rather than being disabled, because a disabled update is one nobody
+sees.
+
+### What changed on 24 September 2026
+
+A promotion, and then the day spent on what the promotion showed.
+
+| repository           | change                                                                                                                                      | pull request                                                                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| linked-data-explorer | **v2026.09.6 released and promoted** — Node 24 on both tiers, and the first promotion to expose the production deploy race                  | [#204](https://github.com/sgort/linked-data-explorer/pull/204), [#209](https://github.com/sgort/linked-data-explorer/pull/209) |
+| linked-data-explorer | `buildInfo` reads the build file at module load instead of lazily, so an old process can no longer report a new file's contents             | [#211](https://github.com/sgort/linked-data-explorer/pull/211)                                                                 |
+| linked-data-explorer | both production site deploy jobs renamed, so they can be told apart in a check list                                                         | [#212](https://github.com/sgort/linked-data-explorer/pull/212)                                                                 |
+| linked-data-explorer | the backend deploy verification runs all five checks instead of exiting on the first, so the native-binding assertion is always reached     | [#213](https://github.com/sgort/linked-data-explorer/pull/213)                                                                 |
+| linked-data-explorer | the production-site preview on a promotion pull request recorded as a decision rather than an open question                                 | [#214](https://github.com/sgort/linked-data-explorer/pull/214)                                                                 |
+| linked-data-explorer | **the three production deploys sequenced** — `promote-to-production.yml` calls them in order, closing the last item of #210                 | —                                                                                                                              |
+| linked-data-explorer | the required reviewer removed from the `production` environment                                                                             | —                                                                                                                              |
+| ronl-business-api    | the comment claiming Linked Data Explorer's production environment carries required reviewers, corrected on the day that stopped being true | [#202](https://github.com/sgort/ronl-business-api/pull/202)                                                                    |
+
+**The race this page recorded as open was not theoretical, and the promotion is
+what proved it.** The row below said Linked Data Explorer had "the same four-way
+race on a push to `main`". It had a three-way one, and on the v2026.09.6
+promotion the ROPA site **finished deploying to production before the backend
+had started building** — production served new pages against the previous API
+for several minutes, under three green checks.
+
+`promote-to-production.yml` now takes #177's shape: one workflow on a push to
+`main`, a `changes` job that decides which deploys are needed, the backend
+first, then the two sites in parallel. The differences from RONL Business API
+are both consequences of decisions already on this page:
+
+- **three deploys, not four**, and the two sites keep their own `pull_request`
+  trigger for the production preview. A called workflow and a preview build are
+  different runs with different concurrency groups, so the sequence does not
+  touch the preview and the preview does not enter the sequence.
+- **the decision lives in `scripts/promotion-targets.mjs` with a test beside
+  it**, rather than in a `run:` block. RONL Business API's `promotion-targets.sh`
+  was exercised against a case table by hand; this one is 24 checks run by the
+  promotion's own `changes` job before the script is used, four of which fail if
+  the script's patterns and the site workflows' `pull_request` path lists stop
+  agreeing.
+
+**Three things the move to `workflow_call` changed inside the called
+workflows**, each of which would otherwise have misfired silently: in a called
+workflow `github.event_name` is the _caller's_ event, so both sites' `== 'push'`
+gate would have skipped the deploy on a `workflow_dispatch` promotion;
+`github.workflow` is the _caller's_ name, so the three concurrency groups would
+have collapsed into one and queued; and secrets do not cross the call, so each
+is declared and passed by name rather than with `secrets: inherit`.
+
+**What is now genuinely uniform across the two repositories**: a promotion to
+production is one ordered run, it fails safe towards deploying everything when
+it cannot read its own commit range, and a failed backend stops the sites.
+ttl-editor has a single Static Web App and nothing to sequence.
+
+### What changed on 23 September 2026
+
+One day, and the first thing on this page that had never actually been run.
+
+| repository        | change                                                                                                                                 | pull request                                                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| ronl-business-api | **v2026.09.11 released and promoted** — the first promotion sequenced by a workflow rather than by hand                                | [#193](https://github.com/sgort/ronl-business-api/pull/193), [#194](https://github.com/sgort/ronl-business-api/pull/194) |
+| ronl-business-api | the local dev stack's images pinned by tag and index digest; `docker:pinDigests` added; the App Service runtime decision recorded      | [#197](https://github.com/sgort/ronl-business-api/pull/197)                                                              |
+| ronl-business-api | `/bump-release` runs the tests before it commits                                                                                       | [#190](https://github.com/sgort/ronl-business-api/pull/190)                                                              |
+| ronl-business-api | the vestigial `KEYCLOAK_CLIENT_SECRET` deleted from the production App Service, once `main` carried the commit that stopped reading it | —                                                                                                                        |
+
+**The promotion ordering worked, and here is the evidence rather than the
+claim.** #177 replaced four racing deploy workflows with one sequenced
+promotion, and until this date it had only ever been exercised as a dry run. The
+first real promotion of `acc` to `main`:
+
+```
+changes           16:53:09 → 16:53:14
+backend / build   16:53:18 → 17:00:09   6m51s
+frontend          17:00:13 → 17:05:25
+pa-demo           17:00:13 → 17:02:56
+public-site       17:00:13 → 17:03:23
+```
+
+All three site jobs started **four seconds after the backend completed**. Under
+the previous arrangement they would have started alongside it at 16:53:18 and
+finished around 17:03 — roughly five minutes _before_ the backend they depend
+on. The public site is the one that matters there: its build prerenders against
+the live API, so that window is exactly where a 404 gets baked into the deployed
+output rather than shown once.
+
+Production reported `build.sha` matching the promoted commit, `run: 2` — the
+second automated production backend deploy, and the first inside a sequenced
+promotion. Every previous one was a script run from a laptop.
+
+**The App Service runtime cannot be pinned, and that is now a decision rather
+than an open question.** #119 asked to pin the floating `NODE|22-lts` exactly
+where the platform allows, or record why not. `az webapp list-runtimes --os
+linux` returns, for Node, exactly `NODE|22-lts`, `NODE|24-lts` and `NODE|26` —
+major-level only, no exact version, no digest, no setting that takes one.
+
+This repository's two App Services run `NODE|24-lts`, since the Node 24 move in
+#80; ronl-business-api's two run `NODE|22-lts`, deliberately, per its Renovate
+deferral. Read from Azure with `az webapp config show --query linuxFxVersion` on
+27 September 2026. This paragraph said all four ran `NODE|22-lts`, contradicting
+line 128 of this same file — "Node 24 on both tiers" — until
+iou-architectuur#105.
+
+What remains reachable is keeping the App Service's major in step with
+`.nvmrc`'s, and **the ordering is part of the pin**: switch the App Service
+first, then merge the `.nvmrc` bump. No pull-request check runs against an App
+Service, so nothing enforces this and it has to be written where it gets read —
+`SECURITY-PIPELINE.md` for RONL Business API, and this page and #119 for the
+shared half. **That unblocks #80**, which has been held open since 19 September
+for precisely this reason.
+
+**The rule has an exception, and Linked Data Explorer is it.** `switch first,
+then merge` is complete only for a pure-JavaScript backend. This repository's
+ships `libxmljs2`, which builds against NAN rather than N-API, so its
+`xmljs.node` is bound to `NODE_MODULE_VERSION` — 127 on Node 22, 137 on Node 24.
+Between switching the runtime and deploying an artifact rebuilt on the new
+major, the binary does not match the host and the backend will not start. The
+same is true in reverse if the merge comes first.
+
+What makes that worth writing down is not the interruption — these are sandbox
+applications and an interruption costs nothing — but that **the deploy reports
+success while the application will not start**. The workflow does assert the
+binding loads:
+
+```
+node -e "require('./deploy/node_modules/libxmljs2')" && echo "libxmljs2 native binding loads"
+```
+
+and that assertion runs on the RUNNER. It proves the binary matches the Node the
+runner built it with, which is exactly the axis that cannot see a runner-versus-host
+mismatch. So the one check in the pipeline that looks like it covers this is the
+reason the failure is quiet. Recovery is automatic — `.nvmrc` is in this
+workflow's paths filter and its `changes` pattern since #186, so the merge fires
+the deploy that rebuilds the binary — but someone watching a green run and a dead
+application needs this paragraph to know why.
+
+RONL Business API is unaffected: its backend has thirty runtime dependencies and
+none are native. The two `.node` files in its tree, `@rollup/rollup-linux-x64-gnu`
+and `@napi-rs/lzma`, are development-only and reach no deploy bundle.
+
+**A floating tag is invisible to Renovate.** The container-image item on #119
+split cleanly once the question became _does this repository apply the file?_
+RONL Business API's `docker-compose.yml` — the local dev stack, applied from the
+tree by developers — now pins all five images by tag and **index** digest, with
+`docker:pinDigests` in `renovate.json` so they are maintained rather than merely
+set. The same rule that file already stated for actions: pinning without
+automated updates decays into an unpatched tree, which is worse than floating.
+
+Two of those five were `:latest`, and that is the finding worth carrying to the
+other two repositories. Renovate's docker-compose manager tracks a tag it can
+compare; `:latest` gives it nothing, so `alpine:latest` and
+`operaton/operaton:latest` appeared on no dashboard and in no pull request —
+they were the only images in the tree that nothing was watching at all. The
+three already on version tags were merely unpinned, which is a weaker problem.
+
+The three compose files under `deployment/vm/` are deliberately **not** pinned,
+and that is the more interesting half. Nothing in that repository applies them:
+no workflow, no script reads them. A digest there would record a value no deploy
+consults, against a host whose running image cannot be read from the repository
+— a pin that cannot be verified is a pin that can be wrong with nothing saying
+so. Same shape as the backend deploy before #35, which sat outside every gate on
+the page describing it.
+
+That became [ronl-business-api#196](https://github.com/sgort/ronl-business-api/issues/196),
+a sub-issue of #119: bring the VM deployment under control first, pin second. Two
+decisions narrowed it on the day it was opened. The VM's SSH is firewalled to a
+single fixed IP address, so a GitHub-hosted runner cannot reach it at all — which
+rules out lifting the existing hand-run script into a workflow, and points at the
+VM reconciling the files itself rather than anything pushing to it. And the scope
+is acceptance only, because the production side is being replaced by a new
+supplier's infrastructure.
+
+### What changed on 19–22 September 2026
+
+Four days, and the end of two things this page had been describing as open since
+it was written: a backend deployed by hand, and a production promotion that raced
+itself.
+
+| repository           | change                                                                                                                           | pull request                                                                                                                                                                                                                                                                                                                                                                  |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| all three            | the 14-day package-manager cooldown, the `ubuntu-24.04` runner pin, build checks required on `acc`, and `.nvmrc` in every filter | RBA [#158](https://github.com/sgort/ronl-business-api/pull/158)–[#162](https://github.com/sgort/ronl-business-api/pull/162), LDE [#179](https://github.com/sgort/linked-data-explorer/pull/179)–[#186](https://github.com/sgort/linked-data-explorer/pull/186), TTL [#158](https://github.com/sgort/ttl-editor/pull/158)–[#163](https://github.com/sgort/ttl-editor/pull/163) |
+| linked-data-explorer | the frontend builds on the runner; one exact `.nvmrc` for all four deploy workflows (closed #113)                                | [#179](https://github.com/sgort/linked-data-explorer/pull/179)                                                                                                                                                                                                                                                                                                                |
+| linked-data-explorer | the backend deploy installs from the root lockfile                                                                               | [#181](https://github.com/sgort/linked-data-explorer/pull/181)                                                                                                                                                                                                                                                                                                                |
+| ttl-editor           | both of those, in one pull request                                                                                               | [#160](https://github.com/sgort/ttl-editor/pull/160)                                                                                                                                                                                                                                                                                                                          |
+| ronl-business-api    | the backend deploys from the workflow, over OIDC, from the lockfile (closed #34, #35, #129)                                      | [#176](https://github.com/sgort/ronl-business-api/pull/176)                                                                                                                                                                                                                                                                                                                   |
+| ronl-business-api    | a preview environment is created only when a pull request asks for one                                                           | [#181](https://github.com/sgort/ronl-business-api/pull/181)                                                                                                                                                                                                                                                                                                                   |
+| ronl-business-api    | a pull request's preview may call the acceptance backend, matched on its app's stable slug (closed #37)                          | [#184](https://github.com/sgort/ronl-business-api/pull/184)                                                                                                                                                                                                                                                                                                                   |
+| ronl-business-api    | `check-previews`, ported from ttl-editor (closed #154)                                                                           | [#185](https://github.com/sgort/ronl-business-api/pull/185)                                                                                                                                                                                                                                                                                                                   |
+| ronl-business-api    | a promotion is one ordered run instead of four racing ones (closed #177)                                                         | [#187](https://github.com/sgort/ronl-business-api/pull/187)                                                                                                                                                                                                                                                                                                                   |
+| all three            | lock-file maintenance, merged one at a time with housekeeping between                                                            | RBA [#174](https://github.com/sgort/ronl-business-api/pull/174), LDE [#188](https://github.com/sgort/linked-data-explorer/pull/188), TTL [#164](https://github.com/sgort/ttl-editor/pull/164)                                                                                                                                                                                 |
+
+**RONL Business API's backend is inside the gates at last.** Until 21 September it
+was deployed by `deploy-backend-to-acc.sh` and `deploy-backend-to-prod.sh`, run by
+hand from a local checkout — outside every gate on this page, and installing into a
+`deploy/` directory that had a `package.json` and no lockfile, so
+`npm install --production` re-resolved every caret range at deploy time. On
+2026-08-29 an acceptance deploy shipped `@anthropic-ai/sdk` 42 minor versions and
+`uuid` five majors ahead of anything a build had verified. #176 replaced both with a
+workflow step: `npm ci --omit=dev --workspace=@ronl/backend` in a staging copy of
+the root manifest and lockfile, `az webapp deploy` over an OIDC token, and a
+post-deploy check that polls `/v1/health` until `build.sha` matches the commit. The
+first unattended merge→deploy ran on 2026-09-20 and the sha matched. The scripts
+remain as break-glass. Closed #34, #35 and #129 together — the three RBA rows §6
+had carried longest.
+
+**Four production workflows fired on the same push and nothing sequenced them.** A
+promotion to RBA's `main` started the backend and three Static Web App deploys at
+once. The backend job is the slowest of the four — it runs the full backend suite
+before it packages anything, while a Static Web App deploy is a build and an
+upload — so the frontends reliably finished FIRST, and a frontend calling a route
+the deployed backend did not serve yet got a 404. On the public site that is worse
+than transient: its build prerenders against the live API, so a prerender inside the
+window bakes the failure into the deployed output. The manual answer had been to
+disable the three site workflows before the merge and dispatch them by hand
+afterwards, written down in that repository's `docs/promote-ACC-to-PROD.md`. #187
+made the promotion one run: the four deploy workflows lost their `push` trigger and
+became reusable workflows called in order by `promote-to-production.yml`, which
+decides what changed from one script rather than from four `paths:` filters.
+
+Worth noting for the other two: what made that affordable is that RBA's `main`
+requires only `audit`, so no job name was load-bearing. A reusable workflow's check
+reports as `<caller job> / <called job>`, which renames every required context.
+RBA's `acc` was left alone for exactly that reason — its ruleset names four build
+jobs — and Linked Data Explorer's `main` requires `audit` and `scan`, neither of
+which is a deploy job, so the same move is open there.
+
+**A preview cost more than it proved.** RBA #181 stopped creating a preview
+environment unless a pull request is labelled `preview` and changes something other
+than a manifest. The trigger was #154's finding that three Renovate security pull
+requests had claimed eight environments on 12 September, all eight of which then
+leaked; a dependency bump's preview renders the same pages as the last one, and the
+build is what verifies it. #185 then ported ttl-editor's `check-previews` to find
+the ones that leak anyway. It could not be copied byte for byte: ttl-editor derives
+each app from its workflow's file name, which RBA's naming does not allow, so the
+apps are found by `repositoryUrl` across every subscription — RBA's six span two of
+them, and ttl-editor's script reads only the logged-in one.
+
+**A check that cannot ask must not report success.** Writing #185 surfaced a shape
+worth carrying into the other two. An expired Azure refresh token made
+`az staticwebapp list` fail, and with stderr discarded it returned an empty list —
+indistinguishable from a subscription holding no apps. The check was one step from
+reporting "no orphans" against a stack it had never examined. So: the session is
+proven with a real ARM call rather than `az account show`, which reads cached state
+and succeeds against a token that expired days ago; a subscription that cannot be
+read counts as unchecked and fails; and finding no apps at all fails too, because it
+means nothing was compared. `check-mirror` already had that rule.
+
+**The cooldown holds, and its status check says otherwise.** #119 left one thing to
+confirm: that the next lock-file maintenance in each repository contains no version
+younger than 14 days. Measured on 22 September against the npm registry's own
+`time` map, across every version the three refreshes introduced — RBA 62 packages,
+LDE 97, TTL 42 — **none was younger than 14 days**, and the youngest anywhere was
+exactly 14 days old when Renovate wrote the branch on 21 September. So the control
+works.
+
+The status check does not say so. All three pull requests carried
+`renovate/stability-days` as **pending**, reading "Updates have not met minimum
+release age requirement", and all three were merged over it. That is consistent
+with Renovate's documented behaviour — `lockFileMaintenance` does not honour
+`minimumReleaseAge`, so the branch is flagged rather than evaluated — but the
+practical effect is a red status on a branch that is in fact compliant. A gate that
+is wrong in the safe direction still teaches people to merge past it, which is how
+gates stop working. The measurement above is the thing to read; the status is not.
+
+### What changed on 15 September 2026
+
+All three repositories, and three findings about things no gate could see.
+
+| repository           | change                                                                                          | pull request                                                                                                                                                                          |
+| -------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ttl-editor           | the last four Semgrep findings answered in the source, not the dashboard                        | [#144](https://github.com/sgort/ttl-editor/pull/144)                                                                                                                                  |
+| ttl-editor           | zizmor's `version` input recorded as Renovate-maintained, with the merge order it needs         | [#144](https://github.com/sgort/ttl-editor/pull/144)                                                                                                                                  |
+| linked-data-explorer | the same correction; a Renovate group normally moves both together here                         | [#139](https://github.com/sgort/linked-data-explorer/pull/139)                                                                                                                        |
+| ttl-editor           | lock-file maintenance exempt from the pull-request limits                                       | [#145](https://github.com/sgort/ttl-editor/pull/145)                                                                                                                                  |
+| linked-data-explorer | the same, plus pre-1.0 minors held for approval and `engines` left alone                        | [#138](https://github.com/sgort/linked-data-explorer/pull/138)                                                                                                                        |
+| ttl-editor           | v2026.09.5 released and promoted to production                                                  | [#146](https://github.com/sgort/ttl-editor/pull/146), [#147](https://github.com/sgort/ttl-editor/pull/147)                                                                            |
+| ttl-editor           | previews closed by a workflow with no path filter; orphans checked at each release              | [#150](https://github.com/sgort/ttl-editor/pull/150)                                                                                                                                  |
+| ronl-business-api    | three Renovate updates, rebased and merged one at a time; one backend runtime change, `pg` 8.23 | [#149](https://github.com/sgort/ronl-business-api/pull/149), [#147](https://github.com/sgort/ronl-business-api/pull/147), [#148](https://github.com/sgort/ronl-business-api/pull/148) |
+| ronl-business-api    | v2026.09.8 released; the backend deployed to acceptance by the hand-run script                  | [#151](https://github.com/sgort/ronl-business-api/pull/151)                                                                                                                           |
+| ronl-business-api    | `/bump-release` versions `packages/pa-cockpit`, left at 1.0.0 across 49 commits                 | [#153](https://github.com/sgort/ronl-business-api/pull/153)                                                                                                                           |
+
+**Eight preview environments were still running for pull requests that had long
+closed**, four on each ttl-editor app, and nothing reported them: they were found by
+opening the Azure portal. There were two causes, and only one can be fixed inside a
+workflow. §4 has both, under "A path filter also filters the close, and a
+conflicted pull request closes silently". The same read of Azure found three more
+on RONL Business API's acceptance app.
+
+**zizmor's own version was never manual.** Both registers said Renovate could not
+see the `version:` input to `zizmor-action`. Renovate maps that action to the
+`ghcr.io/zizmorcore/zizmor` image, and had an update queued in both repositories.
+§2 has what follows, under "What the register check cannot see".
+
+**The Semgrep dashboard and the CLI counted different things.** ttl-editor's CLI
+reported `Findings: 0` on every scan while the dashboard's scan list showed 4 Code
+findings, because the list counts findings ignored in the dashboard and the CLI does
+not. Moving those four into the source took the list to 0 on `acc` and `main`. §2
+has the detail.
+
+### What changed on 14 September 2026
+
+One day across all three repositories, and three findings nobody had planned for.
+
+| repository           | change                                                                                           | pull request                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| ronl-business-api    | `deps:check` stops firing on every release bump, and names `npm ci`                              | [#128](https://github.com/sgort/ronl-business-api/pull/128)                                                              |
+| ronl-business-api    | lock-file maintenance exempt from the pull-request limits, after its first Monday opened nothing | [#133](https://github.com/sgort/ronl-business-api/pull/133)                                                              |
+| ronl-business-api    | the first lock-file maintenance: Semgrep 435 → 25, reachable Supply Chain 249 → 0                | [#134](https://github.com/sgort/ronl-business-api/pull/134)                                                              |
+| ronl-business-api    | Prettier pinned to exactly 3.9.6, after that refresh failed `check-format`                       | [#135](https://github.com/sgort/ronl-business-api/pull/135)                                                              |
+| ronl-business-api    | the lockfile check runs first in the pre-push hook                                               | [#137](https://github.com/sgort/ronl-business-api/pull/137)                                                              |
+| ronl-business-api    | minor updates of pre-1.0 packages held for approval, after one required ESLint 9                 | [#142](https://github.com/sgort/ronl-business-api/pull/142)                                                              |
+| ronl-business-api    | `engines` floors no longer raised to the newest release                                          | [#146](https://github.com/sgort/ronl-business-api/pull/146)                                                              |
+| ronl-business-api    | Node pinned exactly everywhere in CI: the config validator on 24.20.0, `.nvmrc` on 22.23.2       | [#139](https://github.com/sgort/ronl-business-api/pull/139), [#144](https://github.com/sgort/ronl-business-api/pull/144) |
+| linked-data-explorer | the lockfile check runs first in the pre-push hook                                               | [#127](https://github.com/sgort/linked-data-explorer/pull/127)                                                           |
+| linked-data-explorer | the same check, new here                                                                         | [#121](https://github.com/sgort/linked-data-explorer/pull/121)                                                           |
+| linked-data-explorer | Renovate's action bump, with the register moved on its own branch                                | [#104](https://github.com/sgort/linked-data-explorer/pull/104)                                                           |
+| linked-data-explorer | SHACL shapes shipped to production; validation fails closed; both backend deploys gate on it     | [#123](https://github.com/sgort/linked-data-explorer/pull/123)                                                           |
+| linked-data-explorer | that gate waits for the new build to answer                                                      | [#124](https://github.com/sgort/linked-data-explorer/pull/124)                                                           |
+| linked-data-explorer | promoted to production, no release cut                                                           | [#125](https://github.com/sgort/linked-data-explorer/pull/125)                                                           |
+| ttl-editor           | the same check, new here                                                                         | [#142](https://github.com/sgort/ttl-editor/pull/142)                                                                     |
+| ttl-editor           | the lockfile check runs first in the pre-push hook                                               | [#143](https://github.com/sgort/ttl-editor/pull/143)                                                                     |
+| ttl-editor           | Renovate's action bump, with the register moved on its own branch                                | [#141](https://github.com/sgort/ttl-editor/pull/141)                                                                     |
+| ttl-editor           | the first scheduled lock-file maintenance, six packages                                          | [#140](https://github.com/sgort/ttl-editor/pull/140)                                                                     |
+
+**Linked Data Explorer's production SHACL Validator had been checking nothing.**
+Every file reported Valid with all three shape layers _Not loaded_; the same
+file on acceptance was Invalid with 25 errors. Two faults had stacked: the shape
+files were only ever copied into the acceptance deploy package, and a layer that
+did not load counted as a layer with no errors. §4 has the workflow half, under
+"A fix made in one environment's workflow is half a fix".
+
+**The deploy check written for it failed its first run, on a sound deploy.** It
+read the previous build, still answering after the deploy step had returned. §1
+records why, under "A post-deploy check has to know which build answered", and
+two issues track the exact fix: [linked-data-explorer#122](https://github.com/sgort/linked-data-explorer/issues/122) and
+[ronl-business-api#129](https://github.com/sgort/ronl-business-api/issues/129).
+
+**Nothing had checked a workstation's install against its lockfile**, in any of
+the three. §2 has the measurement and the check, under "The tree on a
+workstation".
+
+**Holding majors behind approval never kept a slot for lock-file maintenance.**
+RONL Business API's first scheduled refresh opened nothing: Renovate counts every
+open Renovate pull request against the limit, security ones included, and seven
+open security pull requests were already over it. §2 has the correction, under
+"Renovate maintains dependencies, not the tree".
+
+### What changed on 12 September 2026
+
+RONL Business API worked from an eleven-item list and closed **ten** of them in a
+day, in the order that made each one cheap — the eleventh being out of scope
+rather than skipped. The list is reproduced here because the **shape** of the
+work is the useful part, not the ticks: one item was passed over at the start and
+only came back last, which is the failure mode worth remembering.
+
+| item    |                                    | outcome                                                                  |
+| ------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| **C1**  | `acc` ruleset: `deletion` + non-ff | ✅ closed last, a month after `main` got the same two rules              |
+| **C2**  | Backend tests before merge         | ✅ `pull_request` trigger added, #87 closed                              |
+| **C3**  | `check-supply-chain` blocking      | ✅ `continue-on-error` removed, #83 closed                               |
+| **C4**  | Formatting checked in CI           | ✅ `npm ci` + `check-format` in the `audit` job                          |
+| **C5**  | Semgrep Code + Supply Chain        | ✅ workflow + `.semgrepignore`; **`scan` deliberately not required yet** |
+| **C6**  | Renovate lock-file maintenance     | ✅ plus majors-behind-approval replacing the global flag                 |
+| **C7**  | One Node version                   | ✅ `.nvmrc` at an exact `22.22.0`, read by all eight deploy workflows    |
+| **C8**  | Mirror in sync                     | ✅ `check-mirror` in **all three** repositories, called at each release  |
+| **C9**  | Backend deploy in a workflow       | — out of scope, #34/#35 remain open                                      |
+| **C10** | Branch-floor loose ends            | ✅ #84 and #85 closed                                                    |
+| **C11** | Refresh `the-gate-has-teeth.md`    | ✅ three false claims corrected in place rather than deleted             |
+
+**C1 was the item to notice, and it closed last.** Work started at C2 and only
+came back to it at the end of the day, so for a month RONL Business API's two
+rulesets differed in a way nobody had decided — `main` carrying `deletion` and
+`non_fast_forward` from the day it was created during the promotion, `acc`
+carrying neither. Both now have all four rules.
+
+**They still differ in exactly one parameter, deliberately:**
+
+|        | `require_extra_approval_for_unattributed_changes` |
+| ------ | ------------------------------------------------- |
+| `acc`  | `true`                                            |
+| `main` | **`false`**                                       |
+
+`main`'s was set false on purpose: its promotion carried commits under three
+author identities against a ruleset requiring **zero** approvals, so the flag
+would have demanded an approval nobody could give. Preserved rather than
+harmonised when `acc` was updated, and now recorded in that repository's
+`SECURITY-PIPELINE.md` and `the-gate-has-teeth.md` as well, so the next person to
+compare them does not read it as drift.
+
+**Classic branch protection reports `allow_force_pushes: true` on both branches,
+and that is not a hole.** It never was for `main` either. The ruleset's
+`non_fast_forward` is what refuses the push; the classic setting is a vestigial
+second layer that the effective-rules view sees past.
+
+That distinction is why this row was checked with
+`gh api repos/…/rules/branches/<branch>`, which reports the **effective** rules
+from every ruleset at once. Reading one ruleset, or the classic protection
+endpoint alone, gives the wrong answer — an earlier draft of this very section
+claimed `acc` "can still be deleted", which the effective view disproved:
+deletion was already blocked, by the classic layer rather than the ruleset.
+
+---

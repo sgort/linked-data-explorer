@@ -8,7 +8,14 @@
     {
       "name": "DocumentRefMixin",
       "extends": ["bpmn:UserTask"],
-      "properties": [{ "name": "documentRef", "isAttr": true, "type": "String" }]
+      "properties": [
+        {
+          "name": "documentRef",
+          "isAttr": true,
+          "type": "String",
+          "description": "One or more document template ids, comma-separated. A task can produce several deliverables; see utils/documentRefs.ts for why this is a delimited attribute rather than isMany or child elements."
+        }
+      ]
     },
     {
       "name": "RopaRefMixin",

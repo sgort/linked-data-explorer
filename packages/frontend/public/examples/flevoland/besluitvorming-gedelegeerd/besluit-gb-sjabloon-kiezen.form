@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-sjabloon-kiezen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_1",
+      "type": "text",
+      "text": "# 1. Kies de juiste beslissingssjabloon"
+    },
+    {
+      "id": "Field_Text_2",
+      "type": "text",
+      "text": "Bepaal het type besluit en selecteer het bijbehorende sjabloon. De sjablonen staan in het DMS / intranet."
+    },
+    {
+      "id": "Field_Text_3",
+      "type": "text",
+      "text": "| Type besluit | Sjabloon |\n|---|---|\n| Standaardbesluit onder gedelegeerde bevoegdheid | Besluittemplate |\n| Besluit met motivering / nadere onderbouwing | Besluit + Memorandum template |\n| Financieel besluit > € 50.000 | Financieel memorandum template |\n| Besluit buiten delegatie | Escalatie / indieningstemplate |\n| Overige specifieke besluiten | Specialistische template(s) |"
+    },
+    {
+      "id": "Field_Select_4",
+      "type": "select",
+      "label": "Type besluit",
+      "key": "besluitType",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Standaardbesluit onder gedelegeerde bevoegdheid",
+          "value": "standaard"
+        },
+        {
+          "label": "Besluit met motivering / nadere onderbouwing",
+          "value": "motivering"
+        },
+        {
+          "label": "Financieel besluit > € 50.000",
+          "value": "financieel"
+        },
+        {
+          "label": "Besluit buiten delegatie",
+          "value": "buiten-delegatie"
+        },
+        {
+          "label": "Overige specifieke besluiten",
+          "value": "specifiek"
+        }
+      ]
+    },
+    {
+      "id": "Field_Submit_5",
+      "type": "button",
+      "action": "submit",
+      "label": "Sjabloon kiezen"
+    }
+  ]
+}

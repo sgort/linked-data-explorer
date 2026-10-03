@@ -31,7 +31,7 @@ describe('DocumentTemplateSelector', () => {
     expect(screen.getByText(/No documents available/)).toBeTruthy();
   });
 
-  test('lists templates and pre-selects the current documentRef', () => {
+  test('shows the template already attached by documentRef', () => {
     getTemplates.mockReturnValue([template()]);
     render(
       <DocumentTemplateSelector
@@ -42,7 +42,37 @@ describe('DocumentTemplateSelector', () => {
     );
 
     expect(screen.getByText('📄 Beschikking')).toBeTruthy();
-    expect(screen.getByRole('combobox')).toHaveValue('d1');
+    // Attached templates leave the add-list, so the only option left is its placeholder.
+    expect(screen.getByRole('combobox')).toHaveValue('');
+  });
+
+  test('shows every template in a comma-separated documentRef', () => {
+    getTemplates.mockReturnValue([template(), template({ id: 'd2', name: 'Objectenboom' })]);
+    render(
+      <DocumentTemplateSelector
+        element={{}}
+        modeling={{ updateProperties: vi.fn() }}
+        selectedDocumentRef="d1,d2"
+      />
+    );
+
+    expect(screen.getByText('📄 Beschikking')).toBeTruthy();
+    expect(screen.getByText('📄 Objectenboom')).toBeTruthy();
+  });
+
+  test('falls back to the id when the referenced template is not in this browser', () => {
+    // A BPMN can arrive referencing a template this browser was never seeded
+    // with; hiding the attachment would make it look unset and invite a
+    // modeller to overwrite it.
+    getTemplates.mockReturnValue([template()]);
+    render(
+      <DocumentTemplateSelector
+        element={{}}
+        modeling={{ updateProperties: vi.fn() }}
+        selectedDocumentRef="d1,rip-objectenboom"
+      />
+    );
+    expect(screen.getByText('📄 rip-objectenboom')).toBeTruthy();
   });
 
   test("shows the linked template's processKey when set", () => {
@@ -57,7 +87,7 @@ describe('DocumentTemplateSelector', () => {
     expect(screen.getByText(/processKey: ZorgtoeslagProcess/)).toBeTruthy();
   });
 
-  test('selecting a template writes ronl:documentRef to the element', async () => {
+  test('attaching a template writes ronl:documentRef to the element', async () => {
     getTemplates.mockReturnValue([template()]);
     const updateProperties = vi.fn();
     const element = { id: 'task1' };
@@ -67,7 +97,39 @@ describe('DocumentTemplateSelector', () => {
     expect(updateProperties).toHaveBeenCalledWith(element, { 'ronl:documentRef': 'd1' });
   });
 
-  test('clearing the selection removes ronl:documentRef', async () => {
+  test('attaching a second template appends rather than replacing', async () => {
+    getTemplates.mockReturnValue([template(), template({ id: 'd2', name: 'Objectenboom' })]);
+    const updateProperties = vi.fn();
+    const element = { id: 'task1' };
+    render(
+      <DocumentTemplateSelector
+        element={element}
+        modeling={{ updateProperties }}
+        selectedDocumentRef="d1"
+      />
+    );
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'd2');
+    expect(updateProperties).toHaveBeenCalledWith(element, { 'ronl:documentRef': 'd1,d2' });
+  });
+
+  test('removing one of two leaves the other attached', async () => {
+    getTemplates.mockReturnValue([template(), template({ id: 'd2', name: 'Objectenboom' })]);
+    const updateProperties = vi.fn();
+    const element = { id: 'task1' };
+    render(
+      <DocumentTemplateSelector
+        element={element}
+        modeling={{ updateProperties }}
+        selectedDocumentRef="d1,d2"
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Beschikking' }));
+    expect(updateProperties).toHaveBeenCalledWith(element, { 'ronl:documentRef': 'd2' });
+  });
+
+  test('removing the last one removes ronl:documentRef', async () => {
     getTemplates.mockReturnValue([template()]);
     const updateProperties = vi.fn();
     const element = { id: 'task1' };
@@ -79,7 +141,7 @@ describe('DocumentTemplateSelector', () => {
       />
     );
 
-    await userEvent.selectOptions(screen.getByRole('combobox'), '');
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Beschikking' }));
     expect(updateProperties).toHaveBeenCalledWith(element, { 'ronl:documentRef': undefined });
   });
 });

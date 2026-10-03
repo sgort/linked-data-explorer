@@ -24,7 +24,7 @@
         <bpmn:flowNodeRef>SubEnd</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
-    <bpmn:startEvent id="SubStart" name="Start beoordeling">
+    <bpmn:startEvent id="SubStart" name="Start beoordeling" ronl:awbPhase="4+5">
       <bpmn:outgoing>Flow_Sub_Start_Prepare</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:scriptTask id="Sub_PrepareDmnInput" name="Prepareer DMN-invoer" scriptFormat="javascript">

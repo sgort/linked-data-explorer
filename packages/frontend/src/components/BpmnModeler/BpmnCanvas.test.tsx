@@ -574,6 +574,30 @@ describe('BpmnCanvas — deploy modal', () => {
     await vi.waitFor(() => expect(document.body.textContent).toContain('Operaton unreachable'));
   });
 
+  // The dialog opens over a live bpmn-js canvas, which brings its own three-digit
+  // stacking: .djs-context-pad 100, .djs-popup 200, .djs-hover-tooltip 1000, and
+  // the properties panel's fixed tooltip and FEEL popup at 1001. At Tailwind's
+  // z-50 the selected task's context pad rendered ON TOP of the modal and stayed
+  // clickable through the backdrop.
+  //
+  // jsdom computes no stacking order, so this asserts the one thing it can see:
+  // the number on the overlay, against the highest layer bpmn-js ships. It is a
+  // guard against the class being normalised back to z-50 for consistency with
+  // the app's other dialogs — none of which sit over a canvas.
+  test('the overlay outranks every z-index bpmn-js ships', async () => {
+    const HIGHEST_VENDOR_LAYER = 1001;
+
+    await renderCanvas();
+    await userEvent.click(screen.getByText('Deploy'));
+
+    const overlay = (await screen.findByTestId('deploy-modal')).parentElement!;
+    expect(overlay.className).toContain('fixed inset-0');
+
+    const z = overlay.className.match(/\bz-\[(\d+)\]/)?.[1];
+    expect(z, `overlay has no arbitrary z-index class: ${overlay.className}`).toBeDefined();
+    expect(Number(z)).toBeGreaterThan(HIGHEST_VENDOR_LAYER);
+  });
+
   test('Cancel closes the deploy modal', async () => {
     await renderCanvas();
     await userEvent.click(screen.getByText('Deploy'));

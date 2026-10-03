@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, test } from 'vitest';
 
-import { getStoredVersion, setStoredVersion } from './exampleVersions';
+import { EXAMPLE_VERSIONS, getStoredVersion, setStoredVersion } from './exampleVersions';
 
 beforeEach(() => {
   localStorage.clear();
@@ -51,5 +51,31 @@ describe('setStoredVersion', () => {
   test('does not throw when localStorage already holds invalid JSON', () => {
     localStorage.setItem('linkedDataExplorer_exampleVersions', 'not json');
     expect(() => setStoredVersion('example_awb_process', 1)).not.toThrow();
+  });
+});
+
+describe('EXAMPLE_VERSIONS — besluitvorming gedelegeerd', () => {
+  test('versions the process at 2: a declined signature escalates', () => {
+    expect(EXAMPLE_VERSIONS.example_besluit_gb).toBe(2);
+  });
+
+  test('versions all twelve forms', () => {
+    const ids = [
+      ...[
+        'sjabloon_kiezen',
+        'sjabloon_invullen',
+        'advies_toetsing',
+        'voorwaarden',
+        'memorandum',
+        'akkoord',
+        'indienen',
+        'ondertekenen',
+        'escalatie',
+        'besluit_nemen',
+        'registreren',
+        'archiveren',
+      ].map((s) => `example_besluit_gb_${s}`),
+    ];
+    for (const id of ids) expect(EXAMPLE_VERSIONS[id]).toBe(1);
   });
 });
