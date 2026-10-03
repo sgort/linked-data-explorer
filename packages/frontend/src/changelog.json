@@ -2,6 +2,183 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.10.0",
+      "status": "Released",
+      "date": "3 oct 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "be5bc99",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "libxmljs2 builds with node-gyp 13, which takes the last production high out of the tree",
+          "details": [
+            "libxmljs2 0.37.0, still its latest release, asks for node-gyp ^11.2.0. That pulls make-fetch-happen, and with it http-cache-semantics, brace-expansion and ip-address. http-cache-semantics has no patched release (the advisory covers <=4.2.0, the latest), so no update could clear it; only removing the chain could. node-gyp 13 fetches with undici instead. An override scoped to libxmljs2 pins it to ^13.0.2. 13.1.0 was skipped because it is inside the 14-day cooldown.",
+            "The lockfile change: 2 packages added, 5 changed, 68 removed, all in the node-gyp subtree. The backend's production install goes from 349 packages to 271. node-gyp is only libxmljs2's fallback, because prebuild-install fetches a prebuilt binary on the runner. The fallback was forced once with 13.0.2 and builds, loads and validates correctly, and the ACC deploy confirmed the native binding works on the host.",
+            "npm install --package-lock-only does not apply an override to an existing lock entry; the libxmljs2 and node-gyp entries had to be removed so both were re-resolved together. Clears the production high the daily dependency audit reported in #240."
+          ]
+        },
+        {
+          "sha": "7dcfdea",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Weekly lockfile refresh, clearing two brace-expansion highs and four moderates",
+          "details": [
+            "Renovate's lock-file maintenance re-resolved the tree within the declared ranges: 162 packages added, 33 removed, 98 changed, 21 of them production dependencies. Among them brace-expansion 2.1.4 → 2.1.7 (two high advisories and a moderate), ip-address 10.7.0 → 10.7.2 (two moderates), and qs 6.15.3 → 6.16.0 under body-parser 1.20.8 (two moderates).",
+            "dompurify stays at 3.4.15: 3.4.16 was still inside the 14-day cooldown when the refresh ran, and arrives with the next one."
+          ]
+        },
+        {
+          "sha": "ad220cb",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Besluitvorming: a declined signature escalates to the bevoegde bestuursautoriteit",
+          "details": [
+            "\"Ondertekend? nee\" used to loop back to \"Dien het besluit in voor ondertekening\". That form cannot edit the besluit, so the loop re-signed an unchanged document. With advies, voorwaarden and memorandum upstream, a decline is an incident rather than a correction round: it now goes to \"Escaleren naar bevoegde bestuursautoriteit\", where the indiener records why and the authority decides. The process has no rework loop left.",
+            "The bundle test pins the new route, the Modeler seed moves to version 2, and the design records the decision."
+          ]
+        },
+        {
+          "sha": "33ad43b",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "The Modeler and Form Editor seed the besluitvorming gedelegeerd process and its forms",
+          "details": [
+            "The Modeler seeds GedelegeerdBesluitProcess (Dutch, flevoland, linked to the GedelegeerdBesluitRoute DMN) and the Form Editor its twelve forms, each at version 1 in exampleVersions.ts."
+          ]
+        },
+        {
+          "sha": "34ad417",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "New example: besluitvorming onder gedelegeerde bevoegdheid, with process, DMN, forms and document",
+          "details": [
+            "A Dutch example bundle in public/examples/flevoland/besluitvorming-gedelegeerd/. GedelegeerdBesluitProcess has six lanes (Aanvrager / Indiener, Juridische Zaken / Compliance, Systeem, Bevoegde bestuursautoriteit, Gemachtigde ondertekenaar, Registratie & Beheer) and six declared phases, and \"Onderteken het besluit\" signs the besluit through ValidSign (ronl:signatureRef).",
+            "GedelegeerdBesluitRoute is a FIRST-hit DMN with the diagram's decision rules: escalate when conditions fail, the decision is outside the mandate or it is politically sensitive; a memorandum when considerations are unclear or the financial impact exceeds € 50.000; otherwise straight to signing. The process calls it untenanted. Twelve form-js forms, one per user task, and besluit-gb-besluit, the besluit document with its signOff zone, complete the bundle.",
+            "A bundle test checks that the files agree with each other: form ids and fields, DMN inputs and rules, gateway conditions, roles per lane, phases and document bindings. The document is also an inline Document Composer template. The Vite dev server rejects imports from public/, so a test pins the inline copy to the deployable file instead."
+          ]
+        },
+        {
+          "sha": "a291caf",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "HR capacity claim declares its eight phases, and reaches the shared routing DMN",
+          "details": [
+            "ManagementCapacityClaimProcess declares its own phases for the caseworker stepper in ronl-business-api. ronl:phases lists Intake, Claim opstellen, Routering, Agendering, Directiebesluit, Heroverweging, Overdracht and Financiële reservering, and ronl:phase marks the node that starts each one. Every other node inherits its phase from the nodes before it.",
+            "Task_DetermineRouting gains camunda:decisionRefTenantId=\"${null}\", as every other example business rule task has. The process runs under tenant flevoland, so without it Operaton looked for CapacityClaimRouting in that tenant and completing \"Formatieclaim opstellen\" failed. Both nl copies stay identical, and the seed moves to 4 so the Modeler replaces cached copies."
+          ]
+        },
+        {
+          "sha": "294d120",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "HR capacity claim process in swimlanes, one lane per role",
+          "details": [
+            "ManagementCapacityClaimProcess gets a pool and a lane per role, as the RIP processes have: Manager, Systeem, Directiesecretaris, Directie, Manager/HR-businesspartner/Personeelscontroller, HRM-unit, Inkoop/Planning & control and Financieel controller. Lane names follow the tasks' candidateGroups, and the two tasks shared by several roles get a combined lane.",
+            "Element ids, names, forms, scripts and conditions are unchanged. The examples/organizations copy is kept identical, and the seed is bumped so the Modeler replaces cached copies."
+          ]
+        },
+        {
+          "sha": "ce19d02",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Frontend dependency updates",
+          "details": [
+            "@bpmn-io/form-js 1.26.0 → 1.26.1, @bpmn-io/properties-panel 3.54.1 → 3.55.0, and, for development only, @types/node 22.20.2 → 22.20.3, autoprefixer 10.5.6 → 10.6.1, eslint-plugin-react-refresh 0.5.6 → 0.5.7 and prettier 3.9.6 → 3.9.7."
+          ]
+        },
+        {
+          "sha": "f393eef",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Backend dependency updates",
+          "details": [
+            "express 4.22.2 → 4.22.3, and, for development only, @types/n3 1.26.3 → 1.26.4, prettier 3.9.6 → 3.9.7 and yaml 2.9.0 → 2.9.1."
+          ]
+        },
+        {
+          "sha": "e2b5c0e",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "test:scripts runs on Windows again, and a written-off example folder says so",
+          "details": [
+            "promotion-targets.test.mjs resolved its script with new URL(...).pathname, which on Windows gives '/C:/...', not a native path. Every command-line check failed there, and because test:scripts joins its suites with &&, dso-dossier.test.mjs never ran either. Linux CI passed throughout. It now uses fileURLToPath, and exits 1 if the resolved path does not exist, so the same mistake cannot hide again.",
+            "examples/organizations/flevoland/thuisbatterij/ references three forms that exist nowhere. The repository already treats that folder as superseded by public/examples/flevoland/, but nothing inside the folder said so. A README now records what it is, rather than fixing one dangling reference and making the file look maintained."
+          ]
+        },
+        {
+          "sha": "0ab32d3",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Awb phases marked on the kapvergunning, thuisbatterij and zorgtoeslag bundles",
+          "details": [
+            "ronl:awbPhase now marks the phase-entry nodes of the three Awb shells (AwbShellProcess, ThuisbatterijSubsidieAanvraagProcess, AwbZorgtoeslagProcess), phases 1 to 8 and archivering. Unmarked nodes inherit the phase of their predecessor in the RONL Business API parser, so the caseworker procesweergave groups phases without reading \"Fase N:\" from task names.",
+            "The decision subprocesses are marked 4+5 at their start, and the two Zorgtoeslag subprocesses gain the ronl namespace declaration they lacked. Edited identically in e2e-fixtures/ and public/examples/. The engine serves the marked definitions only once the bundles are redeployed."
+          ]
+        },
+        {
+          "sha": "b86cd7e",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Zorgtoeslag processes in swimlanes, with Dutch names and a working missing-info form",
+          "details": [
+            "AwbZorgtoeslagProcess gets a pool with Aanvrager, Behandelaar and Systeem lanes, laid out like AwbShellProcess. The Provisional and Final subprocesses each get their own pool. Element ids are unchanged; names become Dutch.",
+            "\"Aanvullende gegevens opvragen\" pointed at an embedded HTML form that never existed, so nothing could set supplementReceived. It now uses a deployable form-js form, zorgtoeslag-aanvullende-gegevens. With the refusal path now reachable, its script also sets paymentRequired and chainProcessRequired, which the payment and chain gateways test. Closes #207."
+          ]
+        },
+        {
+          "sha": "53a18e4",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "AwbShell and TreeFelling processes in swimlanes, with Dutch names and a working missing-info form",
+          "details": [
+            "Both processes get a pool and lanes, as Thuisbatterij and the RIP processes have: Aanvrager, Behandelaar and Systeem for the shell, Behandelaar and Systeem for the subprocess. Element ids are unchanged; names become Dutch.",
+            "\"Aanvullende gegevens opvragen\" now uses kapvergunning-aanvullende-gegevens, a deployable form-js form, instead of an embedded HTML form that never existed. Its script also sets paymentRequired and chainProcessRequired for the now-reachable refusal path."
+          ]
+        },
+        {
+          "sha": "3cced97",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The deploy dialog opens above the BPMN canvas's context pad",
+          "details": [
+            "The deploy dialog's overlay used z-50, like the app's other dialogs, but it is the only one that opens over a bpmn-js canvas, and bpmn-js stacks in three digits (context pad 100, popups 200, tooltips up to 1001). With a task selected, its context pad rendered on top of the dialog and stayed clickable through the backdrop.",
+            "1100 clears the highest of them. A test reads the value off the class, because jsdom computes no stacking order, and guards against it being normalised back to z-50."
+          ]
+        },
+        {
+          "sha": "cd68cca",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "The E2E fixture bundle deploys from this repository, beside the fixtures",
+          "details": [
+            "The script that puts the E2E bundle on a local Operaton lived in ronl-business-api and reached into this repository for every file it read, and posted to this repository's backend. Moving it here removes a cross-repository dependency rather than adding one. A copy in each repository was the worse option: when ronl:documentRef became a list, the other copy silently stopped matching any template.",
+            "ronl-business-api keeps its e2e:deploy-fixtures entry as a shim that calls this one. Verified by deploying six shared decision files and five process bundles across two tenants, both directly and through the shim."
+          ]
+        },
+        {
+          "sha": "ba24e70",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "A task can carry several documents, and the RIP model copies are checked",
+          "details": [
+            "ronl:documentRef now holds a comma-separated list, as camunda:candidateGroups does, so every existing single-id BPMN stays valid. R2.2's \"Opstellen concept VO\" yields both an Ontwerptoelichting and an Objectenboom, but only the first document of a task could be modelled, so templates like rip-objectenboom were authored and never deployed. The properties panel attaches several, as removable chips, and a referenced template this browser has not seeded shows as its id rather than vanishing.",
+            "The twelve RIP phase models exist three times: here, under e2e-fixtures/, and in ronl-business-api as parser fixtures, all kept current by hand. check-rip-bpmn-copies.mjs compares the e2e copies byte for byte and the sources against sha256 fingerprints in rip-bpmn-fingerprints.json, committed identically in both repositories so each can enforce it alone."
+          ]
+        },
+        {
+          "sha": "5eda128",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Dependency audit and SBOM workflows on Node 24.21.0, matching .nvmrc",
+          "details": [
+            "dependency-audit.yml and sbom.yml set Node 24.20.0 literally, ported from ttl-editor after .nvmrc had already moved. Both now match .nvmrc's 24.21.0."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.09.8",
       "status": "Released",
       "date": "26 sep 2026",
