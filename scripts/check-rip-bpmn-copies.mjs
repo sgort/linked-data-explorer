@@ -80,9 +80,41 @@ function authoringModels() {
   return found.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-const models = authoringModels();
-if (models.length === 0) {
+/**
+ * Models outside the RIP ladder that ronl-business-api ALSO keeps as parser
+ * fixtures, under rip-swimlane/__fixtures__/declared/: the processes that
+ * declare their own phases (ronl:phases). They were copied byte for byte and
+ * then checked by nothing, so drift would have gone unnoticed (RBA #312 item
+ * 3). Fingerprinting them here puts them under the same contract as the
+ * ladder. Listed by hand because they share no naming scheme; the key is the
+ * fixture's file name downstream, and `source` tells the other side where to
+ * find it.
+ */
+const DECLARED_PHASE_MODELS = [
+  {
+    name: "GedelegeerdBesluitProcess.bpmn",
+    path: "packages/frontend/public/examples/flevoland/besluitvorming-gedelegeerd/GedelegeerdBesluitProcess.bpmn",
+  },
+  {
+    name: "ManagementCapacityClaimProcess.bpmn",
+    path: "examples/organizations/flevoland/HR-capacity/ManagementCapacityClaimProcess.bpmn",
+  },
+];
+
+const ripModels = authoringModels();
+const models = [...ripModels, ...DECLARED_PHASE_MODELS];
+if (ripModels.length === 0) {
   console.error(`No RIP phase models found under ${AUTHORING}/rip-phase-NN/.`);
+  process.exit(1);
+}
+// A moved or renamed declared-phase model must fail by name, not as an ENOENT
+// from the hashing below.
+const missing = DECLARED_PHASE_MODELS.filter((m) => !existsSync(m.path));
+if (missing.length > 0) {
+  console.error(
+    `Declared-phase model(s) not found; update DECLARED_PHASE_MODELS:\n` +
+      missing.map((m) => `  - ${m.path}`).join("\n"),
+  );
   process.exit(1);
 }
 
@@ -173,5 +205,5 @@ const e2eCount = models.filter((m) =>
   existsSync(join(E2E_FIXTURES, basename(m.name))),
 ).length;
 console.log(
-  `✓ ${models.length} RIP phase models fingerprinted, ${e2eCount} e2e-fixtures copies identical to source.`,
+  `✓ ${ripModels.length} RIP phase models and ${DECLARED_PHASE_MODELS.length} declared-phase models fingerprinted, ${e2eCount} e2e-fixtures copies identical to source.`,
 );
