@@ -17,8 +17,8 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 7, // v7: swimlanes + Dutch names + missing-info form
-  example_tree_felling: 10, // v10: swimlanes + Dutch names
+  example_awb_process: 8, // v8: Dutch runtime texts (finalMessage, replacementInfo; #260)
+  example_tree_felling: 11, // v11: Dutch runtime texts (finalMessage, replacementInfo; #260)
   example_awb_zorgtoeslag: 6, // v6: swimlanes + Dutch names + missing-info form
   example_zorgtoeslag_provisional: 8, // v8: swimlanes + Dutch names
   example_zorgtoeslag_final: 7, // v7: swimlanes + Dutch names

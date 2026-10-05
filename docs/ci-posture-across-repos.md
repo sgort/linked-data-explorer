@@ -148,17 +148,17 @@ Each section is that repository's own posture, end to end. The thematic sections
 workflows. It is the simplest of the three and therefore the one where a missing
 gate is most visible.
 
-|                   |                                                                      |
-| ----------------- | -------------------------------------------------------------------- |
-| Deploy target     | Static Web Apps — `orange-beach` (`acc`), `white-sky` (`main`)       |
-| Node              | `.nvmrc` `24.20.0` for both deploys; the same literal in three more  |
-| Coverage floor    | 1 runner, `vite.config.mjs`, 80% branches per file                   |
-| Pinned references | 17, across `check-supply-chain`                                      |
-| `acc` ruleset     | `21728745` — 4 rules, checks `audit`, `scan`, `Build and deploy ACC` |
-| `main` ruleset    | `24227117` — 4 rules, checks `audit`, `scan`                         |
-| On a clock        | `dependency-audit.yml`, daily, both branches                         |
-| At a release      | `sbom.yml`, on a push to `main`                                      |
-| Outside CI        | `check-mirror.sh`, `check-deps.sh`, `check-previews.sh`              |
+|                   |                                                                               |
+| ----------------- | ----------------------------------------------------------------------------- |
+| Deploy target     | Static Web Apps — `orange-beach` (`acc`), `white-sky` (`main`)                |
+| Node              | `.nvmrc` `24.20.0` for both deploys; the same literal in three more           |
+| Coverage floor    | 1 runner, `vite.config.mjs`, 80% branches per file                            |
+| Pinned references | 17, across `check-supply-chain`                                               |
+| `acc` ruleset     | `21728745` — 4 rules, checks `audit`, `scan`, `Build and deploy ACC`          |
+| `main` ruleset    | `24227117` — 4 rules, checks `audit`, `scan`                                  |
+| On a clock        | `dependency-audit.yml`, daily, both branches                                  |
+| At a release      | `sbom.yml` — strict on the release pull request, presence on a push to `main` |
+| Outside CI        | `check-mirror.sh`, `check-deps.sh`, `check-previews.sh`                       |
 
 **"One Node version" is one version, not one file.** The two Static Web Apps
 workflows read `.nvmrc`; `zizmor.yml`, `dependency-audit.yml` and `sbom.yml`
@@ -210,7 +210,7 @@ Business API overtook it.
 | `acc` ruleset       | `21794157` — 4 rules, checks `audit`, `scan`, `deploy`, `Build and Deploy Frontend`, `Build and Deploy ROPA Site` |
 | `main` ruleset      | `22630654` — 4 rules, checks `audit`, `scan`                                                                      |
 | On a clock          | `dependency-audit.yml`, daily, both branches                                                                      |
-| At a release        | `sbom.yml`, on a push to `main`                                                                                   |
+| At a release        | `sbom.yml` — strict on the release pull request, presence on a push to `main`                                     |
 | Outside CI          | `check-mirror.sh`, `check-deps.sh` — **no `check-previews.sh`**                                                   |
 
 **Its Node version was two until 30 September.** Five workflows read `.nvmrc`
@@ -266,6 +266,7 @@ test runners, 2,300 backend tests.
 | Pinned references   | 39                                                                                                            |
 | `acc` ruleset       | `21741898` — 4 rules, checks `audit`, `scan`, `build`, and three ACC deploy jobs                              |
 | `main` ruleset      | `23019967` — 4 rules, checks `audit`, `scan`                                                                  |
+| At a release        | `sbom.yml` — strict on the release pull request, presence on a push to `main`                                 |
 | Outside CI          | `check-mirror.sh`, `check-deps.sh`, `check-previews.sh`                                                       |
 
 **It is the only one with a published API contract, and the only one that proves
@@ -2350,6 +2351,43 @@ counted.
 Newest first. Each entry records what moved and, where it matters, what the
 previous claim had been — a corrected claim is more useful than a silently
 replaced one.
+
+### What changed on 5 October 2026
+
+Additions only; the heads in the table at the top are still those of 30
+September, and nothing else was re-verified for this entry. All of it is on
+`acc` in each repository and not yet released.
+
+- **A strict SBOM check where the release is cut, in all three.** `sbom.yml`
+  used to check only that a promotion's version has a committed SBOM, warning on
+  drift, and nothing ran `write-sbom.mjs --check` at all, although the header
+  said the file was "kept honest by the check below". It now runs `--check` on
+  the pull request that changes this version's
+  `docs/sbom/<name>-<version>.cdx.json`, the release bump, and `/bump-release`
+  runs `npm run sbom:check` before the release commit. The promotion check is
+  unchanged, deliberately: a promotion carries commits merged after the release.
+  The "At a release" rows say so, and RONL Business API's table gained the row
+  it lacked ([#255](https://github.com/sgort/linked-data-explorer/issues/255);
+  [#257](https://github.com/sgort/linked-data-explorer/pull/257),
+  [ronl-business-api#316](https://github.com/sgort/ronl-business-api/pull/316),
+  [ttl-editor#198](https://github.com/sgort/ttl-editor/pull/198)).
+- **The fingerprint contract runs in the required `audit` job.**
+  Linked Data Explorer's `check-rip-bpmn` and RONL Business API's
+  `check-swimlane-fixtures` ran in the pre-push hook only, so a `--no-verify`
+  push or an edit in the GitHub UI skipped them. §2's "CI repeats every check
+  the hooks make" was not true until then
+  ([#257](https://github.com/sgort/linked-data-explorer/pull/257),
+  [ronl-business-api#316](https://github.com/sgort/ronl-business-api/pull/316)).
+  The contract also grew: the two declared-phase models RONL Business API keeps
+  as fixtures, besluitvorming and HR-capacity, are fingerprinted alongside the
+  twelve RIP phases
+  ([#261](https://github.com/sgort/linked-data-explorer/pull/261),
+  [ronl-business-api#318](https://github.com/sgort/ronl-business-api/pull/318)).
+- **Example- and fixture-only changes run the backend suite here.** The backend
+  workflow's push `paths` and `changes` pattern gained `examples/`,
+  `e2e-fixtures/` and `packages/frontend/public/examples/`, which the bundle,
+  parity and fixture tests read. A change to those files alone used to report
+  `deploy: SKIPPED` ([#257](https://github.com/sgort/linked-data-explorer/pull/257)).
 
 ### What changed on 3 October 2026
 
