@@ -56,7 +56,7 @@ export const TREE_FELLING_BESCHIKKING: DocumentTemplate = {
   schemaVersion: 1,
   readonly: false,
   status: 'example',
-  language: 'en',
+  language: 'nl',
   organization: 'flevoland',
   createdAt: '2026-03-07T00:00:00.000Z',
   updatedAt: '2026-03-07T00:00:00.000Z',

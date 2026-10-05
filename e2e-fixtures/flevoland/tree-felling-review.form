@@ -9,26 +9,26 @@
     {
       "id": "Text_Header",
       "type": "text",
-      "text": "# Tree felling permit – case worker review"
+      "text": "# Kapvergunning – beoordeling door behandelaar"
     },
     {
       "id": "Field_ReviewError",
       "type": "textfield",
-      "label": "Validation message",
+      "label": "Validatiemelding",
       "key": "reviewError",
       "disabled": true,
       "readonly": true,
-      "description": "If this is filled, fix the issue below and submit again."
+      "description": "Staat hier een melding, herstel dan het probleem hieronder en dien opnieuw in."
     },
     {
       "id": "Text_Current",
       "type": "text",
-      "text": "## Current (DMN) decisions"
+      "text": "## Huidige (DMN-)beslissingen"
     },
     {
       "id": "Field_PermitDecision",
       "type": "textfield",
-      "label": "permitDecision (current)",
+      "label": "permitDecision (huidig)",
       "key": "permitDecision",
       "disabled": true,
       "readonly": true
@@ -36,36 +36,36 @@
     {
       "id": "Field_ReplacementDecision",
       "type": "textfield",
-      "label": "replacementDecision (current)",
+      "label": "replacementDecision (huidig)",
       "key": "replacementDecision",
       "disabled": true,
       "readonly": true,
-      "description": "May be empty/null if permit was rejected."
+      "description": "Kan leeg (null) zijn als de vergunning is afgewezen."
     },
     {
       "id": "Text_Action",
       "type": "text",
-      "text": "## Review action\n- **Confirm**: keep DMN decisions as-is\n- **Reject**: force permitDecision = `Reject`\n- **Change**: override decisions below\n"
+      "text": "## Beoordeling\n- **Bevestigen**: DMN-beslissingen ongewijzigd laten\n- **Afwijzen**: permitDecision geforceerd op `Reject` zetten\n- **Wijzigen**: beslissingen hieronder overschrijven\n"
     },
     {
       "id": "Field_ReviewAction",
       "type": "select",
-      "label": "What do you want to do?",
+      "label": "Wat wilt u doen?",
       "key": "reviewAction",
       "validate": {
         "required": true
       },
       "values": [
         {
-          "label": "Confirm (keep DMN decisions)",
+          "label": "Bevestigen (DMN-beslissingen behouden)",
           "value": "confirm"
         },
         {
-          "label": "Reject (force rejection)",
+          "label": "Afwijzen (afwijzing forceren)",
           "value": "reject"
         },
         {
-          "label": "Change (override decisions)",
+          "label": "Wijzigen (beslissingen overschrijven)",
           "value": "change"
         }
       ]
@@ -73,15 +73,15 @@
     {
       "id": "Field_ReviewPermitDecision",
       "type": "select",
-      "label": "New permitDecision (required when action = Change)",
+      "label": "Nieuwe permitDecision (verplicht bij Wijzigen)",
       "key": "reviewPermitDecision",
       "values": [
         {
-          "label": "Permit",
+          "label": "Vergunnen",
           "value": "Permit"
         },
         {
-          "label": "Reject",
+          "label": "Afwijzen",
           "value": "Reject"
         }
       ]
@@ -89,18 +89,18 @@
     {
       "id": "Field_ReviewReplacementDecision",
       "type": "radio",
-      "label": "Is a replacement tree required?",
+      "label": "Is herplant verplicht?",
       "key": "reviewReplacementDecision",
       "validate": {
         "required": true
       },
       "values": [
         {
-          "label": "Yes – replacement required",
+          "label": "Ja – herplant verplicht",
           "value": true
         },
         {
-          "label": "No – replacement not required",
+          "label": "Nee – geen herplant verplicht",
           "value": false
         }
       ]
@@ -108,7 +108,7 @@
     {
       "id": "Button_Submit",
       "type": "button",
-      "label": "Submit review",
+      "label": "Beoordeling indienen",
       "action": "submit"
     }
   ]
