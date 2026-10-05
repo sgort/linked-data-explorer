@@ -146,4 +146,29 @@ describe('public/examples and e2e-fixtures differ only by their labels', () => {
     }
     expect(problems).toEqual([]);
   });
+
+  it('every subprocess a fixture calls has an E2E key no example uses', () => {
+    // The Modeler's deploy dialog bundles a callActivity's subprocess by looking
+    // up the calledElement among ALL stored processes, whatever their status.
+    // That can only pick the right copy because the keys differ: an example
+    // shell calls TreeFellingPermitSubProcess, the fixture shell
+    // TreeFellingPermitSubProcessE2E. A fixture subprocess that kept its
+    // example key would be indistinguishable, and deploying the example shell
+    // could bundle the fixture copy (#254 item 2). Shells may share a key with
+    // their example; they are opened, not looked up.
+    const problems: string[] = [];
+    for (const tenant of fs.readdirSync(FIXTURES_ROOT)) {
+      const dir = path.join(FIXTURES_ROOT, tenant);
+      if (!fs.statSync(dir).isDirectory()) continue;
+      for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.bpmn'))) {
+        const text = fs.readFileSync(path.join(dir, file), 'utf8');
+        for (const [, called] of text.matchAll(/calledElement="([^"]+)"/g)) {
+          if (!called.endsWith('E2E')) {
+            problems.push(`${tenant}/${file}: calls ${called}, which lacks the E2E suffix`);
+          }
+        }
+      }
+    }
+    expect(problems).toEqual([]);
+  });
 });

@@ -29,6 +29,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { DocumentService } from '../../services/documentService';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocumentBlock, DocumentTemplate } from '../../types/document.types';
+import { EXAMPLE_VERSIONS, getStoredVersion, setStoredVersion } from '../../utils/exampleVersions';
 import AssetLibrary from './AssetLibrary';
 import BindingPanel from './BindingPanel';
 import ContentLibrary from './ContentLibrary';
@@ -65,24 +66,29 @@ const DocumentComposer: React.FC<DocumentComposerProps> = ({ endpoint }) => {
   // Left panel tab: 'content' | 'assets'
   const [leftTab, setLeftTab] = useState<'content' | 'assets'>('content');
 
-  // ─── Seed default templates on first load ──────────────────────────────
+  // ─── Seed / refresh default templates on load ──────────────────────────
+  // Versioned like the example forms and processes: a template is (re)written
+  // whenever EXAMPLE_VERSIONS holds a higher version than this browser has
+  // recorded. Seeding by presence alone never refreshed a template a browser
+  // already held, so a fix to a shipped template reached only new users
+  // (#254 item 7).
   useEffect(() => {
     const existing = DocumentService.getTemplates();
-    const existingIds = new Set(existing.map((t) => t.id));
-    let seeded = false;
+    const seeded: DocumentTemplate[] = [];
 
     for (const tmpl of DEFAULT_TEMPLATES) {
-      if (!existingIds.has(tmpl.id)) {
-        DocumentService.saveTemplate(tmpl);
-        seeded = true;
-      }
+      const version = EXAMPLE_VERSIONS[tmpl.id];
+      if (getStoredVersion(tmpl.id) >= version) continue;
+      DocumentService.saveTemplate(tmpl);
+      setStoredVersion(tmpl.id, version);
+      seeded.push(tmpl);
     }
 
-    if (seeded) {
+    if (seeded.length > 0) {
       const all = DocumentService.getTemplates();
       setTemplates(all);
       beginLoadWindow();
-      setActiveTemplateId(DEFAULT_TEMPLATES[0].id);
+      setActiveTemplateId(seeded[0].id);
     } else if (existing.length > 0) {
       setTemplates(existing);
     }

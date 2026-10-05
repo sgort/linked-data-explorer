@@ -40,7 +40,11 @@ const FormTemplateSelector: React.FC<FormTemplateSelectorProps> = ({
 
     modeling.updateProperties(element, {
       'camunda:formRef': schemaId,
-      'camunda:formRefBinding': 'latest',
+      // "deployment", as every seeded and fixture BPMN uses: the form resolves
+      // from the process definition's own deployment, unique by construction.
+      // "latest" resolves the key across the whole repository, and fails with
+      // ENGINE-03109 once the same form key is deployed under several tenants.
+      'camunda:formRefBinding': 'deployment',
       // Clear legacy HTML formKey if present
       'camunda:formKey': undefined,
     });
