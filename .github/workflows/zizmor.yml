@@ -167,6 +167,18 @@ jobs:
         if: always()
         run: npm run check-format
 
+      - name: RIP phase-model copies match their source
+        # The e2e-fixtures copies byte for byte, and the authoring files against
+        # rip-bpmn-fingerprints.json, the file ronl-business-api commits
+        # identically. This used to run only in the pre-push hook, so a push
+        # made with --no-verify, or an edit made in the GitHub UI, skipped the
+        # contract entirely (#254, items 5 and 11). Here, in the required job,
+        # nothing reaches acc or main around it.
+        #
+        # if: always() for the same reason as the checks above.
+        if: always()
+        run: npm run check-rip-bpmn
+
       - name: Verify pin truth and register agreement
         # zizmor validates pin FORMAT — that `uses:` names a 40-character SHA.
         # It cannot say the SHA is the RIGHT one, so a wrong or hostile digest
