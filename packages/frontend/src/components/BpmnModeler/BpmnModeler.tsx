@@ -381,17 +381,17 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
         updated.push(dvtpExample);
       }
 
-      // --- HR-capacity Dutch BPMN sibling (multilingualism release) ---
+      // --- HR-capacity (Dutch; the English variant was removed, #254 item 6) ---
       const hrCapacityNlId = 'example_hr_capacity_nl';
       if (getStoredVersion(hrCapacityNlId) < EXAMPLE_VERSIONS[hrCapacityNlId]) {
         const xml = await fetch(
-          '/examples/flevoland/HR-capacity/nl/ManagementCapacityClaimProcess.nl.bpmn'
+          '/examples/flevoland/HR-capacity/ManagementCapacityClaimProcess.bpmn'
         ).then((r) => r.text());
         const hrCapacityNlExample: BpmnProcess = {
           id: hrCapacityNlId,
           name: 'Beheer capaciteitsclaim — proces (Voorbeeld, NL)',
           description:
-            'Dutch sibling of the HR-capacity Management Capacity Claim Process. Demonstrates the multilingualism feature: same DMN keys, translated labels, English variable values.',
+            'HR-capacity Management Capacity Claim Process: Dutch labels, with the shared routing DMN and its English keys and variable values.',
           xml,
           createdAt: '2026-04-26T12:00:00.000Z',
           updatedAt: new Date().toISOString(),

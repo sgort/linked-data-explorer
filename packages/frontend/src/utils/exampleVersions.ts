@@ -28,10 +28,10 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_besluit_gb: 2, // v2: a declined signature escalates instead of looping back
 
   // Camunda Forms
-  example_kapvergunning_start: 4, // v4: force re-seed for ACC users with stale localStorage from v1.6.0 testing
-  example_tree_felling_review: 4, // v4: force re-seed (see above)
+  example_kapvergunning_start: 5, // v5: translated to Dutch, tagged nl (#254 item 1)
+  example_tree_felling_review: 5, // v5: translated to Dutch, tagged nl (#254 item 1)
   example_kapvergunning_missing_info: 1,
-  example_awb_notify_applicant: 4, // v4: force re-seed (see above)
+  example_awb_notify_applicant: 5, // v5: translated to Dutch, tagged nl (#254 item 1)
   example_zorgtoeslag_notify_applicant: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_provisional_start: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_provisional_review: 4, // v4: force re-seed (see above)
@@ -54,7 +54,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_besluit_gb_registreren: 1,
   example_besluit_gb_archiveren: 1,
 
-  // HR-capacity Dutch forms (multilingualism release)
+  // HR-capacity forms (Dutch)
   example_hr_capacity_intake_nl: 1,
   example_hr_capacity_staffing_nl: 1,
   example_hr_capacity_hiring_nl: 1,
@@ -69,7 +69,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   // checks. Until #254 item 7 templates seeded by presence only, and the two
   // HR-capacity keys that stood here matched no template id and were read by
   // nothing.
-  example_treefelling_beschikking: 1,
+  example_treefelling_beschikking: 2, // v2: tagged nl, as its text always was (#254 item 1)
   example_zorgtoeslag_provisional_beschikking: 1,
   example_zorgtoeslag_final_beschikking: 1,
   example_dvtp_consent_receipt: 1,
