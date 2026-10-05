@@ -28,6 +28,16 @@ on:
       # .nvmrc sets the Node version this workflow builds, tests and ships on.
       # Without it here, a Node bump built and deployed nothing (#119).
       - '.nvmrc'
+      # Backend Jest suites read the example and fixture files: the bundle,
+      # parity and fixture tests (besluitvorming-gedelegeerd-bundle,
+      # example-fixture-parity, public-example-fixture-parity, e2e-fixtures).
+      # Without these paths, a change to the very files those tests check ran
+      # none of them -- PR #235 reported deploy: SKIPPED. A merge of such a
+      # change also redeploys the unchanged backend to acceptance, which is
+      # harmless. #254, item 4.
+      - 'examples/**'
+      - 'e2e-fixtures/**'
+      - 'packages/frontend/public/examples/**'
   workflow_dispatch:
 
 # Serialise deployments to one environment. Keyed on the pull-request
@@ -78,7 +88,7 @@ jobs:
           # moved 338 packages, 82 of them runtime, and CI ran audit and scan alone.
           # A backend-only bump reaches this workflow too, because the lockfile is
           # shared and a hoisted dependency can move under either workspace. #97.
-          PATTERN: '^(\.nvmrc$|packages/backend/|\.github/workflows/azure-backend-acc\.yml$|package-lock\.json$|package\.json$)'
+          PATTERN: '^(\.nvmrc$|packages/backend/|\.github/workflows/azure-backend-acc\.yml$|package-lock\.json$|package\.json$|examples/|e2e-fixtures/|packages/frontend/public/examples/)'
         run: |
           if [ "$EVENT" != "pull_request" ]; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"

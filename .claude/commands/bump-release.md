@@ -123,15 +123,20 @@ Then:
 1. **Merge the in-scope ones before any version editing.** Dependency pull
    requests rewrite `package-lock.json` -- the same file step 4 edits. Bump the
    version first and the merge either conflicts or silently reverts it.
-2. **Verify each dependency pull request locally before merging it.** The
-   backend workflow is `push`-only, so a backend dependency change arrives on
-   `acc` with **no** test run behind it; the only pull-request check is `audit`,
-   which says nothing about whether the dependency broke anything. Run
-   `npm ci && npm run lint && npm test && npm run build && npm run check-format`
-   on the branch. `check-format` is not optional here: it runs in no workflow at
-   all, only in the pre-push hook, so a formatting-tool upgrade that reformats
-   existing files lands green and then fails the _next_ person's push. That is
-   exactly what prettier 3.9.6 did on 2026-08-29.
+2. **Read each dependency pull request's checks before merging it, and verify
+   locally only what they do not cover.** A dependency pull request touches
+   `package.json` and `package-lock.json`, so both deploy workflows run on it:
+   the backend's lint, OpenAPI lint, typecheck, tests and build (its `changes`
+   job matches the lockfile and manifest), and the frontend's lint, typecheck
+   and tests. `audit` runs `check-format` with the repository's own prettier, so
+   a formatting-tool upgrade that reformats existing files fails there instead
+   of on the _next_ person's push, as prettier 3.9.6 did on 2026-08-29. What no
+   check sees is the running app: a dependency that changes behaviour no test
+   pins. For a runtime dependency, start the app on the branch and try the
+   affected feature. A check reported as **skipped** means its workflow judged
+   the pull request irrelevant; confirm that is true before relying on it.
+   (This step used to say the backend workflow was `push`-only and
+   `check-format` ran in no workflow. Both had stopped being true; #254 item 12.)
 3. **Re-check mergeability between merges** when several touch the same file.
    The `acc` ruleset does not require branches to be up to date, so merging one
    leaves the next based on a stale tree. Renovate rebases on conflict but not
@@ -263,10 +268,25 @@ ICTU recommendation 10 asks for SBOMs of released versions, kept analysable:
 when an advisory lands against something that shipped months ago, the question
 is what that version contained, and only a document written at the time can
 answer it. `.github/workflows/sbom.yml` uploads the same document as an
-artifact on the promotion, and checks there that the committed copy matches
-the lockfile — a stale file fails the promotion rather than quietly
-misdescribing what shipped. Artifacts expire after 90 days on a public
+artifact on the promotion. Artifacts expire after 90 days on a public
 repository; the committed copy is the durable one.
+
+**The strict check is yours, here, and again on the pull request.** Confirm the
+file describes the lockfile it will ship with:
+
+```bash
+npm run sbom:check
+```
+
+Run it after `npm run sbom`, and again after anything that can move the
+lockfile before the commit: a rebase, a late dependency merge, a manual
+`npm install`. It exits 1 on a missing or stale file; the fix is
+`npm run sbom`. `sbom.yml` runs the same check on the release pull request,
+the one that changes this version's file, and re-runs it on every push to
+that pull request. On the promotion it only asserts the file exists: a
+promotion carries commits merged after the release, so drift there is a
+warning, not a failure. Until #255 nothing ran the strict check at all, and
+this paragraph claimed the promotion did.
 
 The previous release's file stays where it is. One document per released
 version is the point.

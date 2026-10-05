@@ -13,7 +13,8 @@
  * The E2E suite's global-setup refuses to run until every process in
  * e2e-fixtures/manifest.json is deployed under its tenant,
  * and every decision those processes call is deployed WITHOUT one (see
- * packages/frontend/e2e/helpers/required-processes.ts). A fresh Operaton volume
+ * ronl-business-api's packages/frontend/e2e/helpers/required-processes.ts; this
+ * repository has no e2e/ folder). A fresh Operaton volume
  * has none of it. This script deploys the lot, the way LDE's BPMN Modeler would:
  *
  *   1. SHARED DECISIONS — each file under the manifest's `sharedDecisions.files`,

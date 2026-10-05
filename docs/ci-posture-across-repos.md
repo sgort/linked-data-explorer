@@ -1230,8 +1230,15 @@ worktree before committing from it.** It is also the only way `deps:check`
 passes there. ttl-editor's README states it under "Getting started".
 
 What a skipped hook costs is time, not safety. CI repeats every check the hooks
-make, and the required checks gate the merge; the hook's value is failing first
-and naming the cause, such as a stale install. Worktrees are also rarer now than
+make that bears on correctness, and the required checks gate the merge; the
+hook's value is failing first and naming the cause, such as a stale install.
+`deps:check` is the one hook check with no CI twin, and needs none: CI installs
+with `npm ci`, so its install cannot be stale. That sentence was not true until
+October. Until then the two fingerprint checks, linked-data-explorer's
+`check-rip-bpmn` and ronl-business-api's `check-swimlane-fixtures`, ran in the
+pre-push hook alone, so a `--no-verify` push or an edit in the GitHub UI skipped
+the contract between the two repositories entirely. Both now also run in the
+required `audit` job (linked-data-explorer #254, items 5 and 11). Worktrees are also rarer now than
 when it happened: the assistant's working rules stopped creating them unasked on
 26 September, which removed the skill setups and worktree-isolated subagents
 that had produced them by default.
