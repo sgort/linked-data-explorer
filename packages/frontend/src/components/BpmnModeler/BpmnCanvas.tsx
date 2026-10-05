@@ -20,32 +20,13 @@ import { getDeployTarget } from '../../services/deployTargetService';
 import { DocumentService } from '../../services/documentService';
 import { FormService } from '../../services/formService';
 import { DocumentTemplate } from '../../types/document.types';
+import { collectBundleRefs, findProcessId, resolveSubProcesses } from '../../utils/deployBundle';
 import { parseDocumentRefs } from '../../utils/documentRefs';
 import { getProblemDetail } from '../../utils/problem';
 import DmnTemplateSelector from './DmnTemplateSelector';
 import DocumentTemplateSelector from './DocumentTemplateSelector';
 import FormTemplateSelector from './FormTemplateSelector';
 import ronlModdleDescriptor from './ronlModdleDescriptor.json';
-
-/**
- * Find the `<process>` element in a parsed BPMN document, whatever namespace
- * prefix it carries.
- *
- * The previous lookup used a CSS *type* selector, which matches only the null
- * namespace — so it never matched the `<bpmn:process>` that real bpmn-js output
- * always emits, and every caller silently fell through to its own fallback. The
- * visible consequence was a deployment posting the literal string "process" as
- * its process key instead of the model's actual id, and sub-process lookups by
- * `calledElement` never matching.
- *
- * `getElementsByTagNameNS` matches on local name across every namespace, which
- * is what BPMN needs. There is no prefix-as-tag-name fallback because there is
- * nothing to fall back to: `DOMParser` rejects an undeclared prefix outright and
- * hands back a `<parsererror>` document, so a malformed model has no process
- * element to find under any lookup.
- */
-const findProcessElement = (doc: Document): Element | null =>
-  doc.getElementsByTagNameNS('*', 'process')[0] ?? null;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -488,72 +469,33 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     if (!modelerRef.current) return;
     const { xml } = await modelerRef.current.saveXML({ format: true });
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xml, 'text/xml');
-    const processKey = findProcessElement(doc)?.getAttribute('id') ?? 'process';
+    const processKey = findProcessId(xml) ?? 'process';
 
-    const extractFormRefs = (bpmnXml: string) => [
-      ...new Set([...bpmnXml.matchAll(/camunda:formRef="([^"]+)"/g)].map((m) => m[1])),
-    ];
-
-    const extractDocumentRefs = (bpmnXml: string) => [
-      ...new Set(
-        [
-          ...bpmnXml.matchAll(/ronl:documentRef="([^"]+)"/g),
-          // A signature task binds its template through signatureRef alone;
-          // reading only documentRef left such a template out of the bundle.
-          ...bpmnXml.matchAll(/ronl:signatureRef="([^"]+)"/g),
-          // documentRef holds a comma-separated list, so the captured group is
-          // split rather than used whole — otherwise a task with two documents
-          // contributes one id that matches no template and bundles neither.
-        ].flatMap((m) => parseDocumentRefs(m[1]))
-      ),
-    ];
-
-    const extractCalledElements = (bpmnXml: string) => [
-      ...new Set([...bpmnXml.matchAll(/calledElement="([^"]+)"/g)].map((m) => m[1])),
-    ];
-
-    const allProcesses = BpmnService.getProcesses();
-    const calledElements = extractCalledElements(xml);
-    const subProcessXmls: { filename: string; xml: string }[] = [];
-
-    for (const calledElement of calledElements) {
-      const match = allProcesses.find((p) => {
-        const d = new DOMParser().parseFromString(p.xml, 'text/xml');
-        return findProcessElement(d)?.getAttribute('id') === calledElement;
-      });
-      if (match) subProcessXmls.push({ filename: `${calledElement}.bpmn`, xml: match.xml });
-    }
-
-    const allFormRefs = new Set([
-      ...extractFormRefs(xml),
-      ...subProcessXmls.flatMap((sp) => extractFormRefs(sp.xml)),
-    ]);
+    const subProcessXmls = resolveSubProcesses(xml, BpmnService.getProcesses());
+    const { formRefs: allFormRefs, documentRefs: allDocumentRefs } = collectBundleRefs(
+      xml,
+      subProcessXmls
+    );
 
     const allForms = FormService.getForms();
-    const matchedForms = [...allFormRefs].filter((ref) =>
+    const matchedForms = allFormRefs.filter((ref) =>
       allForms.some((f) => (f.schema as Record<string, unknown>).id === ref)
     );
-    const unmatchedForms = [...allFormRefs].filter(
+    const unmatchedForms = allFormRefs.filter(
       (ref) => !allForms.some((f) => (f.schema as Record<string, unknown>).id === ref)
     );
 
     const ropaRefMissing = !xml.includes('ronl:ropaRef=');
 
-    const allDocumentRefs = new Set([
-      ...extractDocumentRefs(xml),
-      ...subProcessXmls.flatMap((sp) => extractDocumentRefs(sp.xml)),
-    ]);
     const allDocumentTemplates = DocumentService.getTemplates();
-    const matchedDocuments = [...allDocumentRefs].filter((ref) =>
+    const matchedDocuments = allDocumentRefs.filter((ref) =>
       allDocumentTemplates.some((d) => d.id === ref)
     );
     // A referenced template that is not in local storage was previously dropped
     // from the payload without a word, so the deployment shipped without its
     // .document resource and the signing panel silently degraded to a plain
     // form at runtime. Surfaced and blocked here instead.
-    const unmatchedDocuments = [...allDocumentRefs].filter(
+    const unmatchedDocuments = allDocumentRefs.filter(
       (ref) => !allDocumentTemplates.some((d) => d.id === ref)
     );
 
@@ -634,66 +576,24 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     try {
       const { xml } = await modelerRef.current.saveXML({ format: true });
 
-      const extractFormRefs = (bpmnXml: string) => [
-        ...new Set([...bpmnXml.matchAll(/camunda:formRef="([^"]+)"/g)].map((m) => m[1])),
-      ];
-
-      const extractDocumentRefs = (bpmnXml: string) => [
-        ...new Set(
-          [
-            ...bpmnXml.matchAll(/ronl:documentRef="([^"]+)"/g),
-            // A signature task binds its template through signatureRef alone;
-            // reading only documentRef left such a template out of the bundle.
-            ...bpmnXml.matchAll(/ronl:signatureRef="([^"]+)"/g),
-            // documentRef holds a comma-separated list, so the captured group
-            // is split rather than used whole — otherwise a task with two
-            // documents contributes one id that matches no template and
-            // bundles neither.
-          ].flatMap((m) => parseDocumentRefs(m[1]))
-        ),
-      ];
-
-      const extractCalledElements = (bpmnXml: string) => [
-        ...new Set([...bpmnXml.matchAll(/calledElement="([^"]+)"/g)].map((m) => m[1])),
-      ];
-
-      const allProcesses = BpmnService.getProcesses();
-      const subProcessXmls: { filename: string; xml: string }[] = [];
-
-      for (const calledElement of extractCalledElements(xml)) {
-        const match = allProcesses.find((p) => {
-          const d = new DOMParser().parseFromString(p.xml, 'text/xml');
-          return findProcessElement(d)?.getAttribute('id') === calledElement;
-        });
-        if (match) subProcessXmls.push({ filename: `${calledElement}.bpmn`, xml: match.xml });
-      }
-
-      const allFormRefs = new Set([
-        ...extractFormRefs(xml),
-        ...subProcessXmls.flatMap((sp) => extractFormRefs(sp.xml)),
-      ]);
+      const subProcessXmls = resolveSubProcesses(xml, BpmnService.getProcesses());
+      const { formRefs, documentRefs } = collectBundleRefs(xml, subProcessXmls);
 
       const allForms = FormService.getForms();
       const forms: { id: string; schema: Record<string, unknown> }[] = [];
-      for (const ref of allFormRefs) {
+      for (const ref of formRefs) {
         const match = allForms.find((f) => (f.schema as Record<string, unknown>).id === ref);
         if (match) forms.push({ id: ref, schema: match.schema });
       }
 
-      const allDocumentRefs = new Set([
-        ...extractDocumentRefs(xml),
-        ...subProcessXmls.flatMap((sp) => extractDocumentRefs(sp.xml)),
-      ]);
       const allDocumentTemplates = DocumentService.getTemplates();
       const documents: { id: string; template: DocumentTemplate }[] = [];
-      for (const ref of allDocumentRefs) {
+      for (const ref of documentRefs) {
         const match = allDocumentTemplates.find((d) => d.id === ref);
         if (match) documents.push({ id: ref, template: match });
       }
 
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xml, 'text/xml');
-      const processKey = findProcessElement(doc)?.getAttribute('id') ?? `process-${Date.now()}`;
+      const processKey = findProcessId(xml) ?? `process-${Date.now()}`;
 
       const response = await fetch(`${API_BASE_URL}/api/dmns/process/deploy`, {
         method: 'POST',

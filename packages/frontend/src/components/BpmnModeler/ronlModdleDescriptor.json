@@ -14,6 +14,12 @@
           "isAttr": true,
           "type": "String",
           "description": "One or more document template ids, comma-separated. A task can produce several deliverables; see utils/documentRefs.ts for why this is a delimited attribute rather than isMany or child elements."
+        },
+        {
+          "name": "signatureRef",
+          "isAttr": true,
+          "type": "String",
+          "description": "The document template a signature task signs. Bundled at deploy like a documentRef, but names exactly one template."
         }
       ]
     },

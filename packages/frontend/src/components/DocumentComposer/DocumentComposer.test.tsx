@@ -35,6 +35,17 @@ vi.mock('./defaultTemplates', () => ({
   ],
 }));
 
+// The version registry, with default-1 already bumped once. storedVersions is
+// what a browser has recorded; the seeding compares the two.
+let storedVersions: Record<string, number> = {};
+vi.mock('../../utils/exampleVersions', () => ({
+  EXAMPLE_VERSIONS: { 'default-1': 2, 'default-2': 1 },
+  getStoredVersion: (id: string) => storedVersions[id] ?? 0,
+  setStoredVersion: (id: string, v: number) => {
+    storedVersions[id] = v;
+  },
+}));
+
 vi.mock('./ContentLibrary', () => ({ default: () => <div>ContentLibrary stub</div> }));
 vi.mock('./AssetLibrary', () => ({
   default: ({ endpoint }: { endpoint: string }) => <div>AssetLibrary stub:{endpoint}</div>,
@@ -166,6 +177,7 @@ import DocumentComposer from './DocumentComposer';
 afterEach(() => {
   vi.restoreAllMocks();
   store = [];
+  storedVersions = {};
   getTemplates.mockClear();
   saveTemplate.mockClear();
   getTemplate.mockClear();
@@ -181,7 +193,8 @@ describe('DocumentComposer — bootstrap', () => {
     expect(screen.getByText('active:default-1')).toBeTruthy();
   });
 
-  test('does not reseed when every default template already exists', () => {
+  test('does not reseed when every default template exists at its registered version', () => {
+    storedVersions = { 'default-1': 2, 'default-2': 1 };
     store = [
       { id: 'default-1', name: 'Default One', bindings: [], zones: {} },
       { id: 'default-2', name: 'Default Two', bindings: [], zones: {} },
@@ -193,7 +206,32 @@ describe('DocumentComposer — bootstrap', () => {
     expect(screen.getByText('active:none')).toBeTruthy();
   });
 
+  test('refreshes a template whose registered version is above the stored one, though it exists', () => {
+    // A browser seeded before default-1 was bumped. Seeding by presence alone
+    // never refreshed it, so a fix to a shipped template reached nobody who
+    // already had it (#254 item 7).
+    storedVersions = { 'default-1': 1, 'default-2': 1 };
+    store = [
+      { id: 'default-1', name: 'Default One (old)', bindings: [], zones: {} },
+      { id: 'default-2', name: 'Default Two', bindings: [], zones: {} },
+    ];
+    render(<DocumentComposer endpoint="e" />);
+
+    expect(saveTemplate).toHaveBeenCalledTimes(1);
+    expect(saveTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'default-1', name: 'Default One' })
+    );
+    expect(storedVersions['default-1']).toBe(2);
+  });
+
+  test('records the seeded version, so the next load does not seed again', () => {
+    render(<DocumentComposer endpoint="e" />);
+
+    expect(storedVersions).toEqual({ 'default-1': 2, 'default-2': 1 });
+  });
+
   test('shows the "no document selected" placeholder with no active template', () => {
+    storedVersions = { 'default-1': 2, 'default-2': 1 }; // already current
     store = [
       { id: 'default-1', name: 'Default One', bindings: [], zones: {} },
       { id: 'default-2', name: 'Default Two', bindings: [], zones: {} },
@@ -205,6 +243,7 @@ describe('DocumentComposer — bootstrap', () => {
 
 describe('DocumentComposer — template CRUD', () => {
   test('"Create New document" (empty state) creates a blank template and activates it', async () => {
+    storedVersions = { 'default-1': 2, 'default-2': 1 }; // already current
     store = [
       { id: 'default-1', name: 'Default One', bindings: [], zones: {} },
       { id: 'default-2', name: 'Default Two', bindings: [], zones: {} },
@@ -315,6 +354,7 @@ describe('DocumentComposer — save / save as / export / close', () => {
   });
 
   test('Save As does nothing when the prompt is cancelled', async () => {
+    storedVersions = { 'default-1': 2, 'default-2': 1 }; // already current
     store = [
       { id: 'd1', name: 'One', bindings: [], zones: {} },
       { id: 'default-1', name: 'Default One', bindings: [], zones: {} },
