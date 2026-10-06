@@ -47,17 +47,17 @@ otherwise runtime, labelled optional where `optional: true`.
 
 **Findings.**
 
-| finding             | rule                                                                                                                       | blocks           |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| added               | names in head, not in base, with versions                                                                                  | no               |
-| removed             | names in base, not in head                                                                                                 | no               |
-| updated             | names in both whose version sets differ (`a → b`)                                                                          | no               |
-| downgrade           | an install path whose head version is older than its base version and new to the tree, or a single-version name going down | no (highlighted) |
-| origin              | any head entry whose `resolved` does not start with `https://registry.npmjs.org/`                                          | **yes**          |
-| integrity           | any head entry without `integrity`                                                                                         | **yes**          |
-| licence change      | a name that gains a licence it did not have in base (losing one with a removed copy is not a change)                       | no               |
-| licence not allowed | an **added** name whose licence the allow-list does not allow, or that has none                                            | no               |
-| install script      | a name with `hasInstallScript` in head that is new, or had none in base                                                    | no               |
+| finding             | rule                                                                                                                                                                                                                             | blocks           |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| added               | names in head, not in base, with versions                                                                                                                                                                                        | no               |
+| removed             | names in base, not in head                                                                                                                                                                                                       | no               |
+| updated             | names in both whose version sets differ (`a → b`)                                                                                                                                                                                | no               |
+| downgrade           | judged per version line (major; minor for 0.x): a new version below every base version on its line; or a path now holding a new, lower version while the line it held is gone from the tree; or a single-version name going down | no (highlighted) |
+| origin              | any head entry whose `resolved` does not start with `https://registry.npmjs.org/`                                                                                                                                                | **yes**          |
+| integrity           | any head entry without `integrity`                                                                                                                                                                                               | **yes**          |
+| licence change      | a name that gains a licence it did not have in base (losing one with a removed copy is not a change)                                                                                                                             | no               |
+| licence not allowed | an **added** name whose licence the allow-list does not allow, or that has none                                                                                                                                                  | no               |
+| install script      | a name with `hasInstallScript` in head that is new, or had none in base                                                                                                                                                          | no               |
 
 The two blocking rules apply to the **whole** head lockfile: all three trees are
 clean today once workspace entries are excluded, and a bad entry should fail
@@ -73,6 +73,12 @@ going up (`brace-expansion` in #230) and hoisting an existing older copy to
 the root (`type-fest` in #230) all looked like downgrades, and a removed copy
 looked like a licence change (`minipass`). The rules above report none of
 those and still catch a consumer moving back.
+
+**Amended after the final review (6 October 2026).** The path rule alone still
+flagged a root that npm moved onto the other major line while every copy went
+up (`be` 2.0.1 at the root, 1.1.11 nested → 1.1.12 at the root, 2.0.2 nested).
+Comparing within a version line fixes that and also catches a copy that moved
+back on its own line at a different path. Tests pin both cases.
 
 **Allow-list.** Per repository, in `lockfile-review.json` at the root:
 `{ "allowLicenses": [...] }`. Policy data may differ between repositories while
