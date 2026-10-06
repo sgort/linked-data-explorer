@@ -47,17 +47,17 @@ otherwise runtime, labelled optional where `optional: true`.
 
 **Findings.**
 
-| finding             | rule                                                                              | blocks           |
-| ------------------- | --------------------------------------------------------------------------------- | ---------------- |
-| added               | names in head, not in base, with versions                                         | no               |
-| removed             | names in base, not in head                                                        | no               |
-| updated             | names in both whose version sets differ (`a → b`)                                 | no               |
-| downgrade           | an updated name whose highest head version is below its highest base version      | no (highlighted) |
-| origin              | any head entry whose `resolved` does not start with `https://registry.npmjs.org/` | **yes**          |
-| integrity           | any head entry without `integrity`                                                | **yes**          |
-| licence change      | a name whose `license` differs between base and head                              | no               |
-| licence not allowed | an **added** name whose licence the allow-list does not allow, or that has none   | no               |
-| install script      | a name with `hasInstallScript` in head that is new, or had none in base           | no               |
+| finding             | rule                                                                                                                       | blocks           |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| added               | names in head, not in base, with versions                                                                                  | no               |
+| removed             | names in base, not in head                                                                                                 | no               |
+| updated             | names in both whose version sets differ (`a → b`)                                                                          | no               |
+| downgrade           | an install path whose head version is older than its base version and new to the tree, or a single-version name going down | no (highlighted) |
+| origin              | any head entry whose `resolved` does not start with `https://registry.npmjs.org/`                                          | **yes**          |
+| integrity           | any head entry without `integrity`                                                                                         | **yes**          |
+| licence change      | a name that gains a licence it did not have in base (losing one with a removed copy is not a change)                       | no               |
+| licence not allowed | an **added** name whose licence the allow-list does not allow, or that has none                                            | no               |
+| install script      | a name with `hasInstallScript` in head that is new, or had none in base                                                    | no               |
 
 The two blocking rules apply to the **whole** head lockfile: all three trees are
 clean today once workspace entries are excluded, and a bad entry should fail
@@ -65,6 +65,14 @@ however it arrived. Licence and install-script findings consider only what
 changed, so the accepted tree (the bpmn.io licence on `bpmn-js` and
 `@bpmn-io/form-js*`, MPL-2.0 on TTL's `lightningcss`) does not repeat in every
 report.
+
+**Why those two rules read the paths.** Replaying #230 and #251 while writing
+the plan (6 October 2026) showed that comparing version **sets** misreads npm:
+losing a newer copy (`agent-base` in #251), every copy on several major lines
+going up (`brace-expansion` in #230) and hoisting an existing older copy to
+the root (`type-fest` in #230) all looked like downgrades, and a removed copy
+looked like a licence change (`minipass`). The rules above report none of
+those and still catch a consumer moving back.
 
 **Allow-list.** Per repository, in `lockfile-review.json` at the root:
 `{ "allowLicenses": [...] }`. Policy data may differ between repositories while

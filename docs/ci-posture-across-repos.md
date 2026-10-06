@@ -2352,6 +2352,18 @@ Newest first. Each entry records what moved and, where it matters, what the
 previous claim had been — a corrected claim is more useful than a silently
 replaced one.
 
+### What changed on 6 October 2026
+
+Additions only; the heads in the table at the top are unchanged. A
+`lockfile-review` job in `zizmor.yml` shows reviewers what a dependency pull
+request's lockfile change contains — added, removed, updated and downgraded
+packages, licence changes, licences off the allow-list, new install scripts —
+as a comment, and fails on a non-npmjs origin or a missing `integrity`
+([#248](https://github.com/sgort/linked-data-explorer/issues/248)). A second
+job holds the write token for the comment and runs no repository code. In
+Linked Data Explorer first; ttl-editor and RONL Business API follow, and each
+`acc` ruleset requires the check once it has reported there.
+
 ### What changed on 5 October 2026
 
 Additions only; the heads in the table at the top are still those of 30
