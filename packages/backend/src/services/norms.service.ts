@@ -55,6 +55,11 @@ const CPRMV_METADATA_MODEL: Record<string, 'dataset' | 'ruleset'> = {
 // behaviour (the data currently in TriplyDB is 0.3.0).
 export const DEFAULT_CPRMV_VERSION = '0.3.0';
 
+// The /v2/norms default: the version the CPSV editor publishes now. Pinned, not
+// derived from SUPPORTED_CPRMV_VERSIONS, so adding a version to the supported
+// set never moves the v2 default by accident.
+export const DEFAULT_CPRMV_VERSION_V2 = '0.4.1';
+
 // Versions accepted by the route layer's validation. Exported so the route
 // can reject anything outside this set with a helpful message.
 export const SUPPORTED_CPRMV_VERSIONS = Object.keys(CPRMV_NS_BY_VERSION);
@@ -525,6 +530,85 @@ export async function getAllNorms(
     aggregations: { normsPerRulesetid },
     metadata: {
       datasetVersions,
+      cprmvVersion,
+    },
+  };
+}
+
+// =====================================================================
+// Norms in force on a date (/v2/norms)
+// =====================================================================
+
+/**
+ * The rules in force on `validOn`: per rulesetid, every rule of the latest
+ * period whose start date (`applicable_date`) is on or before `validOn`.
+ * A period stays in force until the same ruleset publishes a later one; the
+ * data carries no end dates. Rules without a parseable period are left out.
+ * YYYY-MM-DD strings compare correctly as strings.
+ */
+export function selectInForce(rules: PublishedRule[], validOn: string): PublishedRule[] {
+  const picked = new Map<string, string>();
+  for (const rule of rules) {
+    const rulesetid = rule.rulesetid as string;
+    const period = rule.applicable_date as string | null;
+    if (!period || period > validOn) continue;
+    const current = picked.get(rulesetid);
+    if (current === undefined || period > current) picked.set(rulesetid, period);
+  }
+
+  return rules.filter((rule) => {
+    const period = rule.applicable_date as string | null;
+    return period !== null && picked.get(rule.rulesetid as string) === period;
+  });
+}
+
+/**
+ * Narrows each ruleset's metadata to the records of its selected period: the
+ * entries whose `version` equals the period date, or, when none does, the
+ * version-less entries (0.3.x non-primary rulesets), as the v1 contract's
+ * lookup rule already prescribes. Rulesets with neither are left out, which
+ * the route treats as "do not cache".
+ */
+export function narrowDatasetVersions(
+  datasetVersions: Record<string, DatasetVersionInfo[]>,
+  periods: Record<string, string>
+): Record<string, DatasetVersionInfo[]> {
+  const narrowed: Record<string, DatasetVersionInfo[]> = {};
+  for (const rulesetid of Object.keys(periods).sort()) {
+    const list = datasetVersions[rulesetid] ?? [];
+    const exact = list.filter((v) => v.version === periods[rulesetid]);
+    const chosen = exact.length > 0 ? exact : list.filter((v) => v.version === null);
+    if (chosen.length > 0) narrowed[rulesetid] = chosen;
+  }
+  return narrowed;
+}
+
+/**
+ * The norms in force on `filter.validOn`, for /v2/norms. Runs the same rules
+ * query as v1 without a date filter, then selects in code; the date is never
+ * interpolated into SPARQL.
+ */
+export async function getNormsInForce(
+  endpoint: string | undefined,
+  filter: { rulesetid?: string; validOn: string },
+  cprmvVersion: string = DEFAULT_CPRMV_VERSION_V2
+): Promise<NormsResult> {
+  const all = await getAllNorms(endpoint, { rulesetid: filter.rulesetid }, cprmvVersion);
+  const rules = selectInForce(all.rules, filter.validOn);
+
+  const periods: Record<string, string> = {};
+  const normsPerRulesetid: Record<string, number> = {};
+  for (const rule of rules) {
+    const rulesetid = rule.rulesetid as string;
+    periods[rulesetid] = rule.applicable_date as string;
+    normsPerRulesetid[rulesetid] = (normsPerRulesetid[rulesetid] || 0) + 1;
+  }
+
+  return {
+    rules,
+    aggregations: { normsPerRulesetid },
+    metadata: {
+      datasetVersions: narrowDatasetVersions(all.metadata.datasetVersions, periods),
       cprmvVersion,
     },
   };
