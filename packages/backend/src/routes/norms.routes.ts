@@ -6,35 +6,27 @@ import { Router, Request, Response } from 'express';
 import {
   getAllNorms,
   getDatasetVersionsByRulesetid,
-  SUPPORTED_CPRMV_VERSIONS,
   DEFAULT_CPRMV_VERSION,
 } from '../services/norms.service';
 import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { sendProblem } from '../utils/problem';
 import { refuseOptionalEndpoint } from '../utils/outboundUrl';
-import { computeNormsEtag, computeLastModified } from '../utils/etag';
+import {
+  hasCompleteMetadata,
+  rejectInvalidCprmvVersion,
+  rejectInvalidRulesetid,
+  setNormsCacheHeaders,
+  toNormsData,
+} from './norms.shared';
 import logger from '../utils/logger';
 import packageJson from '../../package.json';
 
 const router = Router();
 
-// Strict validation patterns for filter query parameters. Filter values are
-// interpolated directly into a SPARQL FILTER clause downstream, so rejecting
-// anything outside these character classes upfront is the injection-prevention
-// contract — the service layer assumes pre-validated input.
-const RULESETID_PATTERN = /^[A-Za-z0-9_-]+$/;
+// v1's applicable_date is a shape check only: an exact match on a period's
+// start date. /v2/norms replaces it with valid_on.
 const APPLICABLE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-// Accepted ?cprmv_version= values — validated against the set the service can
-// actually serve (the flat 0.3.x publish shapes). Membership check rather than
-// a character-class regex because the value selects a namespace, not a filter.
-const SUPPORTED_CPRMV_VERSION_SET = new Set(SUPPORTED_CPRMV_VERSIONS);
-
-// Cache-Control max-age. Biannual data tolerates generous caching; 1 hour is
-// conservative. Could be longer (12-24h) once the publication cadence is
-// observed in production.
-const CACHE_MAX_AGE_SECONDS = 3600;
 
 /**
  * GET /v1/norms
@@ -42,38 +34,23 @@ const CACHE_MAX_AGE_SECONDS = 3600;
  *
  * Response envelope fields (under `data`):
  *   total                number of rules in the filtered result set
- *   dataset_versions     per-rulesetid map: { "<id>": { version, published_at } }
+ *   dataset_versions     per-rulesetid map: { "<id>": [{ version, published_at, title }] }
  *                        Only contains entries for rulesetids that have a
- *                        cprmv:Dataset record in TriplyDB.
+ *                        version record in TriplyDB.
  *   cprmv_version        CPRMV vocabulary version, e.g. "0.3.0"
  *   aggregations         { norms_per_rulesetid: { <id>: <count> } }
  *   rules                array of PublishedRule objects
  *
  * HTTP cache headers (set only when every rulesetid in the response has a
- * dataset_versions entry):
- *   ETag           opaque 8-hex hash over dataset_versions + filter params
- *   Last-Modified  RFC 7231 date — max(published_at) across the response
- *   Cache-Control  public, max-age=<CACHE_MAX_AGE_SECONDS>
- *
- * Conditional requests honoured: If-None-Match against ETag and
- * If-Modified-Since against Last-Modified → 304 Not Modified.
- *
- * When any rulesetid in the response is missing dataset metadata,
- * Cache-Control falls back to `no-cache` and ETag/Last-Modified are omitted.
- * Safe-by-default during rollout: caching kicks in progressively as
- * cprmv:Dataset records are published.
+ * dataset_versions entry): ETag, Last-Modified, Cache-Control public,
+ * max-age=3600. If-None-Match / If-Modified-Since → 304. Otherwise
+ * Cache-Control: no-cache.
  *
  * Query parameters (all optional, may be combined):
  *   endpoint          SPARQL endpoint URL override
  *   rulesetid         exact-match filter, /^[A-Za-z0-9_-]+$/ or 400
- *   applicable_date   YYYY-MM-DD or 400
- *   cprmv_version     CPRMV vocabulary version selecting the namespace to
- *                     query and emit; one of SUPPORTED_CPRMV_VERSIONS (0.3.0,
- *                     0.3.2, 0.4.1) or 400. Defaults to DEFAULT_CPRMV_VERSION.
- *                     All three carry flat cprmv:Rule resources and differ only
- *                     in namespace for the rules query; 0.4.1's per-ruleset
- *                     metadata comes from cprmv:RuleSet (validFrom) instead of
- *                     the 0.3.x cprmv:Dataset.
+ *   applicable_date   YYYY-MM-DD or 400; exact match on a period's start date
+ *   cprmv_version     one of SUPPORTED_CPRMV_VERSIONS or 400; default 0.3.0
  *
  * Compliance notes:
  * - API-05: noun-based resource name "norms"
@@ -89,16 +66,7 @@ router.get('/', async (req: Request, res: Response) => {
   const applicableDate = req.query.applicable_date as string | undefined;
   const requestedCprmvVersion = req.query.cprmv_version as string | undefined;
 
-  // Validate filter inputs upfront. Reject on any pattern mismatch so the
-  // service layer can safely treat values as injection-safe.
-  if (rulesetid !== undefined && !RULESETID_PATTERN.test(rulesetid)) {
-    sendProblem(res, req, {
-      status: 400,
-      code: 'INVALID_PARAM',
-      detail: 'Invalid rulesetid: must match /^[A-Za-z0-9_-]+$/',
-    });
-    return;
-  }
+  if (rejectInvalidRulesetid(req, res, rulesetid)) return;
 
   if (applicableDate !== undefined && !APPLICABLE_DATE_PATTERN.test(applicableDate)) {
     sendProblem(res, req, {
@@ -109,29 +77,19 @@ router.get('/', async (req: Request, res: Response) => {
     return;
   }
 
-  if (
-    requestedCprmvVersion !== undefined &&
-    !SUPPORTED_CPRMV_VERSION_SET.has(requestedCprmvVersion)
-  ) {
-    sendProblem(res, req, {
-      status: 400,
-      code: 'INVALID_PARAM',
-      detail: `Invalid cprmv_version: must be one of ${SUPPORTED_CPRMV_VERSIONS.join(', ')}`,
-    });
-    return;
-  }
+  if (rejectInvalidCprmvVersion(req, res, requestedCprmvVersion)) return;
 
-  // Validated; fall back to the default namespace when omitted.
   const cprmvVersion = requestedCprmvVersion ?? DEFAULT_CPRMV_VERSION;
+  const filterSignature = {
+    endpoint: requestedEndpoint,
+    rulesetid,
+    applicable_date: applicableDate,
+    cprmv_version: cprmvVersion,
+  };
 
   try {
-    // ETag short-circuit: when the request is filtered to a single rulesetid,
-    // we can decide freshness from the (cached) metadata map alone — no need
-    // to run the expensive rules query just to find out it would 304.
-    //
-    // For unfiltered requests we don't know which rulesetids would appear
-    // until we run the rules query, so we have to do the full work first
-    // and rely on application-level cache on subsequent requests.
+    // ETag short-circuit: filtered to a single rulesetid, freshness can be
+    // decided from the (cached) metadata map alone, before the rules query.
     if (rulesetid) {
       const allDatasetVersions = await getDatasetVersionsByRulesetid(
         requestedEndpoint,
@@ -140,29 +98,12 @@ router.get('/', async (req: Request, res: Response) => {
       const list = allDatasetVersions[rulesetid];
 
       if (list && list.length > 0) {
-        const datasetVersionsForEtag = { [rulesetid]: list };
-        const etag = computeNormsEtag({
-          datasetVersions: datasetVersionsForEtag,
-          filterSignature: {
-            endpoint: requestedEndpoint,
-            rulesetid,
-            applicable_date: applicableDate,
-            cprmv_version: cprmvVersion,
-          },
-        });
-        const lastModified = computeLastModified(datasetVersionsForEtag);
-
-        res.set('ETag', etag);
-        if (lastModified) res.set('Last-Modified', lastModified);
-        res.set('Cache-Control', `public, max-age=${CACHE_MAX_AGE_SECONDS}`);
-
+        setNormsCacheHeaders(res, { [rulesetid]: list }, filterSignature);
         if (req.fresh) {
           return res.status(304).end();
         }
       }
-      // If `list` is missing, the rulesetid has no Dataset metadata yet.
-      // We fall through to the full query without setting cache headers;
-      // Cache-Control is set below after we have the full response.
+      // No metadata yet: fall through to the full query without cache headers.
     }
 
     logger.info('Norms list request', {
@@ -171,45 +112,15 @@ router.get('/', async (req: Request, res: Response) => {
       ...(applicableDate && { applicableDate }),
     });
 
-    // Full rules query + aggregation + scoped dataset metadata
     const result = await getAllNorms(
       requestedEndpoint,
-      {
-        rulesetid,
-        applicableDate,
-      },
+      { rulesetid, applicableDate },
       cprmvVersion
     );
 
-    // Cache headers when EVERY rulesetid in the response has dataset metadata.
-    // Partial coverage falls back to no-cache: we can't reliably detect a
-    // change in an unversioned ruleset, so consumers must always refetch.
-    const rulesetIdsInResponse = Object.keys(result.aggregations.normsPerRulesetid);
-    const allHaveMetadata =
-      rulesetIdsInResponse.length > 0 &&
-      rulesetIdsInResponse.every((id) => result.metadata.datasetVersions[id]?.length > 0);
-
-    if (allHaveMetadata) {
-      const etag = computeNormsEtag({
-        datasetVersions: result.metadata.datasetVersions,
-        filterSignature: {
-          endpoint: requestedEndpoint,
-          rulesetid,
-          applicable_date: applicableDate,
-          cprmv_version: cprmvVersion,
-        },
-      });
-      const lastModified = computeLastModified(result.metadata.datasetVersions);
-
-      res.set('ETag', etag);
-      if (lastModified) res.set('Last-Modified', lastModified);
-      res.set('Cache-Control', `public, max-age=${CACHE_MAX_AGE_SECONDS}`);
-
-      // Honour conditional request on the post-query path too. req.fresh
-      // compares the headers we just set against If-None-Match /
-      // If-Modified-Since. Unlikely to hit here (we'd have caught it in
-      // the short-circuit above for single-rulesetid requests) but covers
-      // the multi-rulesetid case where the consumer's cache is still valid.
+    if (hasCompleteMetadata(result)) {
+      setNormsCacheHeaders(res, result.metadata.datasetVersions, filterSignature);
+      // Covers the multi-rulesetid case where the consumer's cache is valid.
       if (req.fresh) {
         return res.status(304).end();
       }
@@ -217,47 +128,20 @@ router.get('/', async (req: Request, res: Response) => {
       res.set('Cache-Control', 'no-cache');
     }
 
-    // Serialise to envelope. Internal camelCase translates to snake_case at
-    // the JSON boundary, matching the existing convention for per-rule fields
-    // (applicableDate → applicable_date, normsPerRulesetid → norms_per_rulesetid).
-    // `version` and `title` are nullable — primary ruleset only.
-    //
-    // Each rulesetid maps to a LIST of records (one per applicable period),
-    // pre-sorted by the service: version desc, nulls last, publishedAt desc
-    // tie-break. Consumers wanting "the latest applicable version" take [0].
-    const datasetVersionsForJson: Record<
-      string,
-      Array<{ version: string | null; published_at: string; title: string | null }>
-    > = {};
-    for (const [k, list] of Object.entries(result.metadata.datasetVersions)) {
-      datasetVersionsForJson[k] = list.map((v) => ({
-        version: v.version,
-        published_at: v.publishedAt,
-        title: v.title,
-      }));
-    }
-
     res.json({
       success: true,
-      data: {
-        total: result.rules.length,
-        dataset_versions: datasetVersionsForJson,
-        cprmv_version: result.metadata.cprmvVersion,
-        aggregations: {
-          norms_per_rulesetid: result.aggregations.normsPerRulesetid,
-        },
-        rules: result.rules,
-      },
+      data: toNormsData(result),
       timestamp: new Date().toISOString(),
     } as ApiResponse);
   } catch (error: unknown) {
     logger.error('Norms list error', getErrorDetails(error));
 
-    sendProblem(res, req, { status: 500, code: 'QUERY_ERROR', detail: getErrorMessage(error) });
+    sendProblem(res, req, {
+      status: 500,
+      code: 'QUERY_ERROR',
+      detail: getErrorMessage(error),
+    });
   }
 });
-
-// getCprmvVersion is exported by the service (norms.service.ts) for potential
-// reuse in other routes — e.g. /v1/health could surface it.
 
 export default router;
