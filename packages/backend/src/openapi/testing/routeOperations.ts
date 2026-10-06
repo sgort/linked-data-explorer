@@ -1,8 +1,9 @@
 // packages/backend/src/openapi/testing/routeOperations.ts
 //
-// The operations Express actually serves under /v1, and the operations the
-// OpenAPI document describes, in one notation ("GET /dmns/{identifier}/xml"),
-// so src/openapi/coverage.test.ts can compare them (#129).
+// The operations Express actually serves under one major version (/v1 or /v2),
+// and the operations the OpenAPI document describes, in one notation
+// ("GET /dmns/{identifier}/xml"), so src/openapi/coverage.test.ts can compare
+// them (#129).
 //
 // Anything the walk cannot read reliably (a nested router, router.all, a
 // regular-expression path) throws. Skipping it would hide an operation from the
@@ -18,20 +19,31 @@ interface StackLayer {
   route?: { path: unknown; methods: Record<string, boolean> };
 }
 
+export type MajorVersion = 'v1' | 'v2';
+
 /** '/v1/dmns' + '/:identifier/xml' is '/dmns/{identifier}/xml'. */
-export function toDocumentPath(mount: string, routePath: string): string {
-  if (!mount.startsWith('/v1/')) throw new Error(`${mount} is not a /v1 mount`);
+export function toDocumentPath(
+  mount: string,
+  routePath: string,
+  major: MajorVersion = 'v1'
+): string {
+  const prefix = `/${major}`;
+  if (!mount.startsWith(`${prefix}/`)) throw new Error(`${mount} is not a ${prefix} mount`);
 
   const subPath = routePath === '/' ? '' : routePath;
-  return `${mount.slice('/v1'.length)}${subPath}`.replace(/:(\w+)/g, '{$1}');
+  return `${mount.slice(prefix.length)}${subPath}`.replace(/:(\w+)/g, '{$1}');
 }
 
 export function listServedOperations(
-  routes: ReadonlyArray<Pick<RouteDefinition, 'mount' | 'router'>>
+  routes: ReadonlyArray<Pick<RouteDefinition, 'mount' | 'router'>>,
+  major: MajorVersion = 'v1'
 ): string[] {
   const operations: string[] = [];
 
   for (const { mount, router } of routes) {
+    // Each major version has its own document; only its own mounts count.
+    if (!mount.startsWith(`/${major}/`)) continue;
+
     for (const layer of (router as unknown as { stack: StackLayer[] }).stack) {
       if (layer.name === 'router') throw new Error(`${mount}: nested routers are not supported`);
       if (!layer.route) continue; // middleware, such as cors()
@@ -45,7 +57,7 @@ export function listServedOperations(
         if (!(HTTP_METHODS as readonly string[]).includes(method)) {
           throw new Error(`${mount}${routePath}: unsupported method ${method}`);
         }
-        operations.push(`${method.toUpperCase()} ${toDocumentPath(mount, routePath)}`);
+        operations.push(`${method.toUpperCase()} ${toDocumentPath(mount, routePath, major)}`);
       }
     }
   }

@@ -38,7 +38,7 @@ describe('routeRegistry entries', () => {
   test.each(routeRegistry.map((r) => [r.mount, r] as const))(
     '%s is well-formed',
     (_mount, route) => {
-      expect(route.mount).toMatch(/^\/v1\//);
+      expect(route.mount).toMatch(/^\/v[12]\//);
       expect(route.mount).not.toMatch(/\/$/);
       expect(CATEGORIES).toContain(route.category);
       expect(route.summary.trim()).not.toHaveLength(0);
@@ -116,6 +116,7 @@ describe('public CORS flag', () => {
       '/v1/bundles/public',
       '/v1/openapi.json',
       '/v1/ropa/public',
+      '/v2/openapi.json',
     ]);
   });
 

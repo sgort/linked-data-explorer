@@ -1520,6 +1520,7 @@ paths:
   /norms:
     get:
       operationId: listNorms
+      deprecated: true
       tags: [Discovery]
       summary: Published rules (norms) with their dataset versions
       description: >-
@@ -1529,6 +1530,11 @@ paths:
         `ETag` and `Cache-Control: public, max-age=3600`, and a matching
         conditional request is answered 304; otherwise `Cache-Control: no-cache`.
         The `endpoint` override is checked before use (#142).
+
+        Deprecated in favour of `/v2/norms`, which returns the norms in force
+        on a date and defaults to CPRMV 0.4.1. Every response carries
+        `Deprecation: @1793491200` (2026-11-01), `Sunset: Wed, 01 Nov 2028
+        00:00:00 GMT` and `Link: </v2/norms>; rel="successor-version"`.
       parameters:
         - name: rulesetid
           in: query
@@ -1580,6 +1586,18 @@ paths:
               description: '`public, max-age=3600` with `ETag`, otherwise `no-cache`.'
               schema:
                 type: string
+            Deprecation:
+              description: '`@1793491200` (2026-11-01), when `/v1/norms` is deprecated.'
+              schema:
+                type: string
+            Sunset:
+              description: '`Wed, 01 Nov 2028 00:00:00 GMT`, when `/v1/norms` may be withdrawn.'
+              schema:
+                type: string
+            Link:
+              description: '`</v2/norms>; rel="successor-version"`.'
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -1610,6 +1628,18 @@ paths:
               description: '`public, max-age=3600`.'
               schema:
                 type: string
+            Deprecation:
+              description: '`@1793491200` (2026-11-01), when `/v1/norms` is deprecated.'
+              schema:
+                type: string
+            Sunset:
+              description: '`Wed, 01 Nov 2028 00:00:00 GMT`, when `/v1/norms` may be withdrawn.'
+              schema:
+                type: string
+            Link:
+              description: '`</v2/norms>; rel="successor-version"`.'
+              schema:
+                type: string
         '400':
           description: >-
             A query parameter is invalid (code INVALID_PARAM). The `endpoint`
@@ -1617,12 +1647,38 @@ paths:
             URL, not `https:`, containing credentials, or pointing to an
             internal address. `detail` gives the reason. No request is made
             to it.
+          headers:
+            Deprecation:
+              description: '`@1793491200` (2026-11-01), when `/v1/norms` is deprecated.'
+              schema:
+                type: string
+            Sunset:
+              description: '`Wed, 01 Nov 2028 00:00:00 GMT`, when `/v1/norms` may be withdrawn.'
+              schema:
+                type: string
+            Link:
+              description: '`</v2/norms>; rel="successor-version"`.'
+              schema:
+                type: string
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: The rules could not be queried (code QUERY_ERROR).
+          headers:
+            Deprecation:
+              description: '`@1793491200` (2026-11-01), when `/v1/norms` is deprecated.'
+              schema:
+                type: string
+            Sunset:
+              description: '`Wed, 01 Nov 2028 00:00:00 GMT`, when `/v1/norms` may be withdrawn.'
+              schema:
+                type: string
+            Link:
+              description: '`</v2/norms>; rel="successor-version"`.'
+              schema:
+                type: string
           content:
             application/problem+json:
               schema:

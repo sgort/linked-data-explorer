@@ -53,3 +53,27 @@ export const deprecationMiddleware = (successorPath: string) => {
     next();
   };
 };
+
+/**
+ * Scheduled Deprecation Middleware
+ *
+ * For a versioned route with a published end of life: a dated `Deprecation`
+ * (RFC 9745, `@<unix seconds>`), a `Sunset` (RFC 8594, HTTP-date) and the
+ * successor link (RFC 8288). The /api/* aliases keep the undated form above.
+ */
+export const scheduledDeprecationMiddleware = (opts: {
+  deprecatedAt: Date;
+  sunsetAt: Date;
+  successorPath: string;
+}) => {
+  const deprecation = `@${Math.floor(opts.deprecatedAt.getTime() / 1000)}`;
+  const sunset = opts.sunsetAt.toUTCString();
+  const link = `<${opts.successorPath}>; rel="successor-version"`;
+
+  return (req: Request, res: Response, next: NextFunction): void => {
+    res.set('Deprecation', deprecation);
+    res.set('Sunset', sunset);
+    res.set('Link', link);
+    next();
+  };
+};

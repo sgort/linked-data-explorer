@@ -202,6 +202,16 @@ describe('GET /v1/norms parameter validation', () => {
   });
 });
 
+describe('non-string rulesetid', () => {
+  test('rejects ?rulesetid[]=awb without querying', async () => {
+    const res = await request(makeApp()).get('/v1/norms?rulesetid[]=awb');
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_PARAM');
+    expect(mockGetAllNorms).not.toHaveBeenCalled();
+  });
+});
+
 describe('single-rulesetid ETag short circuit', () => {
   const withMetadata = {
     awb: [{ version: '1.0', publishedAt: '2026-01-01T00:00:00.000Z', title: 'Awb' }],
@@ -460,5 +470,50 @@ describe('/v1/norms matches its OpenAPI description', () => {
 
     expect(res.status).toBe(304);
     expectToMatchOperation(res, 'get', '/norms');
+  });
+});
+
+describe('/v1/norms deprecation', () => {
+  function expectDeprecated(res: request.Response) {
+    expect(res.headers['deprecation']).toBe('@1793491200');
+    expect(res.headers['sunset']).toBe('Wed, 01 Nov 2028 00:00:00 GMT');
+    expect(res.headers['link']).toBe('</v2/norms>; rel="successor-version"');
+  }
+
+  test('announces the successor on a 200', async () => {
+    const res = await request(makeApp()).get('/v1/norms');
+
+    expect(res.status).toBe(200);
+    expectDeprecated(res);
+  });
+
+  test('announces the successor on a 400', async () => {
+    const res = await request(makeApp()).get('/v1/norms?cprmv_version=9.9.9');
+
+    expect(res.status).toBe(400);
+    expectDeprecated(res);
+  });
+
+  test('announces the successor on a 500', async () => {
+    mockGetAllNorms.mockRejectedValue(new Error('SPARQL endpoint unreachable'));
+
+    const res = await request(makeApp()).get('/v1/norms');
+
+    expect(res.status).toBe(500);
+    expectDeprecated(res);
+  });
+
+  test('announces the successor on a 304', async () => {
+    mockGetDatasetVersions.mockResolvedValue({
+      awb: [{ version: '1.0', publishedAt: '2026-01-01T00:00:00.000Z', title: 'Awb' }],
+    });
+
+    const res = await request(makeApp())
+      .get('/v1/norms')
+      .query({ rulesetid: 'awb' })
+      .set('If-None-Match', ETAG);
+
+    expect(res.status).toBe(304);
+    expectDeprecated(res);
   });
 });

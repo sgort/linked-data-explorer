@@ -1,7 +1,8 @@
 // packages/backend/src/routes/openapi.routes.ts
 //
-// GET /v1/openapi.json: this API's OpenAPI description, at the standard
-// location /core/publish-openapi prescribes (#129).
+// GET /v1/openapi.json and GET /v2/openapi.json: this API's OpenAPI
+// descriptions, one per major version, at the standard location
+// /core/publish-openapi prescribes (#129).
 
 import { Request, Response, Router } from 'express';
 import cors from 'cors';

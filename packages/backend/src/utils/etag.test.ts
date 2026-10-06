@@ -1,4 +1,4 @@
-import { computeLastModified, computeNormsEtag, DatasetVersionInfo } from './etag';
+import { computeLastModified, computeNormsEtag, digestRules, DatasetVersionInfo } from './etag';
 
 describe('computeNormsEtag', () => {
   const dataset = (overrides: Partial<DatasetVersionInfo> = {}): DatasetVersionInfo => ({
@@ -124,5 +124,28 @@ describe('computeLastModified', () => {
       BWBR0044894: [{ version: null, publishedAt: '2024-01-01T00:00:00.000Z', title: null }],
     });
     expect(result).toBe(new Date('2026-06-01T00:00:00.000Z').toUTCString());
+  });
+});
+
+describe('digestRules', () => {
+  const rules = [
+    { rulesetid: 'BWBR0015703', rulesetid_index: 1, title: 'a' },
+    { rulesetid: 'BWBR0015703', rulesetid_index: 2, title: 'b' },
+  ];
+
+  test('is 16 hex characters and the same for the same input', () => {
+    expect(digestRules(rules)).toMatch(/^[0-9a-f]{16}$/);
+    expect(digestRules(rules)).toBe(digestRules(structuredClone(rules)));
+  });
+
+  test('changes when one field of one rule changes', () => {
+    const changed = structuredClone(rules);
+    changed[1].title = 'c';
+    expect(digestRules(changed)).not.toBe(digestRules(rules));
+  });
+
+  test('is stable for an empty array', () => {
+    expect(digestRules([])).toBe(digestRules([]));
+    expect(digestRules([])).toMatch(/^[0-9a-f]{16}$/);
   });
 });

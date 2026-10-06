@@ -1,13 +1,15 @@
 // packages/backend/src/routes/index.ts
-// Mounts v1 routes from the shared registry plus legacy /api/* deprecation
-// aliases. The v1 list is intentionally not maintained here — see registry.ts.
+// Mounts the /v1 and /v2 routes from the shared registry plus legacy /api/*
+// deprecation aliases. The route list is intentionally not maintained here —
+// see registry.ts.
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { routeRegistry } from './registry';
 
 // Legacy route imports — kept inline because the /api/* aliases are deprecated
 // and intentionally not part of the registry (the root response and HTML page
-// list v1 only, which is what we want consumers to migrate towards).
+// list only the registry's /v1 and /v2 routes, which is what we want consumers
+// to migrate towards).
 import healthRoutes from './health.routes';
 import dmnRoutes from './dmn.routes';
 import chainRoutes from './chain.routes';
@@ -30,7 +32,7 @@ const deprecationMiddleware = (successorPath: string) => {
   };
 };
 
-// Mount v1 routes from the registry. Express matches in registration order, so
+// Mount the /v1 and /v2 routes from the registry. Express matches in registration order, so
 // the registry doubles as a route precedence spec — see the IMPORTANT note at
 // the top of registry.ts.
 for (const { mount, router: routerImpl } of routeRegistry) {
