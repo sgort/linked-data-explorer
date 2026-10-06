@@ -1,5 +1,6 @@
 // Keeps openapi/openapi.yaml and the Express routes in step (#129). Every
-// operation the registry serves under /v1 must be described, and every
+// operation the registry serves under /v1 or /v2 must be described in that
+// version's document, and every
 // described operation must be served. A route added without a description
 // fails here, which is what closing the pending list (#137) bought.
 
@@ -17,17 +18,19 @@ jest.mock('@rdfjs/dataset', () => ({ __esModule: true, default: { dataset: () =>
 jest.mock('rdf-validate-shacl', () => ({ __esModule: true, default: class {} }));
 
 import { routeRegistry } from '../routes/registry';
-import { readOpenApiDocument } from './document';
+import { readOpenApiDocument, readOpenApiV2Document } from './document';
 import { listDocumentedOperations, listServedOperations } from './testing/routeOperations';
 
-const served = listServedOperations(routeRegistry);
-const documented = listDocumentedOperations(readOpenApiDocument());
+describe.each([
+  ['v1', readOpenApiDocument()],
+  ['v2', readOpenApiV2Document()],
+] as const)('OpenAPI coverage of the /%s routes', (major, document) => {
+  const served = listServedOperations(routeRegistry, major);
+  const documented = listDocumentedOperations(document);
 
-describe('OpenAPI coverage of the /v1 routes', () => {
   // The two rules below cross-check each other, but both pass if each side is
   // empty — a document that failed to parse and a registry that failed to load
-  // agree with each other perfectly. The pending list's ceiling used to be the
-  // only assertion about a count; this is what replaces it.
+  // agree with each other perfectly.
   test('both sides were actually loaded', () => {
     expect(served.length).toBeGreaterThan(0);
     expect(documented.length).toBeGreaterThan(0);

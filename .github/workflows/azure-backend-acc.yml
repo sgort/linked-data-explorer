@@ -209,16 +209,18 @@ jobs:
             exit 1
           fi
 
-          # OpenAPI description, served at /v1/openapi.json from
-          # <package root>/openapi/openapi.json (src/openapi/document.ts). npm run
-          # build generated it; fail here rather than ship an API whose
-          # documentation link answers 500 (#129).
+          # OpenAPI descriptions, served at /v1/openapi.json and /v2/openapi.json
+          # from <package root>/openapi/ (src/openapi/document.ts). npm run build
+          # generated them; fail here rather than ship an API whose documentation
+          # link answers 500 (#129).
           mkdir -p deploy/openapi
-          cp openapi/openapi.json deploy/openapi/
-          if [ ! -s deploy/openapi/openapi.json ]; then
-            echo "❌ Missing OpenAPI description: deploy/openapi/openapi.json"
-            exit 1
-          fi
+          for doc in openapi.json openapi.v2.json; do
+            cp "openapi/$doc" deploy/openapi/
+            if [ ! -s "deploy/openapi/$doc" ]; then
+              echo "❌ Missing OpenAPI description: deploy/openapi/$doc"
+              exit 1
+            fi
+          done
           
           # Verify structure
           echo "Deployment structure:"

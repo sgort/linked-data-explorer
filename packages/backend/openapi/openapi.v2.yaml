@@ -1,0 +1,117 @@
+# packages/backend/openapi/openapi.v2.yaml
+#
+# The OpenAPI description of the v2 routes of the Linked Data Explorer
+# backend, written by hand. Served as JSON at /v2/openapi.json. Built by
+# scripts/build-openapi.cjs exactly like openapi.yaml (info.version from
+# package.json; this file must not set it).
+#
+# A major version gets its own document because `servers` carry the major
+# version (/core/uri-version). Every /v2 route must appear here:
+# src/openapi/coverage.test.ts checks this document against the /v2 mounts.
+openapi: "3.1.0"
+info:
+  title: Linked Data Explorer Backend (v2)
+  description: >-
+    Version 2 of the Linked Data Explorer backend's routes. Only operations
+    whose contract changed incompatibly live here; everything else stays on
+    /v1 (see /v1/openapi.json).
+
+    Every 4xx/5xx response is `application/problem+json` (RFC 9457, schema
+    `Problem`): `status`, `title` and `detail` always; `code`, the
+    machine-readable identifier callers branch on, where the handler sets one.
+  contact:
+    name: Steven Gort
+    email: steven.gort@ictu.nl
+    url: https://iou-architectuur.open-regels.nl/
+servers:
+  - url: https://backend.linkeddata.open-regels.nl/v2
+    description: Production
+  - url: https://acc.backend.linkeddata.open-regels.nl/v2
+    description: Acceptance
+tags:
+  - name: Discovery
+    description: What the API and its data offer.
+paths:
+  /openapi.json:
+    get:
+      operationId: getOpenApiV2Description
+      tags: [Discovery]
+      summary: This OpenAPI description
+      description: >-
+        The published contract of the v2 routes (/core/publish-openapi).
+        Served with `Access-Control-Allow-Origin: *`, so any OpenAPI viewer
+        can load it.
+      responses:
+        "200":
+          description: The OpenAPI 3.1 document.
+          headers:
+            API-Version:
+              $ref: "#/components/headers/ApiVersion"
+            Access-Control-Allow-Origin:
+              description: Always `*`.
+              schema:
+                type: string
+                const: "*"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [openapi, info, paths]
+                properties:
+                  openapi:
+                    type: string
+                    const: "3.1.0"
+        "500":
+          description: The document could not be read.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+components:
+  headers:
+    ApiVersion:
+      description: Full release version of the API (/core/version-header).
+      required: true
+      schema:
+        type: string
+        examples:
+          - "2026.10.1"
+  schemas:
+    Problem:
+      type: object
+      description: >-
+        RFC 9457 problem details (https://www.rfc-editor.org/rfc/rfc9457),
+        returned as `application/problem+json` by every 4xx/5xx response.
+        `code` is kept as an extension member alongside the RFC's own fields:
+        the machine-readable identifier callers branch on.
+      required: [status, title, detail]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          description: >-
+            A URI identifying the problem type. `about:blank` (RFC 9457
+            §4.2.1) unless an operation's description says otherwise.
+          examples: [about:blank]
+        status:
+          type: integer
+          description: The HTTP status, repeated from the response line.
+        title:
+          type: string
+          description: >-
+            A short, human-readable summary of the kind of problem. Stable
+            for that kind.
+          examples: [Bad Request]
+        detail:
+          type: string
+          description: What went wrong with this request.
+        instance:
+          type: string
+          description: The request path that produced this response.
+          examples: [/v2/norms]
+        code:
+          type: string
+          description: >-
+            The machine-readable identifier this operation's description
+            names. Omitted by operations that never set one.
+          examples: [INVALID_PARAM]

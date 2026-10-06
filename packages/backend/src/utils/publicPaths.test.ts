@@ -4,7 +4,7 @@ import { isPublicPath } from './publicPaths';
 // no credentials) instead of the credentialed allowlist in index.ts. Everything it
 // returns true for is readable cross-origin by any site, so it must be exact.
 describe('isPublicPath', () => {
-  test.each(['/v1/ropa/public', '/v1/bundles/public', '/v1/openapi.json'])(
+  test.each(['/v1/ropa/public', '/v1/bundles/public', '/v1/openapi.json', '/v2/openapi.json'])(
     'treats the public mount %s as public',
     (p) => {
       expect(isPublicPath(p)).toBe(true);
@@ -18,9 +18,12 @@ describe('isPublicPath', () => {
     }
   );
 
-  test.each(['/v1/dmns', '/v1/assets/ropa', '/v1/ropa', '/'])('treats %s as not public', (p) => {
-    expect(isPublicPath(p)).toBe(false);
-  });
+  test.each(['/v1/dmns', '/v1/assets/ropa', '/v1/ropa', '/v2/norms', '/'])(
+    'treats %s as not public',
+    (p) => {
+      expect(isPublicPath(p)).toBe(false);
+    }
+  );
   // The defect: a bare prefix match hands wildcard CORS to any sibling route whose
   // name merely begins with "public". No such route exists today -- the mount table
   // in routes/registry.ts has none -- which is exactly why it would arrive unnoticed.

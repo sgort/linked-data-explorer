@@ -17,7 +17,7 @@
     "test:openapi-coverage": "jest --config jest.config.js src/openapi --coverage=false",
     "test:contract": "jest --config jest.config.js src/openapi src/routes --coverage=false",
     "lint": "eslint .",
-    "lint:openapi": "npm run build:openapi && spectral lint openapi/openapi.json --ruleset openapi/.spectral.yaml --fail-severity error",
+    "lint:openapi": "npm run build:openapi && spectral lint openapi/openapi.json openapi/openapi.v2.json --ruleset openapi/.spectral.yaml --fail-severity error",
     "typecheck": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.ts\"",
