@@ -18,6 +18,13 @@ describe('todayInAmsterdam', () => {
 });
 
 describe('secondsUntilAmsterdamMidnight', () => {
+  test('defaults to the current time', () => {
+    const seconds = secondsUntilAmsterdamMidnight();
+    expect(Number.isInteger(seconds)).toBe(true);
+    expect(seconds).toBeGreaterThanOrEqual(1);
+    expect(seconds).toBeLessThanOrEqual(86400);
+  });
+
   test.each([
     ['2026-08-15T21:00:00Z', 3600], // 23:00 summer time
     ['2026-08-15T21:59:30Z', 30], // 23:59:30 summer time

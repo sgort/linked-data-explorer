@@ -202,6 +202,16 @@ describe('GET /v1/norms parameter validation', () => {
   });
 });
 
+describe('non-string rulesetid', () => {
+  test('rejects ?rulesetid[]=awb without querying', async () => {
+    const res = await request(makeApp()).get('/v1/norms?rulesetid[]=awb');
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_PARAM');
+    expect(mockGetAllNorms).not.toHaveBeenCalled();
+  });
+});
+
 describe('single-rulesetid ETag short circuit', () => {
   const withMetadata = {
     awb: [{ version: '1.0', publishedAt: '2026-01-01T00:00:00.000Z', title: 'Awb' }],

@@ -24,12 +24,11 @@ const SUPPORTED_CPRMV_VERSION_SET = new Set(SUPPORTED_CPRMV_VERSIONS);
 export const CACHE_MAX_AGE_SECONDS = 3600;
 
 /** Sends 400 and returns true when `rulesetid` is given and invalid. */
-export function rejectInvalidRulesetid(
-  req: Request,
-  res: Response,
-  rulesetid: string | undefined
-): boolean {
-  if (rulesetid === undefined || RULESETID_PATTERN.test(rulesetid)) return false;
+export function rejectInvalidRulesetid(req: Request, res: Response, rulesetid: unknown): boolean {
+  // Not a string means repeated or bracketed (?rulesetid[]=x), which qs parses
+  // to an array that RegExp.test would coerce into a passing string.
+  if (rulesetid === undefined) return false;
+  if (typeof rulesetid === 'string' && RULESETID_PATTERN.test(rulesetid)) return false;
   sendProblem(res, req, {
     status: 400,
     code: 'INVALID_PARAM',
@@ -39,12 +38,9 @@ export function rejectInvalidRulesetid(
 }
 
 /** Sends 400 and returns true when `cprmv_version` is given and unsupported. */
-export function rejectInvalidCprmvVersion(
-  req: Request,
-  res: Response,
-  version: string | undefined
-): boolean {
-  if (version === undefined || SUPPORTED_CPRMV_VERSION_SET.has(version)) return false;
+export function rejectInvalidCprmvVersion(req: Request, res: Response, version: unknown): boolean {
+  if (version === undefined) return false;
+  if (typeof version === 'string' && SUPPORTED_CPRMV_VERSION_SET.has(version)) return false;
   sendProblem(res, req, {
     status: 400,
     code: 'INVALID_PARAM',

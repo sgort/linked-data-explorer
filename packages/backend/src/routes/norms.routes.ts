@@ -78,11 +78,12 @@ router.get('/', async (req: Request, res: Response) => {
 
   const requestedEndpoint = req.query.endpoint as string | undefined;
   if (refuseOptionalEndpoint(res, req, req.query.endpoint, 'endpoint')) return;
-  const rulesetid = req.query.rulesetid as string | undefined;
+  const rulesetidParam = req.query.rulesetid;
   const applicableDate = req.query.applicable_date as string | undefined;
-  const requestedCprmvVersion = req.query.cprmv_version as string | undefined;
+  const cprmvVersionParam = req.query.cprmv_version;
 
-  if (rejectInvalidRulesetid(req, res, rulesetid)) return;
+  if (rejectInvalidRulesetid(req, res, rulesetidParam)) return;
+  const rulesetid = rulesetidParam as string | undefined;
 
   if (applicableDate !== undefined && !APPLICABLE_DATE_PATTERN.test(applicableDate)) {
     sendProblem(res, req, {
@@ -93,7 +94,8 @@ router.get('/', async (req: Request, res: Response) => {
     return;
   }
 
-  if (rejectInvalidCprmvVersion(req, res, requestedCprmvVersion)) return;
+  if (rejectInvalidCprmvVersion(req, res, cprmvVersionParam)) return;
+  const requestedCprmvVersion = cprmvVersionParam as string | undefined;
 
   const cprmvVersion = requestedCprmvVersion ?? DEFAULT_CPRMV_VERSION;
   const filterSignature = {

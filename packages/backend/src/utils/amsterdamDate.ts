@@ -19,14 +19,15 @@ const timeParts = new Intl.DateTimeFormat('en-GB', {
   hourCycle: 'h23',
 });
 
-function part(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes): string {
-  return parts.find((p) => p.type === type)?.value ?? '';
+// Every requested field is always present in the formatter's output.
+function byType(parts: Intl.DateTimeFormatPart[]): Record<string, string> {
+  return Object.fromEntries(parts.map((p) => [p.type, p.value]));
 }
 
 /** The calendar date in Amsterdam at `now`, as YYYY-MM-DD. */
 export function todayInAmsterdam(now: Date = new Date()): string {
-  const parts = dateParts.formatToParts(now);
-  return `${part(parts, 'year')}-${part(parts, 'month')}-${part(parts, 'day')}`;
+  const p = byType(dateParts.formatToParts(now));
+  return `${p.year}-${p.month}-${p.day}`;
 }
 
 /**
@@ -38,11 +39,8 @@ export function todayInAmsterdam(now: Date = new Date()): string {
  * result is exact wherever it matters.
  */
 export function secondsUntilAmsterdamMidnight(now: Date = new Date()): number {
-  const parts = timeParts.formatToParts(now);
-  const elapsed =
-    Number(part(parts, 'hour')) * 3600 +
-    Number(part(parts, 'minute')) * 60 +
-    Number(part(parts, 'second'));
+  const p = byType(timeParts.formatToParts(now));
+  const elapsed = Number(p.hour) * 3600 + Number(p.minute) * 60 + Number(p.second);
   return 86400 - elapsed;
 }
 

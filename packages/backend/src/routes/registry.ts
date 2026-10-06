@@ -21,6 +21,7 @@ import ropaPublicRoutes from './ropa.public.routes';
 import assetsPublicRoutes from './assets.public.routes';
 import dsoRoutes from './dso.routes';
 import normsRoutes from './norms.routes';
+import normsV2Routes from './norms.v2.routes';
 import shaclRoutes from './shacl.routes';
 import openapiRoutes, { createOpenApiRouter } from './openapi.routes';
 import { readOpenApiV2Document } from '../openapi/document';
@@ -91,6 +92,12 @@ export const routeRegistry: ReadonlyArray<RouteDefinition> = [
     mount: '/v1/norms',
     router: normsRoutes,
     summary: 'cprmv:Rule paths and norms in publish format',
+    category: 'Discovery',
+  },
+  {
+    mount: '/v2/norms',
+    router: normsV2Routes,
+    summary: 'cprmv:Rule norms in force on a date (CPRMV 0.4.1 by default)',
     category: 'Discovery',
   },
   {
