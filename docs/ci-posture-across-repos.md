@@ -148,17 +148,17 @@ Each section is that repository's own posture, end to end. The thematic sections
 workflows. It is the simplest of the three and therefore the one where a missing
 gate is most visible.
 
-|                   |                                                                               |
-| ----------------- | ----------------------------------------------------------------------------- |
-| Deploy target     | Static Web Apps — `orange-beach` (`acc`), `white-sky` (`main`)                |
-| Node              | `.nvmrc` `24.20.0` for both deploys; the same literal in three more           |
-| Coverage floor    | 1 runner, `vite.config.mjs`, 80% branches per file                            |
-| Pinned references | 17, across `check-supply-chain`                                               |
-| `acc` ruleset     | `21728745` — 4 rules, checks `audit`, `scan`, `Build and deploy ACC`          |
-| `main` ruleset    | `24227117` — 4 rules, checks `audit`, `scan`                                  |
-| On a clock        | `dependency-audit.yml`, daily, both branches                                  |
-| At a release      | `sbom.yml` — strict on the release pull request, presence on a push to `main` |
-| Outside CI        | `check-mirror.sh`, `check-deps.sh`, `check-previews.sh`                       |
+|                   |                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| Deploy target     | Static Web Apps — `orange-beach` (`acc`), `white-sky` (`main`)                          |
+| Node              | `.nvmrc` `24.20.0` for both deploys; the same literal in three more                     |
+| Coverage floor    | 1 runner, `vite.config.mjs`, 80% branches per file                                      |
+| Pinned references | 19, across `check-supply-chain`                                                         |
+| `acc` ruleset     | `21728745` — 4 rules, checks `audit`, `scan`, `Build and deploy ACC`, `lockfile-review` |
+| `main` ruleset    | `24227117` — 4 rules, checks `audit`, `scan`                                            |
+| On a clock        | `dependency-audit.yml`, daily, both branches                                            |
+| At a release      | `sbom.yml` — strict on the release pull request, presence on a push to `main`           |
+| Outside CI        | `check-mirror.sh`, `check-deps.sh`, `check-previews.sh`                                 |
 
 **"One Node version" is one version, not one file.** The two Static Web Apps
 workflows read `.nvmrc`; `zizmor.yml`, `dependency-audit.yml` and `sbom.yml`
@@ -200,18 +200,18 @@ to absorb a slip — a third's margin is borrowed from other test files (§3).
 and two Static Web Apps.** Eleven workflows, the most of the three until RONL
 Business API overtook it.
 
-|                     |                                                                                                                   |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Deploy target       | App Service (backend) + Static Web Apps (frontend, ROPA site)                                                     |
-| App Service runtime | `NODE\|24-lts` both tiers, read from Azure 27 September 2026 and again on 30 September                            |
-| Node                | `.nvmrc` `24.21.0` for five workflows; the same `24.21.0` literal in three more                                   |
-| Coverage floor      | 2 runners — `packages/backend/jest.config.js`, `packages/frontend/vite.config.ts`                                 |
-| Pinned references   | 31                                                                                                                |
-| `acc` ruleset       | `21794157` — 4 rules, checks `audit`, `scan`, `deploy`, `Build and Deploy Frontend`, `Build and Deploy ROPA Site` |
-| `main` ruleset      | `22630654` — 4 rules, checks `audit`, `scan`                                                                      |
-| On a clock          | `dependency-audit.yml`, daily, both branches                                                                      |
-| At a release        | `sbom.yml` — strict on the release pull request, presence on a push to `main`                                     |
-| Outside CI          | `check-mirror.sh`, `check-deps.sh` — **no `check-previews.sh`**                                                   |
+|                     |                                                                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Deploy target       | App Service (backend) + Static Web Apps (frontend, ROPA site)                                                                        |
+| App Service runtime | `NODE\|24-lts` both tiers, read from Azure 27 September 2026 and again on 30 September                                               |
+| Node                | `.nvmrc` `24.21.0` for five workflows; the same `24.21.0` literal in three more                                                      |
+| Coverage floor      | 2 runners — `packages/backend/jest.config.js`, `packages/frontend/vite.config.ts`                                                    |
+| Pinned references   | 33                                                                                                                                   |
+| `acc` ruleset       | `21794157` — 4 rules, checks `audit`, `scan`, `deploy`, `Build and Deploy Frontend`, `Build and Deploy ROPA Site`, `lockfile-review` |
+| `main` ruleset      | `22630654` — 4 rules, checks `audit`, `scan`                                                                                         |
+| On a clock          | `dependency-audit.yml`, daily, both branches                                                                                         |
+| At a release        | `sbom.yml` — strict on the release pull request, presence on a push to `main`                                                        |
+| Outside CI          | `check-mirror.sh`, `check-deps.sh` — **no `check-previews.sh`**                                                                      |
 
 **Its Node version was two until 30 September.** Five workflows read `.nvmrc`
 (`24.21.0`) and `zizmor.yml` carries the same number as a literal, but
@@ -263,8 +263,8 @@ test runners, 2,300 backend tests.
 | App Service runtime | `NODE\|22-lts` both tiers, read from Azure 27 September 2026 and again on 30 September                        |
 | Node                | `.nvmrc` `22.23.2` for eight deploys; `24.21.0` literal in three tooling workflows                            |
 | Coverage floor      | 5 runners — backend, frontend, public-site, pa-demo, pa-cockpit; enforced at 80%, every file ≥ 85% since #295 |
-| Pinned references   | 39                                                                                                            |
-| `acc` ruleset       | `21741898` — 4 rules, checks `audit`, `scan`, `build`, and three ACC deploy jobs                              |
+| Pinned references   | 41                                                                                                            |
+| `acc` ruleset       | `21741898` — 4 rules, checks `audit`, `scan`, `build`, three ACC deploy jobs, `lockfile-review`               |
 | `main` ruleset      | `23019967` — 4 rules, checks `audit`, `scan`                                                                  |
 | At a release        | `sbom.yml` — strict on the release pull request, presence on a push to `main`                                 |
 | Outside CI          | `check-mirror.sh`, `check-deps.sh`, `check-previews.sh`                                                       |
@@ -2361,8 +2361,12 @@ packages, licence changes, licences off the allow-list, new install scripts —
 as a comment, and fails on a non-npmjs origin or a missing `integrity`
 ([#248](https://github.com/sgort/linked-data-explorer/issues/248)). A second
 job holds the write token for the comment and runs no repository code. In
-Linked Data Explorer first; ttl-editor and RONL Business API follow, and each
-`acc` ruleset requires the check once it has reported there.
+Linked Data Explorer first ([#264](https://github.com/sgort/linked-data-explorer/pull/264)), then
+ttl-editor ([ttl-editor#199](https://github.com/sgort/ttl-editor/pull/199)) and RONL Business API
+([ronl-business-api#320](https://github.com/sgort/ronl-business-api/pull/320)); each `acc` ruleset
+requires `lockfile-review` since its repository's merge. The new job adds one `actions/checkout`
+and one `actions/setup-node` per repository, so the pinned-reference counts in the three tables
+rose by two: 33, 19 and 41.
 
 ### What changed on 5 October 2026
 
