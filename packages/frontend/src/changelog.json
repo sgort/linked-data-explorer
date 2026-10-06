@@ -2,6 +2,168 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.10.1",
+      "status": "Released",
+      "date": "6 oct 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "517cd71",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "/v2/norms: an ETag that sees corrections, and a Last-Modified that is never in the future",
+          "details": [
+            "On CPRMV 0.4.1 the per-ruleset metadata carries only cprmv:validFrom, so a correction published inside the running period (new rows, higher rulesetid_index) changed neither the ETag nor Last-Modified, and a revalidating client would get 304 indefinitely. The v2 ETag now also covers a digest of the selected rules' content (digestRules in utils/etag.ts); v1 is unchanged.",
+            "A Last-Modified that would lie in the future (a period not yet started) is omitted instead of sent. When If-None-Match is present, /v2/norms ignores If-Modified-Since (RFC 9110 §13.2.2), which Express's fresh does not do by itself, so a matching ETag always answers 304.",
+            "Also from the final review: the v1 route documentation restored after the refactor; Deprecation, Sunset and Link declared as response headers in the v1 OpenAPI description; the post-deploy smoke tests check /v2/openapi.json's version too; build-openapi names the file that failed; stale comments updated."
+          ]
+        },
+        {
+          "sha": "766afda",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "GET /v2/norms: the norms in force on a date",
+          "details": [
+            "Users had to name a CPRMV version to get current data (the v1 default, 0.3.0, holds older periods), and applicable_date matched a period's start date exactly, so 15-08-2026 returned nothing and no single date returned the mix of norms in force. /v2/norms answers both: valid_on (default today in Europe/Amsterdam) returns, per ruleset, the rules of the latest period starting on or before that date, in CPRMV 0.4.1 unless another version is requested.",
+            "The envelope adds valid_on and narrows dataset_versions to the period in force. valid_on must be a real calendar date; applicable_date on v2 is a 400 that points to valid_on; array- or object-shaped query parameters are a 400 on v1 and v2 alike. Without valid_on, max-age never reaches past the next Amsterdam midnight."
+          ]
+        },
+        {
+          "sha": "c5165d6",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "A second OpenAPI document for the v2 routes, at /v2/openapi.json",
+          "details": [
+            "The v1 document's servers carry /v1, so v2 gets openapi/openapi.v2.yaml, built to openapi.v2.json and served at /v2/openapi.json with the same open CORS. The coverage gate runs once per major version, lint:openapi lints both documents, and both deploy workflows ship and check the v2 document."
+          ]
+        },
+        {
+          "sha": "686e72e",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "/v1/norms is deprecated: Deprecation, Sunset and successor link",
+          "details": [
+            "Every /v1/norms response, errors included, now carries Deprecation: @1793491200 (1 November 2026, RFC 9745), Sunset: Wed, 01 Nov 2028 00:00:00 GMT (RFC 8594) and Link: </v2/norms>; rel=\"successor-version\". The response bodies are unchanged; the OpenAPI operation is marked deprecated."
+          ]
+        },
+        {
+          "sha": "c08f442",
+          "author": "Steven Gort",
+          "type": "refactor",
+          "subject": "Norms routes share validation, cache headers and the envelope",
+          "details": [
+            "routes/norms.shared.ts holds what /v1/norms and /v2/norms agree on: rulesetid and cprmv_version validation, the complete-metadata check, ETag/Last-Modified/Cache-Control, and the snake_case envelope. v1 moved onto it with no change in behaviour; its tests pass unedited."
+          ]
+        },
+        {
+          "sha": "5e44346",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Norms service selects the norms in force on a date",
+          "details": [
+            "selectInForce keeps, per ruleset, every rule of the latest period starting on or before the date; narrowDatasetVersions keeps the metadata of that period, falling back to version-less records; getNormsInForce runs the v1 rules query without a date filter and selects in code. DEFAULT_CPRMV_VERSION_V2 is pinned to 0.4.1."
+          ]
+        },
+        {
+          "sha": "8bc1ae2",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Amsterdam calendar helpers",
+          "details": [
+            "todayInAmsterdam, secondsUntilAmsterdamMidnight and isCalendarDate (which rejects 2026-02-30) in utils/amsterdamDate.ts, tested across the summer- and winter-time day boundaries."
+          ]
+        },
+        {
+          "sha": "7e93d20",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "lockfile-review: findings from the final review",
+          "details": [
+            "Unusable input (conflict markers, lockfileVersion 2, an unreadable config) now writes a marked \"could not run\" report, so a red check never sits beside an earlier \"No blocking findings\" comment; a first lockfile compares against an empty one instead of failing with exit 128, and the comment job runs only when a report exists.",
+            "Downgrades are judged within a version line (major; minor for 0.x). A cut comment closes the <details> it falls in; registry text can no longer leave its code span; the comment job uses !cancelled(), so a superseded run cannot overwrite a newer report."
+          ]
+        },
+        {
+          "sha": "970d95a",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Lock file maintenance",
+          "details": [
+            "Renovate's lockfile refresh (#256): transitive updates within the existing ranges, including the bpmn-js / moddle XML layer. The lockfile-review report showed no blocking findings."
+          ]
+        },
+        {
+          "sha": "5a33a32",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "lockfile-review on dependency pull requests",
+          "details": [
+            "Two jobs in zizmor.yml. lockfile-review runs on every pull request with a read-only token, compares the base and head lockfiles, writes the report to the job summary and fails only on a non-npmjs origin or a missing integrity; being always present, it can be required on acc. lockfile-review-comment holds the write token, checks out nothing, and keeps one comment up to date.",
+            "lockfile-review.json holds the licence allow-list. The spec's downgrade and licence-change rules read install paths, after replays of #230 and #251 showed version sets mistake removed copies and hoisting for downgrades."
+          ]
+        },
+        {
+          "sha": "2527d2e",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "lockfile-diff: what a package-lock.json change contains",
+          "details": [
+            "scripts/lockfile-diff.mjs compares two v3 lockfiles as data and renders a Markdown report: packages added, removed, updated and downgraded, licence changes, new packages off the allow-list, new install scripts. Exit 1 only on an origin outside registry.npmjs.org or a missing integrity, exit 2 on unusable input. Node built-ins only; never installs."
+          ]
+        },
+        {
+          "sha": "eebf457",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Kapvergunning: Dutch runtime texts; posture doc entry for 5 October",
+          "details": [
+            "The scripts in TreeFellingPermitSubProcess and AwbShellProcess set finalMessage and replacementInfo in English, which the Dutch notify form and beschikking then showed; both are Dutch now, in public/examples and e2e-fixtures alike. example_tree_felling goes to 11 and example_awb_process to 8, so seeded browsers refresh.",
+            "ci-posture-across-repos.md gains the 5 October archive entry, and its \"At a release\" rows say what sbom.yml checks where."
+          ]
+        },
+        {
+          "sha": "61ad418",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "check-rip-bpmn fingerprints the declared-phase models RONL keeps as fixtures",
+          "details": [
+            "ronl-business-api copies GedelegeerdBesluitProcess and the HR-capacity ManagementCapacityClaimProcess byte for byte as parser fixtures. check-rip-bpmn now fingerprints them alongside the twelve RIP phase models and fails by name when one moves; the RIP hashes are unchanged."
+          ]
+        },
+        {
+          "sha": "648b40b",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Kapvergunning bundle in Dutch; the English HR-capacity variant removed",
+          "details": [
+            "The start, review and notify forms are Dutch and tagged nl, so the bundle no longer trips its own \"mixes languages\" warning; keys and option values are unchanged. Form versions go to 5 and the beschikking's to 2, so browsers refresh.",
+            "The English HR-capacity variant, never seeded, served or tested, is removed; the Dutch files move up out of nl/ and the Modeler and Form Editor fetch paths follow."
+          ]
+        },
+        {
+          "sha": "1f1a1c0",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Modeler: deployment form binding, signatureRef, versioned template seeding, one deploy-bundle module",
+          "details": [
+            "FormTemplateSelector writes camunda:formRefBinding=\"deployment\", as every seeded BPMN does; \"latest\" brought back ENGINE-03109 once a form key was deployed under several tenants. The Modeler reads signatureRef on user tasks as a property, not an unknown attribute.",
+            "DocumentComposer seeds its default templates by version, so bumping a template refreshes it in browsers that already hold it. Both deploy handlers in BpmnCanvas now share utils/deployBundle.ts, with its own tests."
+          ]
+        },
+        {
+          "sha": "a424e95",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "CI runs the fixture tests and check-rip-bpmn; release pull requests check the SBOM",
+          "details": [
+            "The backend workflow's paths now include examples/, e2e-fixtures/ and public/examples/, so the bundle, parity and fixture suites run on the files they check. check-rip-bpmn runs in the required audit job, not only in the pre-push hook.",
+            "npm run sbom:check verifies the release SBOM against the lockfile; sbom.yml runs it strictly on the release pull request. engines.node is raised to >=24.21.0, matching .nvmrc and the App Services."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.10.0",
       "status": "Released",
       "date": "3 oct 2026",
