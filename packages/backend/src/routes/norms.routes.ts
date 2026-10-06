@@ -19,10 +19,26 @@ import {
   setNormsCacheHeaders,
   toNormsData,
 } from './norms.shared';
+import { scheduledDeprecationMiddleware } from '../middleware/version.middleware';
 import logger from '../utils/logger';
 import packageJson from '../../package.json';
 
 const router = Router();
+
+// /v1/norms is succeeded by /v2/norms (norms in force on a date, CPRMV 0.4.1
+// by default). The stability contract keeps v1 for at least 24 months after
+// the deprecation date; these two dates are the ones it publishes.
+export const NORMS_V1_DEPRECATED_AT = new Date('2026-11-01T00:00:00Z');
+export const NORMS_V1_SUNSET_AT = new Date('2028-11-01T00:00:00Z');
+
+// Mounted before the handler so every response carries it: 200, 304, 4xx, 5xx.
+router.use(
+  scheduledDeprecationMiddleware({
+    deprecatedAt: NORMS_V1_DEPRECATED_AT,
+    sunsetAt: NORMS_V1_SUNSET_AT,
+    successorPath: '/v2/norms',
+  })
+);
 
 // v1's applicable_date is a shape check only: an exact match on a period's
 // start date. /v2/norms replaces it with valid_on.

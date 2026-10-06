@@ -1520,6 +1520,7 @@ paths:
   /norms:
     get:
       operationId: listNorms
+      deprecated: true
       tags: [Discovery]
       summary: Published rules (norms) with their dataset versions
       description: >-
@@ -1529,6 +1530,11 @@ paths:
         `ETag` and `Cache-Control: public, max-age=3600`, and a matching
         conditional request is answered 304; otherwise `Cache-Control: no-cache`.
         The `endpoint` override is checked before use (#142).
+
+        Deprecated in favour of `/v2/norms`, which returns the norms in force
+        on a date and defaults to CPRMV 0.4.1. Every response carries
+        `Deprecation: @1793491200` (2026-11-01), `Sunset: Wed, 01 Nov 2028
+        00:00:00 GMT` and `Link: </v2/norms>; rel="successor-version"`.
       parameters:
         - name: rulesetid
           in: query
