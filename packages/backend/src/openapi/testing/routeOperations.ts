@@ -1,8 +1,9 @@
 // packages/backend/src/openapi/testing/routeOperations.ts
 //
-// The operations Express actually serves under one major version (/v1 or /v2), and the operations the
-// OpenAPI document describes, in one notation ("GET /dmns/{identifier}/xml"),
-// so src/openapi/coverage.test.ts can compare them (#129).
+// The operations Express actually serves under one major version (/v1 or /v2),
+// and the operations the OpenAPI document describes, in one notation
+// ("GET /dmns/{identifier}/xml"), so src/openapi/coverage.test.ts can compare
+// them (#129).
 //
 // Anything the walk cannot read reliably (a nested router, router.all, a
 // regular-expression path) throws. Skipping it would hide an operation from the

@@ -59,14 +59,24 @@ const APPLICABLE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  *
  * HTTP cache headers (set only when every rulesetid in the response has a
  * dataset_versions entry): ETag, Last-Modified, Cache-Control public,
- * max-age=3600. If-None-Match / If-Modified-Since → 304. Otherwise
- * Cache-Control: no-cache.
+ * max-age=3600. If-None-Match / If-Modified-Since → 304.
+ *
+ * When any rulesetid in the response is missing dataset metadata,
+ * Cache-Control falls back to `no-cache` and ETag/Last-Modified are omitted.
+ * Safe-by-default during rollout: caching kicks in progressively as
+ * version records are published.
  *
  * Query parameters (all optional, may be combined):
  *   endpoint          SPARQL endpoint URL override
  *   rulesetid         exact-match filter, /^[A-Za-z0-9_-]+$/ or 400
  *   applicable_date   YYYY-MM-DD or 400; exact match on a period's start date
- *   cprmv_version     one of SUPPORTED_CPRMV_VERSIONS or 400; default 0.3.0
+ *   cprmv_version     CPRMV vocabulary version selecting the namespace to
+ *                     query and emit; one of SUPPORTED_CPRMV_VERSIONS (0.3.0,
+ *                     0.3.2, 0.4.1) or 400. Defaults to DEFAULT_CPRMV_VERSION.
+ *                     All three carry flat cprmv:Rule resources and differ only
+ *                     in namespace for the rules query; 0.4.1's per-ruleset
+ *                     metadata comes from cprmv:RuleSet (validFrom) instead of
+ *                     the 0.3.x cprmv:Dataset.
  *
  * Compliance notes:
  * - API-05: noun-based resource name "norms"
@@ -161,5 +171,8 @@ router.get('/', async (req: Request, res: Response) => {
     });
   }
 });
+
+// getCprmvVersion is exported by the service (norms.service.ts) for potential
+// reuse in other routes — e.g. /v1/health could surface it.
 
 export default router;

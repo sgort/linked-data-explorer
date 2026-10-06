@@ -16,6 +16,7 @@ jest.mock('../utils/etag', () => ({
   __esModule: true,
   computeNormsEtag: jest.fn(),
   computeLastModified: jest.fn(),
+  digestRules: jest.fn(),
 }));
 // A fixed "today" and a fixed distance to midnight; isCalendarDate stays real.
 jest.mock('../utils/amsterdamDate', () => ({
@@ -26,7 +27,7 @@ jest.mock('../utils/amsterdamDate', () => ({
 }));
 
 import { getNormsInForce } from '../services/norms.service';
-import { computeLastModified, computeNormsEtag } from '../utils/etag';
+import { computeLastModified, computeNormsEtag, digestRules } from '../utils/etag';
 import { secondsUntilAmsterdamMidnight } from '../utils/amsterdamDate';
 import normsV2Routes from './norms.v2.routes';
 import packageJson from '../../package.json';
@@ -37,6 +38,7 @@ import { readOpenApiV2Document } from '../openapi/document';
 const mockGetNormsInForce = getNormsInForce as jest.Mock;
 const mockEtag = computeNormsEtag as jest.Mock;
 const mockLastModified = computeLastModified as jest.Mock;
+const mockDigest = digestRules as jest.Mock;
 const mockSecondsUntilMidnight = secondsUntilAmsterdamMidnight as jest.Mock;
 
 const ETAG = '"a1b2c3d4"';
@@ -75,6 +77,7 @@ beforeEach(() => {
   mockGetNormsInForce.mockReset().mockResolvedValue(inForce());
   mockEtag.mockReset().mockReturnValue(ETAG);
   mockLastModified.mockReset().mockReturnValue(LAST_MODIFIED);
+  mockDigest.mockReset().mockReturnValue('d1g3st');
   mockSecondsUntilMidnight.mockReset().mockReturnValue(86400);
 });
 
@@ -190,9 +193,10 @@ describe('GET /v2/norms parameters', () => {
 });
 
 describe('GET /v2/norms caching', () => {
-  test('signs the ETag with the resolved date and the API version', async () => {
+  test('signs the ETag with the dataset metadata, the resolved date, the rules and the API generation (api: v2)', async () => {
     await request(makeApp()).get('/v2/norms');
 
+    expect(mockDigest).toHaveBeenCalledWith(inForce().rules);
     expect(mockEtag).toHaveBeenCalledWith({
       datasetVersions: inForce().metadata.datasetVersions,
       filterSignature: {
@@ -201,8 +205,79 @@ describe('GET /v2/norms caching', () => {
         rulesetid: undefined,
         valid_on: '2026-08-15',
         cprmv_version: '0.4.1',
+        rules_digest: 'd1g3st',
       },
     });
+  });
+
+  test('signs a different rules digest when the rules differ but the metadata does not', async () => {
+    const corrected = inForce();
+    corrected.rules = [
+      ...corrected.rules,
+      { rulesetid: 'BWBR0015703', applicable_date: '2026-07-01' },
+    ];
+    mockGetNormsInForce.mockResolvedValueOnce(inForce()).mockResolvedValueOnce(corrected);
+    mockDigest.mockReturnValueOnce('first').mockReturnValueOnce('second');
+
+    await request(makeApp()).get('/v2/norms');
+    await request(makeApp()).get('/v2/norms');
+
+    expect(mockDigest).toHaveBeenNthCalledWith(1, inForce().rules);
+    expect(mockDigest).toHaveBeenNthCalledWith(2, corrected.rules);
+    const signatures = mockEtag.mock.calls.map((c) => c[0].filterSignature.rules_digest);
+    expect(signatures).toEqual(['first', 'second']);
+  });
+
+  test('omits a Last-Modified that would be later than the response', async () => {
+    mockLastModified.mockReturnValue(new Date(Date.now() + 30 * 86400_000).toUTCString());
+
+    const res = await request(makeApp()).get('/v2/norms');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['last-modified']).toBeUndefined();
+    expect(res.headers['etag']).toBe(ETAG);
+  });
+
+  test('answers 304 to If-None-Match plus If-Modified-Since when Last-Modified is in the future', async () => {
+    mockLastModified.mockReturnValue(new Date(Date.now() + 30 * 86400_000).toUTCString());
+
+    const res = await request(makeApp())
+      .get('/v2/norms')
+      .set('If-None-Match', ETAG)
+      .set('If-Modified-Since', new Date(Date.now() - 60_000).toUTCString());
+
+    expect(res.status).toBe(304);
+  });
+
+  test('lets a matching If-None-Match win over an older If-Modified-Since', async () => {
+    const res = await request(makeApp())
+      .get('/v2/norms')
+      .set('If-None-Match', ETAG)
+      .set('If-Modified-Since', 'Wed, 01 Jan 2020 00:00:00 GMT');
+
+    expect(res.status).toBe(304);
+  });
+
+  test('answers 304 to If-Modified-Since alone when Last-Modified is not newer', async () => {
+    const res = await request(makeApp())
+      .get('/v2/norms')
+      .set('If-Modified-Since', 'Thu, 02 Jul 2026 00:00:00 GMT');
+
+    expect(res.status).toBe(304);
+  });
+
+  test('answers 200 to an If-Modified-Since older than Last-Modified, without If-None-Match', async () => {
+    const res = await request(makeApp())
+      .get('/v2/norms')
+      .set('If-Modified-Since', 'Wed, 01 Jan 2020 00:00:00 GMT');
+
+    expect(res.status).toBe(200);
+  });
+
+  test('passes a past Last-Modified through unchanged', async () => {
+    const res = await request(makeApp()).get('/v2/norms');
+
+    expect(res.headers['last-modified']).toBe(LAST_MODIFIED);
   });
 
   test('caps max-age at the next Amsterdam midnight when valid_on is omitted', async () => {
@@ -239,8 +314,9 @@ describe('GET /v2/norms caching', () => {
     const res = await request(makeApp()).get('/v2/norms');
 
     expect(res.headers['cache-control']).toBe('no-cache');
-    // Express adds its own weak ETag to any res.json body; ours is the one signed above.
-    expect(res.headers['etag']).not.toBe(ETAG);
+    expect(mockEtag).not.toHaveBeenCalled();
+    // Express adds its own weak ETag to any res.json body; ours is never signed.
+    if (res.headers['etag'] !== undefined) expect(res.headers['etag']).toMatch(/^W\//);
   });
 });
 

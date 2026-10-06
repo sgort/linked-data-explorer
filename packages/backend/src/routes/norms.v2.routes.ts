@@ -1,6 +1,6 @@
 // GET /v2/norms: the norms in force on a date. Succeeds /v1/norms, whose
-// default CPRMV version (0.3.0) holds only superseded periods and whose
-// applicable_date matched a period's start date exactly.
+// default CPRMV version (0.3.0) is one the editor no longer publishes new
+// periods in and whose applicable_date matched a period's start date exactly.
 
 import { Router, Request, Response } from 'express';
 import { DEFAULT_CPRMV_VERSION_V2, getNormsInForce } from '../services/norms.service';
@@ -21,6 +21,7 @@ import {
   setNormsCacheHeaders,
   toNormsData,
 } from './norms.shared';
+import { digestRules } from '../utils/etag';
 import logger from '../utils/logger';
 import packageJson from '../../package.json';
 
@@ -105,9 +106,26 @@ router.get('/', async (req: Request, res: Response) => {
           rulesetid,
           valid_on: validOn,
           cprmv_version: cprmvVersion,
+          rules_digest: digestRules(result.rules),
         },
         maxAge
       );
+      // RFC 9110 8.8.2.1: Last-Modified must not be later than the response.
+      // A future-dated period (valid_on ahead of its start) is omitted rather
+      // than rewritten to `now`, which would change on every request and keep
+      // clients that send If-None-Match and If-Modified-Since from a 304.
+      const lastModified = res.get('Last-Modified');
+      if (lastModified && new Date(lastModified).getTime() > now.getTime()) {
+        res.removeHeader('Last-Modified');
+      }
+      // RFC 9110 13.2.2: a recipient ignores If-Modified-Since when
+      // If-None-Match is present. fresh (Express 4, 0.5.2) does not implement
+      // that precedence, and it treats If-Modified-Since as stale when the
+      // response has no Last-Modified, which is the case for a future period.
+      // Dropping it lets the ETag decide alone.
+      if (req.headers['if-none-match'] !== undefined) {
+        delete req.headers['if-modified-since'];
+      }
       if (req.fresh) {
         return res.status(304).end();
       }

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // packages/backend/scripts/build-openapi.cjs
 //
-// Builds openapi/openapi.json and openapi/openapi.v2.json from the hand-written YAML
-// beside them (#129).
+// Builds openapi/openapi.json and openapi/openapi.v2.json from the hand-written
+// YAML beside them (#129).
 //
 // info.version is taken from package.json here, never written in the YAML, so
 // the published document and the API-Version header cannot disagree.
@@ -32,13 +32,13 @@ const DOCUMENTS = [
 const SOURCE = DOCUMENTS[0].source;
 const TARGET = DOCUMENTS[0].target;
 
-function buildOpenApiDocument(source, version) {
+function buildOpenApiDocument(source, version, name = 'openapi.yaml') {
   const document = YAML.parse(source);
   if (typeof document !== 'object' || document === null || Array.isArray(document)) {
-    throw new Error('openapi.yaml does not contain an object');
+    throw new Error(`${name} does not contain an object`);
   }
   if (document.info && Object.prototype.hasOwnProperty.call(document.info, 'version')) {
-    throw new Error('openapi.yaml must not set info.version; it is taken from package.json');
+    throw new Error(`${name} must not set info.version; it is taken from package.json`);
   }
   return { ...document, info: { ...document.info, version } };
 }
@@ -47,7 +47,11 @@ function buildOpenApiDocument(source, version) {
 function buildOpenApi() {
   const { version } = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8'));
   return DOCUMENTS.map(({ source, target }) => {
-    const document = buildOpenApiDocument(fs.readFileSync(source, 'utf8'), version);
+    const document = buildOpenApiDocument(
+      fs.readFileSync(source, 'utf8'),
+      version,
+      path.basename(source)
+    );
     // Write to a temporary file and rename it into place, so a concurrent reader
     // (an overlapping Jest run, or the dev server's first request) never sees
     // half-written JSON.

@@ -494,6 +494,15 @@ describe('/v1/norms deprecation', () => {
     expectDeprecated(res);
   });
 
+  test('announces the successor on a 500', async () => {
+    mockGetAllNorms.mockRejectedValue(new Error('SPARQL endpoint unreachable'));
+
+    const res = await request(makeApp()).get('/v1/norms');
+
+    expect(res.status).toBe(500);
+    expectDeprecated(res);
+  });
+
   test('announces the successor on a 304', async () => {
     mockGetDatasetVersions.mockResolvedValue({
       awb: [{ version: '1.0', publishedAt: '2026-01-01T00:00:00.000Z', title: 'Awb' }],

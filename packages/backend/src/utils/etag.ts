@@ -105,3 +105,13 @@ export function computeLastModified(
   // Node's Date.prototype.toUTCString() emits exactly the RFC 7231 format.
   return new Date(latest).toUTCString();
 }
+
+/**
+ * Content digest of a rules array: sha256 over its JSON serialisation, first
+ * 16 hex characters. The v2 ETag signs it so that a correction inside a
+ * running period (new rows, higher rulesetid_index) changes the validator even
+ * when the dataset metadata does not.
+ */
+export function digestRules(rules: unknown[]): string {
+  return crypto.createHash('sha256').update(JSON.stringify(rules)).digest('hex').slice(0, 16);
+}

@@ -62,7 +62,7 @@ paths:
                     type: string
                     const: "3.1.0"
         "500":
-          description: The document could not be read.
+          description: The document could not be read (code OPENAPI_UNAVAILABLE).
           content:
             application/problem+json:
               schema:
@@ -80,9 +80,14 @@ paths:
         the records of the selected periods. When every ruleset in the
         result has dataset metadata, the response carries `ETag` and
         `Cache-Control: public`, and a matching conditional request is
-        answered 304; otherwise `Cache-Control: no-cache`. Without
-        `valid_on`, `max-age` never reaches past the next midnight in
-        Europe/Amsterdam. Succeeds `/v1/norms`.
+        answered 304; otherwise `Cache-Control: no-cache`. The `ETag`
+        covers the content of the selected rules, the resolved `valid_on`
+        and the dataset metadata, so a correction published within a period
+        changes it. `Last-Modified` is omitted when it would be later than the
+        response (a period not yet started), so revalidate with `If-None-Match`;
+        when it is sent, `If-Modified-Since` is ignored (RFC 9110 §13.2.2).
+        Without `valid_on`, `max-age` never reaches past the next midnight
+        in Europe/Amsterdam. Succeeds `/v1/norms`.
       parameters:
         - name: valid_on
           in: query
@@ -125,11 +130,17 @@ paths:
             API-Version:
               $ref: "#/components/headers/ApiVersion"
             ETag:
-              description: Present when every ruleset in the result has dataset metadata.
+              description: >-
+                Present when every ruleset in the result has dataset metadata.
+                Covers the selected rules' content, the resolved `valid_on`
+                and the dataset metadata, so a correction within a period
+                changes it.
               schema:
                 type: string
             Last-Modified:
-              description: Present with `ETag` when the latest publication date is known.
+              description: >-
+                Present with `ETag` when the latest publication date is known
+                and not later than the response.
               schema:
                 type: string
             Cache-Control:
@@ -159,6 +170,12 @@ paths:
               $ref: "#/components/headers/ApiVersion"
             ETag:
               description: The unchanged entity tag.
+              schema:
+                type: string
+            Last-Modified:
+              description: >-
+                Present with `ETag` when the latest publication date is known
+                and not later than the response.
               schema:
                 type: string
             Cache-Control:

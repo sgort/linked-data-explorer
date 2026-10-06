@@ -1,8 +1,8 @@
-// Keeps openapi/openapi.yaml and the Express routes in step (#129). Every
-// operation the registry serves under /v1 or /v2 must be described in that
-// version's document, and every
-// described operation must be served. A route added without a description
-// fails here, which is what closing the pending list (#137) bought.
+// Keeps openapi/openapi.yaml and openapi/openapi.v2.yaml in step with the
+// Express routes (#129). Every operation the registry serves under /v1 or /v2
+// must be described in that version's document, and every described operation
+// must be served. A route added without a description fails here, which is
+// what closing the pending list (#137) bought.
 
 // The real registry is imported, as in routes/registry.test.ts: only db/pool is
 // stubbed, since importing it for real would open a Postgres connection the run
