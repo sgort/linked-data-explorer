@@ -4,9 +4,15 @@ import path from 'path';
 import YAML from 'yaml';
 
 import packageJson from '../../package.json';
-import { OPENAPI_JSON_PATH, readOpenApiDocument } from './document';
+import {
+  OPENAPI_JSON_PATH,
+  OPENAPI_V2_JSON_PATH,
+  readOpenApiDocument,
+  readOpenApiV2Document,
+} from './document';
 
 const YAML_PATH = path.resolve(__dirname, '../../openapi/openapi.yaml');
+const V2_YAML_PATH = path.resolve(__dirname, '../../openapi/openapi.v2.yaml');
 
 function readSource() {
   return YAML.parse(fs.readFileSync(YAML_PATH, 'utf8'));
@@ -74,5 +80,31 @@ describe('readOpenApiDocument', () => {
     const file = write(content);
 
     expect(() => readOpenApiDocument(file)).toThrow(`${file} is not an OpenAPI document`);
+  });
+});
+
+describe('the built v2 OpenAPI document', () => {
+  const source = () => YAML.parse(fs.readFileSync(V2_YAML_PATH, 'utf8'));
+
+  test('is openapi.v2.yaml with info.version taken from package.json', () => {
+    expect(readOpenApiV2Document()).toEqual({
+      ...source(),
+      info: { ...source().info, version: packageJson.version },
+    });
+  });
+
+  test('lists only HTTPS servers that carry the major version', () => {
+    const { servers } = readOpenApiV2Document() as unknown as {
+      servers: { url: string }[];
+    };
+
+    expect(servers.map((server) => server.url)).toEqual([
+      'https://backend.linkeddata.open-regels.nl/v2',
+      'https://acc.backend.linkeddata.open-regels.nl/v2',
+    ]);
+  });
+
+  test('is read from the package root, beside the v1 document', () => {
+    expect(OPENAPI_V2_JSON_PATH).toBe(path.resolve(__dirname, '../../openapi/openapi.v2.json'));
   });
 });

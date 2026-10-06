@@ -8,7 +8,7 @@ jest.mock('../utils/logger', () => ({
 
 import logger from '../utils/logger';
 import { versionMiddleware } from '../middleware/version.middleware';
-import { OpenApiDocument, readOpenApiDocument } from '../openapi/document';
+import { OpenApiDocument, readOpenApiDocument, readOpenApiV2Document } from '../openapi/document';
 import { expectToMatchOperation } from '../openapi/testing/conformance';
 import { createOpenApiRouter } from './openapi.routes';
 
@@ -84,5 +84,19 @@ describe('GET /v1/openapi.json', () => {
 
     expect((await request(app).get('/v1/openapi.json')).status).toBe(500);
     expect((await request(app).get('/v1/openapi.json')).status).toBe(200);
+  });
+});
+
+describe('GET /v2/openapi.json', () => {
+  test('serves the v2 document, as documented there', async () => {
+    const app = express();
+    app.use(versionMiddleware);
+    app.use('/v2/openapi.json', createOpenApiRouter(readOpenApiV2Document));
+
+    const res = await request(app).get('/v2/openapi.json');
+
+    expect(res.status).toBe(200);
+    expect(res.body.servers[0].url).toMatch(/\/v2$/);
+    expectToMatchOperation(res, 'get', '/openapi.json', readOpenApiV2Document());
   });
 });

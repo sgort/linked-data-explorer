@@ -53,7 +53,7 @@ describe('FormTemplateSelector', () => {
 
     expect(updateProperties).toHaveBeenCalledWith(element, {
       'camunda:formRef': 'form-schema-1',
-      'camunda:formRefBinding': 'latest',
+      'camunda:formRefBinding': 'deployment',
       'camunda:formKey': undefined,
     });
   });

@@ -15,6 +15,9 @@ import path from 'path';
  */
 export const OPENAPI_JSON_PATH = path.resolve(__dirname, '../../openapi/openapi.json');
 
+/** The v2 routes' document, built from openapi/openapi.v2.yaml beside it. */
+export const OPENAPI_V2_JSON_PATH = path.resolve(__dirname, '../../openapi/openapi.v2.json');
+
 export interface OpenApiDocument {
   openapi: string;
   info: { title: string; version: string; [key: string]: unknown };
@@ -37,4 +40,9 @@ export function readOpenApiDocument(file: string = OPENAPI_JSON_PATH): OpenApiDo
   }
 
   return parsed as OpenApiDocument;
+}
+
+/** The v2 document; same checks as readOpenApiDocument. */
+export function readOpenApiV2Document(): OpenApiDocument {
+  return readOpenApiDocument(OPENAPI_V2_JSON_PATH);
 }

@@ -1,6 +1,6 @@
 {
   "name": "linked-data-explorer-monorepo",
-  "version": "2026.10.0",
+  "version": "2026.10.1",
   "private": true,
   "description": "Monorepo for Linked Data Explorer - RONL DMN Orchestration Platform",
   "workspaces": [
@@ -21,6 +21,7 @@
     "check-format": "npm run check-format --workspaces --if-present",
     "check-supply-chain": "node scripts/check-supply-chain.mjs",
     "sbom": "node scripts/write-sbom.mjs",
+    "sbom:check": "node scripts/write-sbom.mjs --check",
     "test:scripts": "node scripts/promotion-targets.test.mjs && node scripts/dso-dossier.test.mjs",
     "check-mirror": "bash scripts/check-mirror.sh",
     "check-rip-bpmn": "node scripts/check-rip-bpmn-copies.mjs",
@@ -46,7 +47,7 @@
     ]
   },
   "engines": {
-    "node": ">=22.23.2",
+    "node": ">=24.21.0",
     "npm": ">=10.0.0"
   },
   "repository": {

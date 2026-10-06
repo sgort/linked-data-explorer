@@ -5,15 +5,20 @@
  * They serve deliberately public, read-only data to named third-party consumers:
  * the public ROPA site (packages/ropa-site, served at ropa.open-regels.nl and
  * acc.ropa.open-regels.nl) and similar for /v1/ropa/public, and the RONL Business API
- * caseworker dashboard for /v1/bundles/public. /v1/openapi.json serves the API's
- * OpenAPI description, which /core/publish-openapi requires to be readable from
+ * caseworker dashboard for /v1/bundles/public. /v1/openapi.json and /v2/openapi.json
+ * serve the API's OpenAPI descriptions, which /core/publish-openapi requires to be readable from
  * any origin. The data behind them is shaped for publication (listPublicRopa
  * returns active records only and strips controller and DPO contacts), and the
  * backend performs no inbound authentication, so these endpoints are already
  * readable by anything that is not a browser. Wildcard CORS extends that to
  * browser scripts on other origins, which is the point.
  */
-const PUBLIC_MOUNTS = ['/v1/ropa/public', '/v1/bundles/public', '/v1/openapi.json'];
+const PUBLIC_MOUNTS = [
+  '/v1/ropa/public',
+  '/v1/bundles/public',
+  '/v1/openapi.json',
+  '/v2/openapi.json',
+];
 
 // Matches a mount or anything below it, never a sibling that merely shares the
 // prefix: /v1/ropa/publications must fall through to the credentialed allowlist.

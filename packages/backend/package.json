@@ -1,6 +1,6 @@
 {
   "name": "@linked-data-explorer/backend",
-  "version": "2026.10.0",
+  "version": "2026.10.1",
   "description": "Backend orchestration service for DMN chain execution",
   "main": "dist/index.js",
   "scripts": {
@@ -17,7 +17,7 @@
     "test:openapi-coverage": "jest --config jest.config.js src/openapi --coverage=false",
     "test:contract": "jest --config jest.config.js src/openapi src/routes --coverage=false",
     "lint": "eslint .",
-    "lint:openapi": "npm run build:openapi && spectral lint openapi/openapi.json --ruleset openapi/.spectral.yaml --fail-severity error",
+    "lint:openapi": "npm run build:openapi && spectral lint openapi/openapi.json openapi/openapi.v2.json --ruleset openapi/.spectral.yaml --fail-severity error",
     "typecheck": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -81,7 +81,7 @@
     "exec": "ts-node src/index.ts"
   },
   "engines": {
-    "node": ">=22.23.2",
+    "node": ">=24.21.0",
     "npm": ">=10.0.0"
   },
   "scarfSettings": {

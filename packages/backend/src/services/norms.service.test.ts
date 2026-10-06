@@ -14,10 +14,14 @@ jest.mock('../utils/config', () => ({
 import * as triplydbService from './triplydb.service';
 import {
   DEFAULT_CPRMV_VERSION,
+  DEFAULT_CPRMV_VERSION_V2,
   SUPPORTED_CPRMV_VERSIONS,
   getAllNorms,
   getCprmvVersion,
   getDatasetVersionsByRulesetid,
+  getNormsInForce,
+  narrowDatasetVersions,
+  selectInForce,
 } from './norms.service';
 
 const mockExecuteQuery = triplydbService.executeQuery as jest.Mock;
@@ -602,5 +606,217 @@ describe('getAllNorms aggregation and metadata', () => {
     const result = await getAllNorms(uniqueEndpoint());
 
     expect(result.rules).toEqual([]);
+  });
+});
+
+describe('DEFAULT_CPRMV_VERSION_V2', () => {
+  test('is pinned to 0.4.1 and is a supported version', () => {
+    expect(DEFAULT_CPRMV_VERSION_V2).toBe('0.4.1');
+    expect(SUPPORTED_CPRMV_VERSIONS).toContain(DEFAULT_CPRMV_VERSION_V2);
+  });
+});
+
+describe('selectInForce', () => {
+  const rule = (rulesetid: string, period: string | null, n: number) => ({
+    rulesetid,
+    applicable_date: period,
+    rule_id_path: `${rulesetid}_${period}_${n}`,
+  });
+
+  // Shaped after TriplyDB on 6 October 2026: rulesets whose current periods
+  // started on different dates must all be in force on 2026-08-15.
+  const rules = [
+    rule('A', '2026-02-21', 1),
+    rule('A', '2026-02-21', 2),
+    rule('B', '2026-01-01', 1),
+    rule('C', '2026-07-01', 1),
+    rule('C', '2026-07-01', 2),
+    rule('D', '2026-09-01', 1), // only a future period
+    rule('E', '2025-07-01', 1), // superseded
+    rule('E', '2026-01-01', 1),
+    rule('F', null, 1), // ruleIdPath without a date
+  ];
+
+  const paths = (selected: Record<string, unknown>[]) => selected.map((r) => r.rule_id_path);
+
+  test('mixes the latest started period of every ruleset', () => {
+    expect(paths(selectInForce(rules, '2026-08-15'))).toEqual([
+      'A_2026-02-21_1',
+      'A_2026-02-21_2',
+      'B_2026-01-01_1',
+      'C_2026-07-01_1',
+      'C_2026-07-01_2',
+      'E_2026-01-01_1',
+    ]);
+  });
+
+  test('a period starting on valid_on is in force on valid_on', () => {
+    expect(paths(selectInForce(rules, '2026-07-01'))).toContain('C_2026-07-01_1');
+  });
+
+  test('a period starting the day after valid_on is not', () => {
+    expect(paths(selectInForce(rules, '2026-06-30'))).not.toContain('C_2026-07-01_1');
+  });
+
+  test('leaves out a ruleset whose periods all start later', () => {
+    expect(selectInForce(rules, '2026-08-15').map((r) => r.rulesetid)).not.toContain('D');
+  });
+
+  test('picks the earlier period when the later one has not started', () => {
+    expect(paths(selectInForce(rules, '2025-12-31'))).toEqual(['E_2025-07-01_1']);
+  });
+
+  test('leaves out rules without a parseable period', () => {
+    expect(selectInForce(rules, '2099-01-01').map((r) => r.rulesetid)).not.toContain('F');
+  });
+
+  test('returns nothing before the first period', () => {
+    expect(selectInForce(rules, '2000-01-01')).toEqual([]);
+  });
+});
+
+describe('narrowDatasetVersions', () => {
+  const v = (version: string | null, publishedAt: string) => ({
+    version,
+    publishedAt,
+    title: null,
+  });
+
+  test('keeps the records of the selected period only', () => {
+    const narrowed = narrowDatasetVersions(
+      {
+        BWBR0015703: [
+          v('2026-01-01', '2026-05-15T00:00:00Z'),
+          v('2025-01-01', '2025-05-01T00:00:00Z'),
+        ],
+      },
+      { BWBR0015703: '2025-01-01' }
+    );
+
+    expect(narrowed).toEqual({
+      BWBR0015703: [v('2025-01-01', '2025-05-01T00:00:00Z')],
+    });
+  });
+
+  test('falls back to the version-less records when no version matches', () => {
+    const narrowed = narrowDatasetVersions(
+      {
+        BWBR0002471: [v(null, '2026-02-01T00:00:00Z'), v(null, '2025-02-01T00:00:00Z')],
+      },
+      { BWBR0002471: '2026-01-01' }
+    );
+
+    expect(narrowed.BWBR0002471).toHaveLength(2);
+  });
+
+  test('leaves a ruleset out when neither a match nor a version-less record exists', () => {
+    const narrowed = narrowDatasetVersions(
+      { BWBR0015711: [v('2025-01-01', '2025-05-01T00:00:00Z')] },
+      { BWBR0015711: '2026-01-01' }
+    );
+
+    expect(narrowed).toEqual({});
+  });
+
+  test('leaves a ruleset without metadata out', () => {
+    expect(narrowDatasetVersions({}, { X: '2026-01-01' })).toEqual({});
+  });
+
+  test('lists rulesets in sorted order', () => {
+    const narrowed = narrowDatasetVersions(
+      {
+        B: [v('2026-01-01', '2026-01-01T00:00:00Z')],
+        A: [v('2026-01-01', '2026-01-01T00:00:00Z')],
+      },
+      { B: '2026-01-01', A: '2026-01-01' }
+    );
+
+    expect(Object.keys(narrowed)).toEqual(['A', 'B']);
+  });
+});
+
+describe('getNormsInForce', () => {
+  // The 0.4.1 metadata query mentions cprmv:RuleSet, which also contains the
+  // string "cprmv:Rule", so route on the metadata shapes first.
+  function respondByShape(sets: { meta: Binding[]; rules: Binding[] }) {
+    mockExecuteQuery.mockImplementation(async (_endpoint: string, query: string) => {
+      if (query.includes('cprmv:Dataset') || query.includes('cprmv:RuleSet')) {
+        return bindings(sets.meta);
+      }
+      return bindings(sets.rules);
+    });
+  }
+
+  const meta = [
+    {
+      rulesetId: lit('BWBR0015703'),
+      issued: lit('2026-05-15T06:57:11Z'),
+      version: lit('2026-01-01'),
+    },
+    {
+      rulesetId: lit('BWBR0015703'),
+      issued: lit('2025-05-15T06:57:11Z'),
+      version: lit('2025-07-01'),
+    },
+  ];
+  const rules = [
+    ruleRow({
+      rule: lit('https://example.org/rule/old'),
+      ruleIdPath: lit('BWBR0015703_2025-07-01_1'),
+    }),
+    ruleRow({
+      rule: lit('https://example.org/rule/new'),
+      ruleIdPath: lit('BWBR0015703_2026-01-01_1'),
+    }),
+  ];
+
+  test('returns the rules in force, recounted, with the metadata of their period', async () => {
+    respondByShape({ meta, rules });
+
+    const result = await getNormsInForce(uniqueEndpoint(), { validOn: '2026-03-01' }, '0.3.0');
+
+    expect(result.rules.map((r) => r.rule_id_path)).toEqual(['BWBR0015703_2026-01-01_1']);
+    expect(result.aggregations.normsPerRulesetid).toEqual({ BWBR0015703: 1 });
+    expect(result.metadata.datasetVersions).toEqual({
+      BWBR0015703: [
+        {
+          version: '2026-01-01',
+          publishedAt: '2026-05-15T06:57:11Z',
+          title: null,
+        },
+      ],
+    });
+    expect(result.metadata.cprmvVersion).toBe('0.3.0');
+  });
+
+  test('does not put the date into the SPARQL query', async () => {
+    respondByShape({ meta, rules });
+
+    await getNormsInForce(uniqueEndpoint(), { validOn: '2026-03-01' }, '0.3.0');
+
+    expect(queryFor('cprmv:ruleIdPath')).not.toContain('2026-03-01');
+  });
+
+  test('forwards the rulesetid filter', async () => {
+    respondByShape({ meta, rules });
+
+    await getNormsInForce(
+      uniqueEndpoint(),
+      { rulesetid: 'BWBR0015703', validOn: '2026-03-01' },
+      '0.3.0'
+    );
+
+    expect(queryFor('cprmv:ruleIdPath')).toContain('FILTER(STR(?rulesetId) = "BWBR0015703")');
+  });
+
+  test('queries the 0.4.1 namespace by default', async () => {
+    respondByShape({ meta: [], rules: [] });
+
+    const result = await getNormsInForce(uniqueEndpoint(), {
+      validOn: '2026-03-01',
+    });
+
+    expect(result.metadata.cprmvVersion).toBe('0.4.1');
+    expect(queryFor('cprmv:ruleIdPath')).toContain(NS_041);
   });
 });

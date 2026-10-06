@@ -2,7 +2,7 @@
  * Example version registry
  *
  * Controls when existing users receive updated copies of readonly example files.
- * The seeding logic in BpmnModeler and FormEditor compares the stored version
+ * The seeding logic in BpmnModeler, FormEditor and DocumentComposer compares the stored version
  * against the value here; if the stored version is lower (or absent), the file
  * is re-fetched from public/examples/flevoland/ and the localStorage record is
  * overwritten in-place.
@@ -17,8 +17,8 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 7, // v7: swimlanes + Dutch names + missing-info form
-  example_tree_felling: 10, // v10: swimlanes + Dutch names
+  example_awb_process: 8, // v8: Dutch runtime texts (finalMessage, replacementInfo; #260)
+  example_tree_felling: 11, // v11: Dutch runtime texts (finalMessage, replacementInfo; #260)
   example_awb_zorgtoeslag: 6, // v6: swimlanes + Dutch names + missing-info form
   example_zorgtoeslag_provisional: 8, // v8: swimlanes + Dutch names
   example_zorgtoeslag_final: 7, // v7: swimlanes + Dutch names
@@ -28,10 +28,10 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_besluit_gb: 2, // v2: a declined signature escalates instead of looping back
 
   // Camunda Forms
-  example_kapvergunning_start: 4, // v4: force re-seed for ACC users with stale localStorage from v1.6.0 testing
-  example_tree_felling_review: 4, // v4: force re-seed (see above)
+  example_kapvergunning_start: 5, // v5: translated to Dutch, tagged nl (#254 item 1)
+  example_tree_felling_review: 5, // v5: translated to Dutch, tagged nl (#254 item 1)
   example_kapvergunning_missing_info: 1,
-  example_awb_notify_applicant: 4, // v4: force re-seed (see above)
+  example_awb_notify_applicant: 5, // v5: translated to Dutch, tagged nl (#254 item 1)
   example_zorgtoeslag_notify_applicant: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_provisional_start: 4, // v4: force re-seed (see above)
   example_zorgtoeslag_provisional_review: 4, // v4: force re-seed (see above)
@@ -54,7 +54,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_besluit_gb_registreren: 1,
   example_besluit_gb_archiveren: 1,
 
-  // HR-capacity Dutch forms (multilingualism release)
+  // HR-capacity forms (Dutch)
   example_hr_capacity_intake_nl: 1,
   example_hr_capacity_staffing_nl: 1,
   example_hr_capacity_hiring_nl: 1,
@@ -64,9 +64,19 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_hr_capacity_handover_nl: 1,
   example_hr_capacity_register_reservation_nl: 1,
 
-  // HR-capacity Dutch documents (multilingualism release)
-  example_hr_capacity_board_doc_nl: 1,
-  example_hr_capacity_handover_doc_nl: 1,
+  // Document templates (DocumentComposer's DEFAULT_TEMPLATES), keyed by
+  // template id. Every default template needs an entry: exampleVersions.test.ts
+  // checks. Until #254 item 7 templates seeded by presence only, and the two
+  // HR-capacity keys that stood here matched no template id and were read by
+  // nothing.
+  example_treefelling_beschikking: 2, // v2: tagged nl, as its text always was (#254 item 1)
+  example_zorgtoeslag_provisional_beschikking: 1,
+  example_zorgtoeslag_final_beschikking: 1,
+  example_dvtp_consent_receipt: 1,
+  'board-decision-notification-nl': 1,
+  'capacity-claim-handover-nl': 1,
+  thuisbatterij_subsidie_beschikking: 1,
+  'besluit-gb-besluit': 1,
 
   // DvTP consent bundle
   example_dvtp_toestemming: 3, // v3: formRefBinding=deployment (tenant-safe form resolution)

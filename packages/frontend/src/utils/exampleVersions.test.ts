@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, test } from 'vitest';
 
+import { DEFAULT_TEMPLATES } from '../components/DocumentComposer/defaultTemplates';
 import { EXAMPLE_VERSIONS, getStoredVersion, setStoredVersion } from './exampleVersions';
 
 beforeEach(() => {
@@ -77,5 +78,16 @@ describe('EXAMPLE_VERSIONS — besluitvorming gedelegeerd', () => {
       ].map((s) => `example_besluit_gb_${s}`),
     ];
     for (const id of ids) expect(EXAMPLE_VERSIONS[id]).toBe(1);
+  });
+});
+
+describe('EXAMPLE_VERSIONS — document templates', () => {
+  test('registers every default template, so DocumentComposer can refresh it', () => {
+    // A template without an entry compares its stored version against
+    // undefined, which is never satisfied, and is rewritten on every load.
+    const missing = DEFAULT_TEMPLATES.map((t) => t.id).filter(
+      (id) => !Number.isInteger(EXAMPLE_VERSIONS[id])
+    );
+    expect(missing).toEqual([]);
   });
 });

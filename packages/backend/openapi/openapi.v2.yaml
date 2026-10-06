@@ -1,0 +1,311 @@
+# packages/backend/openapi/openapi.v2.yaml
+#
+# The OpenAPI description of the v2 routes of the Linked Data Explorer
+# backend, written by hand. Served as JSON at /v2/openapi.json. Built by
+# scripts/build-openapi.cjs exactly like openapi.yaml (info.version from
+# package.json; this file must not set it).
+#
+# A major version gets its own document because `servers` carry the major
+# version (/core/uri-version). Every /v2 route must appear here:
+# src/openapi/coverage.test.ts checks this document against the /v2 mounts.
+openapi: "3.1.0"
+info:
+  title: Linked Data Explorer Backend (v2)
+  description: >-
+    Version 2 of the Linked Data Explorer backend's routes. Only operations
+    whose contract changed incompatibly live here; everything else stays on
+    /v1 (see /v1/openapi.json).
+
+    Every 4xx/5xx response is `application/problem+json` (RFC 9457, schema
+    `Problem`): `status`, `title` and `detail` always; `code`, the
+    machine-readable identifier callers branch on, where the handler sets one.
+  contact:
+    name: Steven Gort
+    email: steven.gort@ictu.nl
+    url: https://iou-architectuur.open-regels.nl/
+servers:
+  - url: https://backend.linkeddata.open-regels.nl/v2
+    description: Production
+  - url: https://acc.backend.linkeddata.open-regels.nl/v2
+    description: Acceptance
+tags:
+  - name: Discovery
+    description: What the API and its data offer.
+paths:
+  /openapi.json:
+    get:
+      operationId: getOpenApiV2Description
+      tags: [Discovery]
+      summary: This OpenAPI description
+      description: >-
+        The published contract of the v2 routes (/core/publish-openapi).
+        Served with `Access-Control-Allow-Origin: *`, so any OpenAPI viewer
+        can load it.
+      responses:
+        "200":
+          description: The OpenAPI 3.1 document.
+          headers:
+            API-Version:
+              $ref: "#/components/headers/ApiVersion"
+            Access-Control-Allow-Origin:
+              description: Always `*`.
+              schema:
+                type: string
+                const: "*"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [openapi, info, paths]
+                properties:
+                  openapi:
+                    type: string
+                    const: "3.1.0"
+        "500":
+          description: The document could not be read (code OPENAPI_UNAVAILABLE).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /norms:
+    get:
+      operationId: listNormsInForce
+      tags: [Discovery]
+      summary: The norms in force on a date
+      description: >-
+        For each ruleset, the rules of the latest period whose start date
+        (`applicable_date`) is on or before `valid_on`. A period stays in
+        force until the same ruleset publishes a later one. Rulesets whose
+        periods all start later are absent. `dataset_versions` holds only
+        the records of the selected periods. When every ruleset in the
+        result has dataset metadata, the response carries `ETag` and
+        `Cache-Control: public`, and a matching conditional request is
+        answered 304; otherwise `Cache-Control: no-cache`. The `ETag`
+        covers the content of the selected rules, the resolved `valid_on`
+        and the dataset metadata, so a correction published within a period
+        changes it. `Last-Modified` is omitted when it would be later than the
+        response (a period not yet started), so revalidate with `If-None-Match`;
+        when it is sent, `If-Modified-Since` is ignored (RFC 9110 §13.2.2).
+        Without `valid_on`, `max-age` never reaches past the next midnight
+        in Europe/Amsterdam. Succeeds `/v1/norms`.
+      parameters:
+        - name: valid_on
+          in: query
+          required: false
+          description: >-
+            The date the norms must be in force on, as YYYY-MM-DD; must be a
+            real calendar date. Defaults to today in Europe/Amsterdam.
+          schema:
+            type: string
+            format: date
+        - name: cprmv_version
+          in: query
+          required: false
+          description: CPRMV vocabulary version for the rule keys.
+          schema:
+            type: string
+            enum: ["0.3.0", "0.3.2", "0.4.1"]
+            default: "0.4.1"
+        - name: rulesetid
+          in: query
+          required: false
+          description: Only rules of this ruleset.
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9_-]+$"
+        - name: endpoint
+          in: query
+          required: false
+          description: >-
+            SPARQL endpoint URL to query instead of the configured one.
+            Checked before use (#142): must be a string, a valid URL,
+            `https:`, without credentials, and not point to an internal
+            address.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The rules in force on `valid_on`.
+          headers:
+            API-Version:
+              $ref: "#/components/headers/ApiVersion"
+            ETag:
+              description: >-
+                Present when every ruleset in the result has dataset metadata.
+                Covers the selected rules' content, the resolved `valid_on`
+                and the dataset metadata, so a correction within a period
+                changes it.
+              schema:
+                type: string
+            Last-Modified:
+              description: >-
+                Present with `ETag` when the latest publication date is known
+                and not later than the response.
+              schema:
+                type: string
+            Cache-Control:
+              description: >-
+                `public, max-age=<seconds>` with `ETag` (3600, or less when
+                `valid_on` was omitted and midnight is nearer), otherwise
+                `no-cache`.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/NormsResultV2"
+                  timestamp:
+                    type: string
+                    format: date-time
+        "304":
+          description: Not modified since the conditional request's `ETag` or date.
+          headers:
+            API-Version:
+              $ref: "#/components/headers/ApiVersion"
+            ETag:
+              description: The unchanged entity tag.
+              schema:
+                type: string
+            Last-Modified:
+              description: >-
+                Present with `ETag` when the latest publication date is known
+                and not later than the response.
+              schema:
+                type: string
+            Cache-Control:
+              description: "`public, max-age=<seconds>`."
+              schema:
+                type: string
+        "400":
+          description: >-
+            A query parameter is invalid (code INVALID_PARAM): `valid_on` is
+            not a calendar date, `rulesetid` or `cprmv_version` is not
+            accepted, or `applicable_date` was sent (v1 only; use
+            `valid_on`). The `endpoint` was refused (code INVALID_INPUT;
+            #142). `detail` gives the reason.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: The rules could not be queried (code QUERY_ERROR).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+components:
+  headers:
+    ApiVersion:
+      description: Full release version of the API (/core/version-header).
+      required: true
+      schema:
+        type: string
+        examples:
+          - "2026.10.1"
+  schemas:
+    Problem:
+      type: object
+      description: >-
+        RFC 9457 problem details (https://www.rfc-editor.org/rfc/rfc9457),
+        returned as `application/problem+json` by every 4xx/5xx response.
+        `code` is kept as an extension member alongside the RFC's own fields:
+        the machine-readable identifier callers branch on.
+      required: [status, title, detail]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          description: >-
+            A URI identifying the problem type. `about:blank` (RFC 9457
+            §4.2.1) unless an operation's description says otherwise.
+          examples: [about:blank]
+        status:
+          type: integer
+          description: The HTTP status, repeated from the response line.
+        title:
+          type: string
+          description: >-
+            A short, human-readable summary of the kind of problem. Stable
+            for that kind.
+          examples: [Bad Request]
+        detail:
+          type: string
+          description: What went wrong with this request.
+        instance:
+          type: string
+          description: The request path that produced this response.
+          examples: [/v2/norms]
+        code:
+          type: string
+          description: >-
+            The machine-readable identifier this operation's description
+            names. Omitted by operations that never set one.
+          examples: [INVALID_PARAM]
+    NormsResultV2:
+      type: object
+      required:
+        [total, valid_on, dataset_versions, cprmv_version, aggregations, rules]
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Number of rules in `rules`.
+        valid_on:
+          type: string
+          format: date
+          description: The date this response answers for; today in Europe/Amsterdam when not requested.
+          examples: ["2026-08-15"]
+        dataset_versions:
+          type: object
+          description: >-
+            Per ruleset id, the version records of the period in force on
+            `valid_on`. Rulesets without such a record are absent.
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/DatasetVersion"
+        cprmv_version:
+          type: string
+          description: The CPRMV version the rule keys use.
+          examples: ["0.4.1"]
+        aggregations:
+          type: object
+          required: [norms_per_rulesetid]
+          properties:
+            norms_per_rulesetid:
+              type: object
+              description: Number of rules per ruleset id.
+              additionalProperties:
+                type: integer
+                minimum: 0
+        rules:
+          type: array
+          description: >-
+            The rules in force. A rule's keys are IRIs in the requested CPRMV
+            version's namespace (for example
+            `https://standaarden.open-regels.nl/standards/cprmv/0.4.1#id`),
+            plus `rulesetid`, `applicable_date` (the start of the rule's
+            period), `rulesetid_index`, `rule_id_path` and `rule_id_path_key`.
+            The key set varies by version, so rules are described as open
+            objects.
+          items:
+            type: object
+    DatasetVersion:
+      type: object
+      required: [version, published_at, title]
+      properties:
+        version:
+          type: [string, "null"]
+          description: The period date; null for 0.3.x rulesets other than the primary one.
+        published_at:
+          type: string
+          description: Publication date as published in TriplyDB; not reformatted.
+        title:
+          type: [string, "null"]
+          description: Null for rulesets other than the primary one.

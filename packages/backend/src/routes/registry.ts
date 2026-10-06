@@ -1,5 +1,5 @@
 // packages/backend/src/routes/registry.ts
-// Single source of truth for the v1 API route topology. Consumed by
+// Single source of truth for the API route topology (/v1 and /v2). Consumed by
 // routes/index.ts (for mounting) and utils/rootView.ts (for the root listing).
 // Adding a new route is one entry here — both registration and the root page
 // pick it up automatically.
@@ -21,8 +21,10 @@ import ropaPublicRoutes from './ropa.public.routes';
 import assetsPublicRoutes from './assets.public.routes';
 import dsoRoutes from './dso.routes';
 import normsRoutes from './norms.routes';
+import normsV2Routes from './norms.v2.routes';
 import shaclRoutes from './shacl.routes';
-import openapiRoutes from './openapi.routes';
+import openapiRoutes, { createOpenApiRouter } from './openapi.routes';
+import { readOpenApiV2Document } from '../openapi/document';
 
 /** Logical grouping for the root page. New categories can be added; see
  *  CATEGORY_ORDER in utils/rootView.ts for render order. */
@@ -93,9 +95,22 @@ export const routeRegistry: ReadonlyArray<RouteDefinition> = [
     category: 'Discovery',
   },
   {
+    mount: '/v2/norms',
+    router: normsV2Routes,
+    summary: 'cprmv:Rule norms in force on a date (CPRMV 0.4.1 by default)',
+    category: 'Discovery',
+  },
+  {
     mount: '/v1/openapi.json',
     router: openapiRoutes,
     summary: 'OpenAPI 3.1 description of this API',
+    category: 'Discovery',
+    publicCors: true,
+  },
+  {
+    mount: '/v2/openapi.json',
+    router: createOpenApiRouter(readOpenApiV2Document),
+    summary: 'OpenAPI 3.1 description of the v2 routes',
     category: 'Discovery',
     publicCors: true,
   },

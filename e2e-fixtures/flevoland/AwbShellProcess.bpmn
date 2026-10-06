@@ -97,9 +97,9 @@
       <bpmn:outgoing>Flow_Refuse_Notify</bpmn:outgoing>
       <bpmn:script>
         execution.setVariable("status", "Not admissible");
-        execution.setVariable("finalMessage", "Your application has not been processed due to missing information (Awb 4:5 paragraph 2).");
+        execution.setVariable("finalMessage", "Uw aanvraag is buiten behandeling gesteld omdat gegevens ontbreken (Awb 4:5 lid 2).");
         execution.setVariable("decisionType", "Refused");
-        execution.setVariable("replacementInfo", "N/A");
+        execution.setVariable("replacementInfo", "Niet van toepassing.");
         execution.setVariable("paymentRequired", false);
         execution.setVariable("chainProcessRequired", false);
       </bpmn:script>

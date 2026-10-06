@@ -230,9 +230,18 @@ backend build and would have been mergeable. LDE and TTL at least require `scan`
 which catches newly known vulnerabilities at merge time; RBA runs it without
 requiring it.
 
-No repository has tooling for the transitive review the guideline describes: new
+No repository had tooling for the transitive review the guideline describes: new
 runtime dependencies, new origins, downgrades, or licence changes in a lockfile
 diff.
+
+**Update, October 2026 (#248):** a `lockfile-review` check now does. On every
+pull request that changes `package-lock.json` it posts a comment listing added,
+removed, updated and downgraded packages, licence changes, new packages whose
+licence is not on the repository's allow-list (`lockfile-review.json`), and new
+install scripts — read from the two lockfiles, nothing installed. It fails, and
+is required on `acc`, only for a `resolved` origin outside
+`https://registry.npmjs.org/` or a missing `integrity`. The scores in this
+document are still those of 13 September.
 
 ### 10 — Daily audit or SBOM scan, including released versions
 

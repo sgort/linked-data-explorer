@@ -179,3 +179,12 @@ overrides:
       - 'openapi.json#/paths/~1dmns~1evaluate~1%7BdecisionKey%7D/post/responses/500/content'
     rules:
       nlgov:use-problem-schema: 'off'
+
+  # GET /v2/norms keeps v1's snake_case query keys (cprmv_version) and adds
+  # valid_on in the same style, matching the snake_case members of the
+  # response it filters (applicable_date, rulesetid_index). Mixing styles
+  # within one resource would be harder on callers than the rule is worth.
+  - files:
+      - 'openapi.v2.json#/paths/~1norms/get'
+    rules:
+      nlgov:query-keys-camel-case: 'off'

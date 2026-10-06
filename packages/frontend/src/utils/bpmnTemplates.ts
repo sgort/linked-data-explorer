@@ -34,12 +34,12 @@ export const ASYLUM_MIGRATION_EXAMPLE_XML = `<bpmn:definitions xmlns:bpmn="http:
       <bpmn:outgoing>Flow_08g52cy</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:sequenceFlow id="Flow_08g52cy" sourceRef="StartEvent_Migratie_Procedure" targetRef="Activity_1obwf16" />
-    <bpmn:userTask id="Activity_1obwf16" name="Initiele registratie dossier" camunda:formRef="InitieleRegistratie" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_1obwf16" name="Initiele registratie dossier" camunda:formRef="InitieleRegistratie" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_08g52cy</bpmn:incoming>
       <bpmn:outgoing>Flow_03dawv7</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:sequenceFlow id="Flow_0hq87yk" name="Verzoek" sourceRef="Gateway_1ifoytx" targetRef="Activity_0m6bfjf" />
-    <bpmn:userTask id="Activity_0m6bfjf" name="Verzoek Mvv aanvraag + verblijfs vergunning" camunda:formRef="VerzoekRegulier" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_0m6bfjf" name="Verzoek Mvv aanvraag + verblijfs vergunning" camunda:formRef="VerzoekRegulier" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_0hq87yk</bpmn:incoming>
       <bpmn:outgoing>Flow_1twcf3p</bpmn:outgoing>
     </bpmn:userTask>
@@ -87,19 +87,19 @@ export const ASYLUM_MIGRATION_EXAMPLE_XML = `<bpmn:definitions xmlns:bpmn="http:
       <bpmn:outgoing>Flow_1xshwha</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="Flow_1kexgkg" sourceRef="Activity_1hh5s55" targetRef="Gateway_1lixh3n" />
-    <bpmn:userTask id="Activity_1ahxqsl" name="Behandeling Mvv + verblijfs vergunning" camunda:formRef="BehandelingRegulier" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_1ahxqsl" name="Behandeling Mvv + verblijfs vergunning" camunda:formRef="BehandelingRegulier" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_0r7435z</bpmn:incoming>
       <bpmn:outgoing>Flow_0ta8l0r</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_1pov44k" name="Bezwaar" camunda:formRef="BezwaarRegulier" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_1pov44k" name="Bezwaar" camunda:formRef="BezwaarRegulier" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_1gzeepv</bpmn:incoming>
       <bpmn:outgoing>Flow_0gxpeae</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_0tvsug0" name="Beroep" camunda:formRef="Beroep" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_0tvsug0" name="Beroep" camunda:formRef="Beroep" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_1fe7w66</bpmn:incoming>
       <bpmn:outgoing>Flow_107objo</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_1hh5s55" name="Hoger beroep" camunda:formRef="HogerBeroep" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_1hh5s55" name="Hoger beroep" camunda:formRef="HogerBeroep" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_0myspx5</bpmn:incoming>
       <bpmn:outgoing>Flow_1kexgkg</bpmn:outgoing>
     </bpmn:userTask>
@@ -294,27 +294,27 @@ export const ASYLUM_MIGRATION_EXAMPLE_XML = `<bpmn:definitions xmlns:bpmn="http:
       <bpmn:incoming>Flow_0qpcwio</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_0qpcwio" name="Stop" sourceRef="Gateway_0qr43ko" targetRef="Event_1guseex" />
-    <bpmn:userTask id="Activity_0w8t0s3" name="Verzoek tot asiel" camunda:formRef="VerzoekAsiel" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_0w8t0s3" name="Verzoek tot asiel" camunda:formRef="VerzoekAsiel" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_07cvw4b</bpmn:incoming>
       <bpmn:outgoing>Flow_13kw7ms</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_113md2y" name="Registratie verzoek tot asiel" camunda:formRef="RegistratieAsiel" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_113md2y" name="Registratie verzoek tot asiel" camunda:formRef="RegistratieAsiel" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_0uqymo8</bpmn:incoming>
       <bpmn:outgoing>Flow_1o9vtv2</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_0b0g01u" name="Indiening verzoek tot asiel" camunda:formRef="IndieningAsiel" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_0b0g01u" name="Indiening verzoek tot asiel" camunda:formRef="IndieningAsiel" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_1b87i2y</bpmn:incoming>
       <bpmn:outgoing>Flow_0ibwf41</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_1wy75jv" name="Behandeling inhoudelijk" camunda:formRef="BehandelingAsiel" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_1wy75jv" name="Behandeling inhoudelijk" camunda:formRef="BehandelingAsiel" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_0npimy6</bpmn:incoming>
       <bpmn:outgoing>Flow_0cp4o1w</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_1qio9ph" name="Beroep" camunda:formRef="Beroep" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_1qio9ph" name="Beroep" camunda:formRef="Beroep" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_1isupnd</bpmn:incoming>
       <bpmn:outgoing>Flow_1uj1qvs</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="Activity_0a4pfvp" name="Hoger beroep" camunda:formRef="HogerBeroep" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_0a4pfvp" name="Hoger beroep" camunda:formRef="HogerBeroep" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_0jcxpey</bpmn:incoming>
       <bpmn:outgoing>Flow_1bbt60a</bpmn:outgoing>
     </bpmn:userTask>
@@ -324,7 +324,7 @@ export const ASYLUM_MIGRATION_EXAMPLE_XML = `<bpmn:definitions xmlns:bpmn="http:
       <bpmn:incoming>Flow_0s7y4qh</bpmn:incoming>
       <bpmn:signalEventDefinition id="SignalEventDefinition_1akjoj1" signalRef="Signal_13blrff" />
     </bpmn:endEvent>
-    <bpmn:userTask id="Activity_0cxwftw" name="Inzage dossier" camunda:formRef="InzageDossier" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_0cxwftw" name="Inzage dossier" camunda:formRef="InzageDossier" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_0rv0yhc</bpmn:incoming>
       <bpmn:outgoing>Flow_0hs17xb</bpmn:outgoing>
     </bpmn:userTask>
@@ -349,7 +349,7 @@ export const ASYLUM_MIGRATION_EXAMPLE_XML = `<bpmn:definitions xmlns:bpmn="http:
     <bpmn:sequenceFlow id="Flow_0x0ljru" name="Bijzonderheden" sourceRef="Gateway_04fuup8" targetRef="Activity_1bqu3km">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">\${ProcedureFase == "Bijzonderheden"}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:userTask id="Activity_1bqu3km" name="Procedurele bijzonderheden" camunda:formRef="BijzonderhedenAsiel" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_1bqu3km" name="Procedurele bijzonderheden" camunda:formRef="BijzonderhedenAsiel" camunda:formRefBinding="deployment">
       <bpmn:extensionElements />
       <bpmn:incoming>Flow_0x0ljru</bpmn:incoming>
       <bpmn:outgoing>Flow_1j86ng8</bpmn:outgoing>
@@ -361,7 +361,7 @@ export const ASYLUM_MIGRATION_EXAMPLE_XML = `<bpmn:definitions xmlns:bpmn="http:
     </bpmn:boundaryEvent>
     <bpmn:sequenceFlow id="Flow_0ggrago" sourceRef="Event_02wwwco" targetRef="Gateway_0u9zyqn" />
     <bpmn:sequenceFlow id="Flow_05g3f3n" sourceRef="Activity_05lhdhf" targetRef="Gateway_0qr43ko" />
-    <bpmn:userTask id="Activity_05lhdhf" name="Dossier flow Manipulator" camunda:formRef="DossierManipulator" camunda:formRefBinding="latest">
+    <bpmn:userTask id="Activity_05lhdhf" name="Dossier flow Manipulator" camunda:formRef="DossierManipulator" camunda:formRefBinding="deployment">
       <bpmn:incoming>Flow_0hs17xb</bpmn:incoming>
       <bpmn:outgoing>Flow_05g3f3n</bpmn:outgoing>
     </bpmn:userTask>

@@ -19,9 +19,32 @@ describe('toDocumentPath', () => {
   test('rejects a mount outside /v1', () => {
     expect(() => toDocumentPath('/api/health', '/')).toThrow('/api/health is not a /v1 mount');
   });
+
+  test('strips the major version it is asked for', () => {
+    expect(toDocumentPath('/v2/norms', '/', 'v2')).toBe('/norms');
+  });
+
+  test('rejects a mount of another major version', () => {
+    expect(() => toDocumentPath('/v2/norms', '/')).toThrow('/v2/norms is not a /v1 mount');
+  });
 });
 
 describe('listServedOperations', () => {
+  test('lists only the mounts of the requested major version', () => {
+    const v1 = Router();
+    v1.get('/', handler);
+    const v2 = Router();
+    v2.get('/', handler);
+    const routes = [
+      { mount: '/v1/things', router: v1 },
+      { mount: '/v2/things', router: v2 },
+    ];
+
+    expect(listServedOperations(routes)).toEqual(['GET /things']);
+    expect(listServedOperations(routes, 'v2')).toEqual(['GET /things']);
+    expect(listServedOperations([{ mount: '/v1/things', router: v1 }], 'v2')).toEqual([]);
+  });
+
   test('lists every method of every route and skips middleware', () => {
     const router = Router();
     router.use(cors());
