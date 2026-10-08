@@ -211,11 +211,11 @@ execution.setVariable("bijstandsnormType", read(szw, "bijstandsnormType"));
 execution.setVariable("bijstandsnormTermijn", read(szw, "bijstandsnormTermijn"));
 execution.setVariable("bijstandsnormBekend", bool(norm !== null));</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:businessRuleTask id="Sub_Heusden_Eindresultaat" name="DMN: Heusdenpas en Kindpakket" camunda:resultVariable="heusdenpasResult" camunda:decisionRef="RONL_HeusdenpasEindresultaat" camunda:mapDecisionResult="singleResult" camunda:decisionRefTenantId="${null}" ronl:awbPhase="4">
+    <bpmn:businessRuleTask id="Sub_Heusden_Eindresultaat" name="DMN: Heusdenpas en Kindpakket" camunda:resultVariable="heusdenpasResult" camunda:decisionRef="RONL_HeusdenpasEindresultaat" camunda:mapDecisionResult="singleResult" camunda:decisionRefTenantId="${null}" ronl:awbPhase="4+5">
       <bpmn:incoming>Flow_Sub_Flatten_Heusden</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Heusden_Interpret</bpmn:outgoing>
     </bpmn:businessRuleTask>
-    <bpmn:scriptTask id="Sub_InterpretResult" name="Interpreteer uitkomst en motivering" scriptFormat="javascript" ronl:awbPhase="4">
+    <bpmn:scriptTask id="Sub_InterpretResult" name="Interpreteer uitkomst en motivering" scriptFormat="javascript" ronl:awbPhase="4+5">
       <bpmn:incoming>Flow_Sub_Heusden_Interpret</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Interpret_Review</bpmn:outgoing>
       <bpmn:script>// Interpreteer RONL_HeusdenpasEindresultaat. De DMN geeft alleen ja/nee per
@@ -306,11 +306,11 @@ execution.setVariable("eligible", bool(hp === true));
 execution.setVariable("heusdenpasMotivering", motivering);
 execution.setVariable("kindpakketMotivering", kpMotivering);</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:userTask id="Sub_CaseReview" name="Beoordeling behandelaar: recht op Heusdenpas en Kindpakket" camunda:formRef="heusdenpas-beoordeling" camunda:formRefBinding="deployment" camunda:candidateGroups="caseworker" ronl:awbPhase="5">
+    <bpmn:userTask id="Sub_CaseReview" name="Beoordeling behandelaar: recht op Heusdenpas en Kindpakket" camunda:formRef="heusdenpas-beoordeling" camunda:formRefBinding="deployment" camunda:candidateGroups="caseworker" ronl:awbPhase="4+5">
       <bpmn:incoming>Flow_Sub_Interpret_Review</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Review_Resolve</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:scriptTask id="Sub_ResolveDecision" name="Definitief besluit vaststellen" scriptFormat="javascript" ronl:awbPhase="5">
+    <bpmn:scriptTask id="Sub_ResolveDecision" name="Definitief besluit vaststellen" scriptFormat="javascript" ronl:awbPhase="4+5">
       <bpmn:incoming>Flow_Sub_Review_Resolve</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Resolve_Gateway</bpmn:outgoing>
       <bpmn:script>// Stel het definitieve besluit vast: de DMN-uitkomst, tenzij de behandelaar
@@ -371,12 +371,12 @@ execution.setVariable("kindpakketToegekend", bool(kp));
 execution.setVariable("besluitPositief", bool(hp || kp));
 execution.setVariable("phase5Complete", java.lang.Boolean.TRUE);</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:exclusiveGateway id="Sub_FinalGateway" name="Heusdenpas of Kindpakket toegekend?" ronl:awbPhase="5">
+    <bpmn:exclusiveGateway id="Sub_FinalGateway" name="Heusdenpas of Kindpakket toegekend?" ronl:awbPhase="4+5">
       <bpmn:incoming>Flow_Sub_Resolve_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Final_Yes</bpmn:outgoing>
       <bpmn:outgoing>Flow_Sub_Final_No</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:scriptTask id="Sub_SetGranted" name="Besluitvariabelen zetten: Toegekend" scriptFormat="javascript" ronl:awbPhase="5">
+    <bpmn:scriptTask id="Sub_SetGranted" name="Besluitvariabelen zetten: Toegekend" scriptFormat="javascript" ronl:awbPhase="4+5">
       <bpmn:incoming>Flow_Sub_Final_Yes</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Granted_End</bpmn:outgoing>
       <bpmn:script>function unwrap(v) {
@@ -427,7 +427,7 @@ var msg = hp
 if (kp) { msg += " U ontvangt daarnaast het Kindpakket."; }
 execution.setVariable("finalMessage", msg);</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:scriptTask id="Sub_SetRejected" name="Besluitvariabelen zetten: Afgewezen" scriptFormat="javascript" ronl:awbPhase="5">
+    <bpmn:scriptTask id="Sub_SetRejected" name="Besluitvariabelen zetten: Afgewezen" scriptFormat="javascript" ronl:awbPhase="4+5">
       <bpmn:incoming>Flow_Sub_Final_No</bpmn:incoming>
       <bpmn:outgoing>Flow_Sub_Rejected_End</bpmn:outgoing>
       <bpmn:script>execution.setVariable("heusdenpasNummer", null);
