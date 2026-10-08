@@ -1,0 +1,275 @@
+{
+  "components": [
+    {
+      "type": "text",
+      "text": "# Aanvraag Heusdenpas\nMet de Heusdenpas krijgen inwoners van de gemeente Heusden met een laag inkomen korting op sport, cultuur en andere activiteiten. Gezinnen met kinderen van 4 tot en met 17 jaar kunnen daarnaast het Kindpakket krijgen.",
+      "id": "Field_001_hpa",
+      "layout": {
+        "row": "Row_001_hpa",
+        "columns": null
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Uw gegevens",
+      "id": "Field_002_hpa",
+      "layout": {
+        "row": "Row_002_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Naam",
+      "key": "aanvragerNaam",
+      "type": "textfield",
+      "validate": {
+        "required": true
+      },
+      "id": "Field_003_hpa",
+      "layout": {
+        "row": "Row_a1_hpa",
+        "columns": 8
+      }
+    },
+    {
+      "subtype": "date",
+      "dateLabel": "Geboortedatum",
+      "key": "geboortedatumAanvrager",
+      "type": "datetime",
+      "validate": {
+        "required": true
+      },
+      "id": "Field_004_hpa",
+      "layout": {
+        "row": "Row_a1_hpa",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Ik woon in de gemeente Heusden",
+      "key": "aanvragerInwonerHeusden",
+      "type": "checkbox",
+      "defaultValue": true,
+      "id": "Field_005_hpa",
+      "layout": {
+        "row": "Row_005_hpa",
+        "columns": null
+      }
+    },
+    {
+      "subtype": "date",
+      "dateLabel": "Datum van aanvraag",
+      "key": "dagVanAanvraag",
+      "type": "datetime",
+      "description": "De peildatum voor uw leeftijd en de bijstandsnorm. Laat leeg om de dag van indienen te gebruiken.",
+      "id": "Field_006_hpa",
+      "layout": {
+        "row": "Row_006_hpa",
+        "columns": null
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Uw huishouden",
+      "id": "Field_007_hpa",
+      "layout": {
+        "row": "Row_007_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ik ben alleenstaand",
+      "key": "aanvragerAlleenstaand",
+      "type": "checkbox",
+      "defaultValue": false,
+      "id": "Field_008_hpa",
+      "layout": {
+        "row": "Row_008_hpa",
+        "columns": null
+      }
+    },
+    {
+      "subtype": "date",
+      "dateLabel": "Geboortedatum partner",
+      "key": "geboortedatumPartner",
+      "type": "datetime",
+      "conditional": {
+        "hide": "=aanvragerAlleenstaand"
+      },
+      "validate": {
+        "required": true
+      },
+      "id": "Field_009_hpa",
+      "layout": {
+        "row": "Row_009_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ik heb kinderen",
+      "key": "aanvragerHeeftKinderen",
+      "type": "checkbox",
+      "defaultValue": false,
+      "id": "Field_010_hpa",
+      "layout": {
+        "row": "Row_010_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Er woont een kind van 4 tot en met 17 jaar bij mij",
+      "key": "aanvragerHeeftKind4Tm17",
+      "type": "checkbox",
+      "defaultValue": false,
+      "conditional": {
+        "hide": "=not(aanvragerHeeftKinderen)"
+      },
+      "id": "Field_011_hpa",
+      "layout": {
+        "row": "Row_011_hpa",
+        "columns": null
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Uw inkomen",
+      "id": "Field_012_hpa",
+      "layout": {
+        "row": "Row_012_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Maandelijks bruto inkomen (EUR)",
+      "key": "maandelijksBrutoInkomenAanvrager",
+      "type": "number",
+      "decimalDigits": 2,
+      "validate": {
+        "required": true,
+        "min": 0
+      },
+      "description": "Uw bruto inkomen per maand, zonder vakantiegeld.",
+      "id": "Field_013_hpa",
+      "layout": {
+        "row": "Row_013_hpa",
+        "columns": null
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Regelingen die u al heeft\nHeeft u een van deze regelingen, dan komt u automatisch in aanmerking.",
+      "id": "Field_014_hpa",
+      "layout": {
+        "row": "Row_014_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ik heb een uitkering van Baanbrekers",
+      "key": "aanvragerUitkeringBaanbrekers",
+      "type": "checkbox",
+      "defaultValue": false,
+      "id": "Field_015_hpa",
+      "layout": {
+        "row": "Row_015_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ik heb een voedselbankpas van Den Bosch",
+      "key": "aanvragerVoedselbankpasDenBosch",
+      "type": "checkbox",
+      "defaultValue": false,
+      "id": "Field_016_hpa",
+      "layout": {
+        "row": "Row_016_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ik heb kwijtschelding van gemeentelijke belastingen",
+      "key": "aanvragerKwijtscheldingGemeentelijkeBelastingen",
+      "type": "checkbox",
+      "defaultValue": false,
+      "id": "Field_017_hpa",
+      "layout": {
+        "row": "Row_017_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ik heb een schuldhulptraject bij Kredietbank Nederland",
+      "key": "aanvragerSchuldhulptrajectKredietbankNederland",
+      "type": "checkbox",
+      "defaultValue": false,
+      "id": "Field_018_hpa",
+      "layout": {
+        "row": "Row_018_hpa",
+        "columns": null
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Overige vragen",
+      "id": "Field_019_hpa",
+      "layout": {
+        "row": "Row_019_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ik heb dit kalenderjaar al een Heusdenpas aangevraagd",
+      "key": "aanvragerDitKalenderjaarAlAangevraagd",
+      "type": "checkbox",
+      "defaultValue": false,
+      "id": "Field_020_hpa",
+      "layout": {
+        "row": "Row_020_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ik kom in aanmerking voor studiefinanciering",
+      "key": "aanvragerAanmerkingStudieFinanciering",
+      "type": "checkbox",
+      "defaultValue": false,
+      "id": "Field_021_hpa",
+      "layout": {
+        "row": "Row_021_hpa",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ik verklaar dat ik dit formulier naar waarheid heb ingevuld",
+      "key": "verklaringNaarWaarheid",
+      "type": "checkbox",
+      "validate": {
+        "required": true
+      },
+      "id": "Field_022_hpa",
+      "layout": {
+        "row": "Row_022_hpa",
+        "columns": null
+      }
+    },
+    {
+      "type": "button",
+      "action": "submit",
+      "label": "Aanvraag indienen",
+      "id": "Field_023_hpa",
+      "layout": {
+        "row": "Row_023_hpa",
+        "columns": null
+      }
+    }
+  ],
+  "id": "heusdenpas-aanvraag",
+  "type": "default",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.46.1"
+  },
+  "schemaVersion": 19,
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0"
+}
