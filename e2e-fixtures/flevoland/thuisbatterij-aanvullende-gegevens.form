@@ -16,14 +16,6 @@
       "disabled": true
     },
     {
-      "label": "Datum ontvangst",
-      "id": "Field_003_tbag",
-      "key": "receiptDate",
-      "type": "textfield",
-      "layout": { "row": "Row_002_tbag", "columns": 8 },
-      "disabled": true
-    },
-    {
       "label": "Ontbrekende gegevens",
       "id": "Field_004_tbag",
       "key": "ontbrekendeGegevens",
@@ -71,5 +63,7 @@
   },
   "schemaVersion": 19,
   "executionPlatform": "Camunda Platform",
-  "executionPlatformVersion": "7.21.0"
+  "executionPlatformVersion": "7.21.0",
+  "language": "nl",
+  "organization": "flevoland"
 }
