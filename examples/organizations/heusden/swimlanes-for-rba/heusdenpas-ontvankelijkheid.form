@@ -1,0 +1,192 @@
+{
+  "components": [
+    {
+      "type": "text",
+      "text": "# Ontvankelijkheid beoordelen (Awb 4:5)\nControleer of de aanvraag compleet is. Is er iets onduidelijk of ontbreekt er iets, vraag het dan in de volgende stap op.",
+      "id": "Field_001_hpo",
+      "layout": {
+        "row": "Row_001_hpo",
+        "columns": null
+      }
+    },
+    {
+      "label": "Dossiernummer",
+      "key": "dossierReference",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_002_hpo",
+      "layout": {
+        "row": "Row_o1_hpo",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Datum ontvangst",
+      "key": "receiptDate",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_003_hpo",
+      "layout": {
+        "row": "Row_o1_hpo",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Naam aanvrager",
+      "key": "aanvragerNaam",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_004_hpo",
+      "layout": {
+        "row": "Row_o2_hpo",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Geboortedatum",
+      "key": "geboortedatumAanvrager",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_005_hpo",
+      "layout": {
+        "row": "Row_o2_hpo",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Datum van aanvraag",
+      "key": "dagVanAanvraag",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_006_hpo",
+      "layout": {
+        "row": "Row_o3_hpo",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Maandelijks bruto inkomen",
+      "key": "maandelijksBrutoInkomenAanvrager",
+      "type": "number",
+      "disabled": true,
+      "id": "Field_007_hpo",
+      "layout": {
+        "row": "Row_o3_hpo",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Inwoner van Heusden",
+      "key": "aanvragerInwonerHeusden",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_008_hpo",
+      "layout": {
+        "row": "Row_008_hpo",
+        "columns": null
+      }
+    },
+    {
+      "label": "Alleenstaand",
+      "key": "aanvragerAlleenstaand",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_009_hpo",
+      "layout": {
+        "row": "Row_009_hpo",
+        "columns": null
+      }
+    },
+    {
+      "label": "Geboortedatum partner",
+      "key": "geboortedatumPartner",
+      "type": "textfield",
+      "disabled": true,
+      "conditional": {
+        "hide": "=aanvragerAlleenstaand"
+      },
+      "id": "Field_010_hpo",
+      "layout": {
+        "row": "Row_010_hpo",
+        "columns": null
+      }
+    },
+    {
+      "label": "Heeft kinderen",
+      "key": "aanvragerHeeftKinderen",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_011_hpo",
+      "layout": {
+        "row": "Row_011_hpo",
+        "columns": null
+      }
+    },
+    {
+      "label": "Inwonend kind van 4 t/m 17 jaar",
+      "key": "aanvragerHeeftKind4Tm17",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_012_hpo",
+      "layout": {
+        "row": "Row_012_hpo",
+        "columns": null
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Oordeel",
+      "id": "Field_013_hpo",
+      "layout": {
+        "row": "Row_013_hpo",
+        "columns": null
+      }
+    },
+    {
+      "label": "De aanvraag is volledig",
+      "key": "aanvraagVolledig",
+      "type": "checkbox",
+      "defaultValue": true,
+      "id": "Field_014_hpo",
+      "layout": {
+        "row": "Row_014_hpo",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ontbrekende of onduidelijke gegevens",
+      "key": "ontbrekendeGegevens",
+      "type": "textarea",
+      "conditional": {
+        "hide": "=aanvraagVolledig"
+      },
+      "validate": {
+        "required": true
+      },
+      "id": "Field_015_hpo",
+      "layout": {
+        "row": "Row_015_hpo",
+        "columns": null
+      }
+    },
+    {
+      "type": "button",
+      "action": "submit",
+      "label": "Verzenden",
+      "id": "Field_016_hpo",
+      "layout": {
+        "row": "Row_016_hpo",
+        "columns": null
+      }
+    }
+  ],
+  "id": "heusdenpas-ontvankelijkheid",
+  "type": "default",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.46.1"
+  },
+  "schemaVersion": 19,
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0"
+}

@@ -1,0 +1,493 @@
+{
+  "id": "heusdenpas_beschikking",
+  "name": "Heusdenpas Beschikking",
+  "description": "Beschikking op een aanvraag voor de Heusdenpas en het Kindpakket van de gemeente Heusden, gevuld met de uitkomst van het BPMN-proces.",
+  "processKey": "HeusdenpasAanvraagProcess",
+  "serviceId": "HeusdenpasHeusden",
+  "schemaVersion": 1,
+  "readonly": false,
+  "status": "example",
+  "language": "nl",
+  "organization": "heusden",
+  "createdAt": "2026-10-08T16:02:48.233Z",
+  "updatedAt": "2026-10-08T16:02:48.233Z",
+  "assets": [],
+  "bindings": [
+    {
+      "id": "b1",
+      "placeholder": "{{dossierReference}}",
+      "variableKey": "dossierReference",
+      "source": "process",
+      "label": "Dossiernummer"
+    },
+    {
+      "id": "b2",
+      "placeholder": "{{applicationDate}}",
+      "variableKey": "applicationDate",
+      "source": "process",
+      "label": "Aanvraagdatum"
+    },
+    {
+      "id": "b3",
+      "placeholder": "{{aanvragerNaam}}",
+      "variableKey": "aanvragerNaam",
+      "source": "process",
+      "label": "Naam aanvrager"
+    },
+    {
+      "id": "b4",
+      "placeholder": "{{decisionType}}",
+      "variableKey": "decisionType",
+      "source": "dmn_output",
+      "label": "Besluitsoort"
+    },
+    {
+      "id": "b5",
+      "placeholder": "{{finalMessage}}",
+      "variableKey": "finalMessage",
+      "source": "dmn_output",
+      "label": "Beslissingstekst"
+    },
+    {
+      "id": "b6",
+      "placeholder": "{{heusdenpasMotivering}}",
+      "variableKey": "heusdenpasMotivering",
+      "source": "dmn_output",
+      "label": "Motivering"
+    },
+    {
+      "id": "b7",
+      "placeholder": "{{heusdenpasNummer}}",
+      "variableKey": "heusdenpasNummer",
+      "source": "process",
+      "label": "Pasnummer"
+    },
+    {
+      "id": "b8",
+      "placeholder": "{{heusdenpasGeldigTot}}",
+      "variableKey": "heusdenpasGeldigTot",
+      "source": "process",
+      "label": "Geldig tot en met"
+    },
+    {
+      "id": "b9",
+      "placeholder": "{{awbDeadlineDate}}",
+      "variableKey": "awbDeadlineDate",
+      "source": "process",
+      "label": "Beslistermijn"
+    }
+  ],
+  "zones": {
+    "letterhead": {
+      "blocks": [
+        {
+          "id": "lh_org_name",
+          "type": "text",
+          "label": "Organisatienaam",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Gemeente Heusden"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Team Werk en Inkomen",
+                    "marks": [
+                      {
+                        "type": "italic"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "lh_separator",
+          "type": "separator",
+          "label": "Scheidingslijn"
+        }
+      ]
+    },
+    "contactInformation": {
+      "blocks": [
+        {
+          "id": "ci_address",
+          "type": "text",
+          "label": "Contactgegevens",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Postbus 41"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "5250 AA Vlijmen"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Telefoon: 14 073"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "www.heusden.nl"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "reference": {
+      "blocks": [
+        {
+          "id": "ref_header",
+          "type": "text",
+          "label": "Kenmerk en datum",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Kenmerk: {{dossierReference}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Datum aanvraag: {{applicationDate}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Betreft: Besluit op uw aanvraag voor de Heusdenpas"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "ref_subject",
+          "type": "text",
+          "label": "Aanhef",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Beste {{aanvragerNaam}},"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "body": {
+      "blocks": [
+        {
+          "id": "body_intro",
+          "type": "text",
+          "label": "Inleiding",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "U heeft de Heusdenpas aangevraagd. In deze brief leest u ons besluit."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_decision_heading",
+          "type": "text",
+          "label": "Besluit",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Ons besluit"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_decision_outcome",
+          "type": "text",
+          "label": "BPMN-uitkomst",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Uitkomst van de beoordeling: {{decisionType}}."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "{{finalMessage}}"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_motivation_heading",
+          "type": "text",
+          "label": "Motivering",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Waarom dit besluit?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "body_motivation",
+          "type": "text",
+          "label": "Motiveringstekst",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "{{heusdenpasMotivering}}"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Wij hebben uw aanvraag beoordeeld volgens de Beleidsregels minimabeleid gemeente Heusden. Daarbij gebruiken wij de bijstandsnorm van het ministerie van Sociale Zaken en Werkgelegenheid en de leeftijdsgegevens van de Sociale Verzekeringsbank."
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Wij hebben binnen de beslistermijn van de Algemene wet bestuursrecht (artikel 4:13) besloten. De uiterste beslisdatum was {{awbDeadlineDate}}."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "closing": {
+      "blocks": [
+        {
+          "id": "cl_pass",
+          "type": "text",
+          "label": "Uw Heusdenpas",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Heeft u de Heusdenpas gekregen? Dan ontvangt u de pas binnen twee weken thuis. Pasnummer: {{heusdenpasNummer}}, geldig tot en met {{heusdenpasGeldigTot}}."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "cl_appeal_heading",
+          "type": "text",
+          "label": "Bezwaarmogelijkheid",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 2
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Bent u het niet eens met dit besluit?"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "cl_appeal_text",
+          "type": "text",
+          "label": "Bezwaartekst",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Dan kunt u binnen zes weken na de datum van deze brief bezwaar maken bij het college van burgemeester en wethouders van Heusden. Vermeld in uw bezwaarschrift uw naam, adres, de datum, het kenmerk van deze brief en waarom u het niet eens bent met het besluit. Onderteken het bezwaarschrift."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "signOff": {
+      "blocks": [
+        {
+          "id": "so_closing",
+          "type": "text",
+          "label": "Afsluiting",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Met vriendelijke groet,"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "so_spacer",
+          "type": "spacer",
+          "label": "Ruimte handtekening"
+        },
+        {
+          "id": "so_name",
+          "type": "text",
+          "label": "Naam en functie",
+          "content": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Namens burgemeester en wethouders van Heusden,"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph"
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Teamleider Werk en Inkomen"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "annex": null
+  }
+}
