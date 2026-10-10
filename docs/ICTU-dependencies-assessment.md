@@ -167,6 +167,19 @@ Scored 0 in all three because nothing here addresses it. It is also the
 recommendation least fixable from inside a repository: it needs a registry or
 proxy to exist first.
 
+**Update, October 2026 (#249):** the provenance half is now enforced. The
+required `audit` job in all three runs `npm audit signatures` on every pull
+request (`scripts/audit-signatures.sh`, identical in each), after the `npm ci`
+the formatter already needed. It fails on an invalid or missing registry
+signature, and on a registry gap: metadata that advertises a provenance
+attestation the registry then serves as 404, after which npm verifies nothing
+further. A package without an attestation passes. On 10 October all three
+verified: LDE 1,477 signatures and 191 attestations, TTL 532 and 160, RBA 1,575
+and 213. TTL first had to move `whatwg-url` from 17.1.1, the one version with
+such a gap, to 17.1.2. The registry or proxy half is still open: it waits for an
+answer from ICTU, recorded in #249. The scores in this document are still those
+of 13 September.
+
 ### 6 — Cooldown of at least 7 days, configured in the tools
 
 All three set `minimumReleaseAge: "14 days"` with `internalChecksFilter: "strict"`,
