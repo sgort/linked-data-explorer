@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "tree-felling-review",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Kapvergunning – beoordeling door behandelaar"
+    },
+    {
+      "id": "Field_ReviewError",
+      "type": "textfield",
+      "label": "Validatiemelding",
+      "key": "reviewError",
+      "disabled": true,
+      "readonly": true,
+      "description": "Staat hier een melding, herstel dan het probleem hieronder en dien opnieuw in."
+    },
+    {
+      "id": "Text_Current",
+      "type": "text",
+      "text": "## Huidige (DMN-)beslissingen"
+    },
+    {
+      "id": "Field_PermitDecision",
+      "type": "textfield",
+      "label": "permitDecision (huidig)",
+      "key": "permitDecision",
+      "disabled": true,
+      "readonly": true
+    },
+    {
+      "id": "Field_ReplacementDecision",
+      "type": "textfield",
+      "label": "replacementDecision (huidig)",
+      "key": "replacementDecision",
+      "disabled": true,
+      "readonly": true,
+      "description": "Kan leeg (null) zijn als de vergunning is afgewezen."
+    },
+    {
+      "id": "Text_Action",
+      "type": "text",
+      "text": "## Beoordeling\n- **Bevestigen**: DMN-beslissingen ongewijzigd laten\n- **Afwijzen**: permitDecision geforceerd op `Reject` zetten\n- **Wijzigen**: beslissingen hieronder overschrijven\n"
+    },
+    {
+      "id": "Field_ReviewAction",
+      "type": "select",
+      "label": "Wat wilt u doen?",
+      "key": "reviewAction",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Bevestigen (DMN-beslissingen behouden)",
+          "value": "confirm"
+        },
+        {
+          "label": "Afwijzen (afwijzing forceren)",
+          "value": "reject"
+        },
+        {
+          "label": "Wijzigen (beslissingen overschrijven)",
+          "value": "change"
+        }
+      ]
+    },
+    {
+      "id": "Field_ReviewPermitDecision",
+      "type": "select",
+      "label": "Nieuwe permitDecision (verplicht bij Wijzigen)",
+      "key": "reviewPermitDecision",
+      "values": [
+        {
+          "label": "Vergunnen",
+          "value": "Permit"
+        },
+        {
+          "label": "Afwijzen",
+          "value": "Reject"
+        }
+      ]
+    },
+    {
+      "id": "Field_ReviewReplacementDecision",
+      "type": "radio",
+      "label": "Is herplant verplicht?",
+      "key": "reviewReplacementDecision",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Ja – herplant verplicht",
+          "value": true
+        },
+        {
+          "label": "Nee – geen herplant verplicht",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Beoordeling indienen",
+      "action": "submit"
+    }
+  ]
+}

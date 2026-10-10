@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-registreren",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_72",
+      "type": "text",
+      "text": "# Ontvang en registreer"
+    },
+    {
+      "id": "Field_Ro_73",
+      "type": "textfield",
+      "label": "Onderwerp",
+      "key": "onderwerp",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Tf_74",
+      "type": "textfield",
+      "label": "Zaaknummer (zaaksysteem)",
+      "key": "zaaknummer",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Tf_75",
+      "type": "textfield",
+      "label": "Kenmerk / dossiernummer",
+      "key": "kenmerk",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Cb_76",
+      "type": "checkbox",
+      "label": "Documenten gekoppeld in het zaaksysteem",
+      "key": "documentenGekoppeld",
+      "defaultValue": false
+    },
+    {
+      "id": "Field_Submit_77",
+      "type": "button",
+      "action": "submit",
+      "label": "Registreren"
+    }
+  ]
+}

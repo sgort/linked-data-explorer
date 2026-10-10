@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-indienen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_46",
+      "type": "text",
+      "text": "# 6. Dien het besluit in voor ondertekening"
+    },
+    {
+      "id": "Field_Ro_47",
+      "type": "textfield",
+      "label": "Onderwerp",
+      "key": "onderwerp",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ro_48",
+      "type": "textarea",
+      "label": "Voorgesteld besluit",
+      "key": "voorgesteldBesluit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Cb_49",
+      "type": "checkbox",
+      "label": "Alle documenten zijn toegevoegd en volledig",
+      "key": "documentenCompleet",
+      "defaultValue": false,
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Tf_50",
+      "type": "textfield",
+      "label": "Gemachtigde ondertekenaar (naam)",
+      "key": "ondertekenaar",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Submit_51",
+      "type": "button",
+      "action": "submit",
+      "label": "Indienen"
+    }
+  ]
+}

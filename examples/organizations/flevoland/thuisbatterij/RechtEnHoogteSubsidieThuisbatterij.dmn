@@ -5,6 +5,18 @@
     <informationRequirement id="InformationRequirement_Behaalbare_JaarGebondenBudget">
       <requiredDecision href="#jaarGebondenBudget" />
     </informationRequirement>
+    <informationRequirement id="InformationRequirement_Behaalbare_BasisHoogte">
+      <requiredDecision href="#BerekenBasisHoogteSubsidie" />
+    </informationRequirement>
+    <informationRequirement id="InformationRequirement_Behaalbare_Plafond">
+      <requiredDecision href="#BerekenBeschikbaarSubsidiePlafond" />
+    </informationRequirement>
+    <informationRequirement id="InformationRequirement_1jpwlu5">
+      <requiredDecision href="#BerekenBasisHoogteSubsidie" />
+    </informationRequirement>
+    <informationRequirement id="InformationRequirement_0843g4c">
+      <requiredDecision href="#BerekenBeschikbaarSubsidiePlafond" />
+    </informationRequirement>
     <decisionTable id="DecisionTable_BehaalbareHoogteSubsidie">
       <input id="Input_BasisHoogteSubsidie" label="Basis hoogte subsidie">
         <inputExpression id="InputExpression_BasisHoogteSubsidie" typeRef="double" expressionLanguage="feel">
@@ -34,6 +46,12 @@
     <variable name="basisHoogteSubsidie" typeRef="double" />
     <informationRequirement id="InformationRequirement_1fephhr">
       <requiredInput href="#InputData_18dsvrq" />
+    </informationRequirement>
+    <informationRequirement id="InformationRequirement_Basis_Constanten">
+      <requiredDecision href="#SubsidieConstantenThuisbatterij" />
+    </informationRequirement>
+    <informationRequirement id="InformationRequirement_153k8os">
+      <requiredDecision href="#SubsidieConstantenThuisbatterij" />
     </informationRequirement>
     <decisionTable id="DecisionTable_BerekenBasisHoogteSubsidie">
       <input id="Input_GemaakteKosten" label="Gemaakte kosten">
@@ -74,7 +92,7 @@
     <informationRequirement id="InformationRequirement_12zgy8b">
       <requiredInput href="#InputData_1f43kne" />
     </informationRequirement>
-    <informationRequirement id="InformationRequirement_181n0qk">
+    <informationRequirement id="InformationRequirement_0rt9na8">
       <requiredDecision href="#jaarGebondenBudget" />
     </informationRequirement>
     <decisionTable id="DecisionTable_BerekenBeschikbaarSubsidiePlafond" hitPolicy="FIRST">
@@ -563,7 +581,7 @@
           <text>true</text>
         </outputEntry>
         <outputEntry id="LiteralExpression_Huurder_Reden" expressionLanguage="feel">
-          <text>"Aanvrager heeft recht op subsidie"</text>
+          <text>"Aanvrager heeft recht op subsidie; huurder met toestemming eigenaar"</text>
         </outputEntry>
       </rule>
       <rule id="Rule_Afwijzing_Standaard">
@@ -707,10 +725,25 @@
         <di:waypoint x="1730" y="230" />
         <di:waypoint x="1730" y="200" />
       </dmndi:DMNEdge>
-      <dmndi:DMNEdge id="DMNEdge_1pghh4a" dmnElementRef="InformationRequirement_181n0qk">
+      <dmndi:DMNEdge id="DMNEdge_0rzgzfe" dmnElementRef="InformationRequirement_153k8os">
+        <di:waypoint x="370" y="400" />
+        <di:waypoint x="370" y="320" />
+        <di:waypoint x="370" y="300" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_0awyk9w" dmnElementRef="InformationRequirement_1jpwlu5">
+        <di:waypoint x="370" y="220" />
+        <di:waypoint x="500" y="160" />
+        <di:waypoint x="500" y="140" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_0gu253h" dmnElementRef="InformationRequirement_0rt9na8">
         <di:waypoint x="700" y="430" />
         <di:waypoint x="700" y="320" />
         <di:waypoint x="700" y="300" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_1tu6p1h" dmnElementRef="InformationRequirement_0843g4c">
+        <di:waypoint x="780" y="220" />
+        <di:waypoint x="580" y="160" />
+        <di:waypoint x="580" y="140" />
       </dmndi:DMNEdge>
     </dmndi:DMNDiagram>
   </dmndi:DMNDI>

@@ -57,3 +57,63 @@ describe('examples/ and e2e-fixtures/ copies stay identical', () => {
     });
   }
 });
+
+const PUBLIC_ROOT = path.join(REPO_ROOT, 'packages', 'frontend', 'public', 'examples');
+
+/**
+ * examples/organizations/<tenant>/ holds the authored copy of every bundle for
+ * that tenant; packages/frontend/public/examples/<tenant>/ serves a subset of
+ * them to the Modeler (and e2e-fixtures/ a labelled subset of that, which
+ * public-example-fixture-parity.test.ts guards). So every public file must have
+ * an authored copy, byte for byte.
+ *
+ * Matched by file name rather than path, because the authored tree groups
+ * bundles in their own folders (thuisbatterij/, besluitvorming-gedelegeerd/)
+ * where public/examples keeps most of them flat. A name that occurs twice in
+ * the authored tree is an error: the copy to compare against must be
+ * unambiguous.
+ *
+ * Before this test (#192) nothing tied the authored tree to what was served or
+ * deployed, and it drifted: awb-completeness-check.dmn lost the Thuisbatterij
+ * rule, so a Thuisbatterij application deployed from it was declared
+ * inadmissible, and three bundles had no authored copy at all.
+ */
+const AUTHORED_TENANTS = ['flevoland'];
+
+function filesUnder(dir: string): string[] {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = path.join(dir, e.name);
+    return e.isDirectory() ? filesUnder(p) : [p];
+  });
+}
+
+describe('public/examples has an authored copy in examples/organizations', () => {
+  for (const tenant of AUTHORED_TENANTS) {
+    it(`every public/examples/${tenant} file matches its authored copy`, () => {
+      const publicFiles = filesUnder(path.join(PUBLIC_ROOT, tenant));
+      const authored = new Map<string, string[]>();
+      for (const f of filesUnder(path.join(EXAMPLES_ROOT, tenant))) {
+        const name = path.basename(f);
+        authored.set(name, [...(authored.get(name) ?? []), f]);
+      }
+
+      expect(publicFiles.length).toBeGreaterThan(20);
+      const problems: string[] = [];
+      for (const pub of publicFiles) {
+        const rel = path.relative(PUBLIC_ROOT, pub).split(path.sep).join('/');
+        const copies = authored.get(path.basename(pub)) ?? [];
+        if (copies.length !== 1) {
+          problems.push(
+            `${rel}: ${copies.length === 0 ? 'no' : `${copies.length}`} authored cop${copies.length === 1 ? 'y' : 'ies'} in examples/organizations/${tenant}/`
+          );
+          continue;
+        }
+        if (!fs.readFileSync(pub).equals(fs.readFileSync(copies[0]))) {
+          const authoredRel = path.relative(EXAMPLES_ROOT, copies[0]).split(path.sep).join('/');
+          problems.push(`${rel}: differs from examples/organizations/${authoredRel}`);
+        }
+      }
+      expect(problems).toEqual([]);
+    });
+  }
+});

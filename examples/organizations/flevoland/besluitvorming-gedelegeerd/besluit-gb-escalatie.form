@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-escalatie",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_59",
+      "type": "text",
+      "text": "# Escaleren naar bevoegde bestuursautoriteit"
+    },
+    {
+      "id": "Field_Ro_60",
+      "type": "textfield",
+      "label": "Onderwerp",
+      "key": "onderwerp",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ro_61",
+      "type": "textarea",
+      "label": "Advies Juridische Zaken / Compliance",
+      "key": "advies",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ta_62",
+      "type": "textarea",
+      "label": "Reden van escalatie",
+      "key": "escalatieReden",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Submit_63",
+      "type": "button",
+      "action": "submit",
+      "label": "Escaleren"
+    }
+  ]
+}
