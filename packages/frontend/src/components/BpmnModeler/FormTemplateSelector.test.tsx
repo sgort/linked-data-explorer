@@ -58,6 +58,44 @@ describe('FormTemplateSelector', () => {
     });
   });
 
+  test("the card shows the element's own binding (#270)", async () => {
+    getForms.mockReturnValue([form()]);
+    render(
+      <FormTemplateSelector
+        element={{}}
+        modeling={{ updateProperties: vi.fn() }}
+        selectedFormRef="form-schema-1"
+        selectedFormRefBinding="deployment"
+      />
+    );
+
+    expect(await screen.findByText('formRef: form-schema-1 · binding: deployment')).toBeTruthy();
+  });
+
+  test("the card names Camunda's default when the element has no binding", async () => {
+    getForms.mockReturnValue([form()]);
+    render(
+      <FormTemplateSelector
+        element={{}}
+        modeling={{ updateProperties: vi.fn() }}
+        selectedFormRef="form-schema-1"
+      />
+    );
+
+    expect(
+      await screen.findByText('formRef: form-schema-1 · binding: latest (standaard)')
+    ).toBeTruthy();
+  });
+
+  test('selecting a form shows the deployment binding it writes', async () => {
+    getForms.mockReturnValue([form()]);
+    render(<FormTemplateSelector element={{}} modeling={{ updateProperties: vi.fn() }} />);
+
+    await userEvent.selectOptions(await screen.findByRole('combobox'), 'form-schema-1');
+
+    expect(await screen.findByText('formRef: form-schema-1 · binding: deployment')).toBeTruthy();
+  });
+
   test('clearing the selection removes the formRef properties', async () => {
     getForms.mockReturnValue([form()]);
     const updateProperties = vi.fn();
