@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:camunda="http://camunda.org/schema/1.0/dmn" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:biodi="http://bpmn.io/schema/dmn/biodi/2.0" id="definitions_awb_completeness" name="AwbCompletenessCheck" namespace="http://example.com/awb/dmn" exporter="Camunda Modeler" exporterVersion="5.36.0">
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:camunda="http://camunda.org/schema/1.0/dmn" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:biodi="http://bpmn.io/schema/dmn/biodi/2.0" id="definitions_awb_completeness" name="AwbCompletenessCheck" namespace="http://example.com/awb/dmn" exporter="Camunda Modeler" exporterVersion="5.46.1">
   <decision id="AwbCompletenessCheck" name="Awb Admissibility Check" camunda:historyTimeToLive="180">
     <decisionTable id="DecisionTable_Completeness" hitPolicy="FIRST">
       <input id="Input_ProductType">
@@ -49,6 +49,20 @@
           <text>"No missing fields."</text>
         </outputEntry>
         <outputEntry id="OE_BP_Article">
+          <text>"Awb 4:5 - application complete"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_0udgnpz">
+        <inputEntry id="UnaryTests_00geumx">
+          <text>"SubsidieThuisbatterijFlevoland"</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0o6dsmx">
+          <text>true</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_185kz2l">
+          <text>"No missing fields."</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_1s961cc">
           <text>"Awb 4:5 - application complete"</text>
         </outputEntry>
       </rule>

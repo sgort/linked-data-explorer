@@ -5,6 +5,9 @@
       "flevoland/awb-completeness-check.dmn": [
         "AwbCompletenessCheck"
       ],
+      "flevoland/thuisbatterij-completeness-check.dmn": [
+        "ThuisbatterijCompletenessCheck"
+      ],
       "flevoland/archives-act-retention.dmn": [
         "ArchivesActRetention"
       ],
@@ -21,12 +24,31 @@
         "BerekenBeschikbaarSubsidiePlafond",
         "SubsidieConstantenThuisbatterij",
         "jaarGebondenBudget"
+      ],
+      "heusden/RONL_SVB_Leeftijden.dmn": [
+        "SVB_LeeftijdsInformatie",
+        "SVB_Leeftijdsgrenzen",
+        "SVB_BerekenLeeftijden",
+        "SVB_AOWleeftijd"
+      ],
+      "heusden/RONL_SZW_Bijstand.dmn": [
+        "SZW_BijstandsnormInformatie",
+        "SZW_BijstandsnormBedragen",
+        "SZW_Bijstandsnormtype",
+        "SZW_Bijstandsnormtermijn"
+      ],
+      "heusden/RONL_Heusden_Heusdenpas.dmn": [
+        "RONL_HeusdenpasEindresultaat",
+        "RONL_HeusdenpasHoofdAanvraag",
+        "RONL_HeusdenpasKindpakket",
+        "RONL_HeusdenpasAutomatisch",
+        "RONL_HeusdenpasKnockoffs"
       ]
     },
     "external": {
       "zorgtoeslag_resultaat": "Ships with the zorgtoeslag rules set, not with this bundle: it lives in a 23-decision file (def_zorgtoeslag_temporal_demo) with its own lifecycle. Declared here so a stack rebuilt from this manifest knows it is required, and where it does NOT come from."
     },
-    "source": "Downloaded from the untenanted decision definitions deployed on operaton.open-regels.nl, the same engine the ACC backend uses — the convention the Thuisbatterij bundle set. Verified 22 September 2026: all seven keys present there, every one with tenantId null."
+    "source": "Downloaded from the untenanted decision definitions deployed on operaton.open-regels.nl, the same engine the ACC backend uses — the convention the Thuisbatterij bundle set. Verified 22 September 2026: all seven keys present there, every one with tenantId null. The three heusden/ decision files are the exception: they are byte-identical copies of examples/organizations/heusden/, which is where that bundle is authored (example-fixture-parity.test.ts enforces the copy)."
   },
   "flevoland": [
     {
@@ -121,9 +143,9 @@
       ],
       "decisions": [
         "ArchivesActRetention",
-        "AwbCompletenessCheck"
+        "ThuisbatterijCompletenessCheck"
       ],
-      "source": "taken from the flevoland-tenant bundle deployed on operaton.open-regels.nl (deployment 8803912d, 2026-09-21), not from examples/organizations/flevoland/thuisbatterij/ — that folder's -main/-subprocess pair and its two forms have drifted behind what is actually deployed. Every businessRuleTask carries camunda:decisionRefTenantId=\"${null}\" so the tenant-scoped process resolves the SHARED, untenanted DMNs; the deployed copy pinned decisionRefTenantId=\"46\" instead, which tied it to one organisation's tenant. RechtEnHoogteSubsidieThuisbatterij.dmn holds all six decisions and MUST be deployed WITHOUT a tenant-id.",
+      "source": "taken from the flevoland-tenant bundle deployed on operaton.open-regels.nl (deployment 8803912d, 2026-09-21), and since #192 also the authored copy in examples/organizations/flevoland/thuisbatterij/, which replaced the drifted -main/-subprocess pair that used to live there (example-fixture-parity.test.ts keeps it identical to public/examples). Every businessRuleTask carries camunda:decisionRefTenantId=\"${null}\" so the tenant-scoped process resolves the SHARED, untenanted DMNs; the deployed copy pinned decisionRefTenantId=\"46\" instead, which tied it to one organisation's tenant. RechtEnHoogteSubsidieThuisbatterij.dmn holds all six decisions and MUST be deployed WITHOUT a tenant-id.",
       "subProcesses": [
         {
           "processDefinitionKey": "ThuisbatterijSubsidieDecisionSubProcessE2E",
@@ -170,6 +192,41 @@
             "zorgtoeslag_resultaat"
           ],
           "source": "based on packages/frontend/public/examples/toeslagen/ZorgtoeslagProvisionalSubProcess.bpmn, renamed to ZorgtoeslagProvisionalSubProcessE2E (id + filename) to give this fixture its own Operaton key, distinct from the seeded example — LDE's own catalog otherwise conflates the two by shared process id, silently redeploying stale content; called via AwbZorgtoeslagProcess's callActivity calledElement=\"ZorgtoeslagProvisionalSubProcessE2E\" — deployed together with the shell in one LDE Modeler action, not separately"
+        }
+      ]
+    }
+  ],
+  "heusden": [
+    {
+      "processDefinitionKey": "HeusdenpasAanvraagProcess",
+      "bpmn": "HeusdenpasAanvraagProcess.bpmn",
+      "forms": [
+        "heusdenpas-aanvraag.form",
+        "heusdenpas-ontvankelijkheid.form",
+        "heusdenpas-aanvullende-gegevens.form",
+        "heusdenpas-besluit-informeren.form"
+      ],
+      "documents": [
+        "heusdenpas_beschikking.document"
+      ],
+      "decisions": [
+        "ArchivesActRetention"
+      ],
+      "source": "examples/organizations/heusden/swimlanes-for-rba/HeusdenpasAanvraagProcess.bpmn, byte-identical (example-fixture-parity.test.ts). Unlike the flevoland and toeslagen fixtures it keeps its real keys and carries no E2E labels: ronl-business-api's required-processes.ts expects the same keys on every tier, and a byte-identical copy cannot go stale, which is what the E2E suffix guards against (#274).",
+      "subProcesses": [
+        {
+          "processDefinitionKey": "HeusdenpasBeoordelingSubProcess",
+          "bpmn": "HeusdenpasBeoordelingSubProcess.bpmn",
+          "forms": [
+            "heusdenpas-beoordeling.form"
+          ],
+          "documents": [],
+          "decisions": [
+            "RONL_HeusdenpasEindresultaat",
+            "SVB_LeeftijdsInformatie",
+            "SZW_BijstandsnormInformatie"
+          ],
+          "source": "examples/organizations/heusden/swimlanes-for-rba/HeusdenpasBeoordelingSubProcess.bpmn, byte-identical; called via HeusdenpasAanvraagProcess's callActivity calledElement=\"HeusdenpasBeoordelingSubProcess\" and deployed with it in one request"
         }
       ]
     }

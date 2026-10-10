@@ -9,6 +9,7 @@ import {
   listDocuments,
   listForms,
   markDeployed,
+  ProcessIdTakenError,
   upsertBpmn,
   upsertDocument,
   upsertForm,
@@ -147,6 +148,21 @@ router.post('/bpmn', async (req: Request, res: Response) => {
     await upsertBpmn(req.body);
     res.json({ success: true });
   } catch (err) {
+    if (err instanceof ProcessIdTakenError) {
+      // #171: one stored process per organisation and process id. The holder
+      // lets the Modeler offer to replace that process or rename this one.
+      sendProblem(res, req, {
+        status: 409,
+        code: 'PROCESS_ID_TAKEN',
+        detail: err.message,
+        extensions: {
+          bpmnProcessId: err.bpmnProcessId,
+          organization: err.organization,
+          existing: err.existing,
+        },
+      });
+      return;
+    }
     logger.error('[assets] upsertBpmn failed', { error: getErrorMessage(err) });
     sendProblem(res, req, { status: 500, code: 'UPSERT_FAILED', detail: getErrorMessage(err) });
   }
@@ -215,7 +231,13 @@ router.patch('/bpmn/:id/deploy', async (req: Request, res: Response) => {
 router.get('/bpmn/by-bpmn-id/:bpmnProcessId', async (req: Request, res: Response) => {
   if (!dbRequired(req, res)) return;
   try {
-    const result = await getBpmnByBpmnProcessId(req.params.bpmnProcessId);
+    // ?organization= scopes the lookup to one organisation (#171); an empty
+    // value means "no organisation". Without it, every organisation counts.
+    const organization = req.query.organization;
+    const result = await getBpmnByBpmnProcessId(
+      req.params.bpmnProcessId,
+      typeof organization === 'string' ? { organization: organization || null } : undefined
+    );
     if (!result) {
       sendProblem(res, req, {
         status: 404,

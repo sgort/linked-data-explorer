@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-sjabloon-invullen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_6",
+      "type": "text",
+      "text": "# 2. Vul de sjabloon in"
+    },
+    {
+      "id": "Field_Ro_7",
+      "type": "textfield",
+      "label": "Type besluit",
+      "key": "besluitType",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Tf_8",
+      "type": "textfield",
+      "label": "Onderwerp",
+      "key": "onderwerp",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Ta_9",
+      "type": "textarea",
+      "label": "Motivering / achtergrond",
+      "key": "motivering",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Ta_10",
+      "type": "textarea",
+      "label": "Relevante gegevens",
+      "key": "relevanteGegevens"
+    },
+    {
+      "id": "Field_Num_11",
+      "type": "number",
+      "label": "Financiële gevolgen (€)",
+      "key": "financieleGevolgen",
+      "defaultValue": 0,
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "id": "Field_Ta_12",
+      "type": "textarea",
+      "label": "Bijlagen (indien van toepassing)",
+      "key": "bijlagen"
+    },
+    {
+      "id": "Field_Ta_13",
+      "type": "textarea",
+      "label": "Voorgesteld besluit",
+      "key": "voorgesteldBesluit",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "id": "Field_Submit_14",
+      "type": "button",
+      "action": "submit",
+      "label": "Opslaan"
+    }
+  ]
+}

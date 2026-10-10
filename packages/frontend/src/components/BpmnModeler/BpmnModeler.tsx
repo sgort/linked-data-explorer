@@ -1,10 +1,12 @@
 import { Workflow } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
-import { BpmnService } from '../../services/bpmnService';
+import { BpmnService, ProcessIdConflict } from '../../services/bpmnService';
 import { BpmnProcess } from '../../types';
+import { extractCallActivityTargets } from '../../utils/bpmnLinks';
 import { ASYLUM_MIGRATION_EXAMPLE_XML, DEFAULT_BPMN_XML } from '../../utils/bpmnTemplates';
 import { EXAMPLE_VERSIONS, getStoredVersion, setStoredVersion } from '../../utils/exampleVersions';
+import { freshProcessId, isValidProcessId, renameProcessId } from '../../utils/processIdentity';
 import { applyRonlAttr, readRonlAttr, type RonlAttr } from '../../utils/ronlAttributes';
 import BpmnCanvas from './BpmnCanvas';
 import ProcessList from './ProcessList';
@@ -32,15 +34,6 @@ const extractBpmnProcessId = (xml: string): string => {
   const match = xml.match(/<(?:[\w-]+:)?process\b[^>]*\sid="([^"]*)"/);
   const id = match?.[1]?.trim();
   return id ? id : 'unknown';
-};
-
-/** Returns every calledElement value found in callActivity elements. */
-const extractCallActivityTargets = (xml: string): string[] => {
-  const targets: string[] = [];
-  const re = /calledElement="([^"]+)"/g;
-  let m;
-  while ((m = re.exec(xml)) !== null) targets.push(m[1]);
-  return targets;
 };
 
 /**
@@ -287,7 +280,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           xml,
           createdAt: '2026-06-10T00:00:00.000Z',
           updatedAt: new Date().toISOString(),
-          linkedDmnTemplates: ['AwbCompletenessCheck', 'ArchivesActRetention'],
+          linkedDmnTemplates: ['ThuisbatterijCompletenessCheck', 'ArchivesActRetention'],
           readonly: false,
           status: 'example',
           bpmnProcessId: 'ThuisbatterijSubsidieAanvraagProcess',
@@ -481,14 +474,18 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
 
   const handleCreateProcess = () => {
     if (!confirmDiscardIfDirty()) return;
+    // Every new process would otherwise start with the template's own process
+    // id, and a second one in the same organisation would be refused (#171).
+    const templateId = extractBpmnProcessId(DEFAULT_BPMN_XML);
+    const xml = renameProcessId(DEFAULT_BPMN_XML, templateId, freshProcessId(templateId));
     const newProcess: BpmnProcess = {
       id: `process_${Date.now()}`,
       name: 'New Process',
-      xml: DEFAULT_BPMN_XML,
+      xml,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       linkedDmnTemplates: [],
-      bpmnProcessId: extractBpmnProcessId(DEFAULT_BPMN_XML),
+      bpmnProcessId: extractBpmnProcessId(xml),
       processRole: 'standalone',
     };
     // BpmnService.saveProcess writes to localStorage synchronously before
@@ -531,18 +528,91 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
       language,
       organization,
     };
-    const savePromise = Promise.resolve(BpmnService.saveProcess(newProcess));
+    const savePromise = Promise.resolve(BpmnService.saveProcessDetailed(newProcess));
     setProcessError(null);
     reclassifyProcessRoles(BpmnService.getProcesses());
     setProcesses(BpmnService.getProcesses());
     setActiveProcessId(newProcess.id);
     setCurrentXml(xml);
     resetEditState();
-    savePromise.then((saved) => {
-      if (saved === false) {
-        setProcessError(`Could not save the imported process "${name}" to the server.`);
+    savePromise.then((outcome) => {
+      if (outcome?.saved) return;
+      if (outcome?.conflict) {
+        void resolveImportConflict(newProcess, outcome.conflict);
+        return;
       }
+      setProcessError(`Could not save the imported process "${name}" to the server.`);
     });
+  };
+
+  /**
+   * The organisation already has a stored process with the imported process id
+   * (#171). The refused import is dropped locally; the user either replaces the
+   * existing process's content with the import, keeping that process's record,
+   * status and deploy stamp, or gives the import another process id.
+   */
+  const resolveImportConflict = async (imported: BpmnProcess, conflict: ProcessIdConflict) => {
+    BpmnService.forgetLocal(imported.id);
+    const { bpmnProcessId, existing } = conflict;
+    const where = conflict.organization ? ` in ${conflict.organization}` : '';
+
+    const replace = window.confirm(
+      `Process id "${bpmnProcessId}" is already used by "${existing.name}"${where}.\n\n` +
+        `OK: replace "${existing.name}" with this import.\n` +
+        `Cancel: give the import another process id.`
+    );
+
+    let target: BpmnProcess;
+    if (replace) {
+      const holder = BpmnService.getProcess(existing.id);
+      target = {
+        ...(holder ?? {
+          ...imported,
+          name: existing.name,
+          status: existing.status as BpmnProcess['status'],
+        }),
+        id: existing.id,
+        xml: imported.xml,
+        bpmnProcessId,
+        language: imported.language ?? holder?.language,
+        organization: imported.organization ?? holder?.organization,
+        updatedAt: new Date().toISOString(),
+      };
+    } else {
+      const newId = window.prompt(
+        `Choose another process id for "${imported.name}":`,
+        freshProcessId(bpmnProcessId)
+      );
+      if (!newId || !isValidProcessId(newId)) {
+        setProcesses(BpmnService.getProcesses());
+        setActiveProcessId(existing.id);
+        setProcessError(
+          newId
+            ? `"${newId}" is not a valid process id; "${imported.name}" was not imported.`
+            : `"${imported.name}" was not imported: process id "${bpmnProcessId}" is already used by "${existing.name}"${where}.`
+        );
+        return;
+      }
+      target = {
+        ...imported,
+        xml: renameProcessId(imported.xml, bpmnProcessId, newId),
+        bpmnProcessId: newId,
+      };
+    }
+
+    const outcome = await BpmnService.saveProcessDetailed(target);
+    reclassifyProcessRoles(BpmnService.getProcesses());
+    setProcesses(BpmnService.getProcesses());
+    setActiveProcessId(target.id);
+    setCurrentXml(target.xml);
+    resetEditState();
+    if (!outcome.saved) {
+      setProcessError(
+        outcome.conflict
+          ? `Process id "${outcome.conflict.bpmnProcessId}" is also in use, by "${outcome.conflict.existing.name}". "${imported.name}" was not saved.`
+          : `Could not save the imported process "${imported.name}" to the server.`
+      );
+    }
   };
 
   const handleLoadProcess = (processId: string) => {
@@ -598,7 +668,15 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
     // (BpmnCanvas.handleSave shows a banner on false, see #155); the shell →
     // subprocess propagation below is a best-effort side effect and doesn't
     // change that signal — a cascade failure is only logged.
-    const saved = await BpmnService.saveProcess(merged);
+    const outcome = await BpmnService.saveProcessDetailed(merged);
+    const saved = outcome.saved;
+    if (!outcome.saved && outcome.conflict) {
+      // Renaming the process id to one the organisation already uses (#171).
+      setProcessError(
+        `Not saved: process id "${outcome.conflict.bpmnProcessId}" is already used by ` +
+          `"${outcome.conflict.existing.name}". Choose another process id in the properties panel.`
+      );
+    }
 
     // ─── Shell → subprocess propagation ─────────────────────────────────────
     // When saving a shell, push the shell's CURRENT language and organization down

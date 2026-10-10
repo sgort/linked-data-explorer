@@ -17,15 +17,15 @@
  */
 export const EXAMPLE_VERSIONS: Record<string, number> = {
   // BPMN processes
-  example_awb_process: 8, // v8: Dutch runtime texts (finalMessage, replacementInfo; #260)
+  example_awb_process: 9, // v9: DMN results as plain variables, no serialised maps (#273)
   example_tree_felling: 11, // v11: Dutch runtime texts (finalMessage, replacementInfo; #260)
-  example_awb_zorgtoeslag: 6, // v6: swimlanes + Dutch names + missing-info form
-  example_zorgtoeslag_provisional: 8, // v8: swimlanes + Dutch names
+  example_awb_zorgtoeslag: 7, // v7: DMN results as plain variables, no serialised maps (#273)
+  example_zorgtoeslag_provisional: 9, // v9: DMN results as plain variables, no serialised maps (#273)
   example_zorgtoeslag_final: 7, // v7: swimlanes + Dutch names
-  example_hr_capacity_nl: 4, // v4: phase markers + decisionRefTenantId=${null}
-  example_thuisbatterij_aanvraag: 2, // v2: swimlanes + Dutch names
-  example_thuisbatterij_decision: 2, // v2: swimlanes + Dutch names
-  example_besluit_gb: 2, // v2: a declined signature escalates instead of looping back
+  example_hr_capacity_nl: 5, // v5: DMN results as plain variables, no serialised maps (#273)
+  example_thuisbatterij_aanvraag: 4, // v4: own completeness check, reachable Awb 4:5 path (#206)
+  example_thuisbatterij_decision: 3, // v3: DMN results as plain variables, no serialised maps (#273)
+  example_besluit_gb: 3, // v3: Neem besluit renders the authority's own besluit (#246)
 
   // Camunda Forms
   example_kapvergunning_start: 5, // v5: translated to Dutch, tagged nl (#254 item 1)
@@ -40,7 +40,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_thuisbatterij_start: 1,
   example_thuisbatterij_review: 1,
   example_thuisbatterij_notify_applicant: 1,
-  example_thuisbatterij_missing_info: 1,
+  example_thuisbatterij_missing_info: 2, // v2: shows missingFields, records the supplied values (#206)
   example_besluit_gb_sjabloon_kiezen: 1,
   example_besluit_gb_sjabloon_invullen: 1,
   example_besluit_gb_advies_toetsing: 1,
@@ -50,7 +50,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_besluit_gb_indienen: 1,
   example_besluit_gb_ondertekenen: 1,
   example_besluit_gb_escalatie: 1,
-  example_besluit_gb_besluit_nemen: 1,
+  example_besluit_gb_besluit_nemen: 2, // v2: asks for the besluitnemer (#246)
   example_besluit_gb_registreren: 1,
   example_besluit_gb_archiveren: 1,
 
@@ -77,9 +77,10 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   'capacity-claim-handover-nl': 1,
   thuisbatterij_subsidie_beschikking: 1,
   'besluit-gb-besluit': 1,
+  'besluit-gb-besluit-bestuur': 1,
 
   // DvTP consent bundle
-  example_dvtp_toestemming: 3, // v3: formRefBinding=deployment (tenant-safe form resolution)
+  example_dvtp_toestemming: 4, // v4: DMN results as plain variables, no serialised maps (#273)
   example_dvtp_consent_start: 2, // v2: organization=bzk tagging
   example_dvtp_consent_info: 2, // v2: organization=bzk tagging
   example_dvtp_consent_decision: 2, // v2: organization=bzk tagging

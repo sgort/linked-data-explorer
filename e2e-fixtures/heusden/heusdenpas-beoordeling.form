@@ -1,0 +1,362 @@
+{
+  "components": [
+    {
+      "type": "text",
+      "text": "# Beoordeling Heusdenpas en Kindpakket\nControleer de uitkomst van de beslisketen (SVB, SZW, gemeente Heusden) en bevestig of corrigeer die.",
+      "id": "Field_001_hpb",
+      "layout": {
+        "row": "Row_001_hpb",
+        "columns": null
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Uitkomst beslisketen",
+      "id": "Field_002_hpb",
+      "layout": {
+        "row": "Row_002_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Uitkomst automatisch bepaald",
+      "key": "heusdenpasResultaatBepaald",
+      "type": "checkbox",
+      "disabled": true,
+      "description": "Uit betekent: de beslisketen gaf geen uitkomst. Kies dan 'Pas uitkomst aan' en leg het besluit vast.",
+      "id": "Field_003_hpb",
+      "layout": {
+        "row": "Row_003_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Komt in aanmerking voor de Heusdenpas",
+      "key": "aanmerkingHeusdenPas",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_004_hpb",
+      "layout": {
+        "row": "Row_004_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Komt in aanmerking voor het Kindpakket",
+      "key": "aanmerkingKindPakket",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_005_hpb",
+      "layout": {
+        "row": "Row_005_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Motivering Heusdenpas",
+      "key": "heusdenpasMotivering",
+      "type": "textarea",
+      "disabled": true,
+      "id": "Field_006_hpb",
+      "layout": {
+        "row": "Row_006_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Motivering Kindpakket",
+      "key": "kindpakketMotivering",
+      "type": "textarea",
+      "disabled": true,
+      "id": "Field_007_hpb",
+      "layout": {
+        "row": "Row_007_hpb",
+        "columns": null
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Gebruikte gegevens",
+      "id": "Field_008_hpb",
+      "layout": {
+        "row": "Row_008_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Datum van aanvraag",
+      "key": "dagVanAanvraag",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_009_hpb",
+      "layout": {
+        "row": "Row_b1_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Maandelijks bruto inkomen",
+      "key": "maandelijksBrutoInkomenAanvrager",
+      "type": "number",
+      "disabled": true,
+      "decimalDigits": 2,
+      "id": "Field_010_hpb",
+      "layout": {
+        "row": "Row_b1_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Bijstandsnorm (SZW)",
+      "key": "bijstandsNorm",
+      "type": "number",
+      "disabled": true,
+      "decimalDigits": 2,
+      "id": "Field_011_hpb",
+      "layout": {
+        "row": "Row_b2_hpb",
+        "columns": 6
+      }
+    },
+    {
+      "label": "Normtype",
+      "key": "bijstandsnormType",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_012_hpb",
+      "layout": {
+        "row": "Row_b2_hpb",
+        "columns": 4
+      }
+    },
+    {
+      "label": "Termijn",
+      "key": "bijstandsnormTermijn",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_013_hpb",
+      "layout": {
+        "row": "Row_b2_hpb",
+        "columns": 6
+      }
+    },
+    {
+      "label": "Leeftijd aanvrager (SVB)",
+      "key": "leeftijdAanvrager",
+      "type": "number",
+      "disabled": true,
+      "id": "Field_014_hpb",
+      "layout": {
+        "row": "Row_b3_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Leeftijd partner (SVB)",
+      "key": "leeftijdPartner",
+      "type": "number",
+      "disabled": true,
+      "id": "Field_015_hpb",
+      "layout": {
+        "row": "Row_b3_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Inwoner van Heusden",
+      "key": "aanvragerInwonerHeusden",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_016_hpb",
+      "layout": {
+        "row": "Row_b4_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Inwonend kind van 4 t/m 17 jaar",
+      "key": "aanvragerHeeftKind4Tm17",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_017_hpb",
+      "layout": {
+        "row": "Row_b4_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Dit kalenderjaar al aangevraagd",
+      "key": "aanvragerDitKalenderjaarAlAangevraagd",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_018_hpb",
+      "layout": {
+        "row": "Row_b5_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "In aanmerking voor studiefinanciering",
+      "key": "aanvragerAanmerkingStudieFinanciering",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_019_hpb",
+      "layout": {
+        "row": "Row_b5_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Uitkering Baanbrekers",
+      "key": "aanvragerUitkeringBaanbrekers",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_020_hpb",
+      "layout": {
+        "row": "Row_b6_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Voedselbankpas Den Bosch",
+      "key": "aanvragerVoedselbankpasDenBosch",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_021_hpb",
+      "layout": {
+        "row": "Row_b6_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Kwijtschelding gemeentelijke belastingen",
+      "key": "aanvragerKwijtscheldingGemeentelijkeBelastingen",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_022_hpb",
+      "layout": {
+        "row": "Row_b7_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Schuldhulptraject Kredietbank Nederland",
+      "key": "aanvragerSchuldhulptrajectKredietbankNederland",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_023_hpb",
+      "layout": {
+        "row": "Row_b7_hpb",
+        "columns": 8
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Review door behandelaar",
+      "id": "Field_024_hpb",
+      "layout": {
+        "row": "Row_024_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Reviewactie",
+      "key": "reviewAction",
+      "type": "select",
+      "values": [
+        {
+          "label": "Akkoord met automatische uitkomst",
+          "value": "accept"
+        },
+        {
+          "label": "Pas uitkomst aan",
+          "value": "change"
+        }
+      ],
+      "defaultValue": "accept",
+      "validate": {
+        "required": true
+      },
+      "id": "Field_025_hpb",
+      "layout": {
+        "row": "Row_025_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Heusdenpas toekennen",
+      "key": "reviewHeusdenpas",
+      "type": "checkbox",
+      "conditional": {
+        "hide": "=reviewAction != \"change\""
+      },
+      "id": "Field_026_hpb",
+      "layout": {
+        "row": "Row_026_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Kindpakket toekennen",
+      "key": "reviewKindpakket",
+      "type": "checkbox",
+      "conditional": {
+        "hide": "=reviewAction != \"change\""
+      },
+      "id": "Field_027_hpb",
+      "layout": {
+        "row": "Row_027_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Motivering van de aanpassing",
+      "key": "reviewMotivering",
+      "type": "textarea",
+      "conditional": {
+        "hide": "=reviewAction != \"change\""
+      },
+      "validate": {
+        "required": true
+      },
+      "description": "Deze tekst komt als motivering in de beschikking.",
+      "id": "Field_028_hpb",
+      "layout": {
+        "row": "Row_028_hpb",
+        "columns": null
+      }
+    },
+    {
+      "label": "Review uitgevoerd",
+      "key": "reviewChecked",
+      "type": "checkbox",
+      "validate": {
+        "required": true
+      },
+      "id": "Field_029_hpb",
+      "layout": {
+        "row": "Row_029_hpb",
+        "columns": null
+      }
+    },
+    {
+      "type": "button",
+      "action": "submit",
+      "label": "Klaar",
+      "id": "Field_030_hpb",
+      "layout": {
+        "row": "Row_030_hpb",
+        "columns": null
+      }
+    }
+  ],
+  "id": "heusdenpas-beoordeling",
+  "type": "default",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.46.1"
+  },
+  "schemaVersion": 19,
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0"
+}

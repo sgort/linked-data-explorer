@@ -22,13 +22,45 @@ import { FormService } from '../../services/formService';
 import { DocumentTemplate } from '../../types/document.types';
 import { collectBundleRefs, findProcessId, resolveSubProcesses } from '../../utils/deployBundle';
 import { parseDocumentRefs } from '../../utils/documentRefs';
+import { EMPTY_PHASE_VIEW, PhaseView, phaseViewFromXml } from '../../utils/phases/assignPhases';
+import { checkPhases, PhaseFinding } from '../../utils/phases/phaseChecks';
+import {
+  firstProcess,
+  isCountedNode,
+  markerTargets,
+  processOf,
+  registerPhaseCommand,
+  resolveProcessTarget,
+} from '../../utils/phases/phaseCommands';
+import { phaseCodeLabel, Scheme } from '../../utils/phases/phaseSet';
 import { getProblemDetail } from '../../utils/problem';
 import DmnTemplateSelector from './DmnTemplateSelector';
 import DocumentTemplateSelector from './DocumentTemplateSelector';
 import FormTemplateSelector from './FormTemplateSelector';
+import PhaseMarkerSelector from './PhaseMarkerSelector';
+import ProcessPhasesEditor from './ProcessPhasesEditor';
 import ronlModdleDescriptor from './ronlModdleDescriptor.json';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+/** One colour per phase, by its position in the set (#242). */
+const PHASE_COLOURS = [
+  '#0f766e',
+  '#7c3aed',
+  '#b45309',
+  '#2563eb',
+  '#be123c',
+  '#4d7c0f',
+  '#0369a1',
+  '#a21caf',
+];
+
+/** Phase names and codes are user text, and overlays take raw HTML. */
+const escapeHtml = (text: string): string =>
+  text.replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+  );
 
 interface BpmnCanvasProps {
   xml: string;
@@ -147,6 +179,27 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
   const [selectedElement, setSelectedElement] = useState<any>(null);
 
+  // Every node's phase, recomputed from the saved XML after each change (#242).
+  const [phaseView, setPhaseView] = useState<PhaseView>(EMPTY_PHASE_VIEW);
+  // Awb has no attribute of its own (RBA recognises it by its markers), so a
+  // fresh "Awb phases" choice lives here until the first marker exists.
+  const [schemeIntent, setSchemeIntent] = useState<Scheme | 'none' | undefined>(undefined);
+  const phaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phasePanelRef = useRef<{
+    key: string;
+    container: HTMLElement;
+    root: ReactDOM.Root;
+  } | null>(null);
+
+  const unmountPhasePanel = () => {
+    const panel = phasePanelRef.current;
+    phasePanelRef.current = null;
+    if (!panel) return;
+    panel.container.remove();
+    // Deferred: unmounting a root synchronously while React commits another warns.
+    setTimeout(() => panel.root.unmount());
+  };
+
   // Keep latest onElementSelect in a ref so handleElementSelect can stay stable
   // across renders. Without this, an inline arrow at the parent (e.g. onElementSelect={() => {}})
   // would change identity every render and re-trigger the modeler-init effect below,
@@ -187,6 +240,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     } as unknown);
 
     modelerRef.current = modeler;
+    registerPhaseCommand(modeler.get('commandStack'), modeler.get('modeling'));
 
     // Attach properties panel
     const propertiesPanel = modeler.get('propertiesPanel') as any;
@@ -199,6 +253,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
         const canvas = modeler.get('canvas') as any;
         canvas.zoom('fit-viewport');
         refreshDmnOverlays();
+        schedulePhaseRefresh();
       } catch (err) {
         console.error('Failed to import BPMN:', err);
       }
@@ -214,6 +269,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       setHasChanges(true);
       onDirtyChange?.(true);
       refreshDmnOverlays();
+      schedulePhaseRefresh();
     };
     eventBus.on('commandStack.changed', handleChange);
 
@@ -240,6 +296,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     // Cleanup
     return () => {
       clearTimeout(timer);
+      if (phaseTimer.current) clearTimeout(phaseTimer.current);
       container.removeEventListener('wheel', handleWheel);
       eventBus.off('commandStack.changed', handleChange);
       propertiesPanel.detach();
@@ -322,6 +379,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           element={selectedElement}
           modeling={modeling}
           selectedFormRef={currentFormRef}
+          selectedFormRefBinding={businessObject.get('camunda:formRefBinding')}
         />
       );
 
@@ -351,6 +409,141 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       cleanupReactRoots();
     };
   }, [selectedElement, endpoint]);
+
+  // The phase panel (#242): the process editor for the process itself, the
+  // picker for a node. Its root lives across edits and only re-renders with
+  // the new phase view, so typing in it survives the recompute after each
+  // change; it is re-mounted only when the selection or the process changes.
+  // Declared after the selector effect, so it sits below the other selectors.
+  useEffect(() => {
+    const modeler = modelerRef.current;
+    if (!modeler) return;
+    const elementRegistry = modeler.get('elementRegistry') as any;
+    const commandStack = modeler.get('commandStack');
+    const rootElement = (modeler.get('canvas') as any).getRootElement();
+    const rbaProcess = firstProcess(rootElement);
+
+    let content: { key: string; node: React.ReactNode } | null = null;
+    const processTarget = resolveProcessTarget(selectedElement, rootElement, elementRegistry);
+    if (processTarget) {
+      const participants = elementRegistry.filter((e: any) => e.type === 'bpmn:Participant');
+      content = {
+        key: `process-${processTarget.element.id ?? 'root'}`,
+        node: (
+          <ProcessPhasesEditor
+            target={processTarget}
+            nodes={markerTargets(elementRegistry, processTarget.moddleElement)}
+            commandStack={commandStack}
+            view={phaseView}
+            schemeIntent={schemeIntent}
+            onSchemeIntent={(scheme) => {
+              setSchemeIntent(scheme);
+              schedulePhaseRefresh();
+            }}
+            readByRba={!rbaProcess || processTarget.moddleElement === rbaProcess}
+            note={
+              !selectedElement && participants.length > 1
+                ? "Editing the first participant's process, the one RBA reads."
+                : undefined
+            }
+          />
+        ),
+      };
+    } else if (
+      selectedElement &&
+      (isCountedNode(selectedElement) ||
+        selectedElement.parent?.type === 'bpmn:SubProcess' ||
+        selectedElement.businessObject?.$instanceOf?.('bpmn:FlowNode'))
+    ) {
+      // Also for a node RBA ignores (inside a subprocess, or a kind such as a
+      // plain task): the picker then says why it offers no phases.
+      const owner = processOf(selectedElement);
+      content = {
+        key: `node-${selectedElement.id}`,
+        node: (
+          <PhaseMarkerSelector
+            element={selectedElement}
+            commandStack={commandStack}
+            view={phaseView}
+            schemeIntent={schemeIntent}
+            readByRba={!rbaProcess || !owner || owner === rbaProcess}
+          />
+        ),
+      };
+    }
+
+    if (!content) {
+      unmountPhasePanel();
+      return;
+    }
+    let panel = phasePanelRef.current;
+    if (!panel || panel.key !== content.key || !panel.container.isConnected) {
+      unmountPhasePanel();
+      const scroll = document.querySelector('.bio-properties-panel-scroll-container');
+      if (!scroll) return;
+      const container = document.createElement('div');
+      container.id = `phase-panel-custom-${content.key}`;
+      scroll.appendChild(container);
+      panel = { key: content.key, container, root: ReactDOM.createRoot(container) };
+      phasePanelRef.current = panel;
+    }
+    panel.root.render(content.node);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedElement, phaseView, schemeIntent]);
+
+  useEffect(() => () => unmountPhasePanel(), []);
+
+  /**
+   * Recomputes every node's phase from the saved XML (#242) — the same input
+   * RBA reads, so the canvas cannot drift from the stepper. Debounced: a burst
+   * of edits costs one saveXML. A failed save or parse keeps the last view.
+   */
+  const schedulePhaseRefresh = () => {
+    if (phaseTimer.current) clearTimeout(phaseTimer.current);
+    phaseTimer.current = setTimeout(async () => {
+      const modeler = modelerRef.current;
+      if (!modeler) return;
+      try {
+        const { xml: current } = await modeler.saveXML({ format: false });
+        if (!current) return;
+        const view = phaseViewFromXml(current);
+        setPhaseView(view);
+        // Once the XML shows a scheme, it no longer needs the session intent.
+        if (view.scheme !== 'none') setSchemeIntent(undefined);
+        refreshPhaseOverlays(view);
+      } catch (err) {
+        console.warn('[BpmnCanvas] phase refresh skipped:', err);
+      }
+    }, 150);
+  };
+
+  /** Solid badge where a node starts a phase, outlined where it inherits one. */
+  const refreshPhaseOverlays = (view: PhaseView) => {
+    if (!modelerRef.current) return;
+    const overlays = modelerRef.current.get('overlays') as any;
+    const elementRegistry = modelerRef.current.get('elementRegistry') as any;
+    overlays.remove({ type: 'phase-marker' });
+    const set = view.set;
+    if (!set || view.byNode.size === 0) return;
+    elementRegistry.forEach((element: any) => {
+      const assignment = view.byNode.get(element.id);
+      if (!assignment) return;
+      const index = set.phases.findIndex((p) => p.code === assignment.code);
+      const phase = set.phases[index];
+      const colour = PHASE_COLOURS[index % PHASE_COLOURS.length];
+      const label = phaseCodeLabel(set, assignment.code);
+      // The same text whether the node starts the phase or inherits it; only
+      // solid versus outlined tells them apart. (A bare position number misled:
+      // Awb phase 4+5 is one entry, so position 6 is Fase 7.)
+      const text = set.scheme === 'awb' ? label : `${index + 1} · ${assignment.code}`;
+      const kind = assignment.inherited ? 'phase-badge--inherited' : 'phase-badge--start';
+      const title = escapeHtml(`${label} · ${phase?.name ?? ''}`);
+      overlays.add(element.id, 'phase-marker', {
+        position: { top: -10, left: -6 },
+        html: `<div class="phase-badge ${kind}" style="--phase-colour:${colour}" title="${title}">${escapeHtml(text)}</div>`,
+      });
+    });
+  };
 
   /**
    * Refresh DMN linked badges on all BusinessRuleTasks
@@ -522,6 +715,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     }
     const languageMismatch = languageSet.size > 1;
     const languageList = [...languageSet].sort();
+    const phaseFindings = checkPhases(xml);
     // ────────────────────────────────────────────────────────────────────
 
     setDeployResources({
@@ -534,10 +728,12 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       ropaRefMissing,
       languageMismatch,
       languageList,
+      phaseFindings,
     } as typeof deployResources & {
       ropaRefMissing?: boolean;
       languageMismatch?: boolean;
       languageList?: string[];
+      phaseFindings?: PhaseFinding[];
     });
     // Pre-fill the board-ownership picker with the auto-detected board.
     setBoardAuto(deriveBoardOwnerFromXml(xml));
@@ -942,6 +1138,21 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                     artefact(s) before deploying.
                   </div>
                 )}
+                {((deployResources as any).phaseFindings as PhaseFinding[] | undefined)?.map(
+                  (f) => (
+                    <div
+                      key={f.code}
+                      className={`mb-3 p-3 rounded-lg text-xs ${
+                        f.severity === 'error'
+                          ? 'bg-red-50 border border-red-200 text-red-800'
+                          : 'bg-amber-50 border border-amber-200 text-amber-800'
+                      }`}
+                    >
+                      {f.severity === 'error' ? '✗ ' : '⚠️ '}
+                      {f.message}
+                    </div>
+                  )
+                )}
                 <div className="mt-2 text-xs text-slate-500">
                   {deployResources.bpmnFiles.length +
                     deployResources.formFiles.length +
@@ -991,7 +1202,10 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                     !resolvedBoard ||
                     !deployOrganization ||
                     deployResources.unmatchedForms.length > 0 ||
-                    deployResources.unmatchedDocuments.length > 0
+                    deployResources.unmatchedDocuments.length > 0 ||
+                    ((deployResources as any).phaseFindings as PhaseFinding[] | undefined)?.some(
+                      (f) => f.severity === 'error'
+                    ) === true
                   }
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                 >

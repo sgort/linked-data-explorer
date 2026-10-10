@@ -34,6 +34,7 @@ const CODE_TITLES = {
   DB_NOT_CONFIGURED: 'Storage not configured',
   LIST_FAILED: 'List failed',
   UPSERT_FAILED: 'Save failed',
+  PROCESS_ID_TAKEN: 'Process id already in use',
   DELETE_FAILED: 'Delete failed',
   DEPLOY_MARK_FAILED: 'Deploy record failed',
   LOOKUP_FAILED: 'Lookup failed',

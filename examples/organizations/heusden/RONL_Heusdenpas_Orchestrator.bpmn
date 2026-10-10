@@ -21,70 +21,52 @@
     <!-- SVB Age Information Task -->
     <bpmn:businessRuleTask id="Task_SVB_Leeftijden" 
                            name="SVB: Calculate Age Information" 
-                           camunda:resultVariable="svbResult" 
-                           camunda:decisionRef="SVB_LeeftijdsInformatie" 
-                           camunda:mapDecisionResult="singleResult">
+                           camunda:decisionRef="SVB_LeeftijdsInformatie">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:outputParameter name="aanvragerIsJongerDan18">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("aanvragerIsJongerDan18")}</camunda:outputParameter>
+          <camunda:outputParameter name="aanvragerIs181920">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("aanvragerIs181920")}</camunda:outputParameter>
+          <camunda:outputParameter name="aanvragerIsTenminste21">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("aanvragerIsTenminste21")}</camunda:outputParameter>
+          <camunda:outputParameter name="aanvragerHeeftAOWLeeftijd">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("aanvragerHeeftAOWLeeftijd")}</camunda:outputParameter>
+          <camunda:outputParameter name="partnerIsJongerDan18">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("partnerIsJongerDan18")}</camunda:outputParameter>
+          <camunda:outputParameter name="partnerIs181920">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("partnerIs181920")}</camunda:outputParameter>
+          <camunda:outputParameter name="partnerIsTenminste21">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("partnerIsTenminste21")}</camunda:outputParameter>
+          <camunda:outputParameter name="partnerHeeftAOWLeeftijd">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("partnerHeeftAOWLeeftijd")}</camunda:outputParameter>
+          <camunda:outputParameter name="leeftijdAanvrager">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("leeftijdAanvrager")}</camunda:outputParameter>
+          <camunda:outputParameter name="leeftijdPartner">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("leeftijdPartner")}</camunda:outputParameter>
+          <camunda:outputParameter name="AOWDatumAanvrager">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("AOWDatumAanvrager")}</camunda:outputParameter>
+          <camunda:outputParameter name="AOWDatumPartner">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("AOWDatumPartner")}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_ToSVB</bpmn:incoming>
-      <bpmn:outgoing>Flow_ToSVBScript</bpmn:outgoing>
-    </bpmn:businessRuleTask>
-    
-    <!-- Script to flatten SVB results into process variables -->
-    <bpmn:scriptTask id="Task_FlattenSVBResults" 
-                     name="Flatten SVB Results" 
-                     scriptFormat="javascript">
-      <bpmn:incoming>Flow_ToSVBScript</bpmn:incoming>
       <bpmn:outgoing>Flow_ToSZW</bpmn:outgoing>
-      <bpmn:script>
-        // Extract age information from SVB result and make it available as process variables
-        if (svbResult) {
-          execution.setVariable("aanvragerIsJongerDan18", svbResult.aanvragerIsJongerDan18);
-          execution.setVariable("aanvragerIs181920", svbResult.aanvragerIs181920);
-          execution.setVariable("aanvragerIsTenminste21", svbResult.aanvragerIsTenminste21);
-          execution.setVariable("aanvragerHeeftAOWLeeftijd", svbResult.aanvragerHeeftAOWLeeftijd);
-          execution.setVariable("partnerIsJongerDan18", svbResult.partnerIsJongerDan18);
-          execution.setVariable("partnerIs181920", svbResult.partnerIs181920);
-          execution.setVariable("partnerIsTenminste21", svbResult.partnerIsTenminste21);
-          execution.setVariable("partnerHeeftAOWLeeftijd", svbResult.partnerHeeftAOWLeeftijd);
-          execution.setVariable("leeftijdAanvrager", svbResult.leeftijdAanvrager);
-          execution.setVariable("leeftijdPartner", svbResult.leeftijdPartner);
-          execution.setVariable("AOWDatumAanvrager", svbResult.AOWDatumAanvrager);
-          execution.setVariable("AOWDatumPartner", svbResult.AOWDatumPartner);
-        }
-      </bpmn:script>
-    </bpmn:scriptTask>
+    </bpmn:businessRuleTask>
     
     <!-- SZW Bijstandsnorm Task -->
     <bpmn:businessRuleTask id="Task_SZW_Bijstand" 
                            name="SZW: Calculate Bijstandsnorm" 
-                           camunda:resultVariable="szwResult" 
-                           camunda:decisionRef="SZW_BijstandsnormInformatie" 
-                           camunda:mapDecisionResult="singleResult">
+                           camunda:decisionRef="SZW_BijstandsnormInformatie">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:outputParameter name="bijstandsNorm">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("bijstandsNorm")}</camunda:outputParameter>
+          <camunda:outputParameter name="bijstandsnormType">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("bijstandsnormType")}</camunda:outputParameter>
+          <camunda:outputParameter name="bijstandsnormTermijn">${decisionResult.isEmpty() ? null : decisionResult.getSingleResult().getEntry("bijstandsnormTermijn")}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_ToSZW</bpmn:incoming>
-      <bpmn:outgoing>Flow_ToSZWScript</bpmn:outgoing>
-    </bpmn:businessRuleTask>
-    
-    <!-- Script to flatten SZW results -->
-    <bpmn:scriptTask id="Task_FlattenSZWResults" 
-                     name="Flatten SZW Results" 
-                     scriptFormat="javascript">
-      <bpmn:incoming>Flow_ToSZWScript</bpmn:incoming>
       <bpmn:outgoing>Flow_ToHeusden</bpmn:outgoing>
-      <bpmn:script>
-        // Extract bijstandsnorm information and make it available
-        if (szwResult) {
-          execution.setVariable("bijstandsNorm", szwResult.bijstandsNorm);
-          execution.setVariable("bijstandsnormType", szwResult.bijstandsnormType);
-          execution.setVariable("bijstandsnormTermijn", szwResult.bijstandsnormTermijn);
-        }
-      </bpmn:script>
-    </bpmn:scriptTask>
+    </bpmn:businessRuleTask>
     
     <!-- Heusden Decision Task - keeping the same reference since we're not changing the Heusden file in this update -->
     <bpmn:businessRuleTask id="Task_Heusden_Decision" 
                            name="Heusden: Make Final Decision" 
-                           camunda:resultVariable="heusdenpasResult" 
-                           camunda:decisionRef="RONL_HeusdenpasEindresultaat" 
-                           camunda:mapDecisionResult="singleResult">
+                           camunda:decisionRef="RONL_HeusdenpasEindresultaat">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:outputParameter name="aanmerkingHeusdenPas">${decisionResult.getSingleResult().getEntry("aanmerkingHeusdenPas")}</camunda:outputParameter>
+          <camunda:outputParameter name="aanmerkingKindPakket">${decisionResult.getSingleResult().getEntry("aanmerkingKindPakket")}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_ToHeusden</bpmn:incoming>
       <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
     </bpmn:businessRuleTask>
@@ -95,10 +77,8 @@
     
     <!-- Sequence Flows -->
     <bpmn:sequenceFlow id="Flow_ToSVB" sourceRef="StartEvent_RONL" targetRef="Task_SVB_Leeftijden" />
-    <bpmn:sequenceFlow id="Flow_ToSVBScript" sourceRef="Task_SVB_Leeftijden" targetRef="Task_FlattenSVBResults" />
-    <bpmn:sequenceFlow id="Flow_ToSZW" sourceRef="Task_FlattenSVBResults" targetRef="Task_SZW_Bijstand" />
-    <bpmn:sequenceFlow id="Flow_ToSZWScript" sourceRef="Task_SZW_Bijstand" targetRef="Task_FlattenSZWResults" />
-    <bpmn:sequenceFlow id="Flow_ToHeusden" sourceRef="Task_FlattenSZWResults" targetRef="Task_Heusden_Decision" />
+    <bpmn:sequenceFlow id="Flow_ToSZW" sourceRef="Task_SVB_Leeftijden" targetRef="Task_SZW_Bijstand" />
+    <bpmn:sequenceFlow id="Flow_ToHeusden" sourceRef="Task_SZW_Bijstand" targetRef="Task_Heusden_Decision" />
     <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="Task_Heusden_Decision" targetRef="EndEvent_RONL" />
     
   </bpmn:process>
@@ -119,22 +99,12 @@
       <bpmndi:BPMNShape id="Task_SVB_Leeftijden_di" bpmnElement="Task_SVB_Leeftijden">
         <dc:Bounds x="240" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
-      
-      <!-- SVB Script Task -->
-      <bpmndi:BPMNShape id="Task_FlattenSVBResults_di" bpmnElement="Task_FlattenSVBResults">
-        <dc:Bounds x="390" y="80" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      
+    
       <!-- SZW Task -->
       <bpmndi:BPMNShape id="Task_SZW_Bijstand_di" bpmnElement="Task_SZW_Bijstand">
         <dc:Bounds x="540" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
-      
-      <!-- SZW Script Task -->
-      <bpmndi:BPMNShape id="Task_FlattenSZWResults_di" bpmnElement="Task_FlattenSZWResults">
-        <dc:Bounds x="690" y="80" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      
+    
       <!-- Heusden Task -->
       <bpmndi:BPMNShape id="Task_Heusden_Decision_di" bpmnElement="Task_Heusden_Decision">
         <dc:Bounds x="840" y="80" width="100" height="80" />
@@ -154,26 +124,16 @@
         <di:waypoint x="240" y="120" />
       </bpmndi:BPMNEdge>
       
-      <bpmndi:BPMNEdge id="Flow_ToSVBScript_di" bpmnElement="Flow_ToSVBScript">
-        <di:waypoint x="340" y="120" />
-        <di:waypoint x="390" y="120" />
-      </bpmndi:BPMNEdge>
-      
       <bpmndi:BPMNEdge id="Flow_ToSZW_di" bpmnElement="Flow_ToSZW">
-        <di:waypoint x="490" y="120" />
+        <di:waypoint x="340" y="120" />
         <di:waypoint x="540" y="120" />
       </bpmndi:BPMNEdge>
-      
-      <bpmndi:BPMNEdge id="Flow_ToSZWScript_di" bpmnElement="Flow_ToSZWScript">
-        <di:waypoint x="640" y="120" />
-        <di:waypoint x="690" y="120" />
-      </bpmndi:BPMNEdge>
-      
+    
       <bpmndi:BPMNEdge id="Flow_ToHeusden_di" bpmnElement="Flow_ToHeusden">
-        <di:waypoint x="790" y="120" />
+        <di:waypoint x="640" y="120" />
         <di:waypoint x="840" y="120" />
       </bpmndi:BPMNEdge>
-      
+    
       <bpmndi:BPMNEdge id="Flow_ToEnd_di" bpmnElement="Flow_ToEnd">
         <di:waypoint x="940" y="120" />
         <di:waypoint x="992" y="120" />

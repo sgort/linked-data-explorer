@@ -8,15 +8,19 @@ interface FormTemplateSelectorProps {
   element: any;
   modeling: any;
   selectedFormRef?: string;
+  /** The element's camunda:formRefBinding. Absent means Camunda's default, "latest". */
+  selectedFormRefBinding?: string;
 }
 
 const FormTemplateSelector: React.FC<FormTemplateSelectorProps> = ({
   element,
   modeling,
   selectedFormRef,
+  selectedFormRefBinding,
 }) => {
   const [forms, setForms] = useState<FormSchema[]>([]);
   const [selectedId, setSelectedId] = useState<string>(selectedFormRef ?? '');
+  const [binding, setBinding] = useState<string | undefined>(selectedFormRefBinding);
 
   useEffect(() => {
     setForms(FormService.getForms());
@@ -25,12 +29,14 @@ const FormTemplateSelector: React.FC<FormTemplateSelectorProps> = ({
   // Keep selection in sync when the active element changes
   useEffect(() => {
     setSelectedId(selectedFormRef ?? '');
-  }, [selectedFormRef]);
+    setBinding(selectedFormRefBinding);
+  }, [selectedFormRef, selectedFormRefBinding]);
 
   const handleSelect = (schemaId: string) => {
     setSelectedId(schemaId);
 
     if (!schemaId) {
+      setBinding(undefined);
       modeling.updateProperties(element, {
         'camunda:formRef': undefined,
         'camunda:formRefBinding': undefined,
@@ -38,6 +44,7 @@ const FormTemplateSelector: React.FC<FormTemplateSelectorProps> = ({
       return;
     }
 
+    setBinding('deployment');
     modeling.updateProperties(element, {
       'camunda:formRef': schemaId,
       // "deployment", as every seeded and fixture BPMN uses: the form resolves
@@ -88,7 +95,7 @@ const FormTemplateSelector: React.FC<FormTemplateSelectorProps> = ({
             <div className="text-slate-500 mb-1">{selectedForm.description}</div>
           )}
           <div className="text-slate-500 font-mono text-[10px]">
-            formRef: {selectedId} · binding: latest
+            formRef: {selectedId} · binding: {binding ?? 'latest (standaard)'}
           </div>
         </div>
       )}

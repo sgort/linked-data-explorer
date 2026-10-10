@@ -5,6 +5,7 @@ import { describe, expect, test } from 'vitest';
 import { DocumentTemplate, ZONE_ORDER, ZoneId } from '../../types/document.types';
 import {
   BESLUIT_GB_BESLUIT,
+  BESLUIT_GB_BESLUIT_BESTUUR,
   DEFAULT_TEMPLATES,
   DVTP_CONSENT_RECEIPT,
   emptyDoc,
@@ -90,6 +91,7 @@ describe('DEFAULT_TEMPLATES', () => {
       HR_CAPACITY_HANDOVER_NL,
       THUISBATTERIJ_SUBSIDIE_BESCHIKKING,
       BESLUIT_GB_BESLUIT,
+      BESLUIT_GB_BESLUIT_BESTUUR,
     ]);
   });
 
@@ -185,5 +187,37 @@ describe('BESLUIT_GB_BESLUIT and its deployable file', () => {
   test('is not imported from public/, which the Vite dev server rejects', () => {
     const source = readFileSync(join(__dirname, 'defaultTemplates.ts'), 'utf8');
     expect(source).not.toMatch(/from '[^']*\/public\//);
+  });
+});
+
+describe('BESLUIT_GB_BESLUIT_BESTUUR (#246)', () => {
+  const file = join(
+    __dirname,
+    '../../../public/examples/flevoland/besluitvorming-gedelegeerd/besluit-gb-besluit-bestuur.document'
+  );
+
+  test('is identical to the public .document file', () => {
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(BESLUIT_GB_BESLUIT_BESTUUR);
+  });
+
+  test('belongs to the same process as the ordinary besluit', () => {
+    expect(BESLUIT_GB_BESLUIT_BESTUUR.processKey).toBe(BESLUIT_GB_BESLUIT.processKey);
+    expect(BESLUIT_GB_BESLUIT_BESTUUR.language).toBe('nl');
+    expect(BESLUIT_GB_BESLUIT_BESTUUR.organization).toBe('flevoland');
+  });
+
+  test('is signed by the competent authority, not the gemachtigde ondertekenaar', () => {
+    const signOff = JSON.stringify(BESLUIT_GB_BESLUIT_BESTUUR.zones.signOff);
+    expect(signOff).toContain('De bevoegde bestuursautoriteit,');
+    expect(signOff).toContain('{{besluitnemer}}');
+    expect(JSON.stringify(BESLUIT_GB_BESLUIT_BESTUUR)).not.toContain('{{ondertekenaar}}');
+    expect(JSON.stringify(BESLUIT_GB_BESLUIT_BESTUUR)).not.toContain('gemachtigde ondertekenaar,');
+  });
+
+  test('binds every placeholder it uses', () => {
+    const text = JSON.stringify(BESLUIT_GB_BESLUIT_BESTUUR.zones);
+    const used = new Set(text.match(/\{\{[^}]+\}\}/g));
+    const bound = new Set(BESLUIT_GB_BESLUIT_BESTUUR.bindings.map((b) => b.placeholder));
+    expect([...used].filter((p) => !bound.has(p))).toEqual([]);
   });
 });
