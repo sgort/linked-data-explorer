@@ -2,7 +2,7 @@
   "e2eFixture": true,
   "components": [
     {
-      "text": "# Aanvullende gegevens opvragen (Awb 4:5)\nDe aanvraag is niet volledig. Leg vast welke gegevens ontbreken en tot wanneer de aanvrager deze kan aanvullen. Registreer daarna of de aanvulling binnen de hersteltermijn is ontvangen.",
+      "text": "# Aanvullende gegevens opvragen (Awb 4:5)\nDe ontvankelijkheidstoets vond de aanvraag onvolledig. Leg vast welke gegevens ontbreken en tot wanneer de aanvrager deze kan aanvullen. Neem de aangevulde gegevens hieronder over en registreer of de aanvulling binnen de hersteltermijn is ontvangen. Is de aanvulling ontvangen, dan toetst het proces de aanvraag opnieuw; is zij daarna nog onvolledig, dan wordt de aanvraag buiten behandeling gesteld (Awb 4:5 lid 1).",
       "id": "Field_001_tbag",
       "type": "text",
       "layout": {
@@ -22,12 +22,23 @@
       "disabled": true
     },
     {
+      "label": "Volgens de ontvankelijkheidstoets ontbreekt",
+      "id": "Field_009_tbag",
+      "key": "missingFields",
+      "type": "textfield",
+      "disabled": true,
+      "layout": {
+        "row": "Row_003_tbag",
+        "columns": null
+      }
+    },
+    {
       "label": "Ontbrekende gegevens",
       "id": "Field_004_tbag",
       "key": "ontbrekendeGegevens",
       "type": "textarea",
       "layout": {
-        "row": "Row_003_tbag",
+        "row": "Row_004_tbag",
         "columns": null
       },
       "validate": {
@@ -41,12 +52,146 @@
       "key": "hersteltermijnDatum",
       "type": "datetime",
       "layout": {
-        "row": "Row_004_tbag",
+        "row": "Row_005_tbag",
         "columns": 8
       },
       "validate": {
         "required": true
       }
+    },
+    {
+      "text": "## Aangevulde gegevens\nVooraf ingevuld met wat de aanvraag nu bevat. Pas aan wat de aanvrager heeft aangevuld.",
+      "id": "Field_010_tbag",
+      "type": "text",
+      "layout": {
+        "row": "Row_006_tbag",
+        "columns": null
+      }
+    },
+    {
+      "label": "Gemaakte kosten",
+      "id": "Field_011_tbag",
+      "key": "gemaakteKosten",
+      "type": "number",
+      "layout": {
+        "row": "Row_007_tbag",
+        "columns": null
+      },
+      "description": "Bedrag in euro's.",
+      "validate": {
+        "min": 0
+      }
+    },
+    {
+      "label": "Wat is de relatie van de aanvrager tot de woning?",
+      "values": [
+        {
+          "label": "Eigenaar",
+          "value": "eigenaar"
+        },
+        {
+          "label": "Huurder",
+          "value": "huurder"
+        },
+        {
+          "label": "Anders",
+          "value": "anders"
+        }
+      ],
+      "id": "Field_012_tbag",
+      "key": "relatieTotWoning",
+      "type": "select",
+      "layout": {
+        "row": "Row_008_tbag",
+        "columns": null
+      }
+    },
+    {
+      "label": "Heeft de huurder toestemming van de eigenaar?",
+      "id": "Field_013_tbag",
+      "key": "toestemmingEigenaar",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_009_tbag",
+        "columns": null
+      },
+      "description": "Alleen nodig als de aanvrager huurder is.",
+      "conditional": {
+        "hide": "=relatieTotWoning != \"huurder\""
+      }
+    },
+    {
+      "label": "In welke provincie ligt de woning?",
+      "values": [
+        {
+          "label": "Flevoland",
+          "value": "Flevoland"
+        },
+        {
+          "label": "Drenthe",
+          "value": "Drenthe"
+        },
+        {
+          "label": "Friesland",
+          "value": "Friesland"
+        },
+        {
+          "label": "Gelderland",
+          "value": "Gelderland"
+        },
+        {
+          "label": "Groningen",
+          "value": "Groningen"
+        },
+        {
+          "label": "Limburg",
+          "value": "Limburg"
+        },
+        {
+          "label": "Noord-Brabant",
+          "value": "Noord-Brabant"
+        },
+        {
+          "label": "Noord-Holland",
+          "value": "Noord-Holland"
+        },
+        {
+          "label": "Overijssel",
+          "value": "Overijssel"
+        },
+        {
+          "label": "Utrecht",
+          "value": "Utrecht"
+        },
+        {
+          "label": "Zeeland",
+          "value": "Zeeland"
+        },
+        {
+          "label": "Zuid-Holland",
+          "value": "Zuid-Holland"
+        }
+      ],
+      "id": "Field_014_tbag",
+      "key": "provincieWoning",
+      "type": "select",
+      "layout": {
+        "row": "Row_010_tbag",
+        "columns": null
+      }
+    },
+    {
+      "subtype": "date",
+      "id": "Field_015_tbag",
+      "key": "aanvraagDatum",
+      "type": "datetime",
+      "label": "Datum van aanvraag",
+      "layout": {
+        "row": "Row_011_tbag",
+        "columns": null
+      },
+      "dateLabel": "Datum van aanvraag",
+      "description": "Wordt als string in ISO-formaat yyyy-MM-dd opgeslagen; dit past bij date(aanvraagDatum) in de DMN."
     },
     {
       "label": "Aanvulling binnen hersteltermijn ontvangen",
@@ -55,7 +200,7 @@
       "type": "checkbox",
       "defaultValue": false,
       "layout": {
-        "row": "Row_005_tbag",
+        "row": "Row_012_tbag",
         "columns": null
       }
     },
@@ -65,7 +210,7 @@
       "key": "aanvullingToelichting",
       "type": "textarea",
       "layout": {
-        "row": "Row_006_tbag",
+        "row": "Row_013_tbag",
         "columns": null
       }
     },
@@ -75,7 +220,7 @@
       "id": "Field_008_tbag",
       "type": "button",
       "layout": {
-        "row": "Row_007_tbag",
+        "row": "Row_014_tbag",
         "columns": null
       }
     }
