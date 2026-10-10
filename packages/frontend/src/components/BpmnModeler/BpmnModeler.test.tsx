@@ -8,11 +8,21 @@ const saveProcess = vi.fn();
 const getProcess = vi.fn();
 const deleteProcess = vi.fn();
 const hydrateFromServer = vi.fn();
+const forgetLocal = vi.fn();
+// saveProcessDetailed answers through saveProcess, so every assertion on
+// saveProcess still covers it; a test queues a 409 conflict (#171) here.
+const conflicts: unknown[] = [];
 
 vi.mock('../../services/bpmnService', () => ({
   BpmnService: {
     getProcesses: (...args: unknown[]) => getProcesses(...args),
     saveProcess: (...args: unknown[]) => saveProcess(...args),
+    saveProcessDetailed: async (...args: unknown[]) => {
+      const saved = await saveProcess(...args);
+      const conflict = conflicts.shift();
+      return conflict ? { saved: false, conflict } : { saved: saved !== false };
+    },
+    forgetLocal: (...args: unknown[]) => forgetLocal(...args),
     getProcess: (...args: unknown[]) => getProcess(...args),
     deleteProcess: (...args: unknown[]) => deleteProcess(...args),
     hydrateFromServer: (...args: unknown[]) => hydrateFromServer(...args),
@@ -171,6 +181,8 @@ afterEach(() => {
   getProcess.mockReset();
   deleteProcess.mockReset();
   hydrateFromServer.mockReset();
+  forgetLocal.mockReset();
+  conflicts.length = 0;
   getStoredVersion.mockReset();
   setStoredVersion.mockReset();
 });
@@ -764,7 +776,7 @@ describe('BpmnModeler — ronl:* attribute rewriting on save', () => {
     expect(savedXml()).not.toContain('ronl:dsoActiviteitUrn');
   });
 
-  test('a new process whose XML declares no process id records "unknown"', async () => {
+  test('a new process gets its own process id, so two new processes never collide (#171)', async () => {
     getProcesses.mockReturnValue([]);
     getStoredVersion.mockReturnValue(Infinity);
     hydrateFromServer.mockResolvedValue([]);
@@ -772,9 +784,124 @@ describe('BpmnModeler — ronl:* attribute rewriting on save', () => {
 
     await userEvent.click(screen.getByText('create-process'));
 
-    expect(saveProcess).toHaveBeenCalledWith(
-      expect.objectContaining({ bpmnProcessId: 'DefaultProcess', processRole: 'standalone' })
+    const saved = saveProcess.mock.calls.at(-1)?.[0] as BpmnProcess;
+    expect(saved.processRole).toBe('standalone');
+    expect(saved.bpmnProcessId).toMatch(/^DefaultProcess_\d+$/);
+    expect(saved.xml).toContain(`<bpmn:process id="${saved.bpmnProcessId}"`);
+  });
+});
+
+describe('BpmnModeler — a process id the organisation already uses (#171)', () => {
+  const conflict = {
+    bpmnProcessId: 'ImportedProc',
+    organization: 'flevoland',
+    existing: { id: 'example_imported', name: 'Imported (example)', status: 'example' },
+  };
+  const holder = process({
+    id: 'example_imported',
+    name: 'Imported (example)',
+    status: 'example',
+    bpmnProcessId: 'ImportedProc',
+    organization: 'flevoland',
+  });
+
+  function setup() {
+    getProcesses.mockReturnValue([holder]);
+    getProcess.mockImplementation((id: string) => (id === holder.id ? holder : undefined));
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([holder]);
+    conflicts.push(conflict);
+    render(<BpmnModeler endpoint="e" />);
+  }
+
+  test('replace: the import becomes the content of the process that held the id', async () => {
+    setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    await userEvent.click(screen.getByText('import-process'));
+
+    await vi.waitFor(() =>
+      expect(saveProcess).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          id: 'example_imported',
+          name: 'Imported (example)',
+          status: 'example',
+          bpmnProcessId: 'ImportedProc',
+          xml: '<bpmn:definitions><bpmn:process id="ImportedProc"/></bpmn:definitions>',
+        })
+      )
     );
+    // The refused import itself is dropped from the local cache.
+    expect(forgetLocal).toHaveBeenCalledWith(expect.stringMatching(/^process_\d+$/));
+    expect(window.confirm).toHaveBeenCalledWith(
+      expect.stringContaining('already used by "Imported (example)" in flevoland')
+    );
+  });
+
+  test('rename: the import is saved under the process id the user chooses', async () => {
+    setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    vi.spyOn(window, 'prompt').mockReturnValue('ImportedProc_copy');
+
+    await userEvent.click(screen.getByText('import-process'));
+
+    await vi.waitFor(() =>
+      expect(saveProcess).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          name: 'Imported process',
+          bpmnProcessId: 'ImportedProc_copy',
+          xml: '<bpmn:definitions><bpmn:process id="ImportedProc_copy"/></bpmn:definitions>',
+        })
+      )
+    );
+  });
+
+  test('cancelling the rename leaves the import out and says why', async () => {
+    setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    vi.spyOn(window, 'prompt').mockReturnValue(null);
+
+    await userEvent.click(screen.getByText('import-process'));
+
+    expect(
+      await screen.findByText(
+        /"Imported process" was not imported: process id "ImportedProc" is already used by "Imported \(example\)" in flevoland\./
+      )
+    ).toBeTruthy();
+    // Only the refused first attempt: nothing saved the import afterwards.
+    expect(saveProcess.mock.calls.filter(([p]) => p.name === 'Imported process')).toHaveLength(1);
+  });
+
+  test('an invalid process id is refused rather than written into the XML', async () => {
+    setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    vi.spyOn(window, 'prompt').mockReturnValue('1 bad id');
+
+    await userEvent.click(screen.getByText('import-process'));
+
+    expect(await screen.findByText(/"1 bad id" is not a valid process id/)).toBeTruthy();
+    expect(saveProcess.mock.calls.filter(([p]) => p.name === 'Imported process')).toHaveLength(1);
+  });
+
+  test('saving from the canvas with a taken process id says so', async () => {
+    const p = process({
+      xml: '<bpmn:definitions><bpmn:process id="DefaultProcess"/></bpmn:definitions>',
+    });
+    getProcesses.mockReturnValue([p]);
+    getProcess.mockReturnValue(p);
+    getStoredVersion.mockReturnValue(Infinity);
+    hydrateFromServer.mockResolvedValue([p]);
+    render(<BpmnModeler endpoint="e" />);
+    await userEvent.click(screen.getByText('load-p1'));
+    conflicts.push({ ...conflict, bpmnProcessId: 'EditedProcess' });
+
+    await userEvent.click(screen.getByText('save-canvas'));
+
+    expect(
+      await screen.findByText(
+        /Not saved: process id "EditedProcess" is already used by "Imported \(example\)"/
+      )
+    ).toBeTruthy();
   });
 });
 

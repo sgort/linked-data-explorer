@@ -344,6 +344,37 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '409':
+          description: >-
+            Another stored process in the same organisation already has this
+            `bpmnProcessId` (code PROCESS_ID_TAKEN; #171). A stored process is
+            unique per organisation and process id; rows with status `e2e` and
+            the placeholder id `unknown` are exempt. Nothing is written. The
+            problem carries `bpmnProcessId`, `organization` and `existing`
+            (`id`, `name`, `status` of the process that holds the id), so a
+            client can offer to replace that process or rename this one.
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
+                    required: [bpmnProcessId, existing]
+                    properties:
+                      bpmnProcessId:
+                        type: string
+                      organization:
+                        type: [string, 'null']
+                      existing:
+                        type: object
+                        required: [id, name, status]
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          status:
+                            type: string
         '413':
           description: >-
             The request body was over the 10 MB limit (code
@@ -388,6 +419,16 @@ paths:
           description: >-
             The BPMN process id to resolve. Any string is accepted; a value
             matching no row answers 404, never 400.
+          schema:
+            type: string
+        - name: organization
+          in: query
+          required: false
+          description: >-
+            Only look in this organisation (#171); an empty value means rows
+            without an organisation. Without the parameter every
+            organisation's rows count, and the deployed, most recently updated
+            one is returned.
           schema:
             type: string
       responses:

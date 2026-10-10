@@ -17,6 +17,61 @@ export async function listBpmn(): Promise<Bpmn[]> {
   return rows.map(mapBpmn);
 }
 
+/** The stored process that already holds a process id in an organisation. */
+export interface ProcessIdHolder {
+  id: string;
+  name: string;
+  status: string;
+}
+
+/**
+ * A save would give an organisation a second stored process with the same
+ * process id (#171). Carries the row that already holds it, so the caller can
+ * offer to replace that one or to rename the new one.
+ */
+export class ProcessIdTakenError extends Error {
+  constructor(
+    readonly bpmnProcessId: string,
+    readonly organization: string | null,
+    readonly existing: ProcessIdHolder
+  ) {
+    super(
+      `Process id "${bpmnProcessId}" is already used by "${existing.name}" (${existing.id})` +
+        (organization ? ` in ${organization}` : '')
+    );
+    this.name = 'ProcessIdTakenError';
+  }
+}
+
+/** Statuses and the placeholder id that the uniqueness rule exempts; see migrate.ts. */
+const isExemptFromUniqueness = (status: string, bpmnProcessId: string) =>
+  status === 'e2e' || bpmnProcessId === 'unknown';
+
+/** Another row (not `ldeId`) holding the process id in the organisation, exempt rows excluded. */
+async function findProcessIdHolder(
+  bpmnProcessId: string,
+  organization: string | null,
+  ldeId: string
+): Promise<ProcessIdHolder | null> {
+  if (!pool) return null;
+  const { rows } = await pool.query<{ lde_id: string; name: string; status: string }>(
+    `SELECT lde_id, name, status FROM process_definitions
+     WHERE bpmn_process_id = $1
+       AND COALESCE(organization, '') = COALESCE($2, '')
+       AND lde_id <> $3
+       AND status <> 'e2e'
+     LIMIT 1`,
+    [bpmnProcessId, organization, ldeId]
+  );
+  return rows[0] ? { id: rows[0].lde_id, name: rows[0].name, status: rows[0].status } : null;
+}
+
+/**
+ * Saves a stored process by its LDE id. Refuses, with ProcessIdTakenError,
+ * when another stored process in the same organisation already has this
+ * process id (#171); the unique index in migrate.ts enforces the same rule, and
+ * a save that loses a race against it is reported the same way.
+ */
 export async function upsertBpmn(p: {
   id: string;
   bpmnProcessId?: string;
@@ -33,6 +88,29 @@ export async function upsertBpmn(p: {
   createdAt: string;
   updatedAt: string;
 }): Promise<void> {
+  if (!pool) return;
+  const bpmnProcessId = p.bpmnProcessId ?? 'unknown';
+  const organization = p.organization ?? null;
+  const status = p.status ?? 'wip';
+  const holder = async () =>
+    isExemptFromUniqueness(status, bpmnProcessId)
+      ? null
+      : findProcessIdHolder(bpmnProcessId, organization, p.id);
+
+  const before = await holder();
+  if (before) throw new ProcessIdTakenError(bpmnProcessId, organization, before);
+
+  try {
+    await insertOrUpdateBpmn(p);
+  } catch (err) {
+    // 23505: a concurrent save took the id between the check and the write.
+    const after = (err as { code?: string }).code === '23505' ? await holder() : null;
+    if (after) throw new ProcessIdTakenError(bpmnProcessId, organization, after);
+    throw err;
+  }
+}
+
+async function insertOrUpdateBpmn(p: Parameters<typeof upsertBpmn>[0]): Promise<void> {
   if (!pool) return;
   await pool.query(
     `INSERT INTO process_definitions
@@ -87,16 +165,33 @@ export async function deleteBpmn(ldeId: string): Promise<void> {
  * DESC` breaks any further tie (including between two deployed rows) by
  * recency. Serves both this lookup's callers: subprocess XML resolution and
  * `recordDeployedBundle` below.
+ *
+ * With `organization` given (null meaning "no organisation"), only that
+ * organisation's rows count: the same key may exist in several organisations,
+ * and a deploy for one must not stamp another's row (#171). Without it, every
+ * organisation's rows count, as before.
  */
-export async function getBpmnByBpmnProcessId(bpmnProcessId: string): Promise<unknown | null> {
+export async function getBpmnByBpmnProcessId(
+  bpmnProcessId: string,
+  scope?: { organization: string | null }
+): Promise<unknown | null> {
   if (!pool) return null;
-  const { rows } = await pool.query(
-    `SELECT lde_id, bpmn_process_id, xml FROM process_definitions
-     WHERE bpmn_process_id = $1
-     ORDER BY deployed_at DESC NULLS LAST, updated_at DESC
-     LIMIT 1`,
-    [bpmnProcessId]
-  );
+  const { rows } = scope
+    ? await pool.query(
+        `SELECT lde_id, bpmn_process_id, xml FROM process_definitions
+         WHERE bpmn_process_id = $1
+           AND COALESCE(organization, '') = COALESCE($2, '')
+         ORDER BY deployed_at DESC NULLS LAST, updated_at DESC
+         LIMIT 1`,
+        [bpmnProcessId, scope.organization]
+      )
+    : await pool.query(
+        `SELECT lde_id, bpmn_process_id, xml FROM process_definitions
+         WHERE bpmn_process_id = $1
+         ORDER BY deployed_at DESC NULLS LAST, updated_at DESC
+         LIMIT 1`,
+        [bpmnProcessId]
+      );
   if (rows.length === 0) return null;
   return { id: rows[0].lde_id, bpmnProcessId: rows[0].bpmn_process_id, xml: rows[0].xml };
 }
@@ -167,11 +262,12 @@ export interface DeployedBundleInput {
  * cycle as the Operaton deploy, so the write no longer depends on a second,
  * browser-initiated, unawaited request.
  *
- * Finds the row by `bpmnProcessId`; if none exists yet (the process was
- * deployed without ever being Saved first), creates a minimal one — `name`
- * defaults to the process id itself, `lde_id` is the process id too, since
- * that is already the natural key this lookup uses and keeps the row
- * debuggable. Every other column takes `upsertBpmn`'s own default (see its
+ * Finds the row by `bpmnProcessId` within the deploy's organisation; if none
+ * exists yet (the process was deployed without ever being Saved first),
+ * creates a minimal one — `name` defaults to the process id itself, `lde_id`
+ * is `<organization>:<process id>` (the bare process id without an
+ * organisation), which keeps the row debuggable and cannot collide with
+ * another organisation's row. Every other column takes `upsertBpmn`'s own default (see its
  * `ON CONFLICT` insert): `process_role` 'standalone', `status` 'wip',
  * `linked_dmn_templates` '{}'. Either way, stamps the row deployed via
  * `markDeployed`.
@@ -188,8 +284,15 @@ export async function recordDeployedBundle(
 ): Promise<RecordDeployedBundleResult> {
   if (!pool) return { recorded: false, reason: 'db-not-configured' };
 
-  const existing = (await getBpmnByBpmnProcessId(input.bpmnProcessId)) as { id: string } | null;
-  const ldeId = existing?.id ?? input.bpmnProcessId;
+  const organization = input.organization ?? null;
+  const existing = (await getBpmnByBpmnProcessId(input.bpmnProcessId, { organization })) as {
+    id: string;
+  } | null;
+  // lde_id is unique across organisations, so a row created here is scoped by
+  // its organisation; a bare process id would let a second organisation's
+  // deploy overwrite the first one's row (#171).
+  const ldeId =
+    existing?.id ?? (organization ? `${organization}:${input.bpmnProcessId}` : input.bpmnProcessId);
 
   if (!existing) {
     const now = new Date().toISOString();

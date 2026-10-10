@@ -115,6 +115,66 @@ describe('BpmnService.saveProcess', () => {
   });
 });
 
+describe('BpmnService.saveProcessDetailed (#171)', () => {
+  const taken = {
+    type: 'about:blank',
+    status: 409,
+    title: 'Process id already in use',
+    code: 'PROCESS_ID_TAKEN',
+    detail: 'Process id "AwbShellProcess" is already used by "AWB" (example_awb_process)',
+    bpmnProcessId: 'AwbShellProcess',
+    organization: 'flevoland',
+    existing: { id: 'example_awb_process', name: 'AWB', status: 'example' },
+  };
+
+  test('reports the process that holds the id when the backend answers 409 PROCESS_ID_TAKEN', async () => {
+    server.use(http.post('*/v1/assets/bpmn', () => HttpResponse.json(taken, { status: 409 })));
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const outcome = await BpmnService.saveProcessDetailed(process());
+
+    expect(outcome).toEqual({
+      saved: false,
+      conflict: {
+        bpmnProcessId: 'AwbShellProcess',
+        organization: 'flevoland',
+        existing: { id: 'example_awb_process', name: 'AWB', status: 'example' },
+      },
+    });
+    // saveProcess keeps answering a plain boolean.
+    expect(await BpmnService.saveProcess(process())).toBe(false);
+  });
+
+  test('treats any other 409 as an ordinary failure, without a conflict', async () => {
+    server.use(
+      http.post('*/v1/assets/bpmn', () => HttpResponse.json({ code: 'OTHER' }, { status: 409 }))
+    );
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(await BpmnService.saveProcessDetailed(process())).toEqual({ saved: false });
+  });
+
+  test('reports saved: true on success', async () => {
+    server.use(http.post('*/v1/assets/bpmn', () => HttpResponse.json({ success: true })));
+
+    expect(await BpmnService.saveProcessDetailed(process())).toEqual({ saved: true });
+  });
+});
+
+describe('BpmnService.forgetLocal', () => {
+  test('drops the process from localStorage without contacting the server', () => {
+    localStorage.setItem(
+      'linkedDataExplorer_bpmnProcesses',
+      JSON.stringify([process(), process({ id: 'p2' })])
+    );
+
+    // onUnhandledRequest: 'error' would fail this test on any request.
+    BpmnService.forgetLocal('p1');
+
+    expect(BpmnService.getProcesses().map((p) => p.id)).toEqual(['p2']);
+  });
+});
+
 describe('BpmnService.deleteProcess', () => {
   test('removes the process from localStorage and fires a background DELETE', async () => {
     server.use(http.post('*/v1/assets/bpmn', () => HttpResponse.json({ success: true })));
