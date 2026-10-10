@@ -322,6 +322,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           element={selectedElement}
           modeling={modeling}
           selectedFormRef={currentFormRef}
+          selectedFormRefBinding={businessObject.get('camunda:formRefBinding')}
         />
       );
 
