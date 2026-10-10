@@ -42,6 +42,42 @@
       "name": "OrganizationMixin",
       "extends": ["bpmn:Process"],
       "properties": [{ "name": "organization", "isAttr": true, "type": "String" }]
+    },
+    {
+      "name": "PhasesMixin",
+      "extends": ["bpmn:Process"],
+      "properties": [
+        {
+          "name": "phases",
+          "isAttr": true,
+          "type": "String",
+          "description": "The phases this process declares for RBA's caseworker stepper: code:Name pairs separated by ';' (#242). Absent means Awb phases (ronl:awbPhase markers) or no stepper."
+        },
+        {
+          "name": "phaseLabel",
+          "isAttr": true,
+          "type": "String",
+          "description": "Prefix for a phase reference in the stepper. Absent means 'Fase'."
+        }
+      ]
+    },
+    {
+      "name": "PhaseMarkerMixin",
+      "extends": ["bpmn:FlowNode"],
+      "properties": [
+        {
+          "name": "phase",
+          "isAttr": true,
+          "type": "String",
+          "description": "Code of the declared phase this node starts. Unmarked nodes inherit; see utils/phases/assignPhases.ts."
+        },
+        {
+          "name": "awbPhase",
+          "isAttr": true,
+          "type": "String",
+          "description": "Awb phase this node starts, for processes that declare no phases of their own."
+        }
+      ]
     }
   ]
 }
