@@ -2,6 +2,282 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.10.2",
+      "status": "Released",
+      "date": "10 oct 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "e6ae2fe",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Dependency review: an unused helper removed",
+          "details": [
+            "A plural helper in scripts/dependency-review.mjs lost its last caller before the review merged. ttl-editor's lint, which covers root scripts, caught it on push; the three copies stay identical."
+          ]
+        },
+        {
+          "sha": "ddb1687",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Dependency criteria, a checklist for every new dependency, and a quarterly review",
+          "details": [
+            "ICTU recommendations 1 and 11, as one set of criteria applied twice. docs/dependency-criteria.md, shared with ttl-editor and ronl-business-api, sets six: maintained, maintainers, licence (the lockfile-review allow-list), release policy, footprint and needed, each with a measurable signal and the judgement left to a person.",
+            "When a pull request adds a direct dependency to any manifest, the lockfile-review comment now lists it with a checklist of those criteria, read from the two lockfiles alone. A package already direct elsewhere in the repository, or moved between dependencies and devDependencies, is not new.",
+            "dependency-review.yml runs on the second day of each quarter: scripts/dependency-review.mjs gathers each direct dependency's last release, deprecation, maintainers, licence, install script and whether its repository is archived, and opens the quarter's review issue, failing packages first. The first review (2026-Q4, #290) flagged 24 of 75 and recorded an outcome for each."
+          ]
+        },
+        {
+          "sha": "42ca25f",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "Registry signatures and provenance verified on every pull request",
+          "details": [
+            "ICTU recommendation 5, the provenance half (#249). The required audit job runs npm audit signatures over the installed tree through scripts/audit-signatures.sh, after the npm ci the formatter already needed. It fails on an invalid or missing registry signature, and on a registry gap: an advertised provenance attestation the registry serves as 404, after which npm verifies nothing further. A package without an attestation passes.",
+            "The registry or proxy half waits for an answer from ICTU and stays open in #249."
+          ]
+        },
+        {
+          "sha": "d76fb8b",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Modeler phases: RBA's node order, a panel that keeps your typing, one pool at a time, and readable inherited badges",
+          "details": [
+            "RBA lists nodes by element kind, and that order decides how a loop no start event reaches inherits its phase; the canvas now sorts the same way. A randomised comparison against RBA's parser went from 393 differing processes in 10,000 to none.",
+            "The phase panel keeps its React root across edits, so typing survives the recompute after each change, and the DMN, form and document selectors no longer re-mount on every edit. In a collaboration a phase edit touches only the edited pool's nodes, and a pool RBA does not read says so. Elements RBA does not count, such as a plain task, explain why they offer no phases.",
+            "An inherited badge carries the same text as the badge that starts its phase (\"Fase 7\", \"Archiefwet\"), outlined instead of solid. A bare position number read as the wrong Awb phase after 4+5."
+          ]
+        },
+        {
+          "sha": "59698f5",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Modeler: phase badges on the canvas, the phase editors in the panel, and phase checks before a deploy",
+          "details": [
+            "The canvas recomputes every node's phase 150 ms after each change, from the saved XML that RBA reads, and draws a solid badge where a node starts a phase and an outlined one where it inherits it. The process editor and the node picker are mounted in the properties panel.",
+            "The deploy dialog lists the phase findings. Declared phases mixed with Awb markers blocks Deploy, because RBA would read one scheme and silently ignore the other."
+          ]
+        },
+        {
+          "sha": "f3c5a75",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Modeler: pick the phase a node starts",
+          "details": [
+            "\"Start van fase\" in the properties panel: \"(erft over)\" or one of the process's phases, labelled as RBA's stepper labels them, with a line saying which phase an unmarked node inherits, or that it lies before the first marker."
+          ]
+        },
+        {
+          "sha": "93d441e",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Modeler: edit a process's phases in the properties panel",
+          "details": [
+            "With the process (or a pool) selected: None, Own phases or Awb phases. Own phases can be added, renamed, reordered and removed, with a code generated from the name and an optional label. Renaming or removing a phase carries its markers along; a code that would break ronl:phases, or that another phase already has, is refused with a message."
+          ]
+        },
+        {
+          "sha": "7ee3a2c",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Modeler: one undo step for every phase edit",
+          "details": [
+            "Phase edits go through one registered bpmn-js command whose nested property updates diagram-js records under it, so a code rename that rewrites eight markers is undone by a single Ctrl+Z."
+          ]
+        },
+        {
+          "sha": "286f926",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Modeler: pre-deploy findings for a process's phases",
+          "details": [
+            "Error: declared phases together with Awb markers. Warnings: phases set but no node marked, a marker naming a phase the process does not have, a declared phase no node falls into, entries of ronl:phases RBA skips, and a marker on an element RBA does not count. The shipped examples raise none."
+          ]
+        },
+        {
+          "sha": "e543f3c",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Modeler: RBA's phase inheritance, ported over a graph read from the XML",
+          "details": [
+            "A port of ronl-business-api's assignPhases, findBackEdges and assignColumns over a neutral graph built from the saved BPMN, read the way RBA reads it: the first process, its direct children of the counted kinds, attributes by local name. On the HR capacity and besluitvorming examples it gives RBA's exact node-to-phase maps."
+          ]
+        },
+        {
+          "sha": "5561eac",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Modeler: phase lists, the Awb table and phase codes",
+          "details": [
+            "Parsing and writing ronl:phases by RBA's rules (entries split at the first colon, malformed and repeated entries skipped and reported), RBA's Awb phase table and labels, and codes generated from phase names."
+          ]
+        },
+        {
+          "sha": "4430557",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Modeler: the phase attributes registered in the ronl descriptor",
+          "details": [
+            "ronl:phases and ronl:phaseLabel on a process, ronl:phase and ronl:awbPhase on every flow node, as typed properties. The three examples with phases round-trip every phase attribute."
+          ]
+        },
+        {
+          "sha": "28a563a",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Modeler phase editing: the implementation plan",
+          "details": ["Nine test-first tasks implementing the phase editing design (#242)."]
+        },
+        {
+          "sha": "9e8a904",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Modeler phase editing: the design",
+          "details": [
+            "Setting a process's phases for RBA's caseworker stepper in the Modeler: the attributes, a process editor and node picker in the properties panel, canvas badges computed with a port of RBA's rule, and pre-deploy checks (#242)."
+          ]
+        },
+        {
+          "sha": "67741b6",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "RoPA: each subprocess record nested under the shell that calls it",
+          "details": [
+            "The RoPA list put every subprocess record under the last shell, so with two shells one shell's subprocess showed under the other. Records now nest under the shell whose stored process calls them, read from its call activities as the Modeler reads them; a subprocess called by two shells appears under both.",
+            "Records whose shell has no RoPA record, or that no stored shell calls, are listed apart under \"Not linked to a shell\". The public ROPA site stays flat for now (#284)."
+          ]
+        },
+        {
+          "sha": "f73f61e",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "A stored process is unique per organisation and process id",
+          "details": [
+            "Re-importing an example or fixture could store a second row with the same process id, and lookups ignored the organisation, so a deploy for one organisation could stamp another's row. On every start, the database now resolves existing duplicates (the deployed, most recently updated row stays; the others are archived to process_definitions_dedup_archive and logged) and enforces a unique index on organisation and process id. E2E fixture rows and the placeholder id are exempt.",
+            "Saving a process id the organisation already uses answers 409 PROCESS_ID_TAKEN. Lookups and deploy stamping stay within the deploy's organisation. In the Modeler, an import whose id is taken asks whether to replace the existing process or give the import another id, and a new process gets its own id."
+          ]
+        },
+        {
+          "sha": "a3d28a1",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Besluitvorming: the escalation path gets its own besluit, taken by the competent authority",
+          "details": [
+            "On escalation the besluit task rendered the ordinary decision letter, which named an empty or declining signatory and closed \"Namens deze, de gemachtigde ondertekenaar\". The new document besluit-gb-besluit-bestuur says the competent authority decided and why, adds its outcome and explanation, and closes with the besluitnemer, whom the form now asks for. The ordinary document and its signing are unchanged."
+          ]
+        },
+        {
+          "sha": "ec32d23",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Modeler: the form card shows the form's actual binding",
+          "details": [
+            "The form dropdown writes camunda:formRefBinding=\"deployment\", but the card under it always printed \"binding: latest\". It now shows the element's own binding, and \"latest (standaard)\" when the attribute is absent."
+          ]
+        },
+        {
+          "sha": "b84e3b2",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Thuisbatterij: its own completeness check, and a reachable Awb 4:5 path",
+          "details": [
+            "The shared completeness check only looked at the product type, so every Thuisbatterij application was complete whatever it contained. A new decision, ThuisbatterijCompletenessCheck, finds missing or non-positive costs, a missing relation, province or date, and a tenant without the owner's permission.",
+            "\"Aanvraag volledig?\" now has three exits: complete, incomplete the first time (ask for a supplement, which is re-checked) and incomplete after the recovery period (buiten behandeling, Awb 4:5). The supplement form shows the missing fields and records the supplied values."
+          ]
+        },
+        {
+          "sha": "6be3d25",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "examples/organizations/flevoland is the authored copy of every Flevoland bundle",
+          "details": [
+            "The authored Flevoland tree had drifted from what the Modeler serves and the fixtures deploy: decisions out of date, three bundles without an authored copy, an old Thuisbatterij pair matching nothing deployed. It now holds an identical copy of each, the stale files are removed, and a test requires every served Flevoland file to have exactly one identical authored copy. Nothing served or deployed changes."
+          ]
+        },
+        {
+          "sha": "2cbfa2b",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Examples store DMN results as plain variables, not serialised maps",
+          "details": [
+            "A business rule task with mapDecisionResult=\"singleResult\" stored a multi-output result as a serialised Java map, and two concurrent REST reads could collide on it with ENGINE-03005, as RBA's access check and task pane did on ACC. All 36 such tasks now map each output straight into a plain variable from the transient decisionResult, null-safe where a missing result was tolerated before. Verified on Operaton 2.1.2 and 1.0.0.",
+            "Gateways and scripts read the plain variables; script tasks that only copied map values are removed. Instances already running keep their old definition until they finish."
+          ]
+        },
+        {
+          "sha": "af06deb",
+          "author": "Steven Gort",
+          "type": "ci",
+          "subject": "SBOM checks read the committed file, before generation overwrites it",
+          "details": [
+            "The SBOM workflow generated the file first and then checked it, comparing a fresh generation with itself, so neither the release check nor the promotion check could fail. Both now run before generation."
+          ]
+        },
+        {
+          "sha": "776af65",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "E2E fixtures: the Heusden bundle, mirrored from examples/organizations",
+          "details": [
+            "ronl-business-api's E2E setup needs the Heusdenpas processes under tenant heusden and three untenanted decisions, and the fixture manifest had none of them. They are now copied byte for byte from examples/organizations/heusden, with the mirrored bundles listed once for both parity tests."
+          ]
+        },
+        {
+          "sha": "b317a76",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Backend dependencies updated",
+          "details": ["prettier 3.9.9, ts-jest 29.4.14, typescript-eslint 8.70.1."]
+        },
+        {
+          "sha": "721ef18",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "E2E fixtures: the aanvullende-gegevens fixture byte-identical to its example again",
+          "details": [
+            "The fixture matched the example's content but not its layout, so the parity test reported drift. It is now the example file plus only the e2eFixture marker."
+          ]
+        },
+        {
+          "sha": "78ba218",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Thuisbatterij: the supplement form no longer shows the receipt date",
+          "details": [
+            "The Awb 4:5 form drops its read-only \"Datum ontvangst\" field and keeps the dossier number. The process still sets the variable; nothing read it through this form."
+          ]
+        },
+        {
+          "sha": "1b602db",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Heusdenpas: SZW bijstandsnormen for 2026, and the assessment as one phase",
+          "details": [
+            "The SZW decision had no term after the second half of 2025, so a 2026 application got no norm and no outcome. It now covers both halves of 2026, with the 18 norm types for each. The assessment subprocess is tagged as Awb phase 4+5 throughout, so RBA shows it as a single phase."
+          ]
+        },
+        {
+          "sha": "cfeb8ef",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Heusdenpas: a swimlane process bundle for RBA",
+          "details": [
+            "A deployable bundle for the Heusdenpas and Kindpakket of Gemeente Heusden, on the Thuisbatterij shell and subprocess pattern: an Awb-phased main process, an assessment subprocess running the SVB, SZW and Heusdenpas decision chain with a caseworker review, five Dutch forms and the beschikking. Verified end to end on the local Operaton."
+          ]
+        },
+        {
+          "sha": "62ee569",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Frontend dependencies updated",
+          "details": [
+            "bpmn-js 18.30.1, bpmn-js-properties-panel 5.65.1, @types/node 22.20.4, prettier 3.9.9, typescript-eslint 8.70.1."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.10.1",
       "status": "Released",
       "date": "6 oct 2026",
