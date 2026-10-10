@@ -11,6 +11,7 @@
     "dev:backend": "npm run deps:check && npm run dev --workspace=@linked-data-explorer/backend",
     "dev:full": "npm run deps:check && concurrently \"npm run dev --workspace=@linked-data-explorer/frontend\" \"npm run dev --workspace=@linked-data-explorer/backend\"",
     "deps:check": "bash scripts/check-deps.sh",
+    "audit:signatures": "bash scripts/audit-signatures.sh",
     "build": "npm run build --workspace=@linked-data-explorer/frontend",
     "preview": "npm run preview --workspace=@linked-data-explorer/frontend",
     "lint": "npm run lint --workspaces --if-present",
