@@ -241,6 +241,30 @@ daily audit exists to avoid.
 fails to run must not report a clean tree — the same rule `--no-suppress-errors`
 enforces for Semgrep.
 
+## Dependency review, quarterly
+
+An abandoned package raises no advisory and opens no Renovate pull request, so
+neither the daily audit nor Renovate notices one. ICTU recommendation 11; the
+criteria are in [`docs/dependency-criteria.md`](docs/dependency-criteria.md),
+#250.
+
+`.github/workflows/dependency-review.yml` runs at 06:23 UTC on the second day of
+each quarter, and on demand. `scripts/dependency-review.mjs` reads every direct
+dependency from `package-lock.json`, and asks the npm registry and the GitHub API
+for its last release, deprecation, maintainers, licence and whether its
+repository is archived. It installs nothing.
+
+|                     |                                                                                    |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| Job / check context | `dependency-review` — not `audit`, for the same reason as the daily audit          |
+| Fails on            | nothing: a finding is for a person, and the run stays green                        |
+| Where it reports    | the run's step summary, and one issue per quarter that records the outcomes        |
+| Re-run in a quarter | adds the fresh evidence as a comment; the issue body, with its outcomes, stays put |
+| Node                | an exact literal, like the daily audit                                             |
+
+The same criteria are applied when a dependency is added: the `lockfile-review`
+comment lists each new **direct** dependency with a checklist of them.
+
 ## Version currency
 
 All seven `actions/checkout` references now pin **v7.0.1**, converged in
