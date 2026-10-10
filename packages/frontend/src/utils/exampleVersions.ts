@@ -23,7 +23,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_zorgtoeslag_provisional: 9, // v9: DMN results as plain variables, no serialised maps (#273)
   example_zorgtoeslag_final: 7, // v7: swimlanes + Dutch names
   example_hr_capacity_nl: 5, // v5: DMN results as plain variables, no serialised maps (#273)
-  example_thuisbatterij_aanvraag: 3, // v3: DMN results as plain variables, no serialised maps (#273)
+  example_thuisbatterij_aanvraag: 4, // v4: own completeness check, reachable Awb 4:5 path (#206)
   example_thuisbatterij_decision: 3, // v3: DMN results as plain variables, no serialised maps (#273)
   example_besluit_gb: 2, // v2: a declined signature escalates instead of looping back
 
@@ -40,7 +40,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_thuisbatterij_start: 1,
   example_thuisbatterij_review: 1,
   example_thuisbatterij_notify_applicant: 1,
-  example_thuisbatterij_missing_info: 1,
+  example_thuisbatterij_missing_info: 2, // v2: shows missingFields, records the supplied values (#206)
   example_besluit_gb_sjabloon_kiezen: 1,
   example_besluit_gb_sjabloon_invullen: 1,
   example_besluit_gb_advies_toetsing: 1,

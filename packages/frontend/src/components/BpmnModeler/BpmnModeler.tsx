@@ -287,7 +287,7 @@ const BpmnModeler: React.FC<BpmnModelerProps> = ({ endpoint }) => {
           xml,
           createdAt: '2026-06-10T00:00:00.000Z',
           updatedAt: new Date().toISOString(),
-          linkedDmnTemplates: ['AwbCompletenessCheck', 'ArchivesActRetention'],
+          linkedDmnTemplates: ['ThuisbatterijCompletenessCheck', 'ArchivesActRetention'],
           readonly: false,
           status: 'example',
           bpmnProcessId: 'ThuisbatterijSubsidieAanvraagProcess',

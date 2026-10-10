@@ -5,6 +5,9 @@
       "flevoland/awb-completeness-check.dmn": [
         "AwbCompletenessCheck"
       ],
+      "flevoland/thuisbatterij-completeness-check.dmn": [
+        "ThuisbatterijCompletenessCheck"
+      ],
       "flevoland/archives-act-retention.dmn": [
         "ArchivesActRetention"
       ],
@@ -140,7 +143,7 @@
       ],
       "decisions": [
         "ArchivesActRetention",
-        "AwbCompletenessCheck"
+        "ThuisbatterijCompletenessCheck"
       ],
       "source": "taken from the flevoland-tenant bundle deployed on operaton.open-regels.nl (deployment 8803912d, 2026-09-21), and since #192 also the authored copy in examples/organizations/flevoland/thuisbatterij/, which replaced the drifted -main/-subprocess pair that used to live there (example-fixture-parity.test.ts keeps it identical to public/examples). Every businessRuleTask carries camunda:decisionRefTenantId=\"${null}\" so the tenant-scoped process resolves the SHARED, untenanted DMNs; the deployed copy pinned decisionRefTenantId=\"46\" instead, which tied it to one organisation's tenant. RechtEnHoogteSubsidieThuisbatterij.dmn holds all six decisions and MUST be deployed WITHOUT a tenant-id.",
       "subProcesses": [
