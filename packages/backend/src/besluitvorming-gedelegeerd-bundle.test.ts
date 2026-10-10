@@ -216,7 +216,8 @@ describe('GedelegeerdBesluitProcess (BPMN)', () => {
       return found;
     };
     expect(task('Task_Onderteken')['@_signatureRef']).toBe('besluit-gb-besluit');
-    expect(task('Task_NeemBesluit')['@_documentRef']).toBe('besluit-gb-besluit');
+    // Escalation is decided by the competent authority, in its own words (#246).
+    expect(task('Task_NeemBesluit')['@_documentRef']).toBe('besluit-gb-besluit-bestuur');
   });
 
   it('declares six phases and marks the node that starts each one', () => {
@@ -294,5 +295,35 @@ describe('besluit-gb-besluit (document)', () => {
         'voorgesteldBesluit',
       ].sort()
     );
+  });
+});
+
+describe('besluit-gb-besluit-bestuur (document, #246)', () => {
+  const doc = JSON.parse(readBundle('besluit-gb-besluit-bestuur.document'));
+  const keys: string[] = doc.bindings.map((b: { variableKey: string }) => b.variableKey);
+
+  it('is the document Neem besluit attaches, for the same process', () => {
+    expect(doc.id).toBe('besluit-gb-besluit-bestuur');
+    expect(doc.processKey).toBe('GedelegeerdBesluitProcess');
+  });
+
+  it('names the besluitnemer, not the gemachtigde ondertekenaar', () => {
+    expect(keys).toContain('besluitnemer');
+    expect(keys).not.toContain('ondertekenaar');
+  });
+
+  it('binds only variables a form writes, the authority’s three on Neem besluit itself', () => {
+    const written = new Set(
+      FORMS.flatMap((id) =>
+        form(id)
+          .components.filter((c) => c.key && !c.readonly)
+          .map((c) => c.key as string)
+      )
+    );
+    expect(keys.filter((k) => !written.has(k))).toEqual([]);
+    for (const key of ['besluitUitkomst', 'besluitToelichting', 'besluitnemer']) {
+      expect(field('besluit-gb-besluit-nemen', key).readonly).toBeFalsy();
+    }
+    expect(field('besluit-gb-besluit-nemen', 'besluitnemer').validate?.required).toBe(true);
   });
 });
