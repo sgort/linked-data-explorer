@@ -13,6 +13,8 @@ jest.mock('../services/assets.service', () => ({
   deleteBpmn: jest.fn(),
   markDeployed: jest.fn(),
   getBpmnByBpmnProcessId: jest.fn(),
+  // The real class: the route recognises it with instanceof.
+  ProcessIdTakenError: jest.requireActual('../services/assets.service').ProcessIdTakenError,
   listForms: jest.fn(),
   upsertForm: jest.fn(),
   deleteForm: jest.fn(),
@@ -28,8 +30,9 @@ import { errorHandler } from '../middleware/error.middleware';
 import { expectToMatchOperation } from '../openapi/testing/conformance';
 
 const svc = assetsService as unknown as Record<string, jest.Mock>;
-// Object.values would also yield the __esModule flag, which is not a mock.
-const svcMocks = Object.values(svc).filter((v): v is jest.Mock => typeof v === 'function');
+// Object.values would also yield the __esModule flag and the real
+// ProcessIdTakenError class, neither of which is a mock.
+const svcMocks = Object.values(svc).filter((v): v is jest.Mock => jest.isMockFunction(v));
 
 function makeApp() {
   const app = express();
@@ -94,6 +97,31 @@ describe('BPMN collection', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true });
     expect(svc.upsertBpmn).toHaveBeenCalledWith(FRONTEND_BPMN_BODY);
+  });
+
+  test('POST /bpmn answers 409 PROCESS_ID_TAKEN naming the process that holds the id (#171)', async () => {
+    svc.upsertBpmn.mockRejectedValue(
+      new assetsService.ProcessIdTakenError('AwbShellProcess', 'flevoland', {
+        id: 'example_awb_process',
+        name: 'AWB Generic Process (Example)',
+        status: 'example',
+      })
+    );
+
+    const res = await request(makeApp()).post('/v1/assets/bpmn').send(FRONTEND_BPMN_BODY);
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({
+      code: 'PROCESS_ID_TAKEN',
+      title: 'Process id already in use',
+      bpmnProcessId: 'AwbShellProcess',
+      organization: 'flevoland',
+      existing: {
+        id: 'example_awb_process',
+        name: 'AWB Generic Process (Example)',
+        status: 'example',
+      },
+    });
   });
 
   test('POST /bpmn returns 500 with an UPSERT_FAILED code when the write throws', async () => {
@@ -333,7 +361,23 @@ describe('GET /bpmn/by-bpmn-id/:bpmnProcessId', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, data: { id: 'p1', xml: '<bpmn/>' } });
-    expect(svc.getBpmnByBpmnProcessId).toHaveBeenCalledWith('ZorgtoeslagProcess');
+    expect(svc.getBpmnByBpmnProcessId).toHaveBeenCalledWith('ZorgtoeslagProcess', undefined);
+  });
+
+  test('scopes the lookup to ?organization= (#171), empty meaning no organisation', async () => {
+    svc.getBpmnByBpmnProcessId.mockResolvedValue({ id: 'p1', xml: '<bpmn/>' });
+
+    await request(makeApp()).get(
+      '/v1/assets/bpmn/by-bpmn-id/AwbShellProcess?organization=flevoland'
+    );
+    expect(svc.getBpmnByBpmnProcessId).toHaveBeenLastCalledWith('AwbShellProcess', {
+      organization: 'flevoland',
+    });
+
+    await request(makeApp()).get('/v1/assets/bpmn/by-bpmn-id/AwbShellProcess?organization=');
+    expect(svc.getBpmnByBpmnProcessId).toHaveBeenLastCalledWith('AwbShellProcess', {
+      organization: null,
+    });
   });
 
   test('returns 404 naming the process id when the subprocess is missing', async () => {
@@ -695,6 +739,21 @@ describe('/v1/assets/bpmn matches its OpenAPI description', () => {
     const res = await request(makeDocumentedApp()).post('/v1/assets/bpmn').send(FULL_BPMN);
 
     expect(res.status).toBe(200);
+    expectToMatchOperation(res, 'post', '/assets/bpmn');
+  });
+
+  test('POST /assets/bpmn 409, as documented (#171)', async () => {
+    svc.upsertBpmn.mockRejectedValue(
+      new assetsService.ProcessIdTakenError('AwbShellProcess', 'flevoland', {
+        id: 'example_awb_process',
+        name: 'AWB Generic Process (Example)',
+        status: 'example',
+      })
+    );
+
+    const res = await request(makeDocumentedApp()).post('/v1/assets/bpmn').send(FULL_BPMN);
+
+    expect(res.status).toBe(409);
     expectToMatchOperation(res, 'post', '/assets/bpmn');
   });
 

@@ -17,6 +17,7 @@ import {
   listForms,
   listPublicBundles,
   markDeployed,
+  ProcessIdTakenError,
   recordDeployedBundle,
   upsertBpmn,
   upsertDocument,
@@ -121,6 +122,92 @@ describe('BPMN', () => {
         '2026-06-01T00:00:00.000Z',
       ]
     );
+  });
+
+  describe('upsertBpmn: one stored process per organisation and process id (#171)', () => {
+    const save = (over: Record<string, unknown> = {}) =>
+      upsertBpmn({
+        id: 'process_2',
+        bpmnProcessId: 'AwbShellProcess',
+        name: 'Copy',
+        xml: '<bpmn/>',
+        linkedDmnTemplates: [],
+        organization: 'flevoland',
+        createdAt: '2026-10-10T00:00:00.000Z',
+        updatedAt: '2026-10-10T00:00:00.000Z',
+        ...over,
+      });
+
+    test('refuses with ProcessIdTakenError when another row in the organisation holds the id', async () => {
+      mockQuery.mockResolvedValueOnce({
+        rows: [{ lde_id: 'example_awb_process', name: 'AWB Generic Process', status: 'example' }],
+      });
+
+      const err = await save().catch((e) => e);
+
+      expect(err).toBeInstanceOf(ProcessIdTakenError);
+      expect(err).toMatchObject({
+        bpmnProcessId: 'AwbShellProcess',
+        organization: 'flevoland',
+        existing: { id: 'example_awb_process', name: 'AWB Generic Process', status: 'example' },
+      });
+      // Nothing was written.
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+      const [sql, params] = mockQuery.mock.calls[0];
+      expect(sql).toContain('lde_id <> $3');
+      expect(sql).toContain("status <> 'e2e'");
+      expect(params).toEqual(['AwbShellProcess', 'flevoland', 'process_2']);
+    });
+
+    test('saves when no other row holds the id', async () => {
+      mockQuery.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
+
+      await save();
+
+      expect(mockQuery).toHaveBeenCalledTimes(2);
+      expect(mockQuery.mock.calls[1][0]).toContain('INSERT INTO process_definitions');
+    });
+
+    test('reports a save that lost a race against the unique index the same way', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockRejectedValueOnce(Object.assign(new Error('duplicate key'), { code: '23505' }))
+        .mockResolvedValueOnce({
+          rows: [{ lde_id: 'process_1', name: 'Other copy', status: 'wip' }],
+        });
+
+      await expect(save()).rejects.toBeInstanceOf(ProcessIdTakenError);
+    });
+
+    test('passes on any other database error', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockRejectedValueOnce(Object.assign(new Error('connection lost'), { code: '08006' }));
+
+      await expect(save()).rejects.toThrow('connection lost');
+    });
+
+    test.each([
+      ['an E2E fixture row', { status: 'e2e' }],
+      ['the placeholder id', { bpmnProcessId: undefined }],
+    ])('does not check %s, which the rule exempts', async (_name, over) => {
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+
+      await save(over);
+
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+      expect(mockQuery.mock.calls[0][0]).toContain('INSERT INTO process_definitions');
+    });
+  });
+
+  test('getBpmnByBpmnProcessId without a scope keeps looking across organisations', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await getBpmnByBpmnProcessId('AwbShellProcess');
+
+    const [sql, params] = mockQuery.mock.calls[0];
+    expect(sql).not.toContain('organization');
+    expect(params).toEqual(['AwbShellProcess']);
   });
 
   test('upsertBpmn passes shellId through when given', async () => {
@@ -238,9 +325,11 @@ describe('BPMN', () => {
       expect(updateParams[0]).toBe('p1');
     });
 
-    test('creates a minimal row keyed by the process id when none exists yet, then stamps it deployed', async () => {
+    test('creates a minimal row keyed by organisation and process id when none exists yet, then stamps it deployed', async () => {
       mockQuery
         // getBpmnByBpmnProcessId lookup — nothing found
+        .mockResolvedValueOnce({ rows: [] })
+        // upsertBpmn: no other row holds the process id (#171)
         .mockResolvedValueOnce({ rows: [] })
         // upsertBpmn INSERT
         .mockResolvedValueOnce({ rows: [] })
@@ -248,20 +337,39 @@ describe('BPMN', () => {
         .mockResolvedValueOnce({ rows: [], rowCount: 1 });
 
       expect(await recordDeployedBundle(input)).toEqual({ recorded: true });
-      expect(mockQuery).toHaveBeenCalledTimes(3);
+      expect(mockQuery).toHaveBeenCalledTimes(4);
 
-      const [insertSql, insertParams] = mockQuery.mock.calls[1];
+      // The lookup is scoped to the deploy's organisation (#171).
+      const [lookupSql, lookupParams] = mockQuery.mock.calls[0];
+      expect(lookupSql).toContain("COALESCE(organization, '') = COALESCE($2, '')");
+      expect(lookupParams).toEqual(['ZorgtoeslagProcess', 'flevoland']);
+
+      const [insertSql, insertParams] = mockQuery.mock.calls[2];
       expect(insertSql).toEqual(expect.stringContaining('INSERT INTO process_definitions'));
       // id, bpmn_process_id, name, description, xml, ...
-      expect(insertParams[0]).toBe('ZorgtoeslagProcess'); // lde_id defaults to the process id
+      // lde_id is unique across organisations, so it carries the organisation.
+      expect(insertParams[0]).toBe('flevoland:ZorgtoeslagProcess');
       expect(insertParams[1]).toBe('ZorgtoeslagProcess'); // bpmn_process_id
       expect(insertParams[2]).toBe('ZorgtoeslagProcess'); // name defaults to the process id
       expect(insertParams[4]).toBe('<bpmn:definitions/>'); // xml
       expect(insertParams[11]).toBe('flevoland'); // organization
 
-      const [updateSql, updateParams] = mockQuery.mock.calls[2];
+      const [updateSql, updateParams] = mockQuery.mock.calls[3];
       expect(updateSql).toEqual(expect.stringContaining('UPDATE process_definitions'));
-      expect(updateParams[0]).toBe('ZorgtoeslagProcess');
+      expect(updateParams[0]).toBe('flevoland:ZorgtoeslagProcess');
+    });
+
+    test('keys a created row by the bare process id when the deploy has no organisation', async () => {
+      mockQuery
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+      await recordDeployedBundle({ ...input, organization: undefined });
+
+      expect(mockQuery.mock.calls[0][1]).toEqual(['ZorgtoeslagProcess', null]);
+      expect(mockQuery.mock.calls[2][1][0]).toBe('ZorgtoeslagProcess');
     });
 
     test('reports "existing-row-not-stamped", rather than throwing, when an existing row\'s stamp lands on zero rows', async () => {
@@ -280,6 +388,8 @@ describe('BPMN', () => {
     test('reports "new-row-not-stamped" when a freshly created row\'s stamp lands on zero rows', async () => {
       mockQuery
         // getBpmnByBpmnProcessId lookup — nothing found
+        .mockResolvedValueOnce({ rows: [] })
+        // upsertBpmn: no other row holds the process id
         .mockResolvedValueOnce({ rows: [] })
         // upsertBpmn INSERT
         .mockResolvedValueOnce({ rows: [] })

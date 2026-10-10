@@ -17,7 +17,11 @@ jest.mock('./pool', () => ({
   },
 }));
 
-import { migrate } from './migrate';
+import {
+  DEDUPLICATE_PROCESS_DEFINITIONS,
+  migrate,
+  UNIQUE_PROCESS_PER_ORGANIZATION,
+} from './migrate';
 
 beforeEach(() => {
   mockQuery.mockReset().mockResolvedValue({ rows: [] });
@@ -29,12 +33,66 @@ beforeEach(() => {
 });
 
 describe('migrate', () => {
-  test('runs the schema DDL on a pooled client and logs completion', async () => {
+  test('runs the schema DDL, then the #171 deduplication and unique index, and logs completion', async () => {
     await migrate();
 
     expect(mockConnect).toHaveBeenCalledTimes(1);
-    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledTimes(3);
+    expect(mockQuery.mock.calls[1][0]).toBe(DEDUPLICATE_PROCESS_DEFINITIONS);
+    expect(mockQuery.mock.calls[2][0]).toBe(UNIQUE_PROCESS_PER_ORGANIZATION);
     expect(mockInfo).toHaveBeenCalledWith('[DB] Migrations applied');
+  });
+
+  test('creates the archive table before deduplicating into it (#171)', async () => {
+    await migrate();
+
+    expect(mockQuery.mock.calls[0][0]).toContain(
+      'CREATE TABLE IF NOT EXISTS process_definitions_dedup_archive'
+    );
+  });
+
+  test('deduplicates per organisation and process id, keeping the deployed, newest row (#171)', () => {
+    const sql = DEDUPLICATE_PROCESS_DEFINITIONS;
+    expect(sql).toMatch(/PARTITION BY COALESCE\(organization, ''\), bpmn_process_id/);
+    expect(sql).toMatch(/ORDER BY deployed_at DESC NULLS LAST, updated_at DESC, lde_id/);
+    // Exempt rows never take part: the E2E fixture shells and the placeholder id.
+    expect(sql).toContain("WHERE status <> 'e2e' AND bpmn_process_id <> 'unknown'");
+    // Archived before deleted, and shell_id links moved to the row that stays.
+    expect(sql).toContain('INSERT INTO process_definitions_dedup_archive');
+    expect(sql).toContain('SET shell_id = l.kept_lde_id');
+  });
+
+  test('the unique index has the same scope and exemptions as the deduplication', () => {
+    expect(UNIQUE_PROCESS_PER_ORGANIZATION).toContain('CREATE UNIQUE INDEX IF NOT EXISTS');
+    expect(UNIQUE_PROCESS_PER_ORGANIZATION).toContain(
+      "(COALESCE(organization, ''), bpmn_process_id)"
+    );
+    expect(UNIQUE_PROCESS_PER_ORGANIZATION).toContain(
+      "WHERE status <> 'e2e' AND bpmn_process_id <> 'unknown'"
+    );
+  });
+
+  test('logs each archived duplicate and the row it gave way to', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ lde_id: 'process_2', kept_lde_id: 'process_1' }],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    await migrate();
+
+    expect(mockWarn).toHaveBeenCalledWith(
+      '[DB] Archived duplicate stored processes before enforcing uniqueness',
+      { archived: ['process_2 -> kept process_1'] }
+    );
+  });
+
+  test('stays quiet when there was nothing to deduplicate', async () => {
+    await migrate();
+
+    expect(mockWarn).not.toHaveBeenCalled();
   });
 
   test('creates every table the application depends on', async () => {

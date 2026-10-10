@@ -1,6 +1,68 @@
 import logger from '../utils/logger';
 import pool from './pool';
 
+/**
+ * A stored process is unique per organisation and process id (#171). The
+ * Operaton key is per tenant and the organisation is the tenant, so two
+ * organisations may share a key; one organisation may not have it twice.
+ *
+ * Exempt, and so outside both statements below:
+ *   - status 'e2e': the E2E fixture shells reuse the seeded example's key on
+ *     purpose (#254); they are opened, never looked up by key.
+ *   - process id 'unknown': upsertBpmn's placeholder when the XML had none.
+ *
+ * Existing duplicates are resolved before the index is created, so the index
+ * can never fail on old data. Per group, the deployed, most recently updated
+ * row stays; anything pointing at the others through shell_id is repointed to
+ * it; the others are copied to process_definitions_dedup_archive (the whole
+ * row as JSON, with the row that was kept) and then deleted. Once the index
+ * exists no group can form again, so on every later start this finds nothing.
+ *
+ * A row that is itself removed is not repointed: one statement may not update
+ * and delete the same row.
+ */
+export const DEDUPLICATE_PROCESS_DEFINITIONS = `
+  WITH ranked AS (
+    SELECT lde_id,
+           first_value(lde_id) OVER w AS kept_lde_id,
+           row_number() OVER w AS rn
+    FROM process_definitions
+    WHERE status <> 'e2e' AND bpmn_process_id <> 'unknown'
+    WINDOW w AS (
+      PARTITION BY COALESCE(organization, ''), bpmn_process_id
+      ORDER BY deployed_at DESC NULLS LAST, updated_at DESC, lde_id
+    )
+  ),
+  losers AS (
+    SELECT lde_id, kept_lde_id FROM ranked WHERE rn > 1
+  ),
+  repointed AS (
+    UPDATE process_definitions p
+       SET shell_id = l.kept_lde_id
+      FROM losers l
+     WHERE p.shell_id = l.lde_id
+       AND p.lde_id NOT IN (SELECT lde_id FROM losers)
+    RETURNING p.lde_id
+  ),
+  archived AS (
+    INSERT INTO process_definitions_dedup_archive (lde_id, kept_lde_id, row_data)
+    SELECT p.lde_id, l.kept_lde_id, to_jsonb(p)
+      FROM process_definitions p
+      JOIN losers l ON l.lde_id = p.lde_id
+    RETURNING lde_id
+  )
+  DELETE FROM process_definitions p
+   USING losers l
+   WHERE p.lde_id = l.lde_id
+  RETURNING p.lde_id, l.kept_lde_id;
+`;
+
+export const UNIQUE_PROCESS_PER_ORGANIZATION = `
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_pd_org_bpmn_process_id_unique
+    ON process_definitions (COALESCE(organization, ''), bpmn_process_id)
+    WHERE status <> 'e2e' AND bpmn_process_id <> 'unknown';
+`;
+
 export async function migrate(): Promise<void> {
   if (!pool) {
     logger.warn('[DB] Skipping migrations — database not configured');
@@ -167,7 +229,25 @@ export async function migrate(): Promise<void> {
 
       CREATE INDEX IF NOT EXISTS idx_rpdf_ropa_record_id
         ON ropa_personal_data_fields (ropa_record_id);
+
+      CREATE TABLE IF NOT EXISTS process_definitions_dedup_archive (
+        lde_id       VARCHAR(255) NOT NULL,
+        kept_lde_id  VARCHAR(255) NOT NULL,
+        row_data     JSONB        NOT NULL,
+        archived_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      );
     `);
+
+    const archived = await client.query<{ lde_id: string; kept_lde_id: string }>(
+      DEDUPLICATE_PROCESS_DEFINITIONS
+    );
+    if ((archived.rowCount ?? 0) > 0) {
+      logger.warn('[DB] Archived duplicate stored processes before enforcing uniqueness', {
+        archived: archived.rows.map((r) => `${r.lde_id} -> kept ${r.kept_lde_id}`),
+      });
+    }
+    await client.query(UNIQUE_PROCESS_PER_ORGANIZATION);
+
     logger.info('[DB] Migrations applied');
   } finally {
     client.release();
