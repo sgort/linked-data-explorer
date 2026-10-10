@@ -176,7 +176,15 @@ execution.setVariable("chainForwardDate", new Date().toISOString());
 execution.setVariable("chainForwardComplete", true);
 execution.setVariable("chainForwardTopic", "HeusdenpasHeusden");</bpmn:script>
     </bpmn:scriptTask>
-    <bpmn:businessRuleTask id="Task_ArchivesDMN" name="Archivering: bewaar- en vernietigingstermijn (Archiefwet)" camunda:resultVariable="archivingResult" camunda:decisionRef="ArchivesActRetention" camunda:mapDecisionResult="singleResult" camunda:decisionRefTenantId="${null}" ronl:awbPhase="archivering">
+    <bpmn:businessRuleTask id="Task_ArchivesDMN" name="Archivering: bewaar- en vernietigingstermijn (Archiefwet)" camunda:decisionRef="ArchivesActRetention" camunda:decisionRefTenantId="${null}" ronl:awbPhase="archivering">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:outputParameter name="retentionYears">${decisionResult.getSingleResult().getEntry("retentionYears")}</camunda:outputParameter>
+          <camunda:outputParameter name="retentionClass">${decisionResult.getSingleResult().getEntry("retentionClass")}</camunda:outputParameter>
+          <camunda:outputParameter name="archivingLegalBasis">${decisionResult.getSingleResult().getEntry("legalBasis")}</camunda:outputParameter>
+          <camunda:outputParameter name="destroyable">${decisionResult.getSingleResult().getEntry("destroyable")}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_Chain_No</bpmn:incoming>
       <bpmn:incoming>Flow_Register_Archives</bpmn:incoming>
       <bpmn:outgoing>Flow_ArchivesDMN_Record</bpmn:outgoing>
@@ -184,24 +192,12 @@ execution.setVariable("chainForwardTopic", "HeusdenpasHeusden");</bpmn:script>
     <bpmn:scriptTask id="Task_ArchiveRecord" name="Dossier archiveren" scriptFormat="javascript" ronl:awbPhase="archivering">
       <bpmn:incoming>Flow_ArchivesDMN_Record</bpmn:incoming>
       <bpmn:outgoing>Flow_Archive_End</bpmn:outgoing>
-      <bpmn:script>var result = execution.getVariable("archivingResult");
-function read(o, k) {
-  if (o == null) { return null; }
-  if (typeof o.get === "function") { var v = o.get(k); if (v !== null &amp;&amp; v !== undefined) { return v; } }
-  if (o[k] !== undefined) { return o[k]; }
-  return null;
-}
-if (result) {
-  execution.setVariable("retentionYears", read(result, "retentionYears"));
-  execution.setVariable("retentionClass", read(result, "retentionClass"));
-  execution.setVariable("archivingLegalBasis", read(result, "legalBasis"));
-  execution.setVariable("destroyable", read(result, "destroyable"));
-
-  var years = parseInt(read(result, "retentionYears") || "7");
-  var destroyDate = new Date();
-  destroyDate.setFullYear(destroyDate.getFullYear() + years);
-  execution.setVariable("destroyAfterDate", destroyDate.toISOString().substring(0, 10));
-}
+      <bpmn:script>// retentionYears, retentionClass, archivingLegalBasis and destroyable come
+// from Task_ArchivesDMN's output mapping (#273).
+var years = parseInt(execution.getVariable("retentionYears") || "7");
+var destroyDate = new Date();
+destroyDate.setFullYear(destroyDate.getFullYear() + years);
+execution.setVariable("destroyAfterDate", destroyDate.toISOString().substring(0, 10));
 execution.setVariable("archiveDate", new Date().toISOString());
 execution.setVariable("archiveComplete", true);</bpmn:script>
     </bpmn:scriptTask>

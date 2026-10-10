@@ -75,9 +75,14 @@
     <!-- Lees dienstconfiguratie (FR-30/32) -->
     <bpmn:businessRuleTask id="BR_ConfigCheck"
                            name="Lees dienstconfiguratie (FR-30/32)"
-                           camunda:decisionRef="DvtpConfigCheck"
-                           camunda:resultVariable="configResult"
-                           camunda:mapDecisionResult="singleResult">
+                           camunda:decisionRef="DvtpConfigCheck">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:outputParameter name="initiatorAllowed">${decisionResult.getSingleResult().getEntry("initiatorAllowed")}</camunda:outputParameter>
+          <camunda:outputParameter name="configTtlDays">${decisionResult.getSingleResult().getEntry("configTtlDays")}</camunda:outputParameter>
+          <camunda:outputParameter name="configTtlLabel">${decisionResult.getSingleResult().getEntry("configTtlLabel")}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_Identity_Config</bpmn:incoming>
       <bpmn:outgoing>Flow_Config_Extract</bpmn:outgoing>
     </bpmn:businessRuleTask>
@@ -88,12 +93,13 @@
       <bpmn:incoming>Flow_Config_Extract</bpmn:incoming>
       <bpmn:outgoing>Flow_Extract_GatewayAllowed</bpmn:outgoing>
       <bpmn:script><![CDATA[
-        var result = execution.getVariable("configResult");
-        var allowed = result.get("initiatorAllowed");
+        // initiatorAllowed, configTtlDays and configTtlLabel come from
+        // BR_ConfigCheck's output mapping (#273); normalised here.
+        var allowed = execution.getVariable("initiatorAllowed");
         execution.setVariable("initiatorAllowed", allowed == true);
-        var ttlDays = result.get("configTtlDays");
+        var ttlDays = execution.getVariable("configTtlDays");
         execution.setVariable("configTtlDays", ttlDays != null ? Number(ttlDays) : 365);
-        var ttlLabel = result.get("configTtlLabel");
+        var ttlLabel = execution.getVariable("configTtlLabel");
         execution.setVariable("configTtlLabel", ttlLabel != null ? String(ttlLabel) : "1 jaar (standaard)");
       ]]></bpmn:script>
     </bpmn:scriptTask>
@@ -135,9 +141,13 @@
     <!-- Delegatiecheck (FR-02) -->
     <bpmn:businessRuleTask id="BR_DelegationCheck"
                            name="Controleer machtiging en delegatie (FR-02)"
-                           camunda:decisionRef="DvtpDelegationCheck"
-                           camunda:resultVariable="delegationResult"
-                           camunda:mapDecisionResult="singleResult">
+                           camunda:decisionRef="DvtpDelegationCheck">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:outputParameter name="delegatieGeblokkeerd">${decisionResult.getSingleResult().getEntry("delegatieGeblokkeerd")}</camunda:outputParameter>
+          <camunda:outputParameter name="delegatieReden">${decisionResult.getSingleResult().getEntry("delegatieReden")}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_DigiD_Delegation</bpmn:incoming>
       <bpmn:outgoing>Flow_Delegation_Extract</bpmn:outgoing>
     </bpmn:businessRuleTask>
@@ -148,10 +158,11 @@
       <bpmn:incoming>Flow_Delegation_Extract</bpmn:incoming>
       <bpmn:outgoing>Flow_ExtractDeleg_Gateway</bpmn:outgoing>
       <bpmn:script><![CDATA[
-        var result = execution.getVariable("delegationResult");
-        var blocked = result.get("delegatieGeblokkeerd");
+        // delegatieGeblokkeerd and delegatieReden come from BR_DelegationCheck's
+        // output mapping (#273); normalised here.
+        var blocked = execution.getVariable("delegatieGeblokkeerd");
         execution.setVariable("delegatieGeblokkeerd", blocked == true);
-        var reden = result.get("delegatieReden");
+        var reden = execution.getVariable("delegatieReden");
         execution.setVariable("delegatieReden", reden != null ? String(reden) : "");
       ]]></bpmn:script>
     </bpmn:scriptTask>
