@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import mirroredBundles from './__fixtures__/mirrored-bundles.json';
 
 const REPO_ROOT = path.join(__dirname, '..', '..', '..');
+const EXAMPLES_ROOT = path.join(REPO_ROOT, 'examples', 'organizations');
 const FIXTURES_ROOT = path.join(REPO_ROOT, 'e2e-fixtures');
 const PUBLIC_ROOT = path.join(REPO_ROOT, 'packages', 'frontend', 'public', 'examples');
 
@@ -156,11 +158,25 @@ describe('public/examples and e2e-fixtures differ only by their labels', () => {
     // example key would be indistinguishable, and deploying the example shell
     // could bundle the fixture copy (#254 item 2). Shells may share a key with
     // their example; they are opened, not looked up.
+    //
+    // Exempt: bundles mirrored byte for byte from examples/organizations (see
+    // __fixtures__/mirrored-bundles.json, enforced by example-fixture-parity).
+    // Their copies cannot differ, so bundling either one deploys the same
+    // content, and their keys are the ones every tier runs (the Heusden
+    // bundle, #274).
+    const mirrored = new Set(
+      mirroredBundles.flatMap(({ examples, fixtures, files }) =>
+        (files ?? fs.readdirSync(path.join(EXAMPLES_ROOT, ...examples.split('/')))).map(
+          (f) => `${fixtures}/${f}`
+        )
+      )
+    );
     const problems: string[] = [];
     for (const tenant of fs.readdirSync(FIXTURES_ROOT)) {
       const dir = path.join(FIXTURES_ROOT, tenant);
       if (!fs.statSync(dir).isDirectory()) continue;
       for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.bpmn'))) {
+        if (mirrored.has(`${tenant}/${file}`)) continue;
         const text = fs.readFileSync(path.join(dir, file), 'utf8');
         for (const [, called] of text.matchAll(/calledElement="([^"]+)"/g)) {
           if (!called.endsWith('E2E')) {
