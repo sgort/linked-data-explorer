@@ -67,6 +67,13 @@ design note (`2026-08-25-validsign-phase-approval-signing-design.md`) records wh
 `pdfkit` was chosen over `pdf-lib`. That reason is about fit, not maintenance —
 it shows deliberation, not the check this recommendation asks for.
 
+**Update, October 2026 (#250):** the criteria are written down, in
+[`dependency-criteria.md`](dependency-criteria.md), for all three repositories.
+The `lockfile-review` comment (#248) now lists every new **direct** dependency
+with a checklist of those criteria, so the vetting leaves a trace on the pull
+request that adds it. The scores in this document are still those of
+13 September.
+
 ### 2 — No unpinned tags
 
 Pinned in all three: every `uses:` reference (by digest, verified by a blocking
@@ -281,6 +288,15 @@ No repository has a periodic review, a document describing one, or an issue
 recording one. Renovate's dependency dashboard does list deprecations — RBA's
 flags `@types/uuid` — which is the whole of the credit here: a signal that nobody
 is scheduled to read.
+
+**Update, October 2026 (#250):** `dependency-review.yml` runs on the second day of
+each quarter in all three repositories. It applies the criteria in
+[`dependency-criteria.md`](dependency-criteria.md) to every direct dependency,
+from the registry and the GitHub API, and opens an issue in which each flagged
+package gets a recorded outcome: keep, replace or accept. A trial run on
+linked-data-explorer on 10 October found 75 direct dependencies, 3 failing (all
+deprecated, among them `eslint` 9) and 21 to judge. The scores in this document
+are still those of 13 September.
 
 ---
 
