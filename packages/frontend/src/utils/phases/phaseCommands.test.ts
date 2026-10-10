@@ -2,11 +2,13 @@ import { describe, expect, test, vi } from 'vitest';
 
 import {
   applyPhaseUpdates,
+  firstProcess,
   isCountedNode,
   markerTargets,
   PHASE_COMMAND,
   planClearCodes,
   planRenameCode,
+  processOf,
   registerPhaseCommand,
   resolveProcessTarget,
 } from './phaseCommands';
@@ -180,5 +182,55 @@ describe('planners', () => {
         properties: { 'ronl:awbPhase': undefined },
       },
     ]);
+  });
+});
+
+describe('one process per collaboration (RBA reads only the first)', () => {
+  const procA = bo({});
+  const procB = bo({});
+  const definitions = { rootElements: [{ $type: 'bpmn:Collaboration' }, procA, procB] };
+  Object.assign(procA, { $type: 'bpmn:Process' });
+  Object.assign(procB, { $type: 'bpmn:Process' });
+  const collaboration = { type: 'bpmn:Collaboration', businessObject: { $parent: definitions } };
+  const poolA = {
+    id: 'PoolA',
+    type: 'bpmn:Participant',
+    businessObject: bo({}, { processRef: procA }),
+  };
+  const poolB = {
+    id: 'PoolB',
+    type: 'bpmn:Participant',
+    businessObject: bo({}, { processRef: procB }),
+  };
+  const inA = { ...node('A1', 'bpmn:UserTask', { 'ronl:phase': 'x' }), parent: poolA };
+  const inB = { ...node('B1', 'bpmn:UserTask', { 'ronl:phase': 'x' }), parent: poolB };
+
+  test('firstProcess is the first process in the definitions, not the first pool drawn', () => {
+    expect(firstProcess(collaboration)).toBe(procA);
+    const root = { type: 'bpmn:Process', businessObject: { $parent: { rootElements: [procB] } } };
+    expect(firstProcess(root)).toBe(procB);
+    expect(firstProcess(undefined)).toBeUndefined();
+  });
+
+  test('processOf names the process a node belongs to', () => {
+    expect(processOf(inA)).toBe(procA);
+    expect(processOf(inB)).toBe(procB);
+    const laneNode = {
+      ...node('L1', 'bpmn:UserTask'),
+      parent: { type: 'bpmn:Lane', parent: poolB },
+    };
+    expect(processOf(laneNode)).toBe(procB);
+    expect(processOf(node('Inner', 'bpmn:UserTask', {}, 'bpmn:SubProcess'))).toBeUndefined();
+  });
+
+  test('markerTargets lists only the nodes of the given process', () => {
+    expect(markerTargets(registry([inA, inB]), procA)).toEqual([inA]);
+  });
+
+  test('nothing selected: the pool whose process RBA reads, wherever it is drawn', () => {
+    expect(resolveProcessTarget(null, collaboration, registry([poolB, poolA]))).toEqual({
+      element: poolA,
+      moddleElement: procA,
+    });
   });
 });

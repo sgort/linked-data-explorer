@@ -118,3 +118,26 @@ describe('PhaseMarkerSelector', () => {
     expect(screen.queryByText(/Erft|Geen fase/)).toBeNull();
   });
 });
+
+describe('PhaseMarkerSelector — elements RBA does not read', () => {
+  test('a node in a pool RBA does not read gets no dropdown', () => {
+    const execute = vi.fn();
+    render(
+      <PhaseMarkerSelector
+        element={element()}
+        commandStack={{ execute }}
+        view={view({ scheme: 'declared', set: declared })}
+        readByRba={false}
+      />
+    );
+    expect(screen.getByText(/RBA leest alleen het eerste proces/)).toBeTruthy();
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
+  test('a plain task, which RBA does not count, says so and why inheritance stops there', () => {
+    const task = { ...element(), type: 'bpmn:Task' };
+    setup(task, view({ scheme: 'declared', set: declared }));
+    expect(screen.getByText(/telt dit soort element niet mee/)).toBeTruthy();
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+});

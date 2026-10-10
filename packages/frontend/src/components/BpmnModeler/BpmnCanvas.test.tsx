@@ -1299,3 +1299,136 @@ describe('BpmnCanvas — phases (#242)', () => {
     expect(screen.queryByText(/Awb phase markers/)).toBeNull();
   });
 });
+
+describe('BpmnCanvas — the phase panel across edits (#242)', () => {
+  const NS =
+    'xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" ' +
+    'xmlns:ronl="https://regels.overheid.nl/schema"';
+  const XML =
+    `<bpmn:definitions ${NS}><bpmn:process id="MyProcess" ronl:phases="a:Alpha">` +
+    '<bpmn:startEvent id="S" ronl:phase="a"/></bpmn:process></bpmn:definitions>';
+  const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 300)));
+
+  test('an edit elsewhere keeps what the user is typing in the phase editor', async () => {
+    const { modeler } = await renderCanvas({ xml: XML });
+    const input = await screen.findByPlaceholderText('New phase name');
+    await userEvent.type(input, 'Toetsing');
+
+    act(() => modeler.eventBus.emit('commandStack.changed'));
+    await settle();
+
+    expect(screen.getByPlaceholderText('New phase name')).toHaveValue('Toetsing');
+  });
+
+  test('an edit does not re-mount the selectors of the selected task', async () => {
+    const { modeler } = await renderCanvas({ xml: XML });
+    const task = {
+      id: 'task1',
+      type: 'bpmn:BusinessRuleTask',
+      parent: { type: 'bpmn:Process' },
+      businessObject: { get: () => 'age-check' },
+    };
+    act(() => modeler.eventBus.emit('selection.changed', { newSelection: [task] }));
+    await screen.findByText('DMN selector: age-check');
+    await settle();
+    const dmn = document.querySelector('[id^="dmn-template-custom-"]');
+    const phase = document.querySelector('[id^="phase-panel-custom-"]');
+    expect(phase).not.toBeNull();
+
+    act(() => modeler.eventBus.emit('commandStack.changed'));
+    await settle();
+
+    expect(document.querySelector('[id^="dmn-template-custom-"]')).toBe(dmn);
+    expect(document.querySelector('[id^="phase-panel-custom-"]')).toBe(phase);
+  });
+
+  test('a pool RBA does not read says so instead of offering phases', async () => {
+    const { modeler } = await renderCanvas({ xml: XML });
+    const procA = { $type: 'bpmn:Process', get: () => undefined };
+    const procB = { $type: 'bpmn:Process', get: () => undefined };
+    modeler.canvas.rootElement = {
+      id: 'Collab',
+      type: 'bpmn:Collaboration',
+      businessObject: { $parent: { rootElements: [procA, procB] } },
+    };
+    const poolB = { id: 'PoolB', type: 'bpmn:Participant', businessObject: { processRef: procB } };
+
+    act(() => modeler.eventBus.emit('selection.changed', { newSelection: [poolB] }));
+
+    expect(await screen.findByText(/RBA reads only the first process/)).toBeTruthy();
+  });
+
+  test('a plain task gets the picker, which says RBA does not count it', async () => {
+    const { modeler } = await renderCanvas({ xml: XML });
+    const task = {
+      id: 'plain',
+      type: 'bpmn:Task',
+      parent: { type: 'bpmn:Process' },
+      businessObject: {
+        get: () => undefined,
+        $instanceOf: (type: string) => type === 'bpmn:FlowNode',
+      },
+    };
+
+    act(() => modeler.eventBus.emit('selection.changed', { newSelection: [task] }));
+
+    expect(await screen.findByText(/telt dit soort element niet mee/)).toBeTruthy();
+  });
+});
+
+describe('BpmnCanvas — phase badge text (#242)', () => {
+  const NS =
+    'xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" ' +
+    'xmlns:ronl="https://regels.overheid.nl/schema"';
+  const process = { type: 'bpmn:Process' };
+  const node = (id: string) => ({
+    id,
+    type: 'bpmn:UserTask',
+    width: 100,
+    parent: process,
+    businessObject: { get: () => undefined },
+  });
+
+  async function badges(xml: string) {
+    const { modeler } = await renderCanvas({ xml });
+    const added: { id: string; html: string }[] = [];
+    modeler.overlays.add = ((id: string, type: string, opts: { html: string }) => {
+      if (type === 'phase-marker') added.push({ id, html: opts.html });
+    }) as never;
+    modeler.elementRegistry.elements = [node('S'), node('T')];
+    act(() => modeler.eventBus.emit('commandStack.changed'));
+    await vi.waitFor(() => expect(added).toHaveLength(2));
+    const text = (html: string) => html.replace(/<[^>]+>/g, '');
+    return Object.fromEntries(added.map((a) => [a.id, { html: a.html, text: text(a.html) }]));
+  }
+
+  const flow = '<bpmn:sequenceFlow id="F" sourceRef="S" targetRef="T"/>';
+
+  test('an inherited Awb phase has the same text as the badge that starts it, outlined', async () => {
+    const b = await badges(
+      `<bpmn:definitions ${NS}><bpmn:process id="P"><bpmn:userTask id="S" ronl:awbPhase="7"/>` +
+        `<bpmn:userTask id="T"/>${flow}</bpmn:process></bpmn:definitions>`
+    );
+    expect(b.S.text).toBe('Fase 7');
+    expect(b.T.text).toBe('Fase 7');
+    expect(b.S.html).toContain('phase-badge--start');
+    expect(b.T.html).toContain('phase-badge--inherited');
+  });
+
+  test('archivering reads Archiefwet on both badges', async () => {
+    const b = await badges(
+      `<bpmn:definitions ${NS}><bpmn:process id="P"><bpmn:userTask id="S" ronl:awbPhase="archivering"/>` +
+        `<bpmn:userTask id="T"/>${flow}</bpmn:process></bpmn:definitions>`
+    );
+    expect([b.S.text, b.T.text]).toEqual(['Archiefwet', 'Archiefwet']);
+  });
+
+  test('an inherited declared phase has the same text as the badge that starts it', async () => {
+    const b = await badges(
+      `<bpmn:definitions ${NS}><bpmn:process id="P" ronl:phases="a:Alpha;b:Beta">` +
+        `<bpmn:userTask id="S" ronl:phase="b"/><bpmn:userTask id="T"/>${flow}</bpmn:process></bpmn:definitions>`
+    );
+    expect(b.T.text).toBe(b.S.text);
+    expect(b.S.text).toBe('2 · b');
+  });
+});

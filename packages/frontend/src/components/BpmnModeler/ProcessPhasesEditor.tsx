@@ -31,6 +31,8 @@ interface ProcessPhasesEditorProps {
   schemeIntent?: Scheme | 'none';
   onSchemeIntent: (scheme: Scheme | 'none' | undefined) => void;
   note?: string;
+  /** False for a pool other than the one RBA reads. */
+  readByRba?: boolean;
 }
 
 /**
@@ -46,6 +48,7 @@ const ProcessPhasesEditor: React.FC<ProcessPhasesEditorProps> = ({
   schemeIntent,
   onSchemeIntent,
   note,
+  readByRba = true,
 }) => {
   const readPhases = (): Phase[] =>
     parseDeclaredPhases(
@@ -182,6 +185,18 @@ const ProcessPhasesEditor: React.FC<ProcessPhasesEditorProps> = ({
     ]);
   };
 
+  if (!readByRba) {
+    return (
+      <div className="p-3 bg-white border-t border-slate-200">
+        <div className="text-xs font-medium text-slate-700 mb-2">Phases (RBA stepper)</div>
+        <div className="text-xs text-slate-500">
+          RBA reads only the first process of this collaboration, so this pool has no stepper. Set
+          phases on the first pool.
+        </div>
+      </div>
+    );
+  }
+
   const radio = (value: Scheme | 'none', text: string) => (
     <label className="flex items-center gap-2 text-xs text-slate-700">
       <input
@@ -218,6 +233,9 @@ const ProcessPhasesEditor: React.FC<ProcessPhasesEditorProps> = ({
             <div key={`${p.code}-${i}`} className="flex items-center gap-1">
               <span className="w-5 text-[11px] text-slate-400">{i + 1}</span>
               <input
+                // Keyed by the name: a name changed outside this field (an
+                // undo, a reload) replaces the field instead of leaving it stale.
+                key={p.name}
                 className="flex-1 min-w-0 px-2 py-1 border border-slate-300 rounded text-xs"
                 defaultValue={p.name}
                 aria-label={`Name of phase ${i + 1}`}

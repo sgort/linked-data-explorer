@@ -71,10 +71,29 @@ export function resolveProcessTarget(
   if (rootElement?.type === 'bpmn:Process') {
     return { element: rootElement, moddleElement: rootElement.businessObject };
   }
-  const first = elementRegistry
+  const participants = elementRegistry
     .filter((e: any) => e.type === 'bpmn:Participant')
-    .find((p: any) => p.businessObject.processRef);
+    .filter((p: any) => p.businessObject.processRef);
+  const read = firstProcess(rootElement);
+  const first =
+    participants.find((p: any) => p.businessObject.processRef === read) ?? participants[0];
   return first ? { element: first, moddleElement: first.businessObject.processRef } : null;
+}
+
+/**
+ * The process RBA reads: the first <process> in the definitions (see
+ * phaseGraph.ts), which need not be the first pool drawn on the canvas.
+ */
+export const firstProcess = (rootElement: any): any =>
+  rootElement?.businessObject?.$parent?.rootElements?.find((e: any) => e.$type === 'bpmn:Process');
+
+/** The process a node sits directly in; undefined inside a subprocess. */
+export function processOf(element: any): any {
+  let parent = element?.parent;
+  while (parent?.type === 'bpmn:Lane') parent = parent.parent;
+  if (parent?.type === 'bpmn:Process') return parent.businessObject;
+  if (parent?.type === 'bpmn:Participant') return parent.businessObject?.processRef;
+  return undefined;
 }
 
 /** bpmn-js types of RBA's counted kinds (see phaseGraph.ts COUNTED_KINDS). */
@@ -107,8 +126,15 @@ const PROCESS_LEVEL_PARENTS = new Set(['bpmn:Process', 'bpmn:Participant', 'bpmn
 export const isCountedNode = (element: any): boolean =>
   COUNTED_TYPES.has(element?.type) && PROCESS_LEVEL_PARENTS.has(element?.parent?.type);
 
-export const markerTargets = (elementRegistry: any): any[] =>
-  elementRegistry.filter((e: any) => isCountedNode(e));
+/**
+ * The nodes whose markers a phase edit may touch. With a process given, only
+ * that process's nodes: in a collaboration, a rename in one pool must not
+ * rewrite another pool's markers.
+ */
+export const markerTargets = (elementRegistry: any, process?: any): any[] =>
+  elementRegistry.filter(
+    (e: any) => isCountedNode(e) && (process === undefined || processOf(e) === process)
+  );
 
 export function planRenameCode(nodes: any[], from: string, to: string): ModdleUpdate[] {
   return nodes

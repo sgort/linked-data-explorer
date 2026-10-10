@@ -25,8 +25,10 @@ import { parseDocumentRefs } from '../../utils/documentRefs';
 import { EMPTY_PHASE_VIEW, PhaseView, phaseViewFromXml } from '../../utils/phases/assignPhases';
 import { checkPhases, PhaseFinding } from '../../utils/phases/phaseChecks';
 import {
+  firstProcess,
   isCountedNode,
   markerTargets,
+  processOf,
   registerPhaseCommand,
   resolveProcessTarget,
 } from '../../utils/phases/phaseCommands';
@@ -183,6 +185,20 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   // fresh "Awb phases" choice lives here until the first marker exists.
   const [schemeIntent, setSchemeIntent] = useState<Scheme | 'none' | undefined>(undefined);
   const phaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phasePanelRef = useRef<{
+    key: string;
+    container: HTMLElement;
+    root: ReactDOM.Root;
+  } | null>(null);
+
+  const unmountPhasePanel = () => {
+    const panel = phasePanelRef.current;
+    phasePanelRef.current = null;
+    if (!panel) return;
+    panel.container.remove();
+    // Deferred: unmounting a root synchronously while React commits another warns.
+    setTimeout(() => panel.root.unmount());
+  };
 
   // Keep latest onElementSelect in a ref so handleElementSelect can stay stable
   // across renders. Without this, an inline arrow at the parent (e.g. onElementSelect={() => {}})
@@ -291,12 +307,9 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
   // Render DMN Template Selector when BusinessRuleTask is selected
   useEffect(() => {
-    if (!modelerRef.current) return;
-    const modeler = modelerRef.current;
+    if (!selectedElement || !modelerRef.current) return;
 
-    // The phase editors (#242) are separate React roots; kept here so the
-    // cleanup can unmount them rather than only removing their containers.
-    const phaseRoots: ReactDOM.Root[] = [];
+    const elementType = selectedElement.type;
 
     // Clean up any existing React roots in the properties panel
     const cleanupReactRoots = () => {
@@ -316,57 +329,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
         }
         el.remove();
       });
-      document
-        .querySelectorAll('[id^="phase-process-custom-"], [id^="phase-node-custom-"]')
-        .forEach((el) => el.remove());
-      // Deferred: unmounting a root synchronously while React commits another warns.
-      const roots = phaseRoots.splice(0);
-      setTimeout(() => roots.forEach((root) => root.unmount()));
     };
-
-    const mountPhaseComponent = (prefix: string, node: React.ReactNode) => {
-      const panel = document.querySelector('.bio-properties-panel-scroll-container');
-      if (!panel) return;
-      const container = document.createElement('div');
-      container.id = `${prefix}${selectedElement?.id ?? 'root'}`;
-      panel.appendChild(container);
-      const root = ReactDOM.createRoot(container);
-      phaseRoots.push(root);
-      root.render(node);
-    };
-
-    // The process itself (nothing selected, or a participant): its phases.
-    const elementRegistry = modeler.get('elementRegistry') as any;
-    const commandStack = modeler.get('commandStack');
-    const rootElement = (modeler.get('canvas') as any).getRootElement();
-    const processTarget = resolveProcessTarget(selectedElement, rootElement, elementRegistry);
-    if (processTarget) {
-      cleanupReactRoots();
-      const participants = elementRegistry.filter((e: any) => e.type === 'bpmn:Participant');
-      mountPhaseComponent(
-        'phase-process-custom-',
-        <ProcessPhasesEditor
-          target={processTarget}
-          nodes={markerTargets(elementRegistry)}
-          commandStack={commandStack}
-          view={phaseView}
-          schemeIntent={schemeIntent}
-          onSchemeIntent={(scheme) => {
-            setSchemeIntent(scheme);
-            schedulePhaseRefresh();
-          }}
-          note={
-            !selectedElement && participants.length > 1
-              ? "Editing the first participant's process, the one RBA reads."
-              : undefined
-          }
-        />
-      );
-      return () => cleanupReactRoots();
-    }
-    if (!selectedElement) return;
-
-    const elementType = selectedElement.type;
 
     if (elementType === 'bpmn:BusinessRuleTask') {
       // Clean up first
@@ -441,26 +404,94 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       cleanupReactRoots();
     }
 
-    // Which phase the node starts (#242), below the other selectors. A node in
-    // an embedded subprocess gets the picker too, which says RBA ignores it.
-    if (isCountedNode(selectedElement) || selectedElement.parent?.type === 'bpmn:SubProcess') {
-      mountPhaseComponent(
-        'phase-node-custom-',
-        <PhaseMarkerSelector
-          element={selectedElement}
-          commandStack={commandStack}
-          view={phaseView}
-          schemeIntent={schemeIntent}
-        />
-      );
-    }
-
     // Cleanup when element changes
     return () => {
       cleanupReactRoots();
     };
+  }, [selectedElement, endpoint]);
+
+  // The phase panel (#242): the process editor for the process itself, the
+  // picker for a node. Its root lives across edits and only re-renders with
+  // the new phase view, so typing in it survives the recompute after each
+  // change; it is re-mounted only when the selection or the process changes.
+  // Declared after the selector effect, so it sits below the other selectors.
+  useEffect(() => {
+    const modeler = modelerRef.current;
+    if (!modeler) return;
+    const elementRegistry = modeler.get('elementRegistry') as any;
+    const commandStack = modeler.get('commandStack');
+    const rootElement = (modeler.get('canvas') as any).getRootElement();
+    const rbaProcess = firstProcess(rootElement);
+
+    let content: { key: string; node: React.ReactNode } | null = null;
+    const processTarget = resolveProcessTarget(selectedElement, rootElement, elementRegistry);
+    if (processTarget) {
+      const participants = elementRegistry.filter((e: any) => e.type === 'bpmn:Participant');
+      content = {
+        key: `process-${processTarget.element.id ?? 'root'}`,
+        node: (
+          <ProcessPhasesEditor
+            target={processTarget}
+            nodes={markerTargets(elementRegistry, processTarget.moddleElement)}
+            commandStack={commandStack}
+            view={phaseView}
+            schemeIntent={schemeIntent}
+            onSchemeIntent={(scheme) => {
+              setSchemeIntent(scheme);
+              schedulePhaseRefresh();
+            }}
+            readByRba={!rbaProcess || processTarget.moddleElement === rbaProcess}
+            note={
+              !selectedElement && participants.length > 1
+                ? "Editing the first participant's process, the one RBA reads."
+                : undefined
+            }
+          />
+        ),
+      };
+    } else if (
+      selectedElement &&
+      (isCountedNode(selectedElement) ||
+        selectedElement.parent?.type === 'bpmn:SubProcess' ||
+        selectedElement.businessObject?.$instanceOf?.('bpmn:FlowNode'))
+    ) {
+      // Also for a node RBA ignores (inside a subprocess, or a kind such as a
+      // plain task): the picker then says why it offers no phases.
+      const owner = processOf(selectedElement);
+      content = {
+        key: `node-${selectedElement.id}`,
+        node: (
+          <PhaseMarkerSelector
+            element={selectedElement}
+            commandStack={commandStack}
+            view={phaseView}
+            schemeIntent={schemeIntent}
+            readByRba={!rbaProcess || !owner || owner === rbaProcess}
+          />
+        ),
+      };
+    }
+
+    if (!content) {
+      unmountPhasePanel();
+      return;
+    }
+    let panel = phasePanelRef.current;
+    if (!panel || panel.key !== content.key || !panel.container.isConnected) {
+      unmountPhasePanel();
+      const scroll = document.querySelector('.bio-properties-panel-scroll-container');
+      if (!scroll) return;
+      const container = document.createElement('div');
+      container.id = `phase-panel-custom-${content.key}`;
+      scroll.appendChild(container);
+      panel = { key: content.key, container, root: ReactDOM.createRoot(container) };
+      phasePanelRef.current = panel;
+    }
+    panel.root.render(content.node);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedElement, endpoint, phaseView, schemeIntent]);
+  }, [selectedElement, phaseView, schemeIntent]);
+
+  useEffect(() => () => unmountPhasePanel(), []);
 
   /**
    * Recomputes every node's phase from the saved XML (#242) — the same input
@@ -501,11 +532,10 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       const phase = set.phases[index];
       const colour = PHASE_COLOURS[index % PHASE_COLOURS.length];
       const label = phaseCodeLabel(set, assignment.code);
-      const text = assignment.inherited
-        ? `${index + 1}`
-        : set.scheme === 'awb'
-          ? label
-          : `${index + 1} · ${assignment.code}`;
+      // The same text whether the node starts the phase or inherits it; only
+      // solid versus outlined tells them apart. (A bare position number misled:
+      // Awb phase 4+5 is one entry, so position 6 is Fase 7.)
+      const text = set.scheme === 'awb' ? label : `${index + 1} · ${assignment.code}`;
       const kind = assignment.inherited ? 'phase-badge--inherited' : 'phase-badge--start';
       const title = escapeHtml(`${label} · ${phase?.name ?? ''}`);
       overlays.add(element.id, 'phase-marker', {

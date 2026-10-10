@@ -111,6 +111,12 @@ export function graphFromXml(xml: string): PhaseGraph {
     if (declared.length > 0) graph.outgoingOrder.set(id, declared);
   }
 
+  // RBA builds its node list kind by kind, in KINDS order, and that order
+  // decides the seed without a start event and the walk over nodes no start
+  // event reaches. A stable sort keeps document order within each kind.
+  const kindOrder = [...COUNTED_KINDS];
+  graph.nodes.sort((a, b) => kindOrder.indexOf(a.kind) - kindOrder.indexOf(b.kind));
+
   const phases = attr(process, 'phases');
   const phaseLabel = attr(process, 'phaseLabel');
   return {

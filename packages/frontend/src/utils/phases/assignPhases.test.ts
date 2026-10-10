@@ -186,6 +186,20 @@ describe('computePhaseView — declared (RBA cases)', () => {
     expect(phaseOf(xml).J).toBe('c');
   });
 
+  // RBA builds its node list per element kind, in KINDS order, not in
+  // document order; that order decides the DFS over unreachable nodes.
+  test('RBA: a loop the start event never reaches is walked in KINDS order', () => {
+    const xml = proc(
+      'ronl:phases="a:Alpha;b:Beta"',
+      `<bpmn:startEvent id="S" ronl:phase="a"/>
+       <bpmn:serviceTask id="N1"/>
+       <bpmn:userTask id="N2" ronl:phase="b"/>
+       <bpmn:sequenceFlow id="F1" sourceRef="N1" targetRef="N2"/>
+       <bpmn:sequenceFlow id="F2" sourceRef="N2" targetRef="N1"/>`
+    );
+    expect(phaseOf(xml)).toEqual({ S: 'a', N2: 'b', N1: 'b' });
+  });
+
   test('reports the entries RBA skips', () => {
     const view = phaseViewFromXml(
       proc('ronl:phases="a:Alpha;b;a:Again"', '<bpmn:startEvent id="S" ronl:phase="a"/>')

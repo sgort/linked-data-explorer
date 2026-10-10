@@ -10,6 +10,8 @@ interface PhaseMarkerSelectorProps {
   commandStack: any;
   view: PhaseView;
   schemeIntent?: Scheme | 'none';
+  /** False for a node in a pool other than the one RBA reads. */
+  readByRba?: boolean;
 }
 
 /**
@@ -22,6 +24,7 @@ const PhaseMarkerSelector: React.FC<PhaseMarkerSelectorProps> = ({
   commandStack,
   view,
   schemeIntent,
+  readByRba = true,
 }) => {
   const scheme = schemeIntent ?? view.scheme;
   const set: PhaseSet | undefined =
@@ -34,10 +37,20 @@ const PhaseMarkerSelector: React.FC<PhaseMarkerSelectorProps> = ({
     </div>
   );
 
+  if (!readByRba) {
+    return box(
+      <div className="text-xs text-slate-500">
+        RBA leest alleen het eerste proces van deze samenwerking; fasen van deze pool tellen niet
+        mee.
+      </div>
+    );
+  }
   if (!isCountedNode(element)) {
     return box(
       <div className="text-xs text-slate-500">
-        Dit element telt niet mee voor de fasen: RBA telt alleen elementen direct in het proces.
+        {element.parent?.type === 'bpmn:SubProcess'
+          ? 'Dit element telt niet mee voor de fasen: RBA telt alleen elementen direct in het proces.'
+          : 'RBA telt dit soort element niet mee voor de fasen, en een fase erft er niet doorheen. Kies een specifiek taaktype (bijvoorbeeld een gebruikerstaak) om het mee te laten tellen.'}
       </div>
     );
   }

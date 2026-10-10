@@ -261,6 +261,39 @@ describe('ProcessPhasesEditor', () => {
     expect(screen.queryByPlaceholderText('New phase name')).toBeNull();
   });
 
+  test('a process RBA does not read shows why instead of the editor', () => {
+    render(
+      <ProcessPhasesEditor
+        target={{ element: {}, moddleElement: { get: () => undefined } }}
+        nodes={[]}
+        commandStack={{ execute: vi.fn() }}
+        view={declaredView}
+        onSchemeIntent={vi.fn()}
+        readByRba={false}
+      />
+    );
+    expect(screen.getByText(/RBA reads only the first process/)).toBeTruthy();
+    expect(screen.queryByLabelText('None')).toBeNull();
+  });
+
+  test('a name changed outside the editor (an undo) shows up in its field', () => {
+    let phases = 'a:Alpha';
+    const moddleElement = { get: (k: string) => (k === 'ronl:phases' ? phases : undefined) };
+    const props = {
+      target: { element: {}, moddleElement },
+      nodes: [],
+      commandStack: { execute: vi.fn() },
+      onSchemeIntent: vi.fn(),
+    };
+    const { rerender } = render(<ProcessPhasesEditor {...props} view={{ ...declaredView }} />);
+    expect(screen.getByLabelText('Name of phase 1')).toHaveValue('Alpha');
+
+    phases = 'a:Renamed';
+    rerender(<ProcessPhasesEditor {...props} view={{ ...declaredView }} />);
+
+    expect(screen.getByLabelText('Name of phase 1')).toHaveValue('Renamed');
+  });
+
   test('shows the note it is given', () => {
     const moddleElement = { get: () => undefined };
     render(
