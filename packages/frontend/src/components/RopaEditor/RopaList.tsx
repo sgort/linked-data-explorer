@@ -1,7 +1,9 @@
 import { Plus, Trash2 } from 'lucide-react';
 import React from 'react';
 
+import { BpmnProcess } from '../../types';
 import { RopaRecord, RopaStatus } from '../../types/ropa.types';
+import { groupRopaRecords } from '../../utils/ropaGrouping';
 
 const STATUS_COLOUR: Record<RopaStatus, string> = {
   draft: 'bg-slate-100 text-slate-600',
@@ -11,6 +13,8 @@ const STATUS_COLOUR: Record<RopaStatus, string> = {
 
 interface RopaListProps {
   records: RopaRecord[];
+  /** Stored processes: a shell's call activities link its subprocess records (#173). */
+  processes?: BpmnProcess[];
   activeId: string | null;
   loading: boolean;
   onSelect: (id: string) => void;
@@ -20,14 +24,21 @@ interface RopaListProps {
 
 const RopaList: React.FC<RopaListProps> = ({
   records,
+  processes = [],
   activeId,
   loading,
   onSelect,
   onCreate,
   onDelete,
 }) => {
-  const shells = records.filter((r) => r.processLevel === 'shell');
-  const subs = records.filter((r) => r.processLevel === 'subprocess');
+  const { shells, unlinked } = groupRopaRecords(records, processes);
+
+  const renderSub = (sub: RopaRecord, key: string) => (
+    <div key={key} className="flex items-start gap-1">
+      <div className="mt-3 ml-2 text-slate-300 select-none">└</div>
+      <div className="flex-1">{renderCard(sub, true)}</div>
+    </div>
+  );
 
   const renderCard = (record: RopaRecord, indented = false) => (
     <div
@@ -83,13 +94,21 @@ const RopaList: React.FC<RopaListProps> = ({
           <p className="text-xs text-slate-400 text-center py-8">No records yet</p>
         ) : (
           <>
-            {shells.map((s) => renderCard(s))}
-            {subs.map((sub) => (
-              <div key={sub.id} className="flex items-start gap-1">
-                <div className="mt-3 ml-2 text-slate-300 select-none">└</div>
-                <div className="flex-1">{renderCard(sub, true)}</div>
+            {shells.map(({ shell, subprocesses }) => (
+              <div key={shell.id} className="space-y-2">
+                {renderCard(shell)}
+                {/* A subprocess called by two shells appears under both. */}
+                {subprocesses.map((sub) => renderSub(sub, `${shell.id}/${sub.id}`))}
               </div>
             ))}
+            {unlinked.length > 0 && (
+              <div className="pt-2 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  Not linked to a shell
+                </p>
+                {unlinked.map((sub) => renderSub(sub, sub.id))}
+              </div>
+            )}
           </>
         )}
       </div>

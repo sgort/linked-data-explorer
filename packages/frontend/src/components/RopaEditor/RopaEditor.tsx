@@ -1,13 +1,18 @@
 import { ShieldCheck } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+import { BpmnService } from '../../services/bpmnService';
 import { RopaService } from '../../services/ropaService';
+import { BpmnProcess } from '../../types';
 import { RopaRecord } from '../../types/ropa.types';
 import RopaList from './RopaList';
 import RopaRecordEditor from './RopaRecordEditor';
 
 const RopaEditor: React.FC = () => {
   const [records, setRecords] = useState<RopaRecord[]>([]);
+  // The stored processes link a subprocess record to its shell (#173). Without
+  // them every subprocess is listed as unlinked, which is honest but less useful.
+  const [processes, setProcesses] = useState<BpmnProcess[]>(() => BpmnService.getProcesses());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +30,7 @@ const RopaEditor: React.FC = () => {
 
   useEffect(() => {
     load();
+    BpmnService.hydrateFromServer().then(setProcesses);
   }, []);
 
   const active = records.find((r) => r.id === activeId) ?? null;
@@ -69,6 +75,7 @@ const RopaEditor: React.FC = () => {
       )}
       <RopaList
         records={records}
+        processes={processes}
         activeId={activeId}
         loading={loading}
         onSelect={setActiveId}

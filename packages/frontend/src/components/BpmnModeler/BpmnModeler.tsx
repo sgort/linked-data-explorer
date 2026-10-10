@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 import { BpmnService, ProcessIdConflict } from '../../services/bpmnService';
 import { BpmnProcess } from '../../types';
+import { extractCallActivityTargets } from '../../utils/bpmnLinks';
 import { ASYLUM_MIGRATION_EXAMPLE_XML, DEFAULT_BPMN_XML } from '../../utils/bpmnTemplates';
 import { EXAMPLE_VERSIONS, getStoredVersion, setStoredVersion } from '../../utils/exampleVersions';
 import { freshProcessId, isValidProcessId, renameProcessId } from '../../utils/processIdentity';
@@ -33,15 +34,6 @@ const extractBpmnProcessId = (xml: string): string => {
   const match = xml.match(/<(?:[\w-]+:)?process\b[^>]*\sid="([^"]*)"/);
   const id = match?.[1]?.trim();
   return id ? id : 'unknown';
-};
-
-/** Returns every calledElement value found in callActivity elements. */
-const extractCallActivityTargets = (xml: string): string[] => {
-  const targets: string[] = [];
-  const re = /calledElement="([^"]+)"/g;
-  let m;
-  while ((m = re.exec(xml)) !== null) targets.push(m[1]);
-  return targets;
 };
 
 /**

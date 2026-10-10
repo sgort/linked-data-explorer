@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
 
+import { BpmnProcess } from '../../types';
 import { RopaRecord } from '../../types/ropa.types';
 import RopaList from './RopaList';
 
@@ -63,6 +64,68 @@ describe('RopaList', () => {
     );
     expect(screen.getByText('Shell')).toBeTruthy();
     expect(screen.getByText('Sub')).toBeTruthy();
+  });
+
+  test('nests each subprocess under the shell that calls it, whatever the order, and lists the rest apart (#173)', () => {
+    const shellProcess = (id: string, calls: string) =>
+      ({
+        id: `p-${id}`,
+        bpmnProcessId: id,
+        processRole: 'shell',
+        xml: `<bpmn:process id="${id}"><bpmn:callActivity calledElement="${calls}"/></bpmn:process>`,
+      }) as unknown as BpmnProcess;
+
+    render(
+      <RopaList
+        {...baseProps}
+        processes={[
+          shellProcess('AwbZorgtoeslagProcess', 'ZorgSub'),
+          shellProcess('AwbShellProcess', 'KapSub'),
+        ]}
+        records={[
+          record({ id: 'zorg', title: 'AWB Zorgtoeslag', bpmnProcessId: 'AwbZorgtoeslagProcess' }),
+          record({ id: 'kap', title: 'AWB Kapvergunning', bpmnProcessId: 'AwbShellProcess' }),
+          record({
+            id: 'zorg-sub',
+            title: 'Zorgtoeslag voorlopig',
+            bpmnProcessId: 'ZorgSub',
+            processLevel: 'subprocess',
+          }),
+          record({
+            id: 'kap-sub',
+            title: 'Kapvergunning beoordeling',
+            bpmnProcessId: 'KapSub',
+            processLevel: 'subprocess',
+          }),
+          record({
+            id: 'orphan',
+            title: 'Losse deelprocessen',
+            bpmnProcessId: 'Orphan',
+            processLevel: 'subprocess',
+          }),
+        ]}
+      />
+    );
+
+    // Document order: each shell directly followed by its own subprocess.
+    const order = [
+      'AWB Zorgtoeslag',
+      'Zorgtoeslag voorlopig',
+      'AWB Kapvergunning',
+      'Kapvergunning beoordeling',
+      'Not linked to a shell',
+      'Losse deelprocessen',
+    ].map((text) => screen.getByText(text));
+    for (let i = 1; i < order.length; i++) {
+      expect(
+        order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    }
+  });
+
+  test('shows no "not linked" heading when every subprocess has its shell', () => {
+    render(<RopaList {...baseProps} records={[record({ id: 'shell-1', title: 'Shell' })]} />);
+    expect(screen.queryByText('Not linked to a shell')).toBeNull();
   });
 
   test('clicking a card calls onSelect with its id', async () => {
