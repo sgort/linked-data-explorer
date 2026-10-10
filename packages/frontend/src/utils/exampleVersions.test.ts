@@ -56,8 +56,8 @@ describe('setStoredVersion', () => {
 });
 
 describe('EXAMPLE_VERSIONS — besluitvorming gedelegeerd', () => {
-  test('versions the process at 2: a declined signature escalates', () => {
-    expect(EXAMPLE_VERSIONS.example_besluit_gb).toBe(2);
+  test("versions the process at 3: Neem besluit renders the authority's own besluit (#246)", () => {
+    expect(EXAMPLE_VERSIONS.example_besluit_gb).toBe(3);
   });
 
   test('versions all twelve forms', () => {
@@ -77,7 +77,9 @@ describe('EXAMPLE_VERSIONS — besluitvorming gedelegeerd', () => {
         'archiveren',
       ].map((s) => `example_besluit_gb_${s}`),
     ];
-    for (const id of ids) expect(EXAMPLE_VERSIONS[id]).toBe(1);
+    // Neem besluit is at 2 since it asks for the besluitnemer (#246).
+    const changed: Record<string, number> = { example_besluit_gb_besluit_nemen: 2 };
+    for (const id of ids) expect(EXAMPLE_VERSIONS[id]).toBe(changed[id] ?? 1);
   });
 });
 

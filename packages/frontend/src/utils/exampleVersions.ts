@@ -25,7 +25,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_hr_capacity_nl: 5, // v5: DMN results as plain variables, no serialised maps (#273)
   example_thuisbatterij_aanvraag: 4, // v4: own completeness check, reachable Awb 4:5 path (#206)
   example_thuisbatterij_decision: 3, // v3: DMN results as plain variables, no serialised maps (#273)
-  example_besluit_gb: 2, // v2: a declined signature escalates instead of looping back
+  example_besluit_gb: 3, // v3: Neem besluit renders the authority's own besluit (#246)
 
   // Camunda Forms
   example_kapvergunning_start: 5, // v5: translated to Dutch, tagged nl (#254 item 1)
@@ -50,7 +50,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   example_besluit_gb_indienen: 1,
   example_besluit_gb_ondertekenen: 1,
   example_besluit_gb_escalatie: 1,
-  example_besluit_gb_besluit_nemen: 1,
+  example_besluit_gb_besluit_nemen: 2, // v2: asks for the besluitnemer (#246)
   example_besluit_gb_registreren: 1,
   example_besluit_gb_archiveren: 1,
 
@@ -77,6 +77,7 @@ export const EXAMPLE_VERSIONS: Record<string, number> = {
   'capacity-claim-handover-nl': 1,
   thuisbatterij_subsidie_beschikking: 1,
   'besluit-gb-besluit': 1,
+  'besluit-gb-besluit-bestuur': 1,
 
   // DvTP consent bundle
   example_dvtp_toestemming: 4, // v4: DMN results as plain variables, no serialised maps (#273)

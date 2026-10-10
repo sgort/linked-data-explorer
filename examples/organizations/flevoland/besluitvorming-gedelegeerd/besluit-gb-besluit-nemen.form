@@ -65,6 +65,16 @@
       "key": "besluitToelichting"
     },
     {
+      "id": "Field_Tf_72",
+      "type": "textfield",
+      "label": "Naam besluitnemer (bevoegde bestuursautoriteit)",
+      "key": "besluitnemer",
+      "description": "Komt onder het besluit te staan.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
       "id": "Field_Submit_71",
       "type": "button",
       "action": "submit",
