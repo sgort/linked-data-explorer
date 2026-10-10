@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "besluit-gb-ondertekenen",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Field_Text_52",
+      "type": "text",
+      "text": "# Onderteken het besluit"
+    },
+    {
+      "id": "Field_Text_53",
+      "type": "text",
+      "text": "Controleer de volledigheid en bevestig je bevoegdheid. Ondertekenen gaat normaal via ValidSign; dit formulier is de terugvaloptie."
+    },
+    {
+      "id": "Field_Ro_54",
+      "type": "textfield",
+      "label": "Onderwerp",
+      "key": "onderwerp",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Ro_55",
+      "type": "textarea",
+      "label": "Voorgesteld besluit",
+      "key": "voorgesteldBesluit",
+      "readonly": true,
+      "disabled": true
+    },
+    {
+      "id": "Field_Radio_56",
+      "type": "radio",
+      "label": "Ondertekening",
+      "key": "approvalStatus",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Ondertekend",
+          "value": "approved"
+        },
+        {
+          "label": "Niet ondertekend — terug naar indiener",
+          "value": "rejected"
+        }
+      ]
+    },
+    {
+      "id": "Field_Ta_57",
+      "type": "textarea",
+      "label": "Toelichting",
+      "key": "ondertekenToelichting"
+    },
+    {
+      "id": "Field_Submit_58",
+      "type": "button",
+      "action": "submit",
+      "label": "Vastleggen"
+    }
+  ]
+}

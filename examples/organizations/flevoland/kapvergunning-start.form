@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 16,
+  "type": "default",
+  "id": "kapvergunning-start",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0",
+  "components": [
+    {
+      "id": "Text_Header",
+      "type": "text",
+      "text": "# Kapvergunning aanvragen"
+    },
+    {
+      "id": "Text_Intro",
+      "type": "text",
+      "text": "Met dit formulier vraagt u een kapvergunning aan. Uw aanvraag wordt automatisch beoordeeld op grond van de Algemene Plaatselijke Verordening (APV). U ontvangt een besluit en, als dat van toepassing is, informatie over de herplantplicht."
+    },
+    {
+      "id": "Field_TreeDiameter",
+      "type": "number",
+      "label": "Stamdiameter (cm)",
+      "key": "treeDiameter",
+      "validate": {
+        "required": true,
+        "min": 1,
+        "max": 500
+      },
+      "description": "Meet de diameter van de stam op 1,30 meter boven het maaiveld (borsthoogte). Voorbeelden: kleine boom 10–20 cm · middelgrote boom 30–50 cm · grote boom 60+ cm."
+    },
+    {
+      "id": "Field_ProtectedArea",
+      "type": "checkbox",
+      "label": "De boom staat in een beschermd gebied",
+      "key": "protectedArea",
+      "description": "Beschermde gebieden zijn onder meer natuurgebieden, beschermde stads- en dorpsgezichten, erfgoedlocaties en gebieden met een bijzondere milieubeschermingsstatus."
+    },
+    {
+      "id": "Button_Submit",
+      "type": "button",
+      "label": "Aanvraag indienen",
+      "action": "submit"
+    }
+  ]
+}
