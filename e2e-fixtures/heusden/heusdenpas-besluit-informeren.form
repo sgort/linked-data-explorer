@@ -1,0 +1,227 @@
+{
+  "components": [
+    {
+      "type": "text",
+      "text": "# Fase 6: Aanvrager informeren over het besluit (Awb 3:41)\nHet besluit is vastgesteld. Controleer de beschikking en leg vast hoe de aanvrager wordt geïnformeerd.",
+      "id": "Field_001_hpi",
+      "layout": {
+        "row": "Row_001_hpi",
+        "columns": null
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Besluit",
+      "id": "Field_002_hpi",
+      "layout": {
+        "row": "Row_002_hpi",
+        "columns": null
+      }
+    },
+    {
+      "label": "Dossiernummer",
+      "key": "dossierReference",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_003_hpi",
+      "layout": {
+        "row": "Row_i1_hpi",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Naam aanvrager",
+      "key": "aanvragerNaam",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_004_hpi",
+      "layout": {
+        "row": "Row_i1_hpi",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Status",
+      "key": "status",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_005_hpi",
+      "layout": {
+        "row": "Row_i2_hpi",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Besluit",
+      "key": "decisionType",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_006_hpi",
+      "layout": {
+        "row": "Row_i2_hpi",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Heusdenpas toegekend",
+      "key": "heusdenpasToegekend",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_007_hpi",
+      "layout": {
+        "row": "Row_i3_hpi",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Kindpakket toegekend",
+      "key": "kindpakketToegekend",
+      "type": "checkbox",
+      "disabled": true,
+      "id": "Field_008_hpi",
+      "layout": {
+        "row": "Row_i3_hpi",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Pasnummer",
+      "key": "heusdenpasNummer",
+      "type": "textfield",
+      "disabled": true,
+      "conditional": {
+        "hide": "=not(heusdenpasToegekend)"
+      },
+      "id": "Field_009_hpi",
+      "layout": {
+        "row": "Row_i4_hpi",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Geldig tot en met",
+      "key": "heusdenpasGeldigTot",
+      "type": "textfield",
+      "disabled": true,
+      "conditional": {
+        "hide": "=not(heusdenpasToegekend)"
+      },
+      "id": "Field_010_hpi",
+      "layout": {
+        "row": "Row_i4_hpi",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Motivering",
+      "key": "heusdenpasMotivering",
+      "type": "textarea",
+      "disabled": true,
+      "id": "Field_011_hpi",
+      "layout": {
+        "row": "Row_011_hpi",
+        "columns": null
+      }
+    },
+    {
+      "label": "Bericht aan de aanvrager",
+      "key": "finalMessage",
+      "type": "textarea",
+      "disabled": true,
+      "id": "Field_012_hpi",
+      "layout": {
+        "row": "Row_012_hpi",
+        "columns": null
+      }
+    },
+    {
+      "type": "text",
+      "text": "## Verzending",
+      "id": "Field_013_hpi",
+      "layout": {
+        "row": "Row_013_hpi",
+        "columns": null
+      }
+    },
+    {
+      "label": "Verzendwijze",
+      "key": "notificationMethod",
+      "type": "select",
+      "values": [
+        {
+          "label": "Berichtenbox MijnOverheid",
+          "value": "portal"
+        },
+        {
+          "label": "E-mail",
+          "value": "email"
+        },
+        {
+          "label": "Brief per post",
+          "value": "letter"
+        }
+      ],
+      "validate": {
+        "required": true
+      },
+      "id": "Field_014_hpi",
+      "layout": {
+        "row": "Row_014_hpi",
+        "columns": null
+      }
+    },
+    {
+      "subtype": "date",
+      "dateLabel": "Verzenddatum",
+      "key": "notificationDate",
+      "type": "datetime",
+      "id": "Field_015_hpi",
+      "layout": {
+        "row": "Row_015_hpi",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Interne notitie",
+      "key": "notificationNotes",
+      "type": "textarea",
+      "id": "Field_016_hpi",
+      "layout": {
+        "row": "Row_016_hpi",
+        "columns": null
+      }
+    },
+    {
+      "label": "Ik bevestig dat de aanvrager over dit besluit wordt geïnformeerd",
+      "key": "applicantNotified",
+      "type": "checkbox",
+      "validate": {
+        "required": true
+      },
+      "id": "Field_017_hpi",
+      "layout": {
+        "row": "Row_017_hpi",
+        "columns": null
+      }
+    },
+    {
+      "type": "button",
+      "action": "submit",
+      "label": "Verzending bevestigen",
+      "id": "Field_018_hpi",
+      "layout": {
+        "row": "Row_018_hpi",
+        "columns": null
+      }
+    }
+  ],
+  "id": "heusdenpas-besluit-informeren",
+  "type": "default",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.46.1"
+  },
+  "schemaVersion": 19,
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0"
+}

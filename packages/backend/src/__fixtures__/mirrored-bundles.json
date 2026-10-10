@@ -1,0 +1,10 @@
+[
+  { "examples": "flevoland/rip-phase-21", "fixtures": "flevoland" },
+  { "examples": "flevoland/rip-phase-22", "fixtures": "flevoland" },
+  { "examples": "heusden/swimlanes-for-rba", "fixtures": "heusden" },
+  {
+    "examples": "heusden",
+    "fixtures": "heusden",
+    "files": ["RONL_Heusden_Heusdenpas.dmn", "RONL_SVB_Leeftijden.dmn", "RONL_SZW_Bijstand.dmn"]
+  }
+]

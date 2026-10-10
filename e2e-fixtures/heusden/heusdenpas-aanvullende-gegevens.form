@@ -1,0 +1,100 @@
+{
+  "components": [
+    {
+      "type": "text",
+      "text": "# Aanvullende gegevens opvragen (Awb 4:5)\nDe aanvraag is niet volledig. Leg vast tot wanneer de aanvrager de gegevens kan aanvullen. Registreer daarna of de aanvulling binnen de hersteltermijn is ontvangen.",
+      "id": "Field_001_hpag",
+      "layout": {
+        "row": "Row_001_hpag",
+        "columns": null
+      }
+    },
+    {
+      "label": "Dossiernummer",
+      "key": "dossierReference",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_002_hpag",
+      "layout": {
+        "row": "Row_g1_hpag",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Datum ontvangst",
+      "key": "receiptDate",
+      "type": "textfield",
+      "disabled": true,
+      "id": "Field_003_hpag",
+      "layout": {
+        "row": "Row_g1_hpag",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Ontbrekende gegevens",
+      "key": "ontbrekendeGegevens",
+      "type": "textarea",
+      "disabled": true,
+      "id": "Field_004_hpag",
+      "layout": {
+        "row": "Row_004_hpag",
+        "columns": null
+      }
+    },
+    {
+      "subtype": "date",
+      "dateLabel": "Hersteltermijn tot",
+      "key": "hersteltermijnDatum",
+      "type": "datetime",
+      "validate": {
+        "required": true
+      },
+      "id": "Field_005_hpag",
+      "layout": {
+        "row": "Row_005_hpag",
+        "columns": 8
+      }
+    },
+    {
+      "label": "Aanvulling binnen hersteltermijn ontvangen",
+      "key": "supplementReceived",
+      "type": "checkbox",
+      "defaultValue": false,
+      "id": "Field_006_hpag",
+      "layout": {
+        "row": "Row_006_hpag",
+        "columns": null
+      }
+    },
+    {
+      "label": "Toelichting",
+      "key": "aanvullingToelichting",
+      "type": "textarea",
+      "id": "Field_007_hpag",
+      "layout": {
+        "row": "Row_007_hpag",
+        "columns": null
+      }
+    },
+    {
+      "type": "button",
+      "action": "submit",
+      "label": "Verzenden",
+      "id": "Field_008_hpag",
+      "layout": {
+        "row": "Row_008_hpag",
+        "columns": null
+      }
+    }
+  ],
+  "id": "heusdenpas-aanvullende-gegevens",
+  "type": "default",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.46.1"
+  },
+  "schemaVersion": 19,
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.21.0"
+}
