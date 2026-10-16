@@ -62,7 +62,7 @@
   },
   "overrides": {
     "libxmljs2": {
-      "node-gyp": "^13.0.2"
+      "node-gyp": "^13.1.0"
     }
   }
 }
