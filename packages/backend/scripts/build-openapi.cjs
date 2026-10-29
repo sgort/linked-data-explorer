@@ -23,8 +23,11 @@ const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const DOCUMENTS = [
   { source: 'openapi.yaml', target: 'openapi.json' },
   { source: 'openapi.v2.yaml', target: 'openapi.v2.json' },
+  // `source` and `target` are the literals just above, not input.
 ].map(({ source, target }) => ({
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   source: path.join(PACKAGE_ROOT, 'openapi', source),
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   target: path.join(PACKAGE_ROOT, 'openapi', target),
 }));
 
