@@ -20,14 +20,22 @@ const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  */
 export function renameProcessId(xml: string, from: string, to: string): string {
   if (!isValidProcessId(to)) throw new Error(`"${to}" is not a valid process id`);
+  // The only data in these RegExps is `old`, and escapeRegExp makes it match
+  // as a literal; `to` goes into the replacement, never the pattern, and is an
+  // NCName besides. The patterns around it are fixed and linear.
   const old = escapeRegExp(from);
-  return xml
-    .replace(new RegExp(`(<(?:[\\w-]+:)?process\\b[^>]*\\sid=")${old}(")`, 'g'), `$1${to}$2`)
-    .replace(new RegExp(`(\\sprocessRef=")${old}(")`, 'g'), `$1${to}$2`)
-    .replace(
-      new RegExp(`(<(?:[\\w-]+:)?BPMNPlane\\b[^>]*\\sbpmnElement=")${old}(")`, 'g'),
-      `$1${to}$2`
-    );
+  return (
+    xml
+      // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+      .replace(new RegExp(`(<(?:[\\w-]+:)?process\\b[^>]*\\sid=")${old}(")`, 'g'), `$1${to}$2`)
+      // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+      .replace(new RegExp(`(\\sprocessRef=")${old}(")`, 'g'), `$1${to}$2`)
+      .replace(
+        // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+        new RegExp(`(<(?:[\\w-]+:)?BPMNPlane\\b[^>]*\\sbpmnElement=")${old}(")`, 'g'),
+        `$1${to}$2`
+      )
+  );
 }
 
 /** A process id no other new process has: the template's own id plus a timestamp. */

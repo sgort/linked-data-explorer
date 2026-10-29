@@ -122,7 +122,7 @@ deploy workflows read one exact version from `.nvmrc`, maintained by Renovate's
 is when its pin started to decide what ships: before, Oryx built the bundle on
 22.22.0 regardless.
 
-`zizmor.yml` keeps its own literal, `24.21.0`, deliberately: its
+`zizmor.yml` keeps its own literal, `24.22.1`, deliberately: its
 `renovate-config-validator` step needs Node 24.
 
 **The App Service host runtime cannot be pinned exactly, and that is now a
