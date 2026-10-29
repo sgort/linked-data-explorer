@@ -2,6 +2,99 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.10.3",
+      "status": "Released",
+      "date": "29 oct 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "b89cd17",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "follow-redirects 1.16.1: credential headers no longer survive a cross-origin redirect",
+          "details": [
+            "GHSA-q3jh-wrc6-jgq8 and GHSA-8r9p-f939-6h3c, both high and both in production through axios: array-form headers and the sensitiveHeaders regex let credential headers through a cross-origin redirect. 1.16.1 is inside axios's range and past the 14-day cooldown, so this is a plain lockfile update.",
+            "Neither advisory was in the Semgrep export; the dependency audit surfaced them."
+          ]
+        },
+        {
+          "sha": "f7cba3b",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Lockfile refresh for 22 supply-chain advisories",
+          "details": [
+            "Production: body-parser 1.20.9, dompurify 3.4.17 (one critical, one high), markdown-it 14.3.3, qs 6.16.1 and undici 7.30.1 and 8.12.3. Development: fast-uri 3.1.9, postcss-selector-parser 6.1.5 and vite 6.4.5. Every fix is inside the declared ranges, so no package.json changes.",
+            "Most fixes were younger than the 14-day cooldown, so the update ran as the security exception .npmrc allows, on the command line only: --min-release-age=6. That admitted the youngest fix needed (body-parser 1.20.9, 22 October) and kept out qs 6.16.2, two days old and not a fix.",
+            "Still open: @vitest/mocker (dev, waits for vitest 4.1.12 from Renovate), @tiptap/core (fixed only in the 3.x major) and deepmerge (no fix released). The last two are triaged as accepted risk."
+          ]
+        },
+        {
+          "sha": "aec5c34",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Semgrep: verified false positives suppressed in processIdentity and build-openapi",
+          "details": [
+            "detect-non-literal-regexp on renameProcessId: the only data in its RegExps passes through escapeRegExp, and the new id goes into the replacement only. path-join-resolve-traversal on build-openapi.cjs: the joined names are the literals beside them. Each suppression names its full rule id, with the reason next to it."
+          ]
+        },
+        {
+          "sha": "bf2467c",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Node moves to 24.22.1, the release that fixes CVE-2026-111497",
+          "details": [
+            "Semgrep flagged .nvmrc at 24.21.0 for the Brotli decoder out-of-bounds write. Renovate's #308 stopped at 24.22.0, which is still affected, because 24.22.1 was inside the cooldown.",
+            "Both App Services already ran v24.22.1, so this closed no live exposure: it puts CI and development on the version production runs. .nvmrc, the literals in the dependency-audit, dependency-review, sbom and zizmor workflows, and engines.node move together."
+          ]
+        },
+        {
+          "sha": "ce1f458",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Frontend dependencies updated",
+          "details": [
+            "@bpmn-io/properties-panel 3.57.0, bpmn-js 18.31.0, bpmn-js-properties-panel 5.65.2, react and react-dom 19.3.1, @testing-library/user-event 14.6.8, @types/node 22.20.5, postcss 8.5.30, prettier 3.9.10, typescript-eslint 8.71.2."
+          ]
+        },
+        {
+          "sha": "2487fb7",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "concurrently 10.0.6",
+          "details": [
+            "Takes shell-quote from 1.9.0 to 1.12.0, which fixes GHSA-pqg4-j6r4-53mv (critical, development only)."
+          ]
+        },
+        {
+          "sha": "a5a169d",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Backend dependencies updated",
+          "details": [
+            "fast-xml-parser 5.11.2, pg 8.23.1, @stoplight/spectral-cli 6.17.0, prettier 3.9.10, ts-jest 29.4.15, typescript-eslint 8.71.2."
+          ]
+        },
+        {
+          "sha": "79e561b",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "lint-staged 17.6.0",
+          "details": ["Development only: the pre-commit hook."]
+        },
+        {
+          "sha": "d2bb22c",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "SBOM: the production set is read from the lockfile, not npm sbom --omit=dev",
+          "details": [
+            "npm sbom --omit=dev drops production packages: it left 75 out of this repository's SBOM, react and react-dom among them. write-sbom.mjs now lists the whole tree and keeps what the lockfile does not mark dev, plus the workspace packages; a production package npm does not list stops the generation instead of writing an incomplete document.",
+            "Promoted to production on its own in #298, to correct the v2026.10.2 SBOM; it lands in a changelog entry here. scripts/write-sbom.test.mjs runs in sbom.yml before the SBOM checks."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.10.2",
       "status": "Released",
       "date": "10 oct 2026",
