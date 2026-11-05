@@ -3,6 +3,7 @@ import { CheckCircle, Database, Loader2, Search, X } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
 import { DmnModel } from '../../types';
+import ServiceLinks from '../ServiceLinks/ServiceLinks';
 import ValidationBadge from './ValidationBadge';
 import VendorBadge from './VendorBadge';
 import VendorModal from './VendorModal';
@@ -120,6 +121,7 @@ const DraggableDmnCard: React.FC<DraggableDmnCardProps> = ({ dmn, isUsed, onVend
                 {dmn.organizationName}
               </div>
             )}
+            <ServiceLinks requires={dmn.requires} requiredBy={dmn.requiredBy} className="mt-1" />
           </div>
 
           {/* Status Badge */}

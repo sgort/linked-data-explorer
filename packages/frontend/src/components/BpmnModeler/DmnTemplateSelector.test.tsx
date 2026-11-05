@@ -124,6 +124,37 @@ describe('DmnTemplateSelector', () => {
     );
   });
 
+  test('the info box of a selected DMN shows the services that require it (ttl-editor#223)', async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      dmnsResponse([
+        {
+          identifier: 'RechtOpSubsidieThuisbatterij',
+          title: 'RechtOpSubsidieThuisbatterij.dmn',
+          requiredBy: [
+            {
+              service:
+                'https://regels.overheid.nl/services/hoogte-subsidie-thuisbatterij-flevoland',
+              dmnIdentifier: 'BehaalbareHoogteSubsidie',
+            },
+          ],
+        },
+      ])
+    );
+    getUserTemplates.mockReturnValue([]);
+    render(
+      <DmnTemplateSelector endpoint="e" element={{}} modeling={{ updateProperties: vi.fn() }} />
+    );
+
+    await userEvent.selectOptions(
+      await screen.findByRole('combobox'),
+      'RechtOpSubsidieThuisbatterij'
+    );
+
+    expect(screen.getByText('Required by:', { exact: false }).parentElement?.textContent).toBe(
+      'Required by: BehaalbareHoogteSubsidie'
+    );
+  });
+
   test('a failed DMN fetch degrades to no options rather than crashing', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('network down'));
     getUserTemplates.mockReturnValue([]);
