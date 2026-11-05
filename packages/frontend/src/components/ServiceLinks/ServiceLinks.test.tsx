@@ -2,7 +2,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 
-import ServiceLinks, { serviceLinkName } from './ServiceLinks';
+import { serviceLinkName } from './serviceLinkName';
+import ServiceLinks from './ServiceLinks';
 
 // dct:requires between public services (sgort/ttl-editor#223): display only.
 const RECHT = 'https://regels.overheid.nl/services/recht-op-subsidie-thuisbatterij-flevoland';
@@ -52,10 +53,10 @@ describe('ServiceLinks', () => {
       />
     );
 
-    expect(screen.getByText('Requires:', { exact: false }).textContent).toBe(
+    expect(screen.getByText('Requires:', { exact: false }).parentElement?.textContent).toBe(
       'Requires: RechtOpSubsidieThuisbatterij, elsewhere'
     );
-    expect(screen.getByText('Required by:', { exact: false }).textContent).toBe(
+    expect(screen.getByText('Required by:', { exact: false }).parentElement?.textContent).toBe(
       'Required by: BehaalbareHoogteSubsidie'
     );
   });

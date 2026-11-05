@@ -650,6 +650,31 @@ describe('getAllDmns service requirements', () => {
     expect(byIdentifier(dmns, 'RechtOpSubsidieThuisbatterij')?.requiredBy).toHaveLength(1);
   });
 
+  test('links are listed in a stable order, whatever order the endpoint returns', async () => {
+    const A = 'https://example.org/services/a';
+    const B = 'https://example.org/services/b';
+    const C = 'https://example.org/services/c';
+    respondWith({
+      main: thuisbatterijRows(),
+      requires: [
+        requiresRow(HOOGTE_SVC, C),
+        requiresRow(HOOGTE_SVC, A),
+        requiresRow(HOOGTE_SVC, B),
+        requiresRow(C, RECHT_SVC),
+        requiresRow(A, RECHT_SVC),
+      ],
+    });
+
+    const dmns = await service().getAllDmns();
+
+    expect(byIdentifier(dmns, 'BehaalbareHoogteSubsidie')?.requires?.map((l) => l.service)).toEqual(
+      [A, B, C]
+    );
+    expect(
+      byIdentifier(dmns, 'RechtOpSubsidieThuisbatterij')?.requiredBy?.map((l) => l.service)
+    ).toEqual([A, C]);
+  });
+
   test('a self-link is ignored', async () => {
     respondWith({
       main: thuisbatterijRows(),

@@ -150,7 +150,7 @@ describe('DmnTemplateSelector', () => {
       'RechtOpSubsidieThuisbatterij'
     );
 
-    expect(screen.getByText('Required by:', { exact: false }).textContent).toBe(
+    expect(screen.getByText('Required by:', { exact: false }).parentElement?.textContent).toBe(
       'Required by: BehaalbareHoogteSubsidie'
     );
   });

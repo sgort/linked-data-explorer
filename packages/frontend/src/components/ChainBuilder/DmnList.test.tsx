@@ -311,6 +311,6 @@ describe('DmnList', () => {
 
     const lines = screen.getAllByText('Requires:', { exact: false });
     expect(lines).toHaveLength(1);
-    expect(lines[0].textContent).toBe('Requires: RechtOpSubsidieThuisbatterij');
+    expect(lines[0].parentElement?.textContent).toBe('Requires: RechtOpSubsidieThuisbatterij');
   });
 });

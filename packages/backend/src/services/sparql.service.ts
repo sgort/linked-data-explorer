@@ -1000,15 +1000,22 @@ SELECT ?service ?serviceTitle ?required ?requiredTitle WHERE {
       };
     };
 
+    // SPARQL rows come back in no fixed order; sort by service URI so a card
+    // with several links does not reorder them between refreshes.
+    const byService = (a: ServiceLink, b: ServiceLink) =>
+      a.service < b.service ? -1 : a.service > b.service ? 1 : 0;
+
     for (const dmn of dmns) {
       if (!dmn.service) continue;
 
       const requires = requirements
         .filter((r) => r.service === dmn.service)
-        .map((r) => link(r.required, r.requiredTitle));
+        .map((r) => link(r.required, r.requiredTitle))
+        .sort(byService);
       const requiredBy = requirements
         .filter((r) => r.required === dmn.service)
-        .map((r) => link(r.service, r.serviceTitle));
+        .map((r) => link(r.service, r.serviceTitle))
+        .sort(byService);
 
       if (requires.length > 0) dmn.requires = requires;
       if (requiredBy.length > 0) dmn.requiredBy = requiredBy;
