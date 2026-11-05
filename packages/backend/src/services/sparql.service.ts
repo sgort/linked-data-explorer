@@ -12,7 +12,16 @@ import {
   EnhancedChainLink,
   SemanticEquivalence,
   ChainCycle,
+  ServiceLink,
 } from '../types/dmn.types';
+
+/** One dct:requires pair: `service` relies on `required`. */
+export interface ServiceRequirement {
+  service: string;
+  serviceTitle?: string;
+  required: string;
+  requiredTitle?: string;
+}
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 
 /**
@@ -246,6 +255,9 @@ ORDER BY ?identifier
     // Fetch vendor counts in a single aggregated query up front so we avoid
     // issuing one extra SPARQL request per DMN when building the final list.
     const vendorCounts = await this.getVendorCounts(targetEndpoint);
+    // Same pattern for dct:requires between services: one query for the whole
+    // endpoint, attached per DMN below (sgort/ttl-editor#223).
+    const requirements = await this.getServiceRequirements(targetEndpoint);
 
     logger.info(`Found ${bindings.length} DMN records`);
 
@@ -318,6 +330,8 @@ ORDER BY ?identifier
         `DMN ${dmn.identifier}: ${dmn.inputs.length} inputs, ${dmn.outputs.length} outputs`
       );
     }
+
+    this.attachServiceLinks(dmns, requirements);
 
     // Update cache for this endpoint
     this.dmnCacheMap.set(targetEndpoint, {
@@ -899,6 +913,105 @@ GROUP BY ?basedOn
         error: getErrorMessage(error),
       });
       return new Map();
+    }
+  }
+
+  /**
+   * Every dct:requires pair between services on the endpoint
+   * (sgort/ttl-editor#223). The subject is the dependent service, the object
+   * the service it relies on. Pairs are deduplicated (a service with titles in
+   * several languages yields one row per title; the first title wins) and
+   * self-links are dropped.
+   *
+   * Degrades to an empty list on failure, like getVendorCounts: the links are
+   * context only and must never cost the caller its DMN list.
+   *
+   * @param endpoint - SPARQL endpoint URL
+   * @returns The requirement pairs
+   */
+  async getServiceRequirements(endpoint?: string): Promise<ServiceRequirement[]> {
+    try {
+      const query = `
+PREFIX dct: <http://purl.org/dc/terms/>
+
+SELECT ?service ?serviceTitle ?required ?requiredTitle WHERE {
+  ?service dct:requires ?required .
+  OPTIONAL { ?service dct:title ?serviceTitle }
+  OPTIONAL { ?required dct:title ?requiredTitle }
+}
+`;
+
+      const data = await this.executeQuery(query, endpoint);
+      const bindings = data.results?.bindings || [];
+
+      const pairs = new Map<string, ServiceRequirement>();
+      for (const binding of bindings) {
+        const service = binding.service?.value;
+        const required = binding.required?.value;
+        if (!service || !required || service === required) continue;
+
+        const key = `${service} ${required}`;
+        const existing = pairs.get(key);
+        if (existing) {
+          existing.serviceTitle ??= binding.serviceTitle?.value;
+          existing.requiredTitle ??= binding.requiredTitle?.value;
+          continue;
+        }
+        pairs.set(key, {
+          service,
+          required,
+          ...(binding.serviceTitle?.value ? { serviceTitle: binding.serviceTitle.value } : {}),
+          ...(binding.requiredTitle?.value ? { requiredTitle: binding.requiredTitle.value } : {}),
+        });
+      }
+
+      logger.debug(`Fetched ${pairs.size} service requirements`);
+      return Array.from(pairs.values());
+    } catch (error) {
+      logger.warn('Failed to fetch service requirements', {
+        error: getErrorMessage(error),
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Set `requires` / `requiredBy` on each DMN from the requirement pairs,
+   * matched on the DMN's service URI. "Required by" is derived from the same
+   * pairs. A key is set only when its list is non-empty, so a dataset without
+   * dct:requires keeps today's response shape.
+   */
+  private attachServiceLinks(dmns: DmnModel[], requirements: ServiceRequirement[]): void {
+    if (requirements.length === 0) return;
+
+    const serviceToDmn = new Map<string, string>();
+    for (const dmn of dmns) {
+      if (dmn.service && !serviceToDmn.has(dmn.service)) {
+        serviceToDmn.set(dmn.service, dmn.identifier);
+      }
+    }
+
+    const link = (service: string, title?: string): ServiceLink => {
+      const dmnIdentifier = serviceToDmn.get(service);
+      return {
+        service,
+        ...(title ? { title } : {}),
+        ...(dmnIdentifier ? { dmnIdentifier } : {}),
+      };
+    };
+
+    for (const dmn of dmns) {
+      if (!dmn.service) continue;
+
+      const requires = requirements
+        .filter((r) => r.service === dmn.service)
+        .map((r) => link(r.required, r.requiredTitle));
+      const requiredBy = requirements
+        .filter((r) => r.required === dmn.service)
+        .map((r) => link(r.service, r.serviceTitle));
+
+      if (requires.length > 0) dmn.requires = requires;
+      if (requiredBy.length > 0) dmn.requiredBy = requiredBy;
     }
   }
 

@@ -52,9 +52,11 @@ function respondWith(sets: {
   vendors?: Binding[];
   inputs?: Binding[];
   outputs?: Binding[];
+  requires?: Binding[];
 }) {
   mockPost.mockImplementation(async (_url: string, query: string) => {
     if (query.includes('ronl:VendorService')) return bindings(sets.vendors ?? []);
+    if (query.includes('dct:requires')) return bindings(sets.requires ?? []);
     if (query.includes('cpsv:isRequiredBy <')) return bindings(sets.inputs ?? []);
     if (query.includes('cpsv:produces <')) return bindings(sets.outputs ?? []);
     return bindings(sets.main ?? []);
@@ -550,6 +552,175 @@ describe('getVendorCounts', () => {
     mockPost.mockRejectedValue(new Error('endpoint unreachable'));
 
     await expect(service().getVendorCounts()).resolves.toEqual(new Map());
+  });
+});
+
+// dct:requires between public services (sgort/ttl-editor#223). The dependent
+// service is the subject; "required by" is derived here, never read from data.
+const HOOGTE_SVC = 'https://regels.overheid.nl/services/hoogte-subsidie-thuisbatterij-flevoland';
+const RECHT_SVC = 'https://regels.overheid.nl/services/recht-op-subsidie-thuisbatterij-flevoland';
+const HOOGTE_TITLE = 'hoogte subsidie thuisbatterij';
+const RECHT_TITLE = 'recht subsidie thuisbatterij';
+
+const thuisbatterijRows = () => [
+  dmnRow({
+    dmn: lit('https://example.org/dmn/hoogte'),
+    identifier: lit('BehaalbareHoogteSubsidie'),
+    title: lit('Behaalbare hoogte subsidie'),
+    service: lit(HOOGTE_SVC),
+    serviceTitle: lit(HOOGTE_TITLE),
+  }),
+  dmnRow({
+    dmn: lit('https://example.org/dmn/recht'),
+    identifier: lit('RechtOpSubsidieThuisbatterij'),
+    title: lit('Recht op subsidie thuisbatterij'),
+    service: lit(RECHT_SVC),
+    serviceTitle: lit(RECHT_TITLE),
+  }),
+];
+
+const requiresRow = (
+  svc: string,
+  required: string,
+  titles: { serviceTitle?: string; requiredTitle?: string } = {}
+): Binding => ({
+  service: lit(svc),
+  required: lit(required),
+  ...(titles.serviceTitle ? { serviceTitle: lit(titles.serviceTitle) } : {}),
+  ...(titles.requiredTitle ? { requiredTitle: lit(titles.requiredTitle) } : {}),
+});
+
+const byIdentifier = <T extends { identifier: string }>(dmns: T[], identifier: string) =>
+  dmns.find((d) => d.identifier === identifier);
+
+describe('getAllDmns service requirements', () => {
+  test('attaches requires to the dependent DMN and requiredBy to the required one', async () => {
+    respondWith({
+      main: thuisbatterijRows(),
+      requires: [
+        requiresRow(HOOGTE_SVC, RECHT_SVC, {
+          serviceTitle: HOOGTE_TITLE,
+          requiredTitle: RECHT_TITLE,
+        }),
+      ],
+    });
+
+    const dmns = await service().getAllDmns();
+    const hoogte = byIdentifier(dmns, 'BehaalbareHoogteSubsidie');
+    const recht = byIdentifier(dmns, 'RechtOpSubsidieThuisbatterij');
+
+    expect(hoogte?.requires).toEqual([
+      { service: RECHT_SVC, title: RECHT_TITLE, dmnIdentifier: 'RechtOpSubsidieThuisbatterij' },
+    ]);
+    expect(hoogte).not.toHaveProperty('requiredBy');
+    expect(recht?.requiredBy).toEqual([
+      { service: HOOGTE_SVC, title: HOOGTE_TITLE, dmnIdentifier: 'BehaalbareHoogteSubsidie' },
+    ]);
+    expect(recht).not.toHaveProperty('requires');
+  });
+
+  test('a required service without a DMN is still listed, without dmnIdentifier', async () => {
+    const elsewhere = 'https://example.org/services/elsewhere';
+    respondWith({
+      main: thuisbatterijRows(),
+      requires: [requiresRow(HOOGTE_SVC, elsewhere)],
+    });
+
+    const dmns = await service().getAllDmns();
+
+    expect(byIdentifier(dmns, 'BehaalbareHoogteSubsidie')?.requires).toEqual([
+      { service: elsewhere },
+    ]);
+  });
+
+  test('duplicate title rows do not duplicate links', async () => {
+    respondWith({
+      main: thuisbatterijRows(),
+      requires: [
+        requiresRow(HOOGTE_SVC, RECHT_SVC, { requiredTitle: RECHT_TITLE }),
+        requiresRow(HOOGTE_SVC, RECHT_SVC, { requiredTitle: 'right to the home battery grant' }),
+      ],
+    });
+
+    const dmns = await service().getAllDmns();
+
+    expect(byIdentifier(dmns, 'BehaalbareHoogteSubsidie')?.requires).toEqual([
+      { service: RECHT_SVC, title: RECHT_TITLE, dmnIdentifier: 'RechtOpSubsidieThuisbatterij' },
+    ]);
+    expect(byIdentifier(dmns, 'RechtOpSubsidieThuisbatterij')?.requiredBy).toHaveLength(1);
+  });
+
+  test('a self-link is ignored', async () => {
+    respondWith({
+      main: thuisbatterijRows(),
+      requires: [requiresRow(HOOGTE_SVC, HOOGTE_SVC)],
+    });
+
+    const hoogte = byIdentifier(await service().getAllDmns(), 'BehaalbareHoogteSubsidie');
+
+    expect(hoogte).not.toHaveProperty('requires');
+    expect(hoogte).not.toHaveProperty('requiredBy');
+  });
+
+  test('without dct:requires in the data, no DMN carries the keys', async () => {
+    respondWith({ main: thuisbatterijRows() });
+
+    const dmns = await service().getAllDmns();
+
+    expect(dmns).toHaveLength(2);
+    for (const dmn of dmns) {
+      expect(dmn).not.toHaveProperty('requires');
+      expect(dmn).not.toHaveProperty('requiredBy');
+    }
+  });
+
+  test('a failing requirements query still returns the DMN list', async () => {
+    mockPost.mockImplementation(async (_url: string, query: string) => {
+      if (query.includes('dct:requires')) throw new Error('requirements query timed out');
+      if (query.includes('ronl:VendorService')) return bindings([]);
+      if (query.includes('cpsv:isRequiredBy <')) return bindings([]);
+      if (query.includes('cpsv:produces <')) return bindings([]);
+      return bindings(thuisbatterijRows());
+    });
+
+    const dmns = await service().getAllDmns();
+
+    expect(dmns).toHaveLength(2);
+    for (const dmn of dmns) {
+      expect(dmn).not.toHaveProperty('requires');
+      expect(dmn).not.toHaveProperty('requiredBy');
+    }
+  });
+});
+
+describe('getServiceRequirements', () => {
+  test('parses rows into deduplicated pairs without self-links', async () => {
+    mockPost.mockResolvedValue(
+      bindings([
+        requiresRow(HOOGTE_SVC, RECHT_SVC, {
+          serviceTitle: HOOGTE_TITLE,
+          requiredTitle: RECHT_TITLE,
+        }),
+        requiresRow(HOOGTE_SVC, RECHT_SVC, { requiredTitle: 'other title' }),
+        requiresRow(RECHT_SVC, RECHT_SVC),
+      ])
+    );
+
+    await expect(service().getServiceRequirements()).resolves.toEqual([
+      {
+        service: HOOGTE_SVC,
+        serviceTitle: HOOGTE_TITLE,
+        required: RECHT_SVC,
+        requiredTitle: RECHT_TITLE,
+      },
+    ]);
+    expect(mockPost.mock.calls[0][1]).toContain('dct:requires');
+  });
+
+  test('degrades to an empty list rather than failing the caller', async () => {
+    mockPost.mockRejectedValue(new Error('endpoint unreachable'));
+
+    await expect(service().getServiceRequirements()).resolves.toEqual([]);
   });
 });
 
