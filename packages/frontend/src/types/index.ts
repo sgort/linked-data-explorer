@@ -75,6 +75,16 @@ export interface DmnVariable {
   testValue?: string | number | boolean;
 }
 
+/**
+ * The other end of a dct:requires link between two public services
+ * (sgort/ttl-editor#223). Mirrors the backend type.
+ */
+export interface ServiceLink {
+  service: string; // Service URI
+  title?: string; // Service dct:title
+  dmnIdentifier?: string; // Identifier of that service's DMN, when listed
+}
+
 export interface DmnModel {
   id: string;
   identifier: string;
@@ -103,6 +113,10 @@ export interface DmnModel {
 
   // NEW: Vendor implementation count
   vendorCount?: number;
+
+  // Service dependencies (dct:requires), display only. Absent when empty.
+  requires?: ServiceLink[];
+  requiredBy?: ServiceLink[];
 }
 
 export interface DmnChainLink {
