@@ -2,6 +2,61 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.11.0",
+      "status": "Released",
+      "date": "5 nov 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "cdadc7b",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Service links on the Chain Composer cards, in a stable order",
+          "details": [
+            "A DMN in the Chain Composer now shows Requires / Required by below its metadata, with labels styled like \"Definition Key:\". ServiceLinks takes an optional labelClassName for that; the list cards and the BPMN panel keep the plain style.",
+            "requires and requiredBy are sorted by service URI, so a card with several links keeps their order between refreshes. serviceLinkName moved to its own module, so ServiceLinks.tsx exports only a component (react-refresh/only-export-components)."
+          ]
+        },
+        {
+          "sha": "b45878c",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Requires / Required by on the DMN cards and in the BPMN link panel",
+          "details": [
+            "A public service can declare the services it relies on with dct:requires (ttl-editor#223). The Chain Builder DMN cards and the info box of the BPMN \"Link to DMN/DRD\" panel now show \"Requires: …\" and \"Required by: …\" when the lists are non-empty. Display only: the order of execution stays in the BPMN.",
+            "Each linked service is named by its DMN identifier, else its title, else the last part of its URI, with the URI as tooltip."
+          ]
+        },
+        {
+          "sha": "b13f14e",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "OpenAPI: requires / requiredBy on DmnModel",
+          "details": [
+            "New ServiceLink schema (service required; title and dmnIdentifier optional) and two optional arrays on DmnModel. A contract test pins GET /v1/dmns with a DMN carrying both lists. No new route."
+          ]
+        },
+        {
+          "sha": "ed254a4",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Each DMN carries the services its service requires and is required by",
+          "details": [
+            "getServiceRequirements() fetches every dct:requires pair on the endpoint in one query, deduplicated and without self-links, and degrades to an empty list on failure like getVendorCounts, so the DMN list always loads.",
+            "getAllDmns matches the pairs on each DMN's service URI and sets requires / requiredBy only when non-empty. \"Required by\" is derived and covers the endpoint being viewed. A dataset without dct:requires returns exactly the same response as before."
+          ]
+        },
+        {
+          "sha": "e666db4",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Backend: @types/n3 1.26.5 and typescript-eslint 8.72.0",
+          "details": ["Development only."]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.10.3",
       "status": "Released",
       "date": "29 oct 2026",
