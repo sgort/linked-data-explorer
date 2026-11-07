@@ -2,6 +2,35 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.11.1",
+      "status": "Released",
+      "date": "7 nov 2026",
+      "scope": "backend",
+      "commits": [
+        {
+          "sha": "8367477",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Encode values placed in Operaton engine paths",
+          "details": [
+            "The backend now calls the engine as an operaton-admin account, while its DMN routes are anonymous. Express decodes route parameters, so a decision key like '../../process-instance?x=' turned POST /decision-definition/key/{key}/evaluate into POST /engine-rest/process-instance with admin rights.",
+            "A new engineSegment() helper (encodeURIComponent, ':' kept, '.' and '..' refused) now wraps every value placed in an engine URL path: both evaluate calls and both requests of fetchDmnXml (ronl-business-api#415)."
+          ]
+        },
+        {
+          "sha": "2111fd8",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Authenticate to Operaton with basic auth instead of an API key",
+          "details": [
+            "Operaton's engine-rest now requires a login (ronl-business-api#415). The shared client sent Authorization: Bearer with OPERATON_API_KEY, which Operaton does not accept, and the external-task worker and health probe sent nothing at all. All of them now send basic auth from OPERATON_USERNAME/OPERATON_PASSWORD through operatonBasicAuth(); OPERATON_API_KEY is removed.",
+            "validateConfig requires both credentials on the deployed tiers (ACC and PROD, decided by the display tier rather than NODE_ENV, since LDE ACC runs NODE_ENV=acceptance). Local development and test runs start without them."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.11.0",
       "status": "Released",
       "date": "5 nov 2026",
