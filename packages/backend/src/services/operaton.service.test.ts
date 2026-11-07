@@ -124,6 +124,38 @@ describe('construction', () => {
   });
 });
 
+describe('caller values cannot walk to another engine endpoint (#415 in ronl-business-api)', () => {
+  // The client runs as an operaton-admin account and these routes are
+  // anonymous; Express has already decoded "%2F" and "%3F" into "/" and "?".
+  const EVIL = '../../process-instance?x=';
+  const paths = () => [...mockGet.mock.calls, ...mockPost.mock.calls].map((c) => String(c[0]));
+  const expectContained = () => {
+    expect(paths().length).toBeGreaterThan(0);
+    for (const p of paths()) {
+      expect(p).not.toContain('/../');
+      expect(p).not.toContain('?');
+    }
+  };
+
+  test('evaluateRaw', async () => {
+    mockPost.mockResolvedValue({ status: 200, data: [] });
+    await new OperatonService().evaluateRaw(EVIL, {}).catch(() => undefined);
+    expectContained();
+  });
+
+  test('evaluateDecision', async () => {
+    mockPost.mockResolvedValue({ data: [] });
+    await new OperatonService().evaluateDecision(EVIL, {}).catch(() => undefined);
+    expectContained();
+  });
+
+  test('fetchDmnXml', async () => {
+    mockGet.mockResolvedValue({ data: { id: 'd:1:x', dmnXml: '<definitions/>' } });
+    await new OperatonService().fetchDmnXml(EVIL).catch(() => undefined);
+    expectContained();
+  });
+});
+
 describe('evaluateDecision', () => {
   test('posts the decision key with Operaton-typed variables', async () => {
     mockPost.mockResolvedValue({ data: [{ recht: { value: true, type: 'Boolean' } }] });
