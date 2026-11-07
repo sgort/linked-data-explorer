@@ -40,6 +40,10 @@ function loadConfig(overrides: Record<string, string>): Config {
   }
 }
 
+// A deployed tier needs Operaton credentials to load at all (#415 in
+// ronl-business-api); these tests are about the label, so they bring them.
+const CREDENTIALS = { OPERATON_USERNAME: 'u', OPERATON_PASSWORD: 'p' };
+
 describe('deployment tier label', () => {
   test.each([
     ['prod', 'PROD'],
@@ -70,7 +74,7 @@ describe('deployment tier label', () => {
   });
 
   test('falls back to NODE_ENV when DEPLOYMENT_ENV is unset, so local dev is zero-config', () => {
-    const config = loadConfig({ DEPLOYMENT_ENV: '', NODE_ENV: 'production' });
+    const config = loadConfig({ DEPLOYMENT_ENV: '', NODE_ENV: 'production', ...CREDENTIALS });
 
     expect(config.deploymentEnv).toBe('production');
     expect(config.displayEnv).toBe('PROD');
@@ -84,8 +88,8 @@ describe('deployment tier label', () => {
   });
 
   test('ACC and PROD are distinguishable even though both run NODE_ENV=production', () => {
-    const acc = loadConfig({ NODE_ENV: 'production', DEPLOYMENT_ENV: 'acc' });
-    const prod = loadConfig({ NODE_ENV: 'production', DEPLOYMENT_ENV: 'prod' });
+    const acc = loadConfig({ NODE_ENV: 'production', DEPLOYMENT_ENV: 'acc', ...CREDENTIALS });
+    const prod = loadConfig({ NODE_ENV: 'production', DEPLOYMENT_ENV: 'prod', ...CREDENTIALS });
 
     expect(acc.displayEnv).toBe('ACC');
     expect(prod.displayEnv).toBe('PROD');
@@ -208,7 +212,13 @@ describe('value parsing', () => {
 describe('validateConfig', () => {
   test('throws outside test runs when required settings are missing', () => {
     expect(() =>
-      loadConfig({ NODE_ENV: 'production', TRIPLYDB_ENDPOINT: '', OPERATON_BASE_URL: '' })
+      loadConfig({
+        NODE_ENV: 'production',
+        OPERATON_USERNAME: 'u',
+        OPERATON_PASSWORD: 'p',
+        TRIPLYDB_ENDPOINT: '',
+        OPERATON_BASE_URL: '',
+      })
     ).toThrow('Missing required configuration: triplydb.endpoint, operaton.baseUrl');
   });
 
@@ -216,6 +226,8 @@ describe('validateConfig', () => {
     expect(() =>
       loadConfig({
         NODE_ENV: 'production',
+        OPERATON_USERNAME: 'u',
+        OPERATON_PASSWORD: 'p',
         TRIPLYDB_ENDPOINT: '',
         OPERATON_BASE_URL: 'http://localhost:8080/engine-rest',
       })
@@ -232,9 +244,52 @@ describe('validateConfig', () => {
     expect(() =>
       loadConfig({
         NODE_ENV: 'production',
+        OPERATON_USERNAME: 'u',
+        OPERATON_PASSWORD: 'p',
         TRIPLYDB_ENDPOINT: 'https://triplydb.example/sparql',
         OPERATON_BASE_URL: 'http://localhost:8080/engine-rest',
       })
+    ).not.toThrow();
+  });
+  // #415 in ronl-business-api: Operaton requires a login on ACC and PROD. LDE ACC
+  // runs NODE_ENV=acceptance, so the tier (DEPLOYMENT_ENV) decides, not NODE_ENV.
+  const DEPLOYED = {
+    TRIPLYDB_ENDPOINT: 'https://triplydb.example/sparql',
+    OPERATON_BASE_URL: 'https://op.example/engine-rest',
+    OPERATON_USERNAME: '',
+    OPERATON_PASSWORD: '',
+  };
+
+  test.each([
+    ['acc', 'acceptance'],
+    ['prod', 'production'],
+  ])('DEPLOYMENT_ENV=%s requires Operaton credentials', (tier, nodeEnv) => {
+    expect(() => loadConfig({ ...DEPLOYED, NODE_ENV: nodeEnv, DEPLOYMENT_ENV: tier })).toThrow(
+      'Missing required configuration: operaton.username, operaton.password'
+    );
+  });
+
+  test('a deployed tier starts once both credentials are set', () => {
+    expect(() =>
+      loadConfig({
+        ...DEPLOYED,
+        NODE_ENV: 'acceptance',
+        DEPLOYMENT_ENV: 'acc',
+        OPERATON_USERNAME: 'ldeBackendAcc',
+        OPERATON_PASSWORD: 'secret',
+      })
+    ).not.toThrow();
+  });
+
+  test('local development starts without Operaton credentials', () => {
+    expect(() =>
+      loadConfig({ ...DEPLOYED, NODE_ENV: 'development', DEPLOYMENT_ENV: 'development' })
+    ).not.toThrow();
+  });
+
+  test('NODE_ENV=test tolerates a deployed tier without credentials', () => {
+    expect(() =>
+      loadConfig({ ...DEPLOYED, NODE_ENV: 'test', DEPLOYMENT_ENV: 'acc' })
     ).not.toThrow();
   });
 });

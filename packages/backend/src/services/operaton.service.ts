@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosInstance } from 'axios';
 import { config } from '../utils/config';
+import { operatonBasicAuth } from '../utils/operaton-auth';
 import logger from '../utils/logger';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { OperatonEvaluationRequest, OperatonEvaluationResponse } from '../types/dmn.types';
@@ -17,13 +18,14 @@ export class OperatonService {
   private client: AxiosInstance;
 
   constructor() {
+    const auth = operatonBasicAuth();
     this.client = axios.create({
       baseURL: config.operaton.baseUrl,
       timeout: config.operaton.timeout,
       headers: {
         'Content-Type': 'application/json',
-        ...(config.operaton.apiKey && { Authorization: `Bearer ${config.operaton.apiKey}` }),
       },
+      ...(auth && { auth }),
     });
 
     // Add request/response interceptors for logging
