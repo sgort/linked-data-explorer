@@ -19,7 +19,8 @@ const configMock = {
   operaton: {
     baseUrl: 'http://localhost:8080/engine-rest',
     timeout: 10000,
-    apiKey: undefined as string | undefined,
+    username: undefined as string | undefined,
+    password: undefined as string | undefined,
   },
 };
 jest.mock('../utils/config', () => ({
@@ -65,7 +66,8 @@ beforeEach(() => {
   client.interceptors.response.use.mockClear();
   mockLogError.mockReset();
   mockLogWarn.mockReset();
-  configMock.operaton.apiKey = undefined;
+  configMock.operaton.username = undefined;
+  configMock.operaton.password = undefined;
 });
 
 describe('construction', () => {
@@ -79,16 +81,18 @@ describe('construction', () => {
     });
   });
 
-  test('adds a bearer header only when an API key is configured', () => {
-    configMock.operaton.apiKey = 'key-1';
+  test('sends basic auth when Operaton credentials are configured (#415)', () => {
+    configMock.operaton.username = 'svc';
+    configMock.operaton.password = 'pw';
 
     new OperatonService();
 
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer key-1' },
-      })
-    );
+    expect(mockCreate).toHaveBeenCalledWith({
+      baseURL: 'http://localhost:8080/engine-rest',
+      timeout: 10000,
+      headers: { 'Content-Type': 'application/json' },
+      auth: { username: 'svc', password: 'pw' },
+    });
   });
 
   test('the request interceptor passes the config through untouched', () => {
@@ -117,6 +121,38 @@ describe('construction', () => {
       message: 'boom',
       response: { detail: 'bad' },
     });
+  });
+});
+
+describe('caller values cannot walk to another engine endpoint (#415 in ronl-business-api)', () => {
+  // The client runs as an operaton-admin account and these routes are
+  // anonymous; Express has already decoded "%2F" and "%3F" into "/" and "?".
+  const EVIL = '../../process-instance?x=';
+  const paths = () => [...mockGet.mock.calls, ...mockPost.mock.calls].map((c) => String(c[0]));
+  const expectContained = () => {
+    expect(paths().length).toBeGreaterThan(0);
+    for (const p of paths()) {
+      expect(p).not.toContain('/../');
+      expect(p).not.toContain('?');
+    }
+  };
+
+  test('evaluateRaw', async () => {
+    mockPost.mockResolvedValue({ status: 200, data: [] });
+    await new OperatonService().evaluateRaw(EVIL, {}).catch(() => undefined);
+    expectContained();
+  });
+
+  test('evaluateDecision', async () => {
+    mockPost.mockResolvedValue({ data: [] });
+    await new OperatonService().evaluateDecision(EVIL, {}).catch(() => undefined);
+    expectContained();
+  });
+
+  test('fetchDmnXml', async () => {
+    mockGet.mockResolvedValue({ data: { id: 'd:1:x', dmnXml: '<definitions/>' } });
+    await new OperatonService().fetchDmnXml(EVIL).catch(() => undefined);
+    expectContained();
   });
 });
 

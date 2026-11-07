@@ -4,6 +4,7 @@
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { config } from '../utils/config';
+import { operatonBasicAuth } from '../utils/operaton-auth';
 import { logger } from '../utils/logger';
 import { sparqlService } from '../services/sparql.service';
 import { shaclValidationService, ShaclLayerStatus } from '../services/shacl-validation.service';
@@ -102,8 +103,12 @@ router.get('/', async (_req: Request, res: Response) => {
     // Check Operaton connection
     const operatonStart = Date.now();
     try {
+      // /version needs the engine login like everything outside the public
+      // rules (#415 in ronl-business-api).
+      const auth = operatonBasicAuth();
       await axios.get(`${config.operaton.baseUrl}/version`, {
         timeout: config.operaton.timeout || 5000,
+        ...(auth && { auth }),
       });
       healthCheck.services.operaton.status = 'up';
       healthCheck.services.operaton.latency = Date.now() - operatonStart;

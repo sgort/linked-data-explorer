@@ -24,6 +24,7 @@ import { shaclValidationService } from '../services/shacl-validation.service';
 import { getBuildInfo } from '../utils/buildInfo';
 import { logger } from '../utils/logger';
 import healthRoutes from './health.routes';
+import { config } from '../utils/config';
 import { expectToMatchOperation } from '../openapi/testing/conformance';
 import packageJson from '../../package.json';
 
@@ -81,6 +82,24 @@ describe('GET /v1/health', () => {
     expect(res.body.services.operaton.status).toBe('up');
     expect(res.headers['api-version']).toBeDefined();
     expectToMatchOperation(res, 'get', '/health');
+  });
+
+  test('probes Operaton with the configured credentials (#415 in ronl-business-api)', async () => {
+    mockHealthCheck.mockResolvedValue({ status: 'up', latency: 1 });
+    mockAxiosGet.mockResolvedValue({ status: 200 });
+    config.operaton.username = 'svc';
+    config.operaton.password = 'pw';
+    try {
+      await request(makeApp()).get('/v1/health');
+    } finally {
+      delete config.operaton.username;
+      delete config.operaton.password;
+    }
+
+    expect(mockAxiosGet).toHaveBeenCalledWith(
+      expect.stringMatching(/\/version$/),
+      expect.objectContaining({ auth: { username: 'svc', password: 'pw' } })
+    );
   });
 
   test('returns 503 degraded when TriplyDB reports down', async () => {

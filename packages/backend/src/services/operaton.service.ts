@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosInstance } from 'axios';
 import { config } from '../utils/config';
+import { operatonBasicAuth } from '../utils/operaton-auth';
 import logger from '../utils/logger';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { OperatonEvaluationRequest, OperatonEvaluationResponse } from '../types/dmn.types';
@@ -9,6 +10,7 @@ import FormData from 'form-data';
 // Required for fs.writeFileSync that's kept for potential future debugging
 // import * as fs from 'fs';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
+import { engineSegment } from '../utils/engine-segment';
 
 /**
  * Service for interacting with Operaton REST API
@@ -17,13 +19,14 @@ export class OperatonService {
   private client: AxiosInstance;
 
   constructor() {
+    const auth = operatonBasicAuth();
     this.client = axios.create({
       baseURL: config.operaton.baseUrl,
       timeout: config.operaton.timeout,
       headers: {
         'Content-Type': 'application/json',
-        ...(config.operaton.apiKey && { Authorization: `Bearer ${config.operaton.apiKey}` }),
       },
+      ...(auth && { auth }),
     });
 
     // Add request/response interceptors for logging
@@ -72,9 +75,12 @@ export class OperatonService {
 
       logger.info(`Evaluating DMN: ${decisionKey}`, { variables: operatonVariables });
 
-      const response = await this.client.post(`/decision-definition/key/${decisionKey}/evaluate`, {
-        variables: operatonVariables,
-      });
+      const response = await this.client.post(
+        `/decision-definition/key/${engineSegment(decisionKey)}/evaluate`,
+        {
+          variables: operatonVariables,
+        }
+      );
 
       const duration = Date.now() - startTime;
       logger.info(`DMN evaluation completed: ${decisionKey}`, { duration });
@@ -118,9 +124,12 @@ export class OperatonService {
     decisionKey: string,
     operatonVariables: Record<string, unknown>
   ): Promise<OperatonEvaluationResponse | OperatonEvaluationResponse[]> {
-    const response = await this.client.post(`/decision-definition/key/${decisionKey}/evaluate`, {
-      variables: operatonVariables,
-    });
+    const response = await this.client.post(
+      `/decision-definition/key/${engineSegment(decisionKey)}/evaluate`,
+      {
+        variables: operatonVariables,
+      }
+    );
     return response.data;
   }
 
@@ -262,7 +271,7 @@ export class OperatonService {
       logger.info('Fetching DMN XML from Operaton', { definitionKey });
 
       // Step 1: Get the latest decision definition for this key
-      const definitionsUrl = `/decision-definition/key/${definitionKey}`;
+      const definitionsUrl = `/decision-definition/key/${engineSegment(definitionKey)}`;
 
       logger.debug('Fetching decision definition', { url: definitionsUrl });
 
@@ -278,7 +287,7 @@ export class OperatonService {
       });
 
       // Step 2: Fetch the DMN XML using the definition ID
-      const xmlUrl = `/decision-definition/${decisionDefinitionId}/xml`;
+      const xmlUrl = `/decision-definition/${engineSegment(decisionDefinitionId)}/xml`;
 
       logger.debug('Fetching DMN XML', { url: xmlUrl });
 
