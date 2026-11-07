@@ -6286,6 +6286,36 @@ components:
         vendorCount:
           type: integer
           minimum: 0
+        requires:
+          type: array
+          description: >-
+            Services this DMN's public service depends on (`dct:requires`).
+            Context only; the order of execution lives in the BPMN. Left out
+            when there are none.
+          items:
+            $ref: '#/components/schemas/ServiceLink'
+        requiredBy:
+          type: array
+          description: >-
+            Services on the same endpoint that depend on this DMN's public
+            service, derived from their `dct:requires`. Left out when there are
+            none.
+          items:
+            $ref: '#/components/schemas/ServiceLink'
+    ServiceLink:
+      type: object
+      description: The other end of a `dct:requires` link between two public services.
+      required: [service]
+      properties:
+        service:
+          type: string
+          description: IRI of the public service.
+        title:
+          type: string
+          description: The service's `dct:title`, when published.
+        dmnIdentifier:
+          type: string
+          description: Identifier of that service's DMN, when it is in the same list.
     DmnVariable:
       type: object
       required: [identifier, title, type]

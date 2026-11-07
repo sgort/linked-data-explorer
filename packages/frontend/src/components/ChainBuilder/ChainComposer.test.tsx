@@ -275,6 +275,29 @@ describe('ChainComposer', () => {
     expect(screen.getByText('SVB')).toBeTruthy();
   });
 
+  test('shows the requires / required by links of a chained DMN (ttl-editor#223)', () => {
+    renderChain([
+      dmn({
+        identifier: 'RechtOpSubsidieThuisbatterij',
+        requiredBy: [
+          {
+            service: 'https://regels.overheid.nl/services/hoogte-subsidie-thuisbatterij-flevoland',
+            dmnIdentifier: 'BehaalbareHoogteSubsidie',
+          },
+        ],
+      }),
+      dmn({ id: 'd2', identifier: 'age-check' }),
+    ]);
+
+    const lines = screen.getAllByText('Required by:', { exact: false });
+    expect(lines).toHaveLength(1);
+    expect(lines[0].parentElement?.textContent).toBe('Required by: BehaalbareHoogteSubsidie');
+    // The label is styled like the card's other labels ("Definition Key:" …).
+    expect(lines[0].className).toContain('font-medium');
+    expect(lines[0].className).toContain('text-slate-600');
+    expect(screen.queryByText('Requires:', { exact: false })).toBeNull();
+  });
+
   test('hides a logo that fails to load', () => {
     renderChain([dmn({ logoUrl: 'https://cdn.example.org/broken.png' })]);
 

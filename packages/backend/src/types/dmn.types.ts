@@ -11,6 +11,17 @@ export interface DmnVariable {
   testValue?: string | number | boolean;
 }
 
+/**
+ * The other end of a dct:requires link between two public services
+ * (sgort/ttl-editor#223). `dmnIdentifier` is set only when that service has a
+ * DMN in the same list.
+ */
+export interface ServiceLink {
+  service: string; // Service URI
+  title?: string; // Service dct:title
+  dmnIdentifier?: string; // Identifier of that service's DMN, when listed
+}
+
 export interface DmnModel {
   id: string;
   identifier: string;
@@ -39,6 +50,10 @@ export interface DmnModel {
 
   // NEW: Vendor implementation count
   vendorCount?: number; // Number of vendor implementations available
+
+  // Service dependencies (dct:requires), display only. Left out when empty.
+  requires?: ServiceLink[]; // Services this DMN's service dct:requires
+  requiredBy?: ServiceLink[]; // Services that dct:require this DMN's service (derived)
 }
 
 export interface ChainLink {

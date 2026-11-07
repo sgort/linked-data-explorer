@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 import { getUserTemplates } from '../../services/userTemplateStorage';
 import { DmnModel } from '../../types';
+import ServiceLinks from '../ServiceLinks/ServiceLinks';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -185,6 +186,14 @@ const DmnTemplateSelector: React.FC<DmnTemplateSelectorProps> = ({
             <div className="text-slate-500 text-[10px] mt-1">
               Combines: {selectedDrd.originalChain.join(' → ')}
             </div>
+          )}
+
+          {!selectedDrd && selectedDmn && (
+            <ServiceLinks
+              requires={selectedDmn.requires}
+              requiredBy={selectedDmn.requiredBy}
+              className="mt-1"
+            />
           )}
 
           <div className="text-slate-500 mt-1 font-mono text-[10px]">

@@ -1,7 +1,8 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
 import { config } from '../utils/config';
 import logger from '../utils/logger';
 import { getErrorMessage } from '../utils/errors';
+import { operatonBasicAuth } from '../utils/operaton-auth';
 import { edocsService } from './edocs.service';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -169,7 +170,7 @@ export class ExternalTaskWorker {
     const response = await axios.post<ExternalTask[]>(
       `${this.operatonBaseUrl}/external-task/fetchAndLock`,
       body,
-      { headers: { 'Content-Type': 'application/json' } }
+      this.requestOptions()
     );
 
     return response.data ?? [];
@@ -289,6 +290,12 @@ export class ExternalTaskWorker {
 
   // ─── Complete / fail ─────────────────────────────────────────────────────────
 
+  /** JSON headers, plus the engine credentials when configured (#415 in ronl-business-api). */
+  private requestOptions(): AxiosRequestConfig {
+    const auth = operatonBasicAuth();
+    return { headers: { 'Content-Type': 'application/json' }, ...(auth && { auth }) };
+  }
+
   private async completeTask(
     taskId: string,
     variables: Record<string, { value: unknown; type: string }>
@@ -296,7 +303,7 @@ export class ExternalTaskWorker {
     await axios.post(
       `${this.operatonBaseUrl}/external-task/${taskId}/complete`,
       { workerId: this.workerId, variables },
-      { headers: { 'Content-Type': 'application/json' } }
+      this.requestOptions()
     );
   }
 
@@ -310,7 +317,7 @@ export class ExternalTaskWorker {
           retries: 0,
           retryTimeout: 0,
         },
-        { headers: { 'Content-Type': 'application/json' } }
+        this.requestOptions()
       );
     } catch (err) {
       // Log but don't re-throw — a failure to report failure should not crash the worker

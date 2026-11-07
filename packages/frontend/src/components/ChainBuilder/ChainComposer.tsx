@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 
 import { DmnModel } from '../../types';
 import { ChainValidation } from '../../types/chainBuilder.types';
+import ServiceLinks from '../ServiceLinks/ServiceLinks';
 import ValidationBadge from './ValidationBadge';
 import VendorBadge from './VendorBadge';
 import VendorModal from './VendorModal';
@@ -209,6 +210,13 @@ const SortableChainItem: React.FC<SortableChainItemProps> = ({
                   </div>
                 )}
               </div>
+
+              <ServiceLinks
+                requires={dmn.requires}
+                requiredBy={dmn.requiredBy}
+                className="mt-2 space-y-1"
+                labelClassName="font-medium text-slate-600"
+              />
 
               <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
                 <span>

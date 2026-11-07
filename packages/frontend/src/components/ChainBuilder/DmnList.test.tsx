@@ -285,4 +285,32 @@ describe('DmnList', () => {
     );
     expect(screen.queryByText('Gevalideerd')).toBeNull();
   });
+
+  test('shows the services a DMN requires, and nothing for a DMN without links (ttl-editor#223)', () => {
+    render(
+      <DmnList
+        dmns={[
+          dmn({
+            id: 'hoogte',
+            identifier: 'BehaalbareHoogteSubsidie',
+            requires: [
+              {
+                service:
+                  'https://regels.overheid.nl/services/recht-op-subsidie-thuisbatterij-flevoland',
+                dmnIdentifier: 'RechtOpSubsidieThuisbatterij',
+              },
+            ],
+          }),
+          dmn({ id: 'plain', identifier: 'age-check' }),
+        ]}
+        usedDmnIds={[]}
+        isLoading={false}
+        endpoint="e"
+      />
+    );
+
+    const lines = screen.getAllByText('Requires:', { exact: false });
+    expect(lines).toHaveLength(1);
+    expect(lines[0].parentElement?.textContent).toBe('Requires: RechtOpSubsidieThuisbatterij');
+  });
 });

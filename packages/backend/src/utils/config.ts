@@ -69,7 +69,9 @@ export const config = {
   operaton: {
     baseUrl: process.env.OPERATON_BASE_URL || '',
     timeout: parseInt(process.env.OPERATON_TIMEOUT || '10000', 10),
-    apiKey: process.env.OPERATON_API_KEY,
+    // #415 in ronl-business-api: the engine requires a login (basic auth).
+    username: process.env.OPERATON_USERNAME,
+    password: process.env.OPERATON_PASSWORD,
   },
 
   outbound: {
@@ -161,6 +163,11 @@ export const config = {
  */
 const validateConfig = () => {
   const required = ['triplydb.endpoint', 'operaton.baseUrl'];
+  // Operaton requires a login on the deployed tiers. LDE ACC runs
+  // NODE_ENV=acceptance, so the tier decides, not NODE_ENV=production.
+  if (['ACC', 'PROD'].includes(config.displayEnv)) {
+    required.push('operaton.username', 'operaton.password');
+  }
   const missing: string[] = [];
 
   required.forEach((key) => {

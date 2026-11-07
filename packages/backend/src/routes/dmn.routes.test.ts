@@ -1125,6 +1125,30 @@ describe('/v1/dmns reads match their OpenAPI description', () => {
     expectToMatchOperation(failed, 'get', '/dmns');
   });
 
+  test('a DMN with requires / requiredBy links still matches (ttl-editor#223)', async () => {
+    sparql.getAllDmns.mockResolvedValue([
+      {
+        ...DMN,
+        service: 'https://regels.overheid.nl/services/hoogte',
+        requires: [
+          {
+            service: 'https://regels.overheid.nl/services/recht',
+            title: 'recht subsidie thuisbatterij',
+            dmnIdentifier: 'RechtOpSubsidieThuisbatterij',
+          },
+          { service: 'https://example.org/services/elsewhere' },
+        ],
+        requiredBy: [{ service: 'https://regels.overheid.nl/services/later' }],
+      },
+    ]);
+
+    const res = await get('');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.dmns[0].requires).toHaveLength(2);
+    expectToMatchOperation(res, 'get', '/dmns');
+  });
+
   test('a non-numeric Integer test value serialises as null, and still matches', async () => {
     sparql.getAllDmns.mockResolvedValue([
       { ...DMN, outputs: [{ identifier: 'x', title: 'X', type: 'Integer', testValue: NaN }] },

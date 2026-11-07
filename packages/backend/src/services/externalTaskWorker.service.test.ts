@@ -10,7 +10,9 @@ jest.mock('./edocs.service', () => ({
   edocsService: { ensureWorkspace: jest.fn(), uploadDocument: jest.fn() },
 }));
 
-const configMock = { operaton: { baseUrl: 'http://localhost:8080/engine-rest' } };
+const configMock: { operaton: { baseUrl: string; username?: string; password?: string } } = {
+  operaton: { baseUrl: 'http://localhost:8080/engine-rest' },
+};
 jest.mock('../utils/config', () => ({
   __esModule: true,
   config: configMock,
@@ -448,6 +450,33 @@ describe('unknown topics', () => {
 
     expect(postsTo('/failure')[0][1].errorMessage).toBe('Unknown topic: some-other-topic');
     expect(postsTo('/complete')).toHaveLength(0);
+  });
+});
+
+describe('Operaton credentials (#415 in ronl-business-api)', () => {
+  afterEach(() => {
+    delete configMock.operaton.username;
+    delete configMock.operaton.password;
+  });
+
+  test('fetchAndLock, complete and failure all send the configured credentials', async () => {
+    configMock.operaton.username = 'svc';
+    configMock.operaton.password = 'pw';
+    mockEnsureWorkspace.mockResolvedValue({
+      workspaceId: 'ws-1',
+      workspaceName: 'n',
+      created: false,
+    });
+
+    await runOneCycle([
+      task('rip-edocs-workspace', strVars({ projectNumber: 'P', projectName: 'N' }), 'ok-1'),
+      task('unknown-topic', strVars({}), 'bad-1'),
+    ]);
+
+    const auth = { username: 'svc', password: 'pw' };
+    expect(postsTo('/fetchAndLock')[0][2]).toEqual(expect.objectContaining({ auth }));
+    expect(postsTo('/complete')[0][2]).toEqual(expect.objectContaining({ auth }));
+    expect(postsTo('/failure')[0][2]).toEqual(expect.objectContaining({ auth }));
   });
 });
 
