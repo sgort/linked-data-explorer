@@ -42,7 +42,11 @@ function loadConfig(overrides: Record<string, string>): Config {
 
 // A deployed tier needs Operaton credentials to load at all (#415 in
 // ronl-business-api); these tests are about the label, so they bring them.
-const CREDENTIALS = { OPERATON_USERNAME: 'u', OPERATON_PASSWORD: 'p' };
+const CREDENTIALS = {
+  OPERATON_USERNAME: 'u',
+  OPERATON_PASSWORD: 'p',
+  KEYCLOAK_URL: 'https://kc.example',
+};
 
 describe('deployment tier label', () => {
   test.each([
@@ -246,6 +250,7 @@ describe('validateConfig', () => {
         NODE_ENV: 'production',
         OPERATON_USERNAME: 'u',
         OPERATON_PASSWORD: 'p',
+        KEYCLOAK_URL: 'https://kc.example',
         TRIPLYDB_ENDPOINT: 'https://triplydb.example/sparql',
         OPERATON_BASE_URL: 'http://localhost:8080/engine-rest',
       })
@@ -258,6 +263,7 @@ describe('validateConfig', () => {
     OPERATON_BASE_URL: 'https://op.example/engine-rest',
     OPERATON_USERNAME: '',
     OPERATON_PASSWORD: '',
+    KEYCLOAK_URL: 'https://kc.example',
   };
 
   test.each([
@@ -291,5 +297,56 @@ describe('validateConfig', () => {
     expect(() =>
       loadConfig({ ...DEPLOYED, NODE_ENV: 'test', DEPLOYMENT_ENV: 'acc' })
     ).not.toThrow();
+  });
+});
+
+describe('sign-in and test deploys (#163)', () => {
+  test('auth defaults to the local Keycloak, realm ronl and the three LDE clients', () => {
+    const config = loadConfig({ KEYCLOAK_URL: '', KEYCLOAK_REALM: '', AUTH_CLIENTS: '' });
+
+    expect(config.auth).toEqual({
+      keycloakUrl: 'http://localhost:8080',
+      realm: 'ronl',
+      clients: ['linked-data-explorer', 'ttl-editor', 'lde-e2e'],
+      role: 'lde-author',
+    });
+  });
+
+  test('a trailing slash on KEYCLOAK_URL is stripped', () => {
+    expect(
+      loadConfig({ KEYCLOAK_URL: 'https://acc.keycloak.open-regels.nl/' }).auth.keycloakUrl
+    ).toBe('https://acc.keycloak.open-regels.nl');
+  });
+
+  test('AUTH_CLIENTS is a comma-separated list, trimmed', () => {
+    expect(loadConfig({ AUTH_CLIENTS: 'a, b' }).auth.clients).toEqual(['a', 'b']);
+  });
+
+  test('test deploys are off unless TEST_DEPLOY_ENABLED is exactly "true"', () => {
+    expect(loadConfig({ TEST_DEPLOY_ENABLED: '' }).testDeploy.enabled).toBe(false);
+    expect(loadConfig({ TEST_DEPLOY_ENABLED: '1' }).testDeploy.enabled).toBe(false);
+    expect(loadConfig({ TEST_DEPLOY_ENABLED: 'true' }).testDeploy).toEqual({
+      enabled: true,
+      tenantId: 'TestOnly',
+      ttlHours: 48,
+      maxPerHour: 10,
+    });
+  });
+
+  test.each([
+    ['acc', 'acceptance'],
+    ['prod', 'production'],
+  ])('DEPLOYMENT_ENV=%s requires KEYCLOAK_URL', (tier, nodeEnv) => {
+    expect(() =>
+      loadConfig({
+        TRIPLYDB_ENDPOINT: 'https://triplydb.example/sparql',
+        OPERATON_BASE_URL: 'https://op.example/engine-rest',
+        OPERATON_USERNAME: 'u',
+        OPERATON_PASSWORD: 'p',
+        KEYCLOAK_URL: '',
+        NODE_ENV: nodeEnv,
+        DEPLOYMENT_ENV: tier,
+      })
+    ).toThrow('Missing required configuration: auth.keycloakUrl');
   });
 });

@@ -74,6 +74,37 @@ export const config = {
     password: process.env.OPERATON_PASSWORD,
   },
 
+  /**
+   * Sign-in for the state-changing routes (#163): Keycloak access tokens from
+   * realm `ronl`, issued to one of `clients`, carrying the realm role `role`.
+   * A deployed tier must name its Keycloak; localhost defaults to the local one.
+   */
+  auth: {
+    keycloakUrl: (
+      process.env.KEYCLOAK_URL ||
+      (['ACC', 'PROD'].includes(formatDeploymentEnv(rawDeploymentEnv))
+        ? ''
+        : 'http://localhost:8080')
+    ).replace(/\/+$/, ''),
+    realm: process.env.KEYCLOAK_REALM || 'ronl',
+    clients: (process.env.AUTH_CLIENTS || 'linked-data-explorer,ttl-editor,lde-e2e')
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean),
+    role: 'lde-author' as const,
+  },
+
+  /**
+   * Anonymous test deploys to tenant TestOnly (#163). Localhost and ACC only:
+   * off unless TEST_DEPLOY_ENABLED is exactly 'true', so PROD stays off.
+   */
+  testDeploy: {
+    enabled: process.env.TEST_DEPLOY_ENABLED === 'true',
+    tenantId: 'TestOnly' as const,
+    ttlHours: 48,
+    maxPerHour: 10,
+  },
+
   outbound: {
     /** Admit http: and internal addresses for SPARQL endpoints. Local development only. */
     allowLocalEndpoints: process.env.ALLOW_LOCAL_ENDPOINTS === 'true',
@@ -166,7 +197,7 @@ const validateConfig = () => {
   // Operaton requires a login on the deployed tiers. LDE ACC runs
   // NODE_ENV=acceptance, so the tier decides, not NODE_ENV=production.
   if (['ACC', 'PROD'].includes(config.displayEnv)) {
-    required.push('operaton.username', 'operaton.password');
+    required.push('operaton.username', 'operaton.password', 'auth.keycloakUrl');
   }
   const missing: string[] = [];
 
