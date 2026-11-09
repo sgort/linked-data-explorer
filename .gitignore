@@ -77,3 +77,6 @@ flattened
 # appear at the repo root and under any directory a scan was run from. Local
 # tooling state, not project config.
 .semgrep/
+
+# Brainstorming companion mockups (superpowers), local scratch.
+.superpowers/
