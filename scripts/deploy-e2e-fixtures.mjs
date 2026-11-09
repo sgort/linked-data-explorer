@@ -44,10 +44,21 @@
  *   node scripts/deploy-e2e-fixtures.mjs
  *   npm run e2e:deploy-fixtures
  *
- * Environment (all optional):
- *   LDE_URL          this repo's backend     default http://localhost:3001
- *   TTL_EDITOR_REPO  ttl-editor (zorgtoeslag default ../ttl-editor
- *                    rules set)
+ * Environment:
+ *   LDE_URL                this repo's backend   default http://localhost:3001
+ *   TTL_EDITOR_REPO        ttl-editor (zorgtoeslag default ../ttl-editor
+ *                          rules set)
+ *   KEYCLOAK_URL           realm ronl's Keycloak  default http://localhost:8080
+ *   LDE_E2E_USERNAME       e2e account            default lde-e2e
+ *   LDE_E2E_PASSWORD       its password           required
+ *   LDE_E2E_CLIENT_SECRET  client lde-e2e secret  required
+ *
+ * Deploying needs a sign-in (#163): the script gets a token for the lde-e2e
+ * account (realm role lde-author) from the confidential client lde-e2e, created
+ * by ronl-business-api's scripts/keycloak-add-lde-clients.sh --with-e2e. Without
+ * one, POST /v1/dmns/deploy would make an anonymous TestOnly test deploy
+ * instead of the untenanted one the E2E gate needs. The two secrets are never
+ * printed.
  *
  * Exit code 0 when everything deployed, 1 on the first failure.
  */
@@ -65,6 +76,9 @@ const TTL_EDITOR_REPO = resolve(
   process.env.TTL_EDITOR_REPO ?? "../ttl-editor",
 );
 const FIXTURES = join(REPO_ROOT, "e2e-fixtures");
+const KEYCLOAK_URL = (
+  process.env.KEYCLOAK_URL ?? "http://localhost:8080"
+).replace(/\/+$/, "");
 
 /**
  * Where the manifest's `sharedDecisions.external` decisions come from. The
@@ -101,12 +115,65 @@ function readJson(path) {
   }
 }
 
+let tokenPromise = null;
+
+/** A token for the lde-e2e account (realm role lde-author), fetched once. */
+async function getE2eToken() {
+  const password = process.env.LDE_E2E_PASSWORD;
+  const secret = process.env.LDE_E2E_CLIENT_SECRET;
+  const missing = [
+    !password && "LDE_E2E_PASSWORD",
+    !secret && "LDE_E2E_CLIENT_SECRET",
+  ].filter(Boolean);
+  if (missing.length) {
+    fail(
+      `Deploying needs a sign-in (#163): set ${missing.join(" and ")} for the lde-e2e account.`,
+    );
+  }
+  const form = new URLSearchParams({
+    grant_type: "password",
+    client_id: "lde-e2e",
+    client_secret: secret,
+    username: process.env.LDE_E2E_USERNAME ?? "lde-e2e",
+    password,
+    scope: "openid",
+  });
+  let res;
+  try {
+    res = await fetch(
+      `${KEYCLOAK_URL}/realms/ronl/protocol/openid-connect/token`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form,
+      },
+    );
+  } catch (err) {
+    fail(
+      `Keycloak not reachable at ${KEYCLOAK_URL} (${err.cause?.code ?? err.message}).`,
+    );
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.access_token) {
+    fail(
+      `Sign-in as lde-e2e failed: ${data.error_description ?? data.error ?? `HTTP ${res.status}`}`,
+    );
+  }
+  return data.access_token;
+}
+
 async function ldeRequest(method, path, body) {
   let res;
+  const headers = {};
+  if (body) headers["Content-Type"] = "application/json";
+  if (method !== "GET") {
+    tokenPromise ??= getE2eToken();
+    headers.Authorization = `Bearer ${await tokenPromise}`;
+  }
   try {
     res = await fetch(`${LDE_URL}${path}`, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers,
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch (err) {
@@ -274,6 +341,10 @@ function buildProcessDeploy(tenant, entry) {
 
 async function main() {
   const manifest = readJson(join(FIXTURES, "manifest.json"));
+
+  // Sign in first: missing credentials fail before anything is contacted.
+  tokenPromise = getE2eToken();
+  await tokenPromise;
 
   const operatonUrl = await assertLocalTarget();
   const operatonVersion = await assertOperatonUp(operatonUrl);
