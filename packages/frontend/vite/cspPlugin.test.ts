@@ -26,6 +26,17 @@ describe('buildCspConfig', () => {
     );
   });
 
+  test('with Keycloak, admits the silent session check frame (#163)', () => {
+    const csp = buildCspConfig(ACC_API_BASE_URL, 'https://acc.keycloak.open-regels.nl')
+      .globalHeaders['Content-Security-Policy-Report-Only'];
+
+    // keycloak-js frames Keycloak, which redirects the frame back to the app's
+    // own /silent-check-sso.html: both ends must be allowed.
+    expect(csp).toContain("frame-src 'self' https://acc.keycloak.open-regels.nl;");
+    expect(csp).toContain("frame-ancestors 'self';");
+    expect(csp).not.toContain("frame-ancestors 'none'");
+  });
+
   test('refuses a Keycloak URL that is not absolute (#163)', () => {
     expect(() => buildCspConfig(ACC_API_BASE_URL, 'keycloak')).toThrow(/VITE_KEYCLOAK_URL/);
   });

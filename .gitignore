@@ -33,6 +33,10 @@ coverage
 # Hand-authored Jest config (not generated output) — keep tracked
 !packages/backend/jest.config.js
 
+# Hand-authored static scripts of the sign-in popup and session check (#163),
+# served as-is from public/ (inline scripts would break the CSP) — keep tracked
+!packages/frontend/public/*.js
+
 # Hand-authored build configs (not generated output) — keep tracked. Without
 # these the frontend builds locally and ships unstyled from CI, since the
 # *.js rule above would leave both files behind (#96).

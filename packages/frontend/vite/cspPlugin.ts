@@ -80,7 +80,12 @@ export function buildCspConfig(apiBaseUrl: string, keycloakUrl?: string): CspCon
     // logoResolver then uses for <img src> as-is.
     "img-src 'self' data: https://open-regels.triply.cc https://api.open-regels.triply.cc",
     `connect-src 'self' ${origin}${keycloakOrigin ? ` ${keycloakOrigin}` : ''}`,
-    "frame-ancestors 'none'",
+    // #163: the silent check-sso frames Keycloak, which redirects the frame to
+    // the app's own /silent-check-sso.html -- so the app frames itself, and
+    // only itself. Without Keycloak nothing is framed.
+    ...(keycloakOrigin
+      ? [`frame-src 'self' ${keycloakOrigin}`, "frame-ancestors 'self'"]
+      : ["frame-ancestors 'none'"]),
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
