@@ -317,7 +317,13 @@ paths:
                 updatedAt:
                   type: string
                   format: date-time
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: The process definition was created or updated. The response carries no data.
           headers:
@@ -484,7 +490,13 @@ paths:
           description: The storage id (`lde_id`) to delete.
           schema:
             type: string
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: >-
             The delete ran. The response carries no data and does not say
@@ -575,7 +587,13 @@ paths:
                     field here, which always overwrites. When present, must
                     be either empty (opts the process out of a board tag) or
                     a lowercase slug such as `caseworker`/`infra-board`.
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: The deployment was recorded. The response carries no data.
           headers:
@@ -736,7 +754,13 @@ paths:
                 updatedAt:
                   type: string
                   format: date-time
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: The form schema was created or updated. The response carries no data.
           headers:
@@ -800,7 +824,13 @@ paths:
           description: The storage id to delete.
           schema:
             type: string
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: >-
             The delete ran. The response carries no data and does not say
@@ -958,7 +988,13 @@ paths:
                 updatedAt:
                   type: string
                   format: date-time
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: The document template was created or updated. The response carries no data.
           headers:
@@ -1023,7 +1059,13 @@ paths:
           description: The storage id to delete.
           schema:
             type: string
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: >-
             The delete ran. The response carries no data and does not say
@@ -1218,7 +1260,13 @@ paths:
                         type: boolean
                       sortOrder:
                         type: integer
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: >-
             The record was created or updated. The response carries only
@@ -1360,7 +1408,13 @@ paths:
           schema:
             type: string
             format: uuid
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: >-
             The delete ran. The response carries no data and does not say
@@ -1448,7 +1502,13 @@ paths:
           description: SPARQL endpoint URL whose cache to clear. Omitted or empty clears all.
           schema:
             type: string
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: The cache was cleared.
           headers:
@@ -1814,7 +1874,13 @@ paths:
                 graphName:
                   type: string
                   description: Echoed back in the response when given.
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: The service was updated.
           headers:
@@ -2443,7 +2509,13 @@ paths:
                     type: string
                 deploymentName:
                   type: string
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: The DRD was deployed.
           headers:
@@ -2585,7 +2657,13 @@ paths:
                     empty string leaves it unset. A non-empty value must be a
                     lowercase slug (`^[a-z0-9]+(?:-[a-z0-9]+)*$`, e.g.
                     `caseworker`, `infra-board`) — anything else answers 400.
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: The bundle was deployed.
           headers:
@@ -2714,7 +2792,13 @@ paths:
                 filename:
                   type: string
                   description: Defaults to `<deploymentName>.dmn` when missing or blank.
+      security:
+        - bearerAuth: []
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '200':
           description: The DMN was deployed.
           headers:
@@ -5451,6 +5535,28 @@ paths:
                       instance: '/v1/vendors/dmn/SVB_LeeftijdsInformatie',
                     }
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        A Keycloak access token from realm `ronl`, issued to the LDE frontend
+        (`linked-data-explorer`), ttl-editor (`ttl-editor`) or the e2e client
+        (`lde-e2e`), carrying the realm role `lde-author` (#163).
+  responses:
+    Unauthenticated:
+      description: No sign-in, or the token is invalid or expired (code UNAUTHENTICATED).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: Signed in without the role lde-author (code FORBIDDEN).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
   headers:
     ApiVersion:
       description: Full release version of the API (/core/version-header).

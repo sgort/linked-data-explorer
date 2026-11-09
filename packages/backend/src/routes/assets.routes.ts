@@ -19,6 +19,7 @@ import logger from '../utils/logger';
 import pool from '../db/pool';
 import { sendProblem } from '../utils/problem';
 import { asRecord, checkBoardOwner, checkField, FieldErrors } from '../utils/validation';
+import { requireAuthor } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -137,7 +138,7 @@ router.get('/bpmn', async (_req: Request, res: Response) => {
   }
 });
 
-router.post('/bpmn', async (req: Request, res: Response) => {
+router.post('/bpmn', requireAuthor, async (req: Request, res: Response) => {
   if (!dbRequired(req, res)) return;
   const errors = validateBpmnUpsert(asRecord(req.body));
   if (errors.length > 0) {
@@ -168,7 +169,7 @@ router.post('/bpmn', async (req: Request, res: Response) => {
   }
 });
 
-router.delete('/bpmn/:id', async (req: Request, res: Response) => {
+router.delete('/bpmn/:id', requireAuthor, async (req: Request, res: Response) => {
   if (!dbRequired(req, res)) return;
   try {
     await deleteBpmn(req.params.id);
@@ -179,7 +180,7 @@ router.delete('/bpmn/:id', async (req: Request, res: Response) => {
   }
 });
 
-router.patch('/bpmn/:id/deploy', async (req: Request, res: Response) => {
+router.patch('/bpmn/:id/deploy', requireAuthor, async (req: Request, res: Response) => {
   if (!dbRequired(req, res)) return;
   const deployErrors = validateBpmnDeploy(asRecord(req.body));
   if (deployErrors.length > 0) {
@@ -265,7 +266,7 @@ router.get('/forms', async (_req: Request, res: Response) => {
   }
 });
 
-router.post('/forms', async (req: Request, res: Response) => {
+router.post('/forms', requireAuthor, async (req: Request, res: Response) => {
   if (!dbRequired(req, res)) return;
   const errors = validateFormUpsert(asRecord(req.body));
   if (errors.length > 0) {
@@ -281,7 +282,7 @@ router.post('/forms', async (req: Request, res: Response) => {
   }
 });
 
-router.delete('/forms/:id', async (req: Request, res: Response) => {
+router.delete('/forms/:id', requireAuthor, async (req: Request, res: Response) => {
   if (!dbRequired(req, res)) return;
   try {
     await deleteForm(req.params.id);
@@ -304,7 +305,7 @@ router.get('/documents', async (_req: Request, res: Response) => {
   }
 });
 
-router.post('/documents', async (req: Request, res: Response) => {
+router.post('/documents', requireAuthor, async (req: Request, res: Response) => {
   if (!dbRequired(req, res)) return;
   const errors = validateDocumentUpsert(asRecord(req.body));
   if (errors.length > 0) {
@@ -320,7 +321,7 @@ router.post('/documents', async (req: Request, res: Response) => {
   }
 });
 
-router.delete('/documents/:id', async (req: Request, res: Response) => {
+router.delete('/documents/:id', requireAuthor, async (req: Request, res: Response) => {
   if (!dbRequired(req, res)) return;
   try {
     await deleteDocument(req.params.id);

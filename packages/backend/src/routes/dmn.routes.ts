@@ -13,6 +13,7 @@ import { sendProblem } from '../utils/problem';
 import { refuseOptionalEndpoint, refuseTarget, checkOperatonTarget } from '../utils/outboundUrl';
 import { config } from '../utils/config';
 import { asRecord, checkBoardOwner } from '../utils/validation';
+import { requireAuthor } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -169,7 +170,7 @@ router.get('/cycles', async (req: Request, res: Response) => {
  * Assemble and deploy a DRD from an ordered chain of DMN identifiers.
  * Body: { dmnIds: string[], deploymentName: string }
  */
-router.post('/drd/deploy', async (req: Request, res: Response) => {
+router.post('/drd/deploy', requireAuthor, async (req: Request, res: Response) => {
   try {
     const { dmnIds, deploymentName } = req.body as {
       dmnIds: string[];
@@ -234,7 +235,7 @@ router.post('/drd/deploy', async (req: Request, res: Response) => {
  *   forms: { id: string, schema: Record<string, unknown> }[]
  * }
  */
-router.post('/process/deploy', async (req: Request, res: Response) => {
+router.post('/process/deploy', requireAuthor, async (req: Request, res: Response) => {
   try {
     const {
       bpmnXml,
@@ -427,7 +428,7 @@ router.get('/process/deploy-target', (req: Request, res: Response) => {
  *
  * Body: { xml: string, deploymentName: string, filename?: string }
  */
-router.post('/deploy', async (req: Request, res: Response) => {
+router.post('/deploy', requireAuthor, async (req: Request, res: Response) => {
   try {
     const { xml, deploymentName, filename } = req.body as {
       xml: string;
