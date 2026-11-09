@@ -1,4 +1,5 @@
 import { BpmnProcess } from '../types';
+import { authHeaders, getAuthState } from './auth';
 
 const STORAGE_KEY = 'linkedDataExplorer_bpmnProcesses';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -14,6 +15,8 @@ export interface ProcessIdConflict {
 export interface SaveOutcome {
   saved: boolean;
   conflict?: ProcessIdConflict;
+  /** Saved while signed out: kept in this browser only (#163). */
+  localOnly?: boolean;
 }
 
 export class BpmnService {
@@ -50,10 +53,17 @@ export class BpmnService {
 
     if (process.readonly) return { saved: true };
 
+    // #163: without lde-author the shared library refuses the write, so the
+    // process stays in this browser, marked, until an author saves it again.
+    if (!getAuthState().isAuthor) {
+      this.setLocalOnly(process.id, true);
+      return { saved: true, localOnly: true };
+    }
+
     try {
       const res = await fetch(`${API_BASE}/v1/assets/bpmn`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           id: process.id,
           bpmnProcessId: process.bpmnProcessId ?? 'unknown',
@@ -88,6 +98,7 @@ export class BpmnService {
         }
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      this.setLocalOnly(process.id, false);
       return { saved: true };
     } catch (err) {
       console.warn('[BpmnService] Background save failed:', err);
@@ -105,13 +116,41 @@ export class BpmnService {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(processes));
   }
 
+  /**
+   * Signed out (#163), only a process kept in this browser can be deleted; a
+   * shared one is left alone (the UI locks its Delete).
+   */
   static deleteProcess(processId: string): void {
-    const processes = this.getProcesses().filter((p) => p.id !== processId);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(processes));
+    const all = this.getProcesses();
+    const target = all.find((p) => p.id === processId);
+    const isAuthor = getAuthState().isAuthor;
+    if (!isAuthor && !target?.localOnly) {
+      console.warn('[BpmnService] Delete refused: sign in to delete a shared process');
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all.filter((p) => p.id !== processId)));
+    if (!isAuthor) return;
 
-    fetch(`${API_BASE}/v1/assets/bpmn/${processId}`, { method: 'DELETE' }).catch((err) =>
-      console.warn('[BpmnService] Background delete failed:', err)
-    );
+    void (async () => {
+      try {
+        await fetch(`${API_BASE}/v1/assets/bpmn/${processId}`, {
+          method: 'DELETE',
+          headers: await authHeaders(),
+        });
+      } catch (err) {
+        console.warn('[BpmnService] Background delete failed:', err);
+      }
+    })();
+  }
+
+  /** Marks or unmarks a stored process as kept in this browser only. */
+  private static setLocalOnly(processId: string, on: boolean): void {
+    const processes = this.getProcesses().map((p) => {
+      if (p.id !== processId) return p;
+      const { localOnly: _old, ...rest } = p;
+      return on ? { ...rest, localOnly: true } : rest;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(processes));
   }
 
   static getProcess(processId: string): BpmnProcess | null {
@@ -124,8 +163,12 @@ export class BpmnService {
       const res = await fetch(`${API_BASE}/v1/assets/bpmn`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { data } = (await res.json()) as { data: BpmnProcess[] };
-      const examples = this.getProcesses().filter((p) => p.readonly);
-      const merged = [...examples, ...data];
+      const local = this.getProcesses();
+      const examples = local.filter((p) => p.readonly);
+      // #163: keep what was saved signed out, unless the server has that id.
+      const serverIds = new Set(data.map((p) => p.id));
+      const localOnly = local.filter((p) => p.localOnly && !serverIds.has(p.id));
+      const merged = [...examples, ...data, ...localOnly];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
       return merged;
     } catch (err) {

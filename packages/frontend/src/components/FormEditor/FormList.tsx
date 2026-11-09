@@ -1,12 +1,22 @@
-import { ChevronDown, ChevronRight, LayoutTemplate, Plus, Trash2, Upload } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  LayoutTemplate,
+  Lock,
+  Plus,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import React, { useMemo, useRef, useState } from 'react';
 
+import { useDeleteLock } from '../../hooks/useAuth';
 import { FormSchema } from '../../types';
 import ArtefactListToolbar, {
   filterArtefacts,
   LanguageFilter,
 } from '../common/ArtefactListToolbar';
 import LanguageSelector, { LanguageCode } from '../common/LanguageSelector';
+import { LocalOnlyBadge, LocalSaveNotice } from '../common/LocalOnly';
 import OrganizationSelector from '../common/OrganizationSelector';
 import StatusBadge from '../common/StatusBadge';
 
@@ -49,6 +59,7 @@ const FormList: React.FC<FormListProps> = ({
   onLanguageChange,
   onOrganizationChange,
 }) => {
+  const deleteLock = useDeleteLock();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [search, setSearch] = useState('');
@@ -182,6 +193,7 @@ const FormList: React.FC<FormListProps> = ({
             <div className="flex items-center gap-2">
               <h3 className="font-medium text-slate-800 text-sm">{form.name}</h3>
               <StatusBadge status={form.status} />
+              {form.localOnly && <LocalOnlyBadge />}
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {new Date(form.updatedAt).toLocaleDateString()}
@@ -193,15 +205,15 @@ const FormList: React.FC<FormListProps> = ({
             e.stopPropagation();
             onDeleteForm(form.id);
           }}
-          disabled={form.readonly}
+          disabled={form.readonly || deleteLock(form).locked}
           className={`p-1 rounded transition-colors ${
-            form.readonly
+            form.readonly || deleteLock(form).locked
               ? 'text-slate-300 cursor-not-allowed'
               : 'hover:bg-red-100 text-slate-400 hover:text-red-600'
           }`}
-          title={form.readonly ? 'Cannot delete example' : 'Delete form'}
+          title={form.readonly ? 'Cannot delete example' : (deleteLock(form).hint ?? 'Delete form')}
         >
-          <Trash2 size={14} />
+          {deleteLock(form).locked ? <Lock size={14} aria-hidden="true" /> : <Trash2 size={14} />}
         </button>
       </div>
     </div>
@@ -251,6 +263,7 @@ const FormList: React.FC<FormListProps> = ({
       />
 
       <div className="flex-1 overflow-y-auto p-2 space-y-3">
+        <LocalSaveNotice />
         {forms.length === 0 ? (
           <div className="text-center py-8 text-slate-400">
             <LayoutTemplate size={32} className="mx-auto mb-2 opacity-50" />

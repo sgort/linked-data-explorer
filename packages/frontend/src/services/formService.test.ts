@@ -3,6 +3,24 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
+// #163: signed in as an lde-author unless a test says otherwise.
+const authMock = vi.hoisted(() => ({
+  state: { ready: true, signedIn: true, isAuthor: true, name: 'Test' } as {
+    ready: boolean;
+    signedIn: boolean;
+    isAuthor: boolean;
+    name?: string;
+  },
+}));
+vi.mock('./auth', () => ({
+  getAuthState: () => authMock.state,
+  subscribe: () => () => undefined,
+  authHeaders: async (): Promise<Record<string, string>> =>
+    authMock.state.isAuthor ? { Authorization: 'Bearer test-token' } : {},
+}));
+const AUTHOR = { ready: true, signedIn: true, isAuthor: true, name: 'Test' };
+const SIGNED_OUT = { ready: true, signedIn: false, isAuthor: false };
+
 import { FormSchema } from '../types';
 import { FormService } from './formService';
 
@@ -118,5 +136,67 @@ describe('FormService.hydrateFromServer', () => {
     server.use(http.get('*/v1/assets/forms', () => new HttpResponse(null, { status: 500 })));
 
     expect(await FormService.hydrateFromServer()).toEqual([form()]);
+  });
+});
+
+describe('FormService — saving signed out keeps it in this browser (#163)', () => {
+  afterEach(() => {
+    authMock.state = AUTHOR;
+  });
+
+  test('a signed-out save does not call the backend and marks it local-only', () => {
+    authMock.state = SIGNED_OUT;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockClear();
+    expect(FormService.saveForm(form())).toEqual({ localOnly: true });
+    expect(FormService.getForm('f1')?.localOnly).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("an author's save sends the token and clears the local-only mark", async () => {
+    let auth: string | null = null;
+    server.use(
+      http.post('*/v1/assets/forms', ({ request }) => {
+        auth = request.headers.get('Authorization');
+        return HttpResponse.json({ data: { id: 'f1' } });
+      })
+    );
+    expect(FormService.saveForm(form({ localOnly: true }))).toEqual({ localOnly: false });
+    await vi.waitFor(() => expect(auth).toBe('Bearer test-token'));
+    expect(FormService.getForm('f1')?.localOnly).toBeUndefined();
+  });
+
+  test('hydration keeps a local-only item the server does not have, and the server wins on the same id', async () => {
+    localStorage.setItem(
+      'linkedDataExplorer_formSchemas',
+      JSON.stringify([
+        form({ id: 'mine', localOnly: true }),
+        form({ id: 'both', name: 'Mine', localOnly: true }),
+      ])
+    );
+    server.use(
+      http.get('*/v1/assets/forms', () =>
+        HttpResponse.json({ data: [form({ id: 'both', name: 'Shared' })] })
+      )
+    );
+    const all = await FormService.hydrateFromServer();
+    expect(all.map((x) => x.id).sort()).toEqual(['both', 'mine']);
+    expect(all.find((x) => x.id === 'both')).toMatchObject({ name: 'Shared' });
+    expect(all.find((x) => x.id === 'both')?.localOnly).toBeUndefined();
+  });
+
+  test('signed out, deleting a local-only item stays local and a shared item is kept', () => {
+    authMock.state = SIGNED_OUT;
+    localStorage.setItem(
+      'linkedDataExplorer_formSchemas',
+      JSON.stringify([form({ id: 'mine', localOnly: true }), form({ id: 'shared' })])
+    );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockClear();
+    FormService.deleteForm('mine');
+    FormService.deleteForm('shared');
+    expect(FormService.getForm('mine')).toBeNull();
+    expect(FormService.getForm('shared')).not.toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

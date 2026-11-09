@@ -19,3 +19,15 @@ export function useLockedAction(verb: string): { locked: boolean; hint: string |
     hint: signedIn ? `You need permission to ${verb}` : `Sign in to ${verb}`,
   };
 }
+
+/**
+ * For a list item's Delete (#163): a shared item needs lde-author, an item kept
+ * in this browser can always go. Returns the lock and the hint for that item.
+ */
+export function useDeleteLock(): (item: { localOnly?: boolean }) => {
+  locked: boolean;
+  hint: string | null;
+} {
+  const lock = useLockedAction('delete');
+  return (item) => (item.localOnly ? { locked: false, hint: null } : lock);
+}
