@@ -17,6 +17,19 @@ const ACC_API_BASE_URL = 'https://acc.backend.linkeddata.open-regels.nl';
 const PROD_API_BASE_URL = 'https://backend.linkeddata.open-regels.nl';
 
 describe('buildCspConfig', () => {
+  test('admits the Keycloak origin in connect-src when one is given (#163)', () => {
+    const csp = buildCspConfig(ACC_API_BASE_URL, 'https://acc.keycloak.open-regels.nl/')
+      .globalHeaders['Content-Security-Policy-Report-Only'];
+
+    expect(csp).toContain(
+      "connect-src 'self' https://acc.backend.linkeddata.open-regels.nl https://acc.keycloak.open-regels.nl;"
+    );
+  });
+
+  test('refuses a Keycloak URL that is not absolute (#163)', () => {
+    expect(() => buildCspConfig(ACC_API_BASE_URL, 'keycloak')).toThrow(/VITE_KEYCLOAK_URL/);
+  });
+
   test('builds the acceptance policy from the acceptance API base URL', () => {
     const config = buildCspConfig(ACC_API_BASE_URL);
 

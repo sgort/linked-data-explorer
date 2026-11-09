@@ -25,6 +25,7 @@ import React, { useEffect, useState } from 'react';
 import BpmnModeler from './components/BpmnModeler/BpmnModeler';
 import ChainBuilder from './components/ChainBuilder/ChainBuilder';
 import Changelog from './components/Changelog';
+import SignInMenu from './components/common/SignInMenu';
 import DmnValidator from './components/DmnValidator';
 import DocumentComposer from './components/DocumentComposer/DocumentComposer';
 import DsoExplorer from './components/DsoExplorer/DsoExplorer';
@@ -362,7 +363,7 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col min-w-0">
         {/* Header with App Info & Endpoint Selection */}
         <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mr-auto">
             <h1 className="text-xl font-bold text-slate-800 tracking-tight">
               Linked Data Explorer
             </h1>
@@ -435,6 +436,10 @@ const App: React.FC = () => {
                 </button>
               </div>
             )}
+          {/* #163: sign-in, needed only for actions that change shared state */}
+          <div className="ml-4 flex-shrink-0">
+            <SignInMenu />
+          </div>
         </header>
 
         {/* Workspace Panels */}

@@ -31,7 +31,7 @@ export interface CspConfig {
  * missing origin, which would silently misreport what the app actually
  * contacts.
  */
-export function buildCspConfig(apiBaseUrl: string): CspConfig {
+export function buildCspConfig(apiBaseUrl: string, keycloakUrl?: string): CspConfig {
   if (!apiBaseUrl) {
     throw new Error(
       'VITE_API_BASE_URL is required to build the Content-Security-Policy, and was empty.'
@@ -43,6 +43,18 @@ export function buildCspConfig(apiBaseUrl: string): CspConfig {
     origin = new URL(apiBaseUrl).origin;
   } catch {
     throw new Error(`VITE_API_BASE_URL is not a valid absolute URL: ${JSON.stringify(apiBaseUrl)}`);
+  }
+
+  // #163: keycloak-js talks to the realm (token, refresh) from the page.
+  let keycloakOrigin = '';
+  if (keycloakUrl) {
+    try {
+      keycloakOrigin = new URL(keycloakUrl).origin;
+    } catch {
+      throw new Error(
+        `VITE_KEYCLOAK_URL is not a valid absolute URL: ${JSON.stringify(keycloakUrl)}`
+      );
+    }
   }
 
   const reportUri = `${origin}/v1/csp-reports`;
@@ -67,7 +79,7 @@ export function buildCspConfig(apiBaseUrl: string): CspConfig {
     // asset records to a versioned `versions[0].url` on that host, which
     // logoResolver then uses for <img src> as-is.
     "img-src 'self' data: https://open-regels.triply.cc https://api.open-regels.triply.cc",
-    `connect-src 'self' ${origin}`,
+    `connect-src 'self' ${origin}${keycloakOrigin ? ` ${keycloakOrigin}` : ''}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -95,7 +107,7 @@ export function buildCspConfig(apiBaseUrl: string): CspConfig {
  * already needs for the rest of the config also drives this file — one
  * source of the resolved env, not two.
  */
-export function cspPlugin(apiBaseUrl: string | undefined): Plugin {
+export function cspPlugin(apiBaseUrl: string | undefined, keycloakUrl?: string): Plugin {
   let outDir = 'dist';
   let root = process.cwd();
 
@@ -107,7 +119,7 @@ export function cspPlugin(apiBaseUrl: string | undefined): Plugin {
       root = config.root;
     },
     closeBundle() {
-      const config = buildCspConfig(apiBaseUrl ?? '');
+      const config = buildCspConfig(apiBaseUrl ?? '', keycloakUrl);
       const target = path.isAbsolute(outDir) ? outDir : path.resolve(root, outDir);
       writeFileSync(
         path.join(target, 'staticwebapp.config.json'),
