@@ -61,6 +61,10 @@ const CODE_TITLES = {
   PAYLOAD_TOO_LARGE: 'Request body too large',
   INVALID_BODY: 'Invalid request body',
   OPERATON_NOT_CONFIGURED: 'Operaton not configured',
+  UNAUTHENTICATED: 'Sign-in required',
+  FORBIDDEN: 'Permission required',
+  TEST_DEPLOY_KEY_EXISTS: 'Decision key already in use',
+  TEST_DEPLOY_RATE_LIMITED: 'Too many test deploys',
 } as const satisfies Record<string, string>;
 
 /** A `code` this API answers with; each has a stable title above. */
