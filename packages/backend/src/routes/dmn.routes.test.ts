@@ -4,7 +4,12 @@ import request from 'supertest';
 // #163: sign-in is covered by write-auth.test.ts; these suites test behaviour.
 jest.mock('../middleware/auth.middleware', () => ({
   requireAuthor: (_req: unknown, _res: unknown, next: () => void) => next(),
-  optionalAuthor: (_req: unknown, _res: unknown, next: () => void) => next(),
+  // Signed in, so POST /deploy keeps its untenanted behaviour here; the
+  // anonymous TestOnly path is covered by dmn.testdeploy.routes.test.ts.
+  optionalAuthor: (_req: unknown, res: { locals: Record<string, unknown> }, next: () => void) => {
+    res.locals.user = { sub: 'test', roles: ['lde-author'] };
+    next();
+  },
 }));
 jest.mock('../utils/logger', () => ({
   __esModule: true,

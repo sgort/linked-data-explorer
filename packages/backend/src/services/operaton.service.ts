@@ -122,10 +122,13 @@ export class OperatonService {
    */
   async evaluateRaw(
     decisionKey: string,
-    operatonVariables: Record<string, unknown>
+    operatonVariables: Record<string, unknown>,
+    /** #163: evaluate the copy under this tenant (only ever TestOnly). */
+    tenantId?: string
   ): Promise<OperatonEvaluationResponse | OperatonEvaluationResponse[]> {
+    const tenantPath = tenantId ? `/tenant-id/${engineSegment(tenantId)}` : '';
     const response = await this.client.post(
-      `/decision-definition/key/${engineSegment(decisionKey)}/evaluate`,
+      `/decision-definition/key/${engineSegment(decisionKey)}${tenantPath}/evaluate`,
       {
         variables: operatonVariables,
       }
@@ -616,12 +619,44 @@ export class OperatonService {
   }
 
   /**
+   * #163: the tenant of every decision definition with this key, all versions
+   * and all tenants (`null` = untenanted). Used to refuse a test deploy whose
+   * key exists outside TestOnly.
+   */
+  async findDecisionTenants(key: string): Promise<Array<string | null>> {
+    const response = await this.client.get('/decision-definition', { params: { key } });
+    const rows = (response.data ?? []) as Array<{ tenantId?: string | null }>;
+    return rows.map((r) => r.tenantId ?? null);
+  }
+
+  /** #163: deployments of one tenant made before `before`, for the TestOnly sweep. */
+  async listDeployments(q: {
+    tenantId: string;
+    before: Date;
+  }): Promise<Array<{ id: string; deploymentTime: string }>> {
+    // Operaton's date format: yyyy-MM-dd'T'HH:mm:ss.SSSZ, e.g. ...000+0000.
+    const before = q.before.toISOString().replace('Z', '+0000');
+    const response = await this.client.get('/deployment', {
+      params: { tenantIdIn: q.tenantId, before },
+    });
+    const rows = (response.data ?? []) as Array<{ id: string; deploymentTime: string }>;
+    return rows.map((r) => ({ id: r.id, deploymentTime: r.deploymentTime }));
+  }
+
+  /** #163: delete a deployment and everything it holds. */
+  async deleteDeployment(id: string): Promise<void> {
+    await this.client.delete(`/deployment/${engineSegment(id)}`, { params: { cascade: true } });
+  }
+
+  /**
    * Deploy a DRD XML to Operaton.
    */
   async deployDrd(
     drdXml: string,
     deploymentName: string,
-    filename: string
+    filename: string,
+    /** #163: Operaton's tenant-id deployment field, for TestOnly deploys. Omitted when unset. */
+    tenantId?: string
   ): Promise<{ deploymentId: string }> {
     try {
       logger.info('Deploying DRD to Operaton', { deploymentName, filename });
@@ -632,6 +667,9 @@ export class OperatonService {
 
       formData.append('deployment-name', deploymentName);
       formData.append('enable-duplicate-filtering', 'false');
+      if (tenantId) {
+        formData.append('tenant-id', tenantId);
+      }
       formData.append('data', Buffer.from(drdXml, 'utf-8'), {
         filename: filename,
         contentType: 'application/xml',

@@ -2776,7 +2776,15 @@ paths:
       operationId: deployDmn
       tags: [Discovery]
       summary: Deploy DMN XML to Operaton as it is
-      description: Operaton's own error status is not passed through; failures answer 500.
+      description: >-
+        Operaton's own error status is not passed through; failures answer 500.
+        Signed in with the role lde-author, the DMN is deployed untenanted. Without
+        a sign-in, and only where the tier allows anonymous test deploys (localhost
+        and ACC; see GET /dmns/deploy/options), it is deployed to tenant TestOnly
+        and removed 48 hours later. A test deploy is refused when a decision key
+        already exists outside TestOnly (409), and at most 10 are accepted per
+        address per hour (429). Where test deploys are off, no sign-in answers
+        401 (#163).
       requestBody:
         required: true
         content:
@@ -2793,12 +2801,29 @@ paths:
                   type: string
                   description: Defaults to `<deploymentName>.dmn` when missing or blank.
       security:
+        - {}
         - bearerAuth: []
       responses:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '409':
+          description: >-
+            Test deploy only: a decision key in the model already exists
+            outside tenant TestOnly (code TEST_DEPLOY_KEY_EXISTS).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: >-
+            Test deploy only: more than 10 test deploys from this address in
+            the last hour (code TEST_DEPLOY_RATE_LIMITED).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '200':
           description: The DMN was deployed.
           headers:
@@ -2818,13 +2843,20 @@ paths:
                     properties:
                       deploymentId:
                         type: string
+                      tenantId:
+                        const: TestOnly
+                        description: Present on a test deploy only.
+                      expiresAt:
+                        type: string
+                        format: date-time
+                        description: Test deploy only, when the deployment is removed.
                   timestamp:
                     type: string
                     format: date-time
         '400':
           description: >-
-            `xml` or `deploymentName` is missing or blank (code
-            INVALID_INPUT), or the request body was not valid JSON (code
+            `xml` or `deploymentName` is missing or blank, or a test deploy's
+            model holds no decision (code INVALID_INPUT), or the request body was not valid JSON (code
             MALFORMED_BODY; #143).
           content:
             application/problem+json:
@@ -2844,6 +2876,47 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /dmns/deploy/options:
+    get:
+      operationId: getDeployOptions
+      tags: [Discovery]
+      summary: Whether this tier allows anonymous test deploys
+      description: >-
+        Lets the LDE frontend and ttl-editor offer a test deploy to tenant
+        TestOnly without a build-time setting (#163). On only on localhost and
+        ACC.
+      responses:
+        '200':
+          description: The test-deploy settings of this backend.
+          headers:
+            API-Version:
+              $ref: '#/components/headers/ApiVersion'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, timestamp]
+                properties:
+                  success:
+                    const: true
+                  data:
+                    type: object
+                    required: [testDeploy]
+                    properties:
+                      testDeploy:
+                        type: object
+                        required: [enabled, tenantId, ttlHours]
+                        properties:
+                          enabled:
+                            type: boolean
+                          tenantId:
+                            const: TestOnly
+                          ttlHours:
+                            type: integer
+                            examples: [48]
+                  timestamp:
+                    type: string
+                    format: date-time
   /dmns/evaluate/{decisionKey}:
     post:
       operationId: evaluateDecision
@@ -2862,6 +2935,14 @@ paths:
           description: The Operaton decision definition key.
           schema:
             type: string
+        - name: tenantId
+          in: query
+          required: false
+          description: >-
+            Evaluate an anonymous test deploy (#163). Only TestOnly is accepted;
+            any other value answers 400 (code INVALID_PARAM).
+          schema:
+            const: TestOnly
       requestBody:
         required: false
         content:

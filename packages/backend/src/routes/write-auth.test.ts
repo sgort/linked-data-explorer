@@ -51,6 +51,16 @@ const CLOSED: Array<[string, string]> = [
 
 type Method = 'get' | 'post' | 'patch' | 'delete';
 
+describe('POST /dmns/deploy without a sign-in where test deploys are off (PROD)', () => {
+  test.each(['/v1/dmns/deploy', '/api/dmns/deploy'])('%s answers 401', async (path) => {
+    const res = await request(app)
+      .post(path)
+      .send({ xml: '<definitions><decision id="k"/></definitions>', deploymentName: 'k' });
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHENTICATED');
+  });
+});
+
 describe('state-changing routes refuse a request without a sign-in', () => {
   test.each(CLOSED)('%s %s answers 401', async (method, path) => {
     const res = await request(app)[method as Method](path).send({});
