@@ -7,6 +7,7 @@ import {
   Clock,
   FileInput,
   Layers,
+  Lock,
   Save,
   Tag,
   Trash2,
@@ -14,6 +15,8 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useLockedAction } from '../../hooks/useAuth';
+import { authHeaders } from '../../services/auth';
 import { ChainTemplate, templateService } from '../../services/templateService';
 import {
   deleteUserTemplate,
@@ -24,6 +27,7 @@ import {
 import { ChainExecutionResult, DmnModel } from '../../types';
 import { ChainPreset, ChainValidation } from '../../types/chainBuilder.types';
 import { TestCase } from '../../types/testCase.types';
+import { authProblemMessage } from '../../utils/authProblem';
 import { getProblemDetail } from '../../utils/problem';
 import ChainResults from './ChainResults';
 import ExecutionProgress from './ExecutionProgress';
@@ -73,6 +77,8 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
   const [templateDescription, setTemplateDescription] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  // #163: saving a DRD template deploys it; a sequential one stays in this browser.
+  const deployLock = useLockedAction('deploy');
 
   // Add refs for scrollable container and execution area
   const scrollableContainerRef = useRef<HTMLDivElement>(null);
@@ -184,12 +190,15 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
 
         const deployResponse = await fetch(`${API_BASE_URL}/api/dmns/drd/deploy`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
           body: JSON.stringify({
             dmnIds: chain.map((d) => d.identifier),
             deploymentName: templateName,
           }),
         });
+
+        const signInProblem = authProblemMessage(deployResponse.status, 'deploy');
+        if (signInProblem) throw new Error(signInProblem);
 
         const deployData = await deployResponse.json();
         console.log('[SaveTemplate] Deploy response:', deployData);
@@ -752,10 +761,17 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
               </div>
             </div>
 
+            {validation?.isDrdCompatible && deployLock.hint && (
+              <p className="mt-4 text-xs text-slate-500">{deployLock.hint}</p>
+            )}
             <div className="flex gap-2 mt-6">
               <button
                 onClick={handleSaveTemplate}
-                disabled={!templateName.trim() || isSavingTemplate}
+                disabled={
+                  !templateName.trim() ||
+                  isSavingTemplate ||
+                  (Boolean(validation?.isDrdCompatible) && deployLock.locked)
+                }
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isSavingTemplate ? (
@@ -765,7 +781,11 @@ const ChainConfig: React.FC<ChainConfigProps> = ({
                   </>
                 ) : (
                   <>
-                    <Save size={16} />
+                    {validation?.isDrdCompatible && deployLock.locked ? (
+                      <Lock size={16} aria-hidden="true" />
+                    ) : (
+                      <Save size={16} />
+                    )}
                     <span>{validation?.isDrdCompatible ? 'Save as DRD' : 'Save Template'}</span>
                   </>
                 )}

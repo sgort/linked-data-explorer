@@ -10,6 +10,7 @@ import {
   Landmark,
   LayoutTemplate,
   Loader2,
+  Lock,
   Play,
   Plus,
   RefreshCw,
@@ -34,8 +35,11 @@ import GraphView from './components/GraphView';
 import ResultsTable from './components/ResultsTable';
 import RopaEditor from './components/RopaEditor/RopaEditor';
 import ShaclValidator from './components/ShaclValidator';
+import { useLockedAction } from './hooks/useAuth';
+import { authHeaders } from './services/auth';
 import { executeSparqlQuery } from './services/sparqlService';
 import { SparqlResponse, ViewMode } from './types';
+import { authProblemMessage } from './utils/authProblem';
 import {
   ALL_QUERIES,
   DEFAULT_SELECTED_ENDPOINT,
@@ -59,6 +63,7 @@ const App: React.FC = () => {
   const [endpoint, setEndpoint] = useState(DEFAULT_SELECTED_ENDPOINT);
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].sparql);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshLock = useLockedAction('refresh the cache');
   const [sparqlResult, setSparqlResult] = useState<SparqlResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,10 +174,15 @@ const App: React.FC = () => {
 
     try {
       const clearUrl = `${API_BASE_URL}/api/cache/clear?endpoint=${encodeURIComponent(endpoint)}`;
-      const clearResponse = await fetch(clearUrl, { method: 'DELETE' });
+      const clearResponse = await fetch(clearUrl, {
+        method: 'DELETE',
+        headers: await authHeaders(),
+      });
 
       if (!clearResponse.ok) {
-        throw new Error('Failed to clear cache');
+        throw new Error(
+          authProblemMessage(clearResponse.status, 'refresh the cache') ?? 'Failed to clear cache'
+        );
       }
 
       // Toggle endpoint to empty string and back to force ChainBuilder to re-fetch.
@@ -403,21 +413,30 @@ const App: React.FC = () => {
 
                 {/* Refresh Cache Button (Orchestration View Only) */}
                 {viewMode === ViewMode.ORCHESTRATION && (
-                  <button
-                    onClick={handleRefreshCache}
-                    disabled={isRefreshing}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm border transition-all
+                  <>
+                    {refreshLock.hint && (
+                      <span className="text-xs text-slate-500">{refreshLock.hint}</span>
+                    )}
+                    <button
+                      onClick={handleRefreshCache}
+                      disabled={isRefreshing || refreshLock.locked}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm border transition-all
                     ${
-                      isRefreshing
+                      isRefreshing || refreshLock.locked
                         ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed'
                         : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 shadow-sm hover:shadow'
                     }
                   `}
-                    title="Refresh DMN cache (clears 5-minute cache)"
-                  >
-                    <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-                    {isRefreshing ? 'Refreshing...' : 'Refresh Cache'}
-                  </button>
+                      title="Refresh DMN cache (clears 5-minute cache)"
+                    >
+                      {refreshLock.locked ? (
+                        <Lock size={16} aria-hidden="true" />
+                      ) : (
+                        <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                      )}
+                      {isRefreshing ? 'Refreshing...' : 'Refresh Cache'}
+                    </button>
+                  </>
                 )}
 
                 <button

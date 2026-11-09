@@ -1,5 +1,7 @@
 import { RopaRecord } from '../types/ropa.types';
+import { authProblemMessage } from '../utils/authProblem';
 import { getProblemDetail } from '../utils/problem';
+import { authHeaders } from './auth';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -33,16 +35,21 @@ export class RopaService {
   ): Promise<string> {
     const res = await fetch(`${API_BASE}/v1/assets/ropa`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify(record),
     });
-    if (!res.ok) throw new Error(await problemDetail(res));
+    if (!res.ok)
+      throw new Error(authProblemMessage(res.status, 'save') ?? (await problemDetail(res)));
     const { data } = (await res.json()) as { data: { id: string } };
     return data.id;
   }
 
   static async deleteRopa(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/v1/assets/ropa/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await problemDetail(res));
+    const res = await fetch(`${API_BASE}/v1/assets/ropa/${id}`, {
+      method: 'DELETE',
+      headers: await authHeaders(),
+    });
+    if (!res.ok)
+      throw new Error(authProblemMessage(res.status, 'delete') ?? (await problemDetail(res)));
   }
 }
