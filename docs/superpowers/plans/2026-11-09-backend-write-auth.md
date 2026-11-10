@@ -5,11 +5,13 @@
 **Goal:** Close the LDE backend's state-changing routes behind the `ronl` realm role `lde-author`. Give the LDE frontend and ttl-editor a sign-in with locked actions. Remove the eDOCS write routes. Add an anonymous `TestOnly` test deploy on localhost and ACC.
 
 **Architecture:**
+
 - The backend checks Keycloak access tokens with `jsonwebtoken` and `jwks-rsa`, following RBA's `jwt.middleware.ts`. It uses two middlewares: `requireAuthor` and `optionalAuthor`. They sit on the route definitions, so the `/api/*` aliases are covered too.
 - Both SPAs get a small `keycloak-js` module, a two-entry Sign in menu and a `LockedAction` button. Each SPA asks the backend whether test deploys are on.
 - A Keycloak setup script in RBA creates the role and clients on each tier.
 
 **Tech Stack:**
+
 - Express 4, Jest and supertest (LDE backend).
 - React 19, Vite and Vitest (LDE frontend, TypeScript; ttl-editor, JSX).
 - Playwright (ttl-editor e2e).
@@ -20,11 +22,11 @@
 
 ## Branches and repositories
 
-| Repo | Branch | Tasks |
-| --- | --- | --- |
-| linked-data-explorer | `feat/163-write-auth` (exists, holds the spec) | 1–9, 13 |
-| ttl-editor | `feat/163-sign-in` (create from `acc`) | 10–12 |
-| ronl-business-api | `feat/163-lde-keycloak-clients` (create from `acc`) | 14 |
+| Repo                 | Branch                                              | Tasks   |
+| -------------------- | --------------------------------------------------- | ------- |
+| linked-data-explorer | `feat/163-write-auth` (exists, holds the spec)      | 1–9, 13 |
+| ttl-editor           | `feat/163-sign-in` (create from `acc`)              | 10–12   |
+| ronl-business-api    | `feat/163-lde-keycloak-clients` (create from `acc`) | 14      |
 
 Each repo's branch is created in its main checkout, with no worktrees. Before every commit, check the branch with `git branch --show-current`. Commits are made only after the owner says yes. Never push to, merge into or commit onto `acc` or `main`. Never start, stop or restart a dev server. Never bypass a hook.
 
@@ -63,11 +65,11 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
 
 ## Review Focus
 
-1. **A token that expires mid-session.** The user was signed in, the token has lapsed, and they click Deploy. Expected: the SPA refreshes the token before the call (`updateToken(30)`); if that fails, the user sees the sign-in hint, not a raw 401. *Test:* Task 7, `authHeaders` refresh test, plus Task 8's 401 mapping test.
-2. **The client address behind Azure.** App Service passes `X-Forwarded-For` as `ip:port`. Expected: the rate limit counts per IP, not per port, and per real client, not per proxy. *Test:* Task 5, `clientAddress` unit tests.
-3. **A DMN whose decision IDs are namespaced or that holds several decisions** (a DRD). Expected: every `<decision id>` is checked, whatever the namespace prefix (`dmn:decision`, `decision`). *Test:* Task 5, `extractDecisionKeys` tests.
-4. **A deprecated alias.** `DELETE /api/cache/clear` and `POST /api/dmns/process/deploy` (still called by the LDE frontend) must answer 401 signed out, just like `/v1`. *Test:* Task 3's mount-wide table.
-5. **An item saved signed out, then the same ID saved by someone else on the server.** Expected: after hydration the server copy wins, and the local-only copy is dropped, not duplicated. *Test:* Task 9's hydrate-merge test.
+1. **A token that expires mid-session.** The user was signed in, the token has lapsed, and they click Deploy. Expected: the SPA refreshes the token before the call (`updateToken(30)`); if that fails, the user sees the sign-in hint, not a raw 401. _Test:_ Task 7, `authHeaders` refresh test, plus Task 8's 401 mapping test.
+2. **The client address behind Azure.** App Service passes `X-Forwarded-For` as `ip:port`. Expected: the rate limit counts per IP, not per port, and per real client, not per proxy. _Test:_ Task 5, `clientAddress` unit tests.
+3. **A DMN whose decision IDs are namespaced or that holds several decisions** (a DRD). Expected: every `<decision id>` is checked, whatever the namespace prefix (`dmn:decision`, `decision`). _Test:_ Task 5, `extractDecisionKeys` tests.
+4. **A deprecated alias.** `DELETE /api/cache/clear` and `POST /api/dmns/process/deploy` (still called by the LDE frontend) must answer 401 signed out, just like `/v1`. _Test:_ Task 3's mount-wide table.
+5. **An item saved signed out, then the same ID saved by someone else on the server.** Expected: after hydration the server copy wins, and the local-only copy is dropped, not duplicated. _Test:_ Task 9's hydrate-merge test.
 
 ---
 
@@ -76,12 +78,14 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
 ### Task 1: Configuration and dependencies
 
 **Files:**
+
 - Modify: `packages/backend/package.json` (add `jsonwebtoken`, `jwks-rsa`, dev `@types/jsonwebtoken`)
 - Modify: `packages/backend/src/utils/config.ts`
 - Modify: `packages/backend/.env.example` (or the repo's example env file; add the four variables with comments)
 - Test: `packages/backend/src/utils/config.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `config.auth: { keycloakUrl: string; realm: string; clients: string[]; role: 'lde-author' }`
     - `keycloakUrl` comes from `KEYCLOAK_URL`, default `http://localhost:8080`, with any trailing `/` stripped.
@@ -103,6 +107,7 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
 ### Task 2: Token check middleware
 
 **Files:**
+
 - Create: `packages/backend/src/middleware/auth.middleware.ts`
 - Modify: `packages/backend/src/utils/problem.ts`. Add these to `CODE_TITLES`:
   - `UNAUTHENTICATED: 'Sign-in required'`
@@ -112,6 +117,7 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
 - Test: `packages/backend/src/middleware/auth.middleware.test.ts`
 
 **Interfaces:**
+
 - Consumes: `config.auth` (Task 1).
 - Produces:
   - `export interface AuthUser { sub: string; username?: string; name?: string; roles: string[] }`
@@ -148,6 +154,7 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
 ### Task 3: Close the state-changing routes
 
 **Files:**
+
 - Modify:
   - `src/routes/assets.routes.ts` (lines 140, 171, 182, 268, 284, 307, 323);
   - `src/routes/ropa.routes.ts` (128, 144);
@@ -161,6 +168,7 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
 - Create: `src/routes/write-auth.test.ts`
 
 **Interfaces:**
+
 - Consumes: `requireAuthor` (Task 2).
 
 - [ ] **Step 0: Check for other callers.** Search `C:\Users\gorts01\Development\{cprmv,editor,iou-architectuur,ronl-business-api}` (excluding `node_modules`) for every closed path in the table below. A caller other than the LDE frontend, ttl-editor or the fixtures script: stop and report it before continuing.
@@ -173,6 +181,7 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
   - `POST /v1/dmns/drd/deploy`, `POST /v1/dmns/process/deploy`, `POST /api/dmns/process/deploy`, `POST /api/dmns/drd/deploy`
 
   A second `it.each` expects these **not** to be 401: `GET /v1/assets/bpmn`, `POST /v1/dmns/validate` (with a body), `POST /v1/shacl/validate`, `POST /v1/chains/execute`, `POST /v1/triplydb/query`.
+
 - [ ] **Step 2: Run** `npm test --workspace=packages/backend -- src/routes/write-auth.test.ts`. Expected: the first table FAILS.
 - [ ] **Step 3: Implement** by adding `requireAuthor` as the first handler on each listed route. Add the mocks to the existing router tests. Update the OpenAPI source, then `npm run build:openapi --workspace=packages/backend`.
 - [ ] **Step 4: Run** `npm test --workspace=packages/backend` (the full suite, including `src/openapi` coverage) and `npm run lint:openapi --workspace=packages/backend`. Expected: all pass.
@@ -181,6 +190,7 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
 ### Task 4: Remove the eDOCS write routes
 
 **Files:**
+
 - Modify: `src/routes/edocs.routes.ts`. Keep only `GET /status`. Remove `POST /workspaces/ensure`, `POST /documents`, and `GET /workspaces/:workspaceId/documents`.
 - Modify: `src/routes/edocs.routes.test.ts`. Remove those cases, and add one asserting `POST /v1/edocs/documents` answers 404.
 - Modify: `src/utils/problem.ts`. Remove `EDOCS_WORKSPACE_FAILED`, `EDOCS_UPLOAD_FAILED` and `EDOCS_DOCUMENTS_FAILED` if nothing else uses them (`grep` first).
@@ -195,6 +205,7 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
 ### Task 5: Anonymous test deploy
 
 **Files:**
+
 - Create: `src/services/testDeploy.service.ts`, `src/services/testDeploy.service.test.ts`
 - Modify: `src/services/operaton.service.ts` (+ its test)
 - Modify: `src/routes/dmn.routes.ts` (`/deploy`, `/evaluate/:decisionKey`, new `GET /deploy/options`) + `dmn.routes.test.ts`
@@ -205,6 +216,7 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
   - the new `/dmns/deploy/options`.
 
 **Interfaces:**
+
 - Consumes: `config.testDeploy` (Task 1), `optionalAuthor` (Task 2).
 - Produces:
   - In `operatonService`:
@@ -225,6 +237,7 @@ Each repo's branch is created in its main checkout, with no worktrees. Before ev
     - `POST /v1/dmns/deploy` returns `data: { deploymentId, tenantId?: 'TestOnly', expiresAt?: ISO string }`.
 
 Behaviour of `POST /v1/dmns/deploy`, in order:
+
 1. Run `optionalAuthor`.
 2. With a user: run the current behaviour, untenanted.
 3. Without a user and with the setting off: 401 `UNAUTHENTICATED`.
@@ -236,6 +249,7 @@ Behaviour of `POST /v1/dmns/deploy`, in order:
    5. Otherwise run `deployDrd(..., 'TestOnly')` and answer with `tenantId` and `expiresAt = deployTime + 48h`.
 
 On `POST /v1/dmns/evaluate/:decisionKey`, the `?tenantId=` parameter:
+
 - absent: today's behaviour;
 - `TestOnly`: use the tenant path;
 - any other value: 400 `INVALID_PARAM`.
@@ -278,9 +292,11 @@ On `POST /v1/dmns/evaluate/:decisionKey`, the `?tenantId=` parameter:
 ### Task 6: Fixtures script signs in
 
 **Files:**
+
 - Modify: `scripts/deploy-e2e-fixtures.mjs`
 
 **Interfaces:**
+
 - Produces: `async function getE2eToken(): Promise<string>`.
   - It POSTs to `${KEYCLOAK_URL}/realms/ronl/protocol/openid-connect/token` with `grant_type=password`, `client_id=lde-e2e`, `client_secret=$LDE_E2E_CLIENT_SECRET`, `username=$LDE_E2E_USERNAME` (default `lde-e2e`), `password=$LDE_E2E_PASSWORD`, and `scope=openid`.
   - `KEYCLOAK_URL` defaults to `http://localhost:8080`.
@@ -296,6 +312,7 @@ On `POST /v1/dmns/evaluate/:decisionKey`, the `?tenantId=` parameter:
 ### Task 7: Sign-in module and components
 
 **Files:**
+
 - Modify:
   - `packages/frontend/package.json` (`keycloak-js` ^23.0.4);
   - `.env.development` (`VITE_KEYCLOAK_URL=http://localhost:8080`), `.env.acceptance` (`https://acc.keycloak.open-regels.nl`), `.env.production` (`https://keycloak.open-regels.nl`), and `.env.test` if present;
@@ -307,6 +324,7 @@ On `POST /v1/dmns/evaluate/:decisionKey`, the `?tenantId=` parameter:
 - Modify: `src/App.tsx`. Render `<SignInMenu/>` at the right end of the `<header>` (line ~364), and call `initAuth()` once at startup.
 
 **Interfaces:**
+
 - Produces:
   - In `auth.ts`:
     - `type AuthState = { ready: boolean; signedIn: boolean; isAuthor: boolean; name?: string }`
@@ -341,6 +359,7 @@ On `POST /v1/dmns/evaluate/:decisionKey`, the `?tenantId=` parameter:
 ### Task 8: Lock the actions and send the token
 
 **Files:**
+
 - Modify:
   - `src/components/BpmnModeler/BpmnCanvas.tsx` (Deploy, fetch at ~794);
   - `src/components/ChainBuilder/ChainConfig.tsx` (deploy at ~185);
@@ -351,6 +370,7 @@ On `POST /v1/dmns/evaluate/:decisionKey`, the `?tenantId=` parameter:
 - Tests: the existing tests of each touched component or service.
 
 **Interfaces:**
+
 - Consumes: `authHeaders`, `useAuth`, `LockedAction` (Task 7).
 - Produces: `authProblemMessage(status: number, verb: string): string | null`. It returns "Sign in to <verb>" for 401, "You need permission to <verb>" for 403, else `null`. Callers show it in place of the raw error.
 
@@ -368,10 +388,12 @@ On `POST /v1/dmns/evaluate/:decisionKey`, the `?tenantId=` parameter:
 ### Task 9: Local-only save for BPMN, forms and document templates
 
 **Files:**
+
 - Modify: `src/services/bpmnService.ts`, `src/services/formService.ts`, `src/services/documentService.ts` + their tests
 - Modify: the library list and save-notice UI in `src/components/BpmnModeler/`, `src/components/FormEditor/` and `src/components/DocumentComposer/` (the components that call these services' save/delete)
 
 **Interfaces:**
+
 - Consumes: `getAuthState`, `authHeaders` (Task 7).
 - Produces:
   - Each stored item type gains `localOnly?: true`.
@@ -397,11 +419,13 @@ On `POST /v1/dmns/evaluate/:decisionKey`, the `?tenantId=` parameter:
 ### Task 10: Sign-in module and components
 
 **Files:**
+
 - Modify: `package.json` (`keycloak-js` ^23.0.4), `.env.development`, `.env.acceptance`, `.env.production`, `.env.example` (`VITE_KEYCLOAK_URL`, values as in Task 7)
 - Create: `src/utils/auth.js`, `src/utils/auth.test.js`, `src/hooks/useAuth.js`, `src/components/SignInMenu.jsx`, `src/components/LockedAction.jsx` (+ tests)
 - Modify: `src/App.jsx`. Put `<SignInMenu/>` in the top bar beside the Publish button (~line 1152), and call `initAuth()` once.
 
 **Interfaces:** the same API as Task 7, in JavaScript. Differences:
+
 - the client ID is `ttl-editor`;
 - the localStorage flag is `ttl.auth.wasSignedIn`;
 - hint texts and menu labels are identical.
@@ -415,6 +439,7 @@ On `POST /v1/dmns/evaluate/:decisionKey`, the `?tenantId=` parameter:
 ### Task 11: DMN tab deploy, test deploy and Publish
 
 **Files:**
+
 - Modify: `src/components/tabs/DMNTab.jsx`:
   - `handleDeployDMN` (~678), the deploy button (~1389);
   - the evaluate fetch (~737);
@@ -424,15 +449,16 @@ On `POST /v1/dmns/evaluate/:decisionKey`, the `?tenantId=` parameter:
 - Tests: `DMNTab.test.jsx` (or a new `DMNTab.signin.test.jsx`), `App.publish.test.jsx`, `triplydbHelper.test.js`
 
 **Interfaces:**
+
 - Consumes: `useAuth`, `authHeaders`, `LockedAction` (Task 10); backend `GET /v1/dmns/deploy/options`, the 409/429 answers, and `data.tenantId` (Task 5).
 
 Deploy button states:
 
-| State | Button | Text under it |
-| --- | --- | --- |
-| author | "Deploy to Operaton" (today's behaviour, with header) | none |
-| not author, `testDeploy.enabled` | "Test deploy to Operaton" | "Deploys to the test tenant TestOnly, removed automatically after 48 hours. Refused if a decision key already exists in the engine." |
-| not author, not enabled (or options failed to load) | `LockedAction verb="deploy"` | none |
+| State                                               | Button                                                | Text under it                                                                                                                        |
+| --------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| author                                              | "Deploy to Operaton" (today's behaviour, with header) | none                                                                                                                                 |
+| not author, `testDeploy.enabled`                    | "Test deploy to Operaton"                             | "Deploys to the test tenant TestOnly, removed automatically after 48 hours. Refused if a decision key already exists in the engine." |
+| not author, not enabled (or options failed to load) | `LockedAction verb="deploy"`                          | none                                                                                                                                 |
 
 - After a test deploy, `deploymentStatus.data.tenantId === 'TestOnly'`, and every evaluate call adds `?tenantId=TestOnly`.
 - A 409 shows the backend's `detail`.
@@ -454,10 +480,12 @@ Deploy button states:
 ### Task 12: e2e journeys sign in
 
 **Files:**
+
 - Create: `e2e/signIn.js`
 - Modify: `e2e/authoring-journey.spec.js`, `e2e/normbedragen-journey.spec.js`, `e2e/round-trip-journey.spec.js`; the README or header comment in `e2e/stack.js` that lists the e2e environment variables
 
 **Interfaces:**
+
 - Produces: `export async function signIn(page)`.
   - It clicks "Sign in", then "Medewerker".
   - On the Keycloak page it fills `#username` with `process.env.E2E_LDE_USERNAME ?? 'lde-e2e'` and `#password` with `process.env.E2E_LDE_PASSWORD`, then submits.
@@ -473,9 +501,11 @@ Deploy button states:
 ### Task 13 (LDE): Rollout notes
 
 **Files:**
+
 - Create: `docs/sign-in-rollout.md` in linked-data-explorer, on `feat/163-write-auth`
 
 Contents, as numbered steps for the owner:
+
 1. Run Task 14's script against ACC Keycloak with the ACC origins.
 2. Assign `lde-author` to the owner and colleagues on ACC (a brokered user signs in once first).
 3. Set the LDE ACC App Service settings `KEYCLOAK_URL` and `TEST_DEPLOY_ENABLED=true`. Use the hand-over script pattern from CLAUDE.md, check whether the app restarted, and verify with `GET /v1/dmns/deploy/options`.
@@ -488,6 +518,7 @@ Contents, as numbered steps for the owner:
    - with the roles assigned.
 
 Checks:
+
 - `curl -X POST <acc-backend>/v1/dmns/drd/deploy` answers 401;
 - `GET /v1/dmns/deploy/options` shows `enabled: true` on ACC and `false` on PROD;
 - a signed-in deploy from ttl-editor works;
@@ -500,14 +531,16 @@ Checks:
 ### Task 14: Keycloak setup script
 
 **Files:**
+
 - Create: `scripts/keycloak-add-lde-clients.sh`, `scripts/keycloak-lde-clients.json` (in ronl-business-api)
 
 This follows `scripts/keycloak-add-rip-roles.sh` and `keycloak-add-entra-idp.sh`: admin token via `curl`, `jq`, idempotent create-or-update, and `--dry-run`. Per those scripts' "WHY NOT A REALM IMPORT", `config/keycloak/ronl-realm.json` is **not** changed. A fresh local Keycloak gets these by running the script, just as the Entra provider does.
 
 **Interfaces:**
+
 - Environment variables:
   - `KEYCLOAK_URL` (required), `REALM` (default `ronl`), `ADMIN_USER`, `ADMIN_REALM`, `ADMIN_PASSWORD` (prompted);
-  - `LDE_ORIGIN` and `TTL_ORIGIN` (required, exact origins, e.g. `http://localhost:3000` and `http://localhost:3002`);
+  - `LDE_ORIGIN` and `TTL_ORIGIN` (required, exact origins, both `http://localhost:3000` locally: ttl-editor serves on 3000 with strictPort, not 3002);
   - with `--with-e2e`: `LDE_E2E_PASSWORD` (prompted).
 - Effects:
   - Realm role `lde-author`.
