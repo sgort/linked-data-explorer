@@ -40,7 +40,8 @@ const MEDEWERKER_HINT = '__medewerker__';
 const FLAG = 'lde.auth.wasSignedIn';
 const CHANNEL = 'lde-auth';
 const POPUP_NAME = 'lde-sign-in';
-const POPUP_FEATURES = 'popup,width=520,height=720';
+const POPUP_WIDTH = 520;
+const POPUP_HEIGHT = 720;
 /** How often to look whether the popup was closed without reporting back. */
 const POPUP_POLL_MS = 500;
 
@@ -100,6 +101,16 @@ function stateFromToken(): AuthState {
     isAuthor: (token.realm_access?.roles ?? []).includes(AUTHOR_ROLE),
     ...(name ? { name } : {}),
   };
+}
+
+/**
+ * Centred on the browser window, not the screen: on a second monitor the
+ * window's own position counts, and screenX is negative left of the main one.
+ */
+function popupFeatures(): string {
+  const left = Math.round(window.screenX + (window.outerWidth - POPUP_WIDTH) / 2);
+  const top = Math.round(window.screenY + (window.outerHeight - POPUP_HEIGHT) / 2);
+  return `popup,width=${POPUP_WIDTH},height=${POPUP_HEIGHT},left=${left},top=${top}`;
 }
 
 const appUrl = (path: string) => `${window.location.origin}${path}`;
@@ -171,7 +182,7 @@ export async function signIn(route: SignInRoute): Promise<void> {
   const popup = window.open(
     keycloak.createLoginUrl({ redirectUri: appUrl('/auth-callback.html'), ...hint }),
     POPUP_NAME,
-    POPUP_FEATURES
+    popupFeatures()
   );
   if (!popup) {
     writeFlag(true);
@@ -188,7 +199,7 @@ export async function signOut(): Promise<void> {
   const popup = window.open(
     keycloak.createLogoutUrl({ redirectUri: appUrl('/auth-callback.html') }),
     POPUP_NAME,
-    POPUP_FEATURES
+    popupFeatures()
   );
   if (!popup) {
     await keycloak.logout({ redirectUri: window.location.origin });

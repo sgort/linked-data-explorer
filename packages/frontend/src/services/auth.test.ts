@@ -167,6 +167,20 @@ describe('auth service', () => {
     expect(fake.login).not.toHaveBeenCalled();
   });
 
+  test('the popup opens in the middle of the browser window', async () => {
+    const { auth } = await load();
+    await auth.initAuth();
+    vi.stubGlobal('screenX', -1920);
+    vi.stubGlobal('screenY', 100);
+    vi.stubGlobal('outerWidth', 1600);
+    vi.stubGlobal('outerHeight', 1000);
+    const { open } = openPopup();
+    void auth.signIn('medewerker');
+    // 520x720 centred on a window at (-1920, 100), 1600x1000 — on a monitor
+    // left of the main one, so negative coordinates must survive.
+    expect(open.mock.calls[0][2]).toBe('popup,width=520,height=720,left=-1380,top=240');
+  });
+
   test('"Flevoland-account" goes straight to Entra, in the popup', async () => {
     const { auth, fake } = await load();
     await auth.initAuth();

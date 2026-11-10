@@ -19,6 +19,7 @@ import SignInMenu from './SignInMenu';
 describe('SignInMenu', () => {
   beforeEach(() => {
     state.current = { ready: true, signedIn: false, isAuthor: false };
+    sessionStorage.clear();
     auth.signIn.mockReset();
     auth.signOut.mockReset();
   });
@@ -39,6 +40,30 @@ describe('SignInMenu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Medewerker' }));
     expect(auth.signIn).toHaveBeenCalledWith('medewerker');
+  });
+
+  test('signed in without lde-author: "View only" and a note on what that means', () => {
+    state.current = { ready: true, signedIn: true, isAuthor: false, name: 'Viewer' };
+    render(<SignInMenu />);
+    expect(screen.getByText('View only')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Your account does not have the lde-author role'
+    );
+  });
+
+  test('the note can be dismissed; "View only" stays', () => {
+    state.current = { ready: true, signedIn: true, isAuthor: false, name: 'Viewer' };
+    render(<SignInMenu />);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByText('View only')).toBeInTheDocument();
+  });
+
+  test('an author sees neither "View only" nor the note', () => {
+    state.current = { ready: true, signedIn: true, isAuthor: true, name: 'Author' };
+    render(<SignInMenu />);
+    expect(screen.queryByText('View only')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   test('signed in, it shows the name and "Sign out"', () => {
