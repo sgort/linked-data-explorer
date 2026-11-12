@@ -5,13 +5,168 @@ import { Router, Request, Response } from 'express';
 import * as triplydbService from '../services/triplydb.service';
 import { logger } from '../utils/logger';
 import { sendProblem } from '../utils/problem';
-import { refuseTarget, checkSparqlEndpoint, checkTriplyDbBaseUrl } from '../utils/outboundUrl';
+import { refuseTarget, checkSparqlEndpoint } from '../utils/outboundUrl';
 
 const router = Router();
 
 // Get package.json for version info
 import packageJson from '../../package.json';
 import { requireAuthor } from '../middleware/auth.middleware';
+import type { NextFunction } from 'express';
+
+/**
+ * Publishing needs the server's TriplyDB account and token (ttl-editor#234).
+ * Without them the backend still runs; only these routes answer 503.
+ */
+export function requirePublishTarget(req: Request, res: Response, next: NextFunction): void {
+  if (triplydbService.publishTarget()) {
+    next();
+    return;
+  }
+  sendProblem(res, req, {
+    status: 503,
+    title: 'Publishing not configured',
+    detail: 'Publishing is not configured on this backend',
+  });
+}
+
+/**
+ * GET /v1/triplydb/publish-target
+ * The non-secret part of where the editors publish to: base URL and account,
+ * never the token. ttl-editor builds its "required services" picker URL from
+ * it plus the dataset the author chose.
+ */
+router.get('/publish-target', requirePublishTarget, (_req: Request, res: Response) => {
+  res.set('API-Version', packageJson.version);
+  res.status(200).json(triplydbService.publishTarget());
+});
+
+/** TriplyDB's own rule for dataset names; it also keeps a write inside the account. */
+export const DATASET_NAME = /^[A-Za-z0-9-]{1,40}$/;
+const GRAPH_PREFIX = 'https://regels.overheid.nl/graphs/';
+const PLAIN_FILE_NAME = /^[^/\\]+$/;
+
+interface PublishLogo {
+  fileName: string;
+  dataUrl: string;
+}
+
+/** The reason a publish request is refused, or null when it is valid. */
+function publishInputError(body: Record<string, unknown>): string | null {
+  const { dataset, graph, filename, ttl, logos } = body;
+  if (typeof dataset !== 'string' || !DATASET_NAME.test(dataset)) {
+    return '`dataset` must be 1 to 40 letters, digits or hyphens';
+  }
+  if (
+    typeof graph !== 'string' ||
+    !graph.startsWith(GRAPH_PREFIX) ||
+    !URL.canParse(graph) ||
+    /\s/.test(graph)
+  ) {
+    return `\`graph\` must be an IRI under ${GRAPH_PREFIX}`;
+  }
+  if (typeof filename !== 'string' || !filename.trim()) return '`filename` is required';
+  if (typeof ttl !== 'string' || !ttl.trim()) return '`ttl` must not be empty';
+  if (logos !== undefined) {
+    if (!Array.isArray(logos)) return '`logos` must be a list';
+    for (const logo of logos as Partial<PublishLogo>[]) {
+      if (
+        typeof logo?.fileName !== 'string' ||
+        !PLAIN_FILE_NAME.test(logo.fileName) ||
+        logo.fileName.includes('..')
+      ) {
+        return 'each logo needs a plain `fileName`';
+      }
+      if (typeof logo.dataUrl !== 'string' || !logo.dataUrl.startsWith('data:image/')) {
+        return 'each logo needs an image `dataUrl`';
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * POST /v1/triplydb/publish
+ * Publish a service description as the signed-in lde-author (ttl-editor#234):
+ * upload the TTL into its graph, upload the logos, sync the dataset's service.
+ * The TriplyDB token is the server's; the caller never sends or sees one.
+ * Every attempt writes one log line saying who published what, and how it went.
+ */
+router.post(
+  '/publish',
+  requireAuthor,
+  requirePublishTarget,
+  async (req: Request, res: Response) => {
+    res.set('API-Version', packageJson.version);
+
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const invalid = publishInputError(body);
+    if (invalid) {
+      sendProblem(res, req, { status: 400, code: 'INVALID_INPUT', detail: invalid });
+      return;
+    }
+
+    const dataset = body.dataset as string;
+    const graph = body.graph as string;
+    const logos = (body.logos as PublishLogo[] | undefined) ?? [];
+    const user = res.locals.user as { sub: string; username?: string } | undefined;
+    const entry = {
+      event: 'triplydb.publish',
+      user: user?.username ?? user?.sub,
+      organization: body.organization,
+      service: body.service,
+      graph,
+      dataset,
+    };
+
+    const dbConfig = triplydbService.serverConfig(dataset);
+
+    try {
+      await triplydbService.uploadTtl(dbConfig, body.ttl as string, body.filename as string, graph);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Upload failed';
+      logger.warn('[TriplyDB] publish', { ...entry, outcome: 'failed', error: message });
+      sendProblem(res, req, { status: 502, title: 'TriplyDB request failed', detail: message });
+      return;
+    }
+
+    const logoResults: Array<{ fileName: string; ok: boolean }> = [];
+    for (const logo of logos) {
+      try {
+        await triplydbService.uploadAsset(dbConfig, logo.fileName, logo.dataUrl);
+        logoResults.push({ fileName: logo.fileName, ok: true });
+      } catch {
+        logoResults.push({ fileName: logo.fileName, ok: false });
+      }
+    }
+
+    let serviceError: string | undefined;
+    try {
+      await triplydbService.updateService(dbConfig, dataset, undefined, graph);
+    } catch (error) {
+      serviceError = error instanceof Error ? error.message : 'Service update failed';
+    }
+
+    if (serviceError) {
+      logger.info('[TriplyDB] publish', {
+        ...entry,
+        outcome: 'published-with-warning',
+        error: serviceError,
+      });
+    } else {
+      logger.info('[TriplyDB] publish', { ...entry, outcome: 'published' });
+    }
+
+    res.status(200).json({
+      success: true,
+      url: `${dbConfig.baseUrl.replace('api.', '')}/datasets/${dbConfig.account}/${dataset}`,
+      graph,
+      serviceUpdated: !serviceError,
+      ...(serviceError ? { serviceError } : {}),
+      logos: logoResults,
+    });
+  }
+);
 
 /**
  * POST /v1/triplydb/query
@@ -98,298 +253,161 @@ router.post('/query', async (req: Request, res: Response) => {
 });
 
 /**
+ * The dataset a request names, as `dataset` or (as older clients send it)
+ * `config.dataset`. Anything else in `config` — instance, account, token — is
+ * ignored: these routes use the server's own (ttl-editor#234).
+ */
+function requestedDataset(body: unknown): string | null {
+  const b = (body ?? {}) as { dataset?: unknown; config?: { dataset?: unknown } };
+  const dataset = b.dataset ?? b.config?.dataset;
+  return typeof dataset === 'string' && DATASET_NAME.test(dataset) ? dataset : null;
+}
+
+function refuseDataset(req: Request, res: Response): void {
+  sendProblem(res, req, {
+    status: 400,
+    code: 'INVALID_INPUT',
+    detail: '`dataset` must be 1 to 40 letters, digits or hyphens',
+  });
+}
+
+/**
  * POST /v1/triplydb/update-service
- * Update a TriplyDB service to include all graphs in the dataset
+ * Sync a service of a dataset in the server's TriplyDB account so it includes
+ * every graph. Requires lde-author; uses the server's token (ttl-editor#234).
  *
- * Compliance notes:
- * - API-05: Uses noun "triplydb" for resource name
- * - API-57: Returns API-Version header with full semantic version
- * - API-04: English is acceptable for technical/integration endpoints
- * - API-48: POST used for actions that modify state
- *
- * Purpose: Proxies TriplyDB service update requests to avoid CORS issues
- * in browser-based applications. After publishing new data to TriplyDB,
- * this endpoint updates the service configuration to include all graphs,
- * enabling cumulative data access.
- *
- * Request body:
- * {
- *   "config": {
- *     "baseUrl": "https://api.open-regels.triply.cc",
- *     "account": "stevengort",
- *     "dataset": "PublishTest",
- *     "apiToken": "your-token"
- *   },
- *   "serviceName": "PublishTest",
- *   "graphName": "https://regels.overheid.nl/graphs/svb/aow-leeftijd"  // optional, for traceability
- * }
- *
- * Response:
- * {
- *   "success": true,
- *   "message": "Service PublishTest updated to include 3 graphs",
- *   "graphCount": 3
- * }
+ * Request body: { "dataset": "PublishTest", "serviceName": "PublishTest", "graphName": "..." }
+ * Response:     { "success": true, "message": "...", "graphCount": 3 }
  */
-router.post('/update-service', requireAuthor, async (req: Request, res: Response) => {
-  // Set API-Version header (API-57 requirement)
-  res.set('API-Version', packageJson.version);
-  res.set('Content-Type', 'application/json');
+router.post(
+  '/update-service',
+  requireAuthor,
+  requirePublishTarget,
+  async (req: Request, res: Response) => {
+    res.set('API-Version', packageJson.version);
 
-  try {
-    const { config, serviceName, graphName } = req.body;
-
-    // Validate request
-    if (!config || !serviceName) {
-      logger.warn('[TriplyDB Routes] Invalid request: missing config or serviceName', {
-        hasConfig: !!config,
-        hasServiceName: !!serviceName,
-      });
-
-      sendProblem(res, req, {
-        status: 400,
-        title: 'Invalid request',
-        detail: 'Missing required fields: config and serviceName',
-      });
+    const dataset = requestedDataset(req.body);
+    if (!dataset) {
+      refuseDataset(req, res);
       return;
     }
-
-    if (!config.baseUrl || !config.account || !config.dataset || !config.apiToken) {
-      logger.warn('[TriplyDB Routes] Invalid config: missing required fields', {
-        hasBaseUrl: !!config.baseUrl,
-        hasAccount: !!config.account,
-        hasDataset: !!config.dataset,
-        hasApiToken: !!config.apiToken,
-      });
-
-      sendProblem(res, req, {
-        status: 400,
-        title: 'Invalid request',
-        detail: 'Invalid config: missing baseUrl, account, dataset, or apiToken',
-      });
-      return;
-    }
-
-    if (refuseTarget(res, req, checkTriplyDbBaseUrl(config.baseUrl, 'config.baseUrl'))) return;
-
-    logger.info('[TriplyDB Routes] Service update request received', {
-      account: config.account,
-      dataset: config.dataset,
-      serviceName: serviceName,
-      graphName: graphName || '(not specified)',
-    });
-
-    // Call service to update
-    const startTime = Date.now();
-    const result = await triplydbService.updateService(config, serviceName, undefined, graphName);
-    const duration = Date.now() - startTime;
-
-    logger.info('[TriplyDB Routes] Service update successful', {
-      serviceName: serviceName,
-      graphCount: result.graphCount,
-      duration: `${duration}ms`,
-    });
-
-    // FIXED: Don't duplicate 'success' - result already contains it
-    res.status(200).json(result);
-  } catch (error) {
-    logger.error('[TriplyDB Routes] Service update failed', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-
-    sendProblem(res, req, {
-      status: 500,
-      title: 'TriplyDB request failed',
-      detail: error instanceof Error ? error.message : 'Service update failed',
-    });
-  }
-});
-
-/**
- * POST /v1/triplydb/list-graphs
- * List all graphs in a TriplyDB dataset
- *
- * Compliance notes:
- * - API-05: Uses noun "graphs" for resource name
- * - API-57: Returns API-Version header
- * - API-48: POST used to avoid exposing credentials in URL
- *
- * Purpose: Retrieves list of all graphs in a dataset for service configuration.
- * Proxied through backend to avoid CORS issues and secure credential handling.
- *
- * Request body:
- * {
- *   "config": {
- *     "baseUrl": "https://api.open-regels.triply.cc",
- *     "account": "stevengort",
- *     "dataset": "PublishTest",
- *     "apiToken": "your-token"
- *   }
- * }
- *
- * Response:
- * {
- *   "success": true,
- *   "graphs": ["graph:default", "graph:default-1", "graph:default-2"],
- *   "count": 3
- * }
- */
-router.post('/list-graphs', async (req: Request, res: Response) => {
-  // Set API-Version header (API-57 requirement)
-  res.set('API-Version', packageJson.version);
-  res.set('Content-Type', 'application/json');
-
-  try {
-    const { config } = req.body;
-
-    // Validate request
-    if (!config || !config.baseUrl || !config.account || !config.dataset || !config.apiToken) {
-      logger.warn('[TriplyDB Routes] Invalid list-graphs request: missing config');
-
-      sendProblem(res, req, {
-        status: 400,
-        title: 'Invalid request',
-        detail: 'Invalid or missing config',
-      });
-      return;
-    }
-
-    if (refuseTarget(res, req, checkTriplyDbBaseUrl(config.baseUrl, 'config.baseUrl'))) return;
-
-    logger.info('[TriplyDB Routes] List graphs request received', {
-      account: config.account,
-      dataset: config.dataset,
-    });
-
-    const startTime = Date.now();
-    const graphNames = await triplydbService.listGraphs(config);
-    const duration = Date.now() - startTime;
-
-    logger.info('[TriplyDB Routes] Graphs listed successfully', {
-      count: graphNames.length,
-      duration: `${duration}ms`,
-    });
-
-    res.status(200).json({
-      success: true,
-      graphs: graphNames,
-      count: graphNames.length,
-    });
-  } catch (error) {
-    logger.error('[TriplyDB Routes] List graphs failed', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-
-    sendProblem(res, req, {
-      status: 500,
-      title: 'TriplyDB request failed',
-      detail: error instanceof Error ? error.message : 'Failed to list graphs',
-    });
-  }
-});
-
-/**
- * POST /v1/triplydb/test-connection
- * Test TriplyDB connection
- *
- * Compliance notes:
- * - API-05: Uses noun for resource
- * - API-57: Returns API-Version header
- * - API-48: POST used to avoid exposing credentials
- *
- * Purpose: Validates TriplyDB credentials and connectivity before attempting
- * data operations. Used for connection testing in CPSV Editor configuration.
- *
- * Request body:
- * {
- *   "config": {
- *     "baseUrl": "https://api.open-regels.triply.cc",
- *     "account": "stevengort",
- *     "dataset": "PublishTest",
- *     "apiToken": "your-token"
- *   }
- * }
- *
- * Response:
- * {
- *   "success": true,
- *   "message": "Connection successful"
- * }
- */
-router.post('/test-connection', async (req: Request, res: Response) => {
-  // Set API-Version header (API-57 requirement)
-  res.set('API-Version', packageJson.version);
-  res.set('Content-Type', 'application/json');
-
-  try {
-    const { config } = req.body;
-
-    if (!config) {
-      logger.warn('[TriplyDB Routes] Test connection request missing config');
-
-      sendProblem(res, req, {
-        status: 400,
-        title: 'Invalid request',
-        detail: 'Missing config',
-      });
-      return;
-    }
-
-    if (!config.baseUrl || !config.account || !config.dataset) {
-      logger.warn('[TriplyDB Routes] Invalid test-connection config: missing required fields', {
-        hasBaseUrl: !!config.baseUrl,
-        hasAccount: !!config.account,
-        hasDataset: !!config.dataset,
-      });
-
+    const { serviceName, graphName } = req.body as { serviceName?: unknown; graphName?: string };
+    if (typeof serviceName !== 'string' || !DATASET_NAME.test(serviceName)) {
       sendProblem(res, req, {
         status: 400,
         code: 'INVALID_INPUT',
-        detail: 'Invalid config: missing baseUrl, account or dataset',
+        detail: '`serviceName` must be 1 to 40 letters, digits or hyphens',
       });
       return;
     }
 
-    if (refuseTarget(res, req, checkTriplyDbBaseUrl(config.baseUrl, 'config.baseUrl'))) return;
-
-    logger.info('[TriplyDB Routes] Connection test requested');
-
-    const startTime = Date.now();
-    const isConnected = await triplydbService.testConnection(config);
-    const duration = Date.now() - startTime;
-
-    logger.info('[TriplyDB Routes] Connection test completed', {
-      success: isConnected,
-      duration: `${duration}ms`,
-    });
-
-    if (!isConnected) {
+    try {
+      logger.info('[TriplyDB Routes] Service update request received', {
+        dataset,
+        serviceName,
+        graphName: graphName || '(not specified)',
+      });
+      const result = await triplydbService.updateService(
+        triplydbService.serverConfig(dataset),
+        serviceName,
+        undefined,
+        graphName
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error('[TriplyDB Routes] Service update failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       sendProblem(res, req, {
-        status: 503,
-        title: 'Service unavailable',
-        detail: 'Connection failed',
+        status: 500,
+        title: 'TriplyDB request failed',
+        detail: error instanceof Error ? error.message : 'Service update failed',
       });
+    }
+  }
+);
+
+/**
+ * POST /v1/triplydb/list-graphs
+ * List the graphs of a dataset in the server's TriplyDB account.
+ * Requires lde-author; uses the server's token (ttl-editor#234).
+ *
+ * Request body: { "dataset": "PublishTest" }
+ * Response:     { "success": true, "graphs": ["..."], "count": 3 }
+ */
+router.post(
+  '/list-graphs',
+  requireAuthor,
+  requirePublishTarget,
+  async (req: Request, res: Response) => {
+    res.set('API-Version', packageJson.version);
+
+    const dataset = requestedDataset(req.body);
+    if (!dataset) {
+      refuseDataset(req, res);
       return;
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Connection successful',
-      status: 200,
-    });
-  } catch (error) {
-    logger.error('[TriplyDB Routes] Connection test error', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-
-    sendProblem(res, req, {
-      status: 500,
-      title: 'TriplyDB request failed',
-      detail: error instanceof Error ? error.message : 'Connection test failed',
-    });
+    try {
+      const graphNames = await triplydbService.listGraphs(triplydbService.serverConfig(dataset));
+      res.status(200).json({ success: true, graphs: graphNames, count: graphNames.length });
+    } catch (error) {
+      logger.error('[TriplyDB Routes] List graphs failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      sendProblem(res, req, {
+        status: 500,
+        title: 'TriplyDB request failed',
+        detail: error instanceof Error ? error.message : 'Failed to list graphs',
+      });
+    }
   }
-});
+);
+
+/**
+ * POST /v1/triplydb/test-connection
+ * Check that a dataset exists in the server's TriplyDB account, as the Publish
+ * dialog's "Test connection" does. Requires lde-author (ttl-editor#234).
+ *
+ * Request body: { "dataset": "PublishTest" }
+ * Response:     { "success": true, "message": "Connection successful", "status": 200 }
+ */
+router.post(
+  '/test-connection',
+  requireAuthor,
+  requirePublishTarget,
+  async (req: Request, res: Response) => {
+    res.set('API-Version', packageJson.version);
+
+    const dataset = requestedDataset(req.body);
+    if (!dataset) {
+      refuseDataset(req, res);
+      return;
+    }
+
+    try {
+      const exists = await triplydbService.testConnection(triplydbService.serverConfig(dataset));
+      if (!exists) {
+        sendProblem(res, req, {
+          status: 404,
+          title: 'Dataset not found',
+          detail: `Dataset ${dataset} was not found in the publishing account`,
+        });
+        return;
+      }
+      res.status(200).json({ success: true, message: 'Connection successful', status: 200 });
+    } catch (error) {
+      logger.error('[TriplyDB Routes] Connection test error', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      sendProblem(res, req, {
+        status: 500,
+        title: 'TriplyDB request failed',
+        detail: error instanceof Error ? error.message : 'Connection test failed',
+      });
+    }
+  }
+);
 
 // ADD TO: packages/backend/src/routes/triplydb.routes.ts
 // Add these endpoints after the existing /test-connection endpoint

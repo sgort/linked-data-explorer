@@ -7,8 +7,9 @@
 import { logger } from '../utils/logger';
 import { config } from '../utils/config';
 import { createOutboundClient } from '../utils/outboundHttp';
+import { checkTriplyDbBaseUrl } from '../utils/outboundUrl';
 
-interface TriplyDBConfig {
+export interface TriplyDBConfig {
   baseUrl: string;
   account: string;
   dataset: string;
@@ -39,7 +40,7 @@ const client = createOutboundClient({ timeout: config.triplydb.timeout });
 
 async function send(
   url: string,
-  init: { method: 'GET' | 'POST'; headers: Record<string, string>; body?: string }
+  init: { method: 'GET' | 'POST'; headers: Record<string, string>; body?: string | FormData }
 ): Promise<{ ok: boolean; status: number; statusText: string; text: string }> {
   const response = await client.request<string>({
     url,
@@ -154,6 +155,81 @@ export async function constructGraph(endpoint: string, query: string): Promise<s
       stack: error instanceof Error ? error.stack : undefined,
     });
     throw new Error(`Failed to execute CONSTRUCT: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * The non-secret part of where the editors publish to (ttl-editor#234), or
+ * null when publishing is not configured: no account, no token, or a base URL
+ * outside TRIPLYDB_ALLOWED_HOSTS. The token is never part of the answer.
+ */
+export function publishTarget(): { baseUrl: string; account: string } | null {
+  const { baseUrl, account, apiToken } = config.triplydb.publish;
+  if (!account || !apiToken) return null;
+  if (!checkTriplyDbBaseUrl(baseUrl, 'TRIPLYDB_BASE_URL').ok) return null;
+  return { baseUrl, account };
+}
+
+/**
+ * The full TriplyDB config for a publish: the server's base URL, account and
+ * token, plus the dataset the author chose (ttl-editor#234).
+ */
+export function serverConfig(dataset: string): TriplyDBConfig {
+  const target = publishTarget();
+  if (!target) throw new Error('Publishing is not configured on this backend');
+  return { ...target, dataset, apiToken: config.triplydb.publish.apiToken };
+}
+
+/**
+ * Upload a TTL file into a graph of the dataset, as a TriplyDB import job.
+ * The filename gets `.ttl` when it lacks it.
+ */
+export async function uploadTtl(
+  dbConfig: TriplyDBConfig,
+  ttl: string,
+  filename: string,
+  graph: string
+): Promise<void> {
+  const name = filename.endsWith('.ttl') ? filename : `${filename}.ttl`;
+  const url =
+    `${dbConfig.baseUrl}/datasets/${dbConfig.account}/${dbConfig.dataset}/jobs` +
+    `?defaultGraphName=${encodeURIComponent(graph)}`;
+  const form = new FormData();
+  form.append('file', new File([ttl], name, { type: 'text/turtle;charset=utf-8' }));
+  form.append('defaultGraphName', graph);
+
+  const response = await send(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${dbConfig.apiToken}` },
+    body: form,
+  });
+  if (!response.ok) {
+    throw new Error(`TriplyDB upload failed: ${response.status} ${response.text}`);
+  }
+}
+
+/** Upload an image, given as a data URL, as an asset of the dataset. */
+export async function uploadAsset(
+  dbConfig: TriplyDBConfig,
+  fileName: string,
+  dataUrl: string
+): Promise<void> {
+  const match = /^data:([^;,]+);base64,(.*)$/s.exec(dataUrl);
+  if (!match) throw new Error('Invalid image data URL');
+  const [, mimeType, base64] = match;
+  const form = new FormData();
+  form.append('file', new File([Buffer.from(base64, 'base64')], fileName, { type: mimeType }));
+
+  const response = await send(
+    `${dbConfig.baseUrl}/datasets/${dbConfig.account}/${dbConfig.dataset}/assets`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${dbConfig.apiToken}` },
+      body: form,
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`TriplyDB asset upload failed: ${response.status} ${response.text}`);
   }
 }
 
