@@ -17,6 +17,30 @@ const ACC_API_BASE_URL = 'https://acc.backend.linkeddata.open-regels.nl';
 const PROD_API_BASE_URL = 'https://backend.linkeddata.open-regels.nl';
 
 describe('buildCspConfig', () => {
+  test('admits the Keycloak origin in connect-src when one is given (#163)', () => {
+    const csp = buildCspConfig(ACC_API_BASE_URL, 'https://acc.keycloak.open-regels.nl/')
+      .globalHeaders['Content-Security-Policy-Report-Only'];
+
+    expect(csp).toContain(
+      "connect-src 'self' https://acc.backend.linkeddata.open-regels.nl https://acc.keycloak.open-regels.nl;"
+    );
+  });
+
+  test('with Keycloak, admits the silent session check frame (#163)', () => {
+    const csp = buildCspConfig(ACC_API_BASE_URL, 'https://acc.keycloak.open-regels.nl')
+      .globalHeaders['Content-Security-Policy-Report-Only'];
+
+    // keycloak-js frames Keycloak, which redirects the frame back to the app's
+    // own /silent-check-sso.html: both ends must be allowed.
+    expect(csp).toContain("frame-src 'self' https://acc.keycloak.open-regels.nl;");
+    expect(csp).toContain("frame-ancestors 'self';");
+    expect(csp).not.toContain("frame-ancestors 'none'");
+  });
+
+  test('refuses a Keycloak URL that is not absolute (#163)', () => {
+    expect(() => buildCspConfig(ACC_API_BASE_URL, 'keycloak')).toThrow(/VITE_KEYCLOAK_URL/);
+  });
+
   test('builds the acceptance policy from the acceptance API base URL', () => {
     const config = buildCspConfig(ACC_API_BASE_URL);
 

@@ -24,7 +24,10 @@ export default defineConfig(({ mode, command }) => {
       port: 3000,
       host: '0.0.0.0',
     },
-    plugins: [react(), ...(command === 'build' ? [cspPlugin(env.VITE_API_BASE_URL)] : [])],
+    plugins: [
+      react(),
+      ...(command === 'build' ? [cspPlugin(env.VITE_API_BASE_URL, env.VITE_KEYCLOAK_URL)] : []),
+    ],
     build: {
       chunkSizeWarningLimit: 1000,
     },

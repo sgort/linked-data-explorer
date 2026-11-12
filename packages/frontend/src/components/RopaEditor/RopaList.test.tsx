@@ -1,7 +1,21 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
+
+// #163: signed in as an lde-author unless a test says otherwise.
+const authMock = vi.hoisted(() => ({
+  state: { ready: true, signedIn: true, isAuthor: true, name: 'Test' } as {
+    ready: boolean;
+    signedIn: boolean;
+    isAuthor: boolean;
+    name?: string;
+  },
+}));
+vi.mock('../../services/auth', () => ({
+  getAuthState: () => authMock.state,
+  subscribe: () => () => undefined,
+}));
 
 import { BpmnProcess } from '../../types';
 import { RopaRecord } from '../../types/ropa.types';
@@ -143,7 +157,7 @@ describe('RopaList', () => {
       <RopaList {...baseProps} onSelect={onSelect} onDelete={onDelete} records={[record()]} />
     );
 
-    await userEvent.click(screen.getByRole('button', { name: '' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(onDelete).toHaveBeenCalledWith('r1');
     expect(onSelect).not.toHaveBeenCalled();
   });
@@ -154,5 +168,27 @@ describe('RopaList', () => {
 
     await userEvent.click(screen.getByTitle('New RoPA record'));
     expect(onCreate).toHaveBeenCalled();
+  });
+});
+
+describe('RopaList — Delete needs a sign-in (#163)', () => {
+  afterEach(() => {
+    authMock.state = { ready: true, signedIn: true, isAuthor: true, name: 'Test' };
+  });
+
+  test('signed out, the delete button is locked and says why', async () => {
+    authMock.state = { ready: true, signedIn: false, isAuthor: false };
+    const onDelete = vi.fn();
+    render(<RopaList {...baseProps} records={[record()]} onDelete={onDelete} />);
+    const del = screen.getByRole('button', { name: 'Delete' });
+    expect(del).toBeDisabled();
+    expect(del).toHaveAttribute('title', 'Sign in to delete');
+  });
+
+  test('an author can delete', async () => {
+    const onDelete = vi.fn();
+    render(<RopaList {...baseProps} records={[record()]} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(onDelete).toHaveBeenCalledWith('r1');
   });
 });

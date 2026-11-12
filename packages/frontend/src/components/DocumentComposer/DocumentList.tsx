@@ -1,12 +1,14 @@
-import { ChevronDown, ChevronRight, FileText, Plus, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Lock, Plus, Trash2, Upload } from 'lucide-react';
 import React, { useMemo, useRef, useState } from 'react';
 
+import { useDeleteLock } from '../../hooks/useAuth';
 import { DocumentTemplate } from '../../types/document.types';
 import ArtefactListToolbar, {
   filterArtefacts,
   LanguageFilter,
 } from '../common/ArtefactListToolbar';
 import LanguageSelector, { LanguageCode } from '../common/LanguageSelector';
+import { LocalOnlyBadge, LocalSaveNotice } from '../common/LocalOnly';
 import OrganizationSelector from '../common/OrganizationSelector';
 import StatusBadge from '../common/StatusBadge';
 
@@ -43,6 +45,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
   onLanguageChange,
   onOrganizationChange,
 }) => {
+  const deleteLock = useDeleteLock();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [search, setSearch] = useState('');
@@ -176,6 +179,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-medium text-slate-800 text-sm truncate">{template.name}</span>
               <StatusBadge status={template.status} wipLabel="DRAFT" size="xs" />
+              {template.localOnly && <LocalOnlyBadge />}
             </div>
             {template.processKey && (
               <p className="text-[10px] text-slate-400 mt-0.5 truncate">{template.processKey}</p>
@@ -191,15 +195,23 @@ const DocumentList: React.FC<DocumentListProps> = ({
             e.stopPropagation();
             onDeleteTemplate(template.id);
           }}
-          disabled={template.readonly}
+          disabled={template.readonly || deleteLock(template).locked}
           className={`p-1 rounded flex-shrink-0 transition-colors ${
-            template.readonly
+            template.readonly || deleteLock(template).locked
               ? 'text-slate-200 cursor-not-allowed'
               : 'text-slate-300 hover:text-red-500 hover:bg-red-50'
           }`}
-          title={template.readonly ? 'Example documents cannot be deleted' : 'Delete'}
+          title={
+            template.readonly
+              ? 'Example documents cannot be deleted'
+              : (deleteLock(template).hint ?? 'Delete')
+          }
         >
-          <Trash2 size={13} />
+          {deleteLock(template).locked ? (
+            <Lock size={13} aria-hidden="true" />
+          ) : (
+            <Trash2 size={13} />
+          )}
         </button>
       </div>
     </div>
@@ -248,6 +260,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
 
       {/* List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <LocalSaveNotice />
         {templates.length === 0 ? (
           <div className="text-center py-8 text-slate-400">
             <FileText size={28} className="mx-auto mb-2 opacity-30" />

@@ -166,6 +166,8 @@ export interface DocumentTemplate {
   createdAt: string;
   updatedAt: string;
   readonly?: boolean;
+  /** Saved while signed out: kept in this browser only, not in the shared library (#163). */
+  localOnly?: boolean;
   status?: 'example' | 'wip' | 'e2e';
   /** ISO 639-1 language code (e.g. 'en', 'nl', 'de'). Undefined means language-agnostic. */
   language?: 'en' | 'nl' | 'de';

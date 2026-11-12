@@ -1,6 +1,11 @@
 import express from 'express';
 import request from 'supertest';
 
+// #163: sign-in is covered by write-auth.test.ts; these suites test behaviour.
+jest.mock('../middleware/auth.middleware', () => ({
+  requireAuthor: (_req: unknown, _res: unknown, next: () => void) => next(),
+  optionalAuthor: (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
 jest.mock('../utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },

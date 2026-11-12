@@ -3,6 +3,25 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
+// #163: signed in as an lde-author unless a test says otherwise.
+const authMock = vi.hoisted(() => ({
+  state: { ready: true, signedIn: true, isAuthor: true, name: 'Test' } as {
+    ready: boolean;
+    signedIn: boolean;
+    isAuthor: boolean;
+    name?: string;
+  },
+}));
+vi.mock('../../services/auth', () => ({
+  getAuthState: () => authMock.state,
+  subscribe: () => () => undefined,
+  authHeaders: async (): Promise<Record<string, string>> =>
+    authMock.state.signedIn ? { Authorization: 'Bearer test-token' } : {},
+  initAuth: async () => undefined,
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}));
+
 const { modelerInstances, MockBpmnModeler } = vi.hoisted(() => {
   class MockCanvas {
     private zoomLevel = 1;
@@ -1430,5 +1449,58 @@ describe('BpmnCanvas — phase badge text (#242)', () => {
     );
     expect(b.T.text).toBe(b.S.text);
     expect(b.S.text).toBe('2 · b');
+  });
+});
+
+describe('BpmnCanvas — deploy needs a sign-in (#163)', () => {
+  const AUTHOR = { ready: true, signedIn: true, isAuthor: true, name: 'Test' };
+  afterEach(() => {
+    authMock.state = AUTHOR;
+  });
+
+  async function deployFlevoland() {
+    await renderCanvas({
+      xml: SIMPLE_XML.replace('<bpmn:process', '<bpmn:process ronl:organization="flevoland"'),
+    });
+    await userEvent.click(screen.getByText('Deploy'));
+    await screen.findByText('no board auto-detected');
+    await userEvent.click(screen.getByRole('button', { name: 'Infra-board' }));
+    await userEvent.click(screen.getAllByRole('button', { name: /Deploy/ })[1]);
+  }
+
+  test('signed out, Deploy is locked with "Sign in to deploy"', async () => {
+    authMock.state = { ready: true, signedIn: false, isAuthor: false };
+    await renderCanvas({});
+    expect(screen.getByRole('button', { name: /Deploy/ })).toBeDisabled();
+    expect(screen.getByText('Sign in to deploy')).toBeInTheDocument();
+  });
+
+  test('signed in without the role, Deploy is locked with "You need permission to deploy"', async () => {
+    authMock.state = { ready: true, signedIn: true, isAuthor: false, name: 'X' };
+    await renderCanvas({});
+    expect(screen.getByRole('button', { name: /Deploy/ })).toBeDisabled();
+    expect(screen.getByText('You need permission to deploy')).toBeInTheDocument();
+  });
+
+  test("an author's deploy sends the token", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({ success: true, data: { deploymentId: 'dep-123' } }),
+    });
+    await deployFlevoland();
+    await vi.waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(options.headers).toMatchObject({ Authorization: 'Bearer test-token' });
+  });
+
+  test('a 401 from the backend is shown as "Sign in to deploy"', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ status: 401, code: 'UNAUTHENTICATED', detail: 'token expired' }),
+    });
+    await deployFlevoland();
+    await vi.waitFor(() =>
+      expect(screen.getAllByText(/Sign in to deploy/).length).toBeGreaterThan(0)
+    );
   });
 });

@@ -32,6 +32,7 @@
     "camunda-bpmn-moddle": "^7.0.2",
     "d3": "^7.9.0",
     "jszip": "^3.10.2",
+    "keycloak-js": "^23.0.7",
     "lucide-react": "^0.577.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

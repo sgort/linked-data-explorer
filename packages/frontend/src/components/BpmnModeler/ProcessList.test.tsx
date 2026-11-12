@@ -1,7 +1,23 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
+
+// #163: signed in as an lde-author unless a test says otherwise.
+const authMock = vi.hoisted(() => ({
+  state: { ready: true, signedIn: true, isAuthor: true, name: 'Test' } as {
+    ready: boolean;
+    signedIn: boolean;
+    isAuthor: boolean;
+    name?: string;
+  },
+}));
+vi.mock('../../services/auth', () => ({
+  getAuthState: () => authMock.state,
+  subscribe: () => () => undefined,
+}));
+const AUTHOR = { ready: true, signedIn: true, isAuthor: true, name: 'Test' };
+const SIGNED_OUT = { ready: true, signedIn: false, isAuthor: false };
 
 vi.mock('./RopaSelector', () => ({
   default: ({ onRopaRefChange }: { onRopaRefChange: (ref: string | undefined) => void }) => (
@@ -275,5 +291,50 @@ describe('ProcessList', () => {
 
     await userEvent.click(screen.getByText('DsoActiviteitSelector stub'));
     expect(onDsoActiviteitUrnChange).toHaveBeenCalledWith('urn:x');
+  });
+});
+
+describe('ProcessList — signed out (#163)', () => {
+  afterEach(() => {
+    authMock.state = AUTHOR;
+  });
+
+  test('marks an item saved signed out as "only in this browser"', () => {
+    render(<ProcessList {...baseProps} processes={[process({ id: 'mine', localOnly: true })]} />);
+    expect(screen.getByText('only in this browser')).toBeInTheDocument();
+  });
+
+  test('says where a signed-out save goes', () => {
+    authMock.state = SIGNED_OUT;
+    render(<ProcessList {...baseProps} processes={[]} />);
+    expect(
+      screen.getByText('Saved in this browser. Sign in to save it to the shared library.')
+    ).toBeInTheDocument();
+  });
+
+  test('an author sees no such notice', () => {
+    render(<ProcessList {...baseProps} processes={[]} />);
+    expect(screen.queryByText(/Saved in this browser/)).toBeNull();
+  });
+
+  test('signed out, Delete is locked on a shared item and free on a local-only one', async () => {
+    authMock.state = SIGNED_OUT;
+    const onDelete = vi.fn();
+    render(
+      <ProcessList
+        {...baseProps}
+        onDeleteProcess={onDelete}
+        processes={[
+          process({ id: 'shared', name: 'Shared one' }),
+          process({ id: 'mine', name: 'Mine', localOnly: true }),
+        ]}
+      />
+    );
+    const locked = screen.getByTitle('Sign in to delete');
+    expect(locked).toBeDisabled();
+    const free = screen.getAllByTitle('Delete').find((b) => !(b as HTMLButtonElement).disabled);
+    expect(free).toBeDefined();
+    await userEvent.click(free as HTMLElement);
+    expect(onDelete).toHaveBeenCalledWith('mine');
   });
 });

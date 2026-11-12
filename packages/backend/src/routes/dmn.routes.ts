@@ -13,6 +13,13 @@ import { sendProblem } from '../utils/problem';
 import { refuseOptionalEndpoint, refuseTarget, checkOperatonTarget } from '../utils/outboundUrl';
 import { config } from '../utils/config';
 import { asRecord, checkBoardOwner } from '../utils/validation';
+import { optionalAuthor, requireAuthor } from '../middleware/auth.middleware';
+import {
+  clientAddress,
+  extractDecisionKeys,
+  findBlockingKey,
+  takeRateSlot,
+} from '../services/testDeploy.service';
 
 const router = Router();
 
@@ -169,7 +176,7 @@ router.get('/cycles', async (req: Request, res: Response) => {
  * Assemble and deploy a DRD from an ordered chain of DMN identifiers.
  * Body: { dmnIds: string[], deploymentName: string }
  */
-router.post('/drd/deploy', async (req: Request, res: Response) => {
+router.post('/drd/deploy', requireAuthor, async (req: Request, res: Response) => {
   try {
     const { dmnIds, deploymentName } = req.body as {
       dmnIds: string[];
@@ -234,7 +241,7 @@ router.post('/drd/deploy', async (req: Request, res: Response) => {
  *   forms: { id: string, schema: Record<string, unknown> }[]
  * }
  */
-router.post('/process/deploy', async (req: Request, res: Response) => {
+router.post('/process/deploy', requireAuthor, async (req: Request, res: Response) => {
   try {
     const {
       bpmnXml,
@@ -385,6 +392,21 @@ router.post('/process/deploy', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /v1/dmns/deploy/options (#163)
+ * Whether this tier allows anonymous test deploys to TestOnly, so the LDE
+ * frontend and ttl-editor can offer "Test deploy" without a build-time setting.
+ * Open, takes no input. Declared before `GET /:identifier` below.
+ */
+router.get('/deploy/options', (req: Request, res: Response) => {
+  const { enabled, tenantId, ttlHours } = config.testDeploy;
+  res.json({
+    success: true,
+    data: { testDeploy: { enabled, tenantId, ttlHours } },
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
  * GET /v1/dmns/process/deploy-target
  * The Operaton instance `POST /dmns/process/deploy` actually deploys to
  * (#165) -- read-only, so the deploy modal can show the backend's real
@@ -427,7 +449,7 @@ router.get('/process/deploy-target', (req: Request, res: Response) => {
  *
  * Body: { xml: string, deploymentName: string, filename?: string }
  */
-router.post('/deploy', async (req: Request, res: Response) => {
+router.post('/deploy', optionalAuthor, async (req: Request, res: Response) => {
   try {
     const { xml, deploymentName, filename } = req.body as {
       xml: string;
@@ -449,15 +471,68 @@ router.post('/deploy', async (req: Request, res: Response) => {
       return;
     }
 
-    const result = await operatonService.deployDrd(
-      xml,
-      deploymentName,
-      filename?.trim() || `${deploymentName}.dmn`
-    );
+    const resourceName = filename?.trim() || `${deploymentName}.dmn`;
 
+    // Signed in with lde-author: deploy untenanted, as before #163.
+    if (res.locals.user) {
+      const result = await operatonService.deployDrd(xml, deploymentName, resourceName);
+      res.json({
+        success: true,
+        data: { deploymentId: result.deploymentId },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // Signed out: an anonymous test deploy to TestOnly, where the tier allows it.
+    if (!config.testDeploy.enabled) {
+      sendProblem(res, req, {
+        status: 401,
+        code: 'UNAUTHENTICATED',
+        detail: 'Sign in to deploy: a Bearer token from realm ronl is required.',
+      });
+      return;
+    }
+    if (!takeRateSlot(clientAddress(req))) {
+      sendProblem(res, req, {
+        status: 429,
+        code: 'TEST_DEPLOY_RATE_LIMITED',
+        detail: `At most ${config.testDeploy.maxPerHour} test deploys per hour from one address.`,
+      });
+      return;
+    }
+    const keys = extractDecisionKeys(xml);
+    if (keys.length === 0) {
+      sendProblem(res, req, {
+        status: 400,
+        code: 'INVALID_INPUT',
+        detail: 'No decision found in the DMN model.',
+      });
+      return;
+    }
+    const blocking = await findBlockingKey(keys);
+    if (blocking) {
+      sendProblem(res, req, {
+        status: 409,
+        code: 'TEST_DEPLOY_KEY_EXISTS',
+        detail: `Decision key "${blocking}" already exists in the engine. Sign in to deploy it, or rename the decision to test it.`,
+      });
+      return;
+    }
+    const { tenantId, ttlHours } = config.testDeploy;
+    // Operaton picks the parser by the resource's extension. An anonymous caller
+    // may only ever deploy a decision model: a `.bpmn` resource would be parsed
+    // as a process, and a process can run code on the engine. So the name is
+    // reduced to its stem and always ends in `.dmn`.
+    const stem = resourceName.split(/[\\/]/).pop()?.split('.')[0] || 'test-deploy';
+    const result = await operatonService.deployDrd(xml, deploymentName, `${stem}.dmn`, tenantId);
     res.json({
       success: true,
-      data: { deploymentId: result.deploymentId },
+      data: {
+        deploymentId: result.deploymentId,
+        tenantId,
+        expiresAt: new Date(Date.now() + ttlHours * 3600_000).toISOString(),
+      },
       timestamp: new Date().toISOString(),
     });
   } catch (error: unknown) {
@@ -493,8 +568,22 @@ router.post('/deploy', async (req: Request, res: Response) => {
  */
 router.post('/evaluate/:decisionKey', async (req: Request, res: Response) => {
   const { decisionKey } = req.params;
+  // #163: ?tenantId=TestOnly evaluates an anonymous test deploy. No other
+  // tenant is reachable through this open route.
+  const tenantId = typeof req.query.tenantId === 'string' ? req.query.tenantId : undefined;
+  if (tenantId !== undefined && tenantId !== config.testDeploy.tenantId) {
+    sendProblem(res, req, {
+      status: 400,
+      code: 'INVALID_PARAM',
+      detail: `tenantId may only be ${config.testDeploy.tenantId}`,
+    });
+    return;
+  }
   try {
-    const result = await operatonService.evaluateRaw(decisionKey, req.body?.variables ?? {});
+    const variables = req.body?.variables ?? {};
+    const result = tenantId
+      ? await operatonService.evaluateRaw(decisionKey, variables, tenantId)
+      : await operatonService.evaluateRaw(decisionKey, variables);
     res.json(result);
   } catch (error: unknown) {
     if (isAxiosError(error) && error.response) {

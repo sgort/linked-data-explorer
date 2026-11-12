@@ -7,6 +7,7 @@ import { corsMiddleware } from './middleware/cors.middleware';
 import { errorHandler, notFoundHandler, BODY_SIZE_LIMIT } from './middleware/error.middleware';
 import { versionMiddleware } from './middleware/version.middleware';
 import { externalTaskWorker } from './services/externalTaskWorker.service';
+import { startTestDeployCleanup } from './services/testDeploy.service';
 import { migrate } from './db/migrate';
 import { rootHandler } from './utils/rootViews';
 
@@ -80,6 +81,9 @@ const startServer = async () => {
     logger.info(`Legacy API: http://${host}:${port}/api (deprecated)`);
 
     externalTaskWorker.start();
+    // #163: removes TestOnly deployments after 48 hours; a no-op unless
+    // TEST_DEPLOY_ENABLED=true (localhost and ACC).
+    startTestDeployCleanup();
   });
 };
 

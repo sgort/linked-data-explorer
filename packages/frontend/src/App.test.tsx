@@ -3,6 +3,25 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
+// #163: signed in as an lde-author unless a test says otherwise.
+const authMock = vi.hoisted(() => ({
+  state: { ready: true, signedIn: true, isAuthor: true, name: 'Test' } as {
+    ready: boolean;
+    signedIn: boolean;
+    isAuthor: boolean;
+    name?: string;
+  },
+}));
+vi.mock('./services/auth', () => ({
+  getAuthState: () => authMock.state,
+  subscribe: () => () => undefined,
+  authHeaders: async (): Promise<Record<string, string>> =>
+    authMock.state.signedIn ? { Authorization: 'Bearer test-token' } : {},
+  initAuth: async () => undefined,
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}));
+
 const executeSparqlQuery = vi.fn();
 vi.mock('./services/sparqlService', () => ({
   executeSparqlQuery: (...args: unknown[]) => executeSparqlQuery(...args),
@@ -352,6 +371,7 @@ describe('App — cache refresh (Orchestration view)', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/cache/clear?endpoint='), {
       method: 'DELETE',
+      headers: { Authorization: 'Bearer test-token' },
     });
     await waitFor(() =>
       expect(screen.getByText(`ChainBuilder:${PRESET_ENDPOINTS[1]?.url}`)).toBeTruthy()
@@ -400,5 +420,35 @@ describe('App — CSV export', () => {
     expect(createObjectURL).toHaveBeenCalled();
     expect(clickSpy).toHaveBeenCalled();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock');
+  });
+});
+
+describe('App — cache refresh needs a sign-in (#163)', () => {
+  afterEach(() => {
+    authMock.state = { ready: true, signedIn: true, isAuthor: true, name: 'Test' };
+  });
+
+  test('signed out, Refresh Cache is locked with "Sign in to refresh the cache"', async () => {
+    authMock.state = { ready: true, signedIn: false, isAuthor: false };
+    render(<App />);
+    await userEvent.click(screen.getByTitle('DMN Orchestration'));
+    expect(screen.getByRole('button', { name: /Refresh Cache/ })).toBeDisabled();
+    expect(screen.getByText('Sign in to refresh the cache')).toBeInTheDocument();
+  });
+
+  test('the header offers Sign in when signed out', () => {
+    authMock.state = { ready: true, signedIn: false, isAuthor: false };
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  test('a 401 from the backend is shown as "Sign in to refresh the cache"', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+    render(<App />);
+    await userEvent.click(screen.getByTitle('DMN Orchestration'));
+    await userEvent.click(screen.getByText('Refresh Cache'));
+    await waitFor(() =>
+      expect(screen.getAllByText('Sign in to refresh the cache').length).toBeGreaterThan(0)
+    );
   });
 });

@@ -10,6 +10,7 @@ jest.mock('axios', () => {
   const client = {
     get: jest.fn(),
     post: jest.fn(),
+    delete: jest.fn(),
     interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } },
   };
   return { __esModule: true, default: { create: jest.fn(() => client) } };
@@ -36,6 +37,7 @@ const mockCreate = axios.create as jest.Mock;
 const client = mockCreate.mock.results[0].value as {
   get: jest.Mock;
   post: jest.Mock;
+  delete: jest.Mock;
   interceptors: {
     request: { use: jest.Mock };
     response: { use: jest.Mock };
@@ -840,5 +842,82 @@ describe('boardOwner tagging', () => {
 describe('module exports', () => {
   test('the singleton is an OperatonService', () => {
     expect(operatonService).toBeInstanceOf(OperatonService);
+  });
+});
+
+describe('TestOnly support (#163)', () => {
+  beforeEach(() => {
+    mockGet.mockReset();
+    mockPost.mockReset();
+    client.delete.mockReset();
+  });
+
+  test('deployDrd sends tenant-id only when a tenant is given', async () => {
+    mockPost.mockResolvedValue({ data: { id: 'dep-1' } });
+
+    await new OperatonService().deployDrd('<definitions/>', 'MyDRD', 'Entry.dmn', 'TestOnly');
+    await new OperatonService().deployDrd('<definitions/>', 'MyDRD', 'Entry.dmn');
+
+    const withTenant = formBody(mockPost.mock.calls[0]);
+    expect(withTenant).toContain('name="tenant-id"');
+    expect(withTenant).toContain('TestOnly');
+    expect(formBody(mockPost.mock.calls[1])).not.toContain('tenant-id');
+  });
+
+  test('evaluateRaw uses the tenant path when a tenant is given', async () => {
+    mockPost.mockResolvedValue({ data: [] });
+
+    await new OperatonService().evaluateRaw('my_key', {}, 'TestOnly');
+
+    expect(mockPost.mock.calls[0][0]).toBe(
+      '/decision-definition/key/my_key/tenant-id/TestOnly/evaluate'
+    );
+  });
+
+  test('evaluateRaw without a tenant keeps the untenanted path', async () => {
+    mockPost.mockResolvedValue({ data: [] });
+
+    await new OperatonService().evaluateRaw('my_key', {});
+
+    expect(mockPost.mock.calls[0][0]).toBe('/decision-definition/key/my_key/evaluate');
+  });
+
+  test('findDecisionTenants lists the tenant of every definition with that key', async () => {
+    mockGet.mockResolvedValue({
+      data: [
+        { id: 'a', key: 'k', tenantId: 'TestOnly' },
+        { id: 'b', key: 'k', tenantId: null },
+      ],
+    });
+
+    const tenants = await new OperatonService().findDecisionTenants('k');
+
+    expect(mockGet.mock.calls[0][0]).toBe('/decision-definition');
+    expect(mockGet.mock.calls[0][1]).toEqual({ params: { key: 'k' } });
+    expect(tenants).toEqual(['TestOnly', null]);
+  });
+
+  test('listDeployments filters by tenant and deploy time', async () => {
+    mockGet.mockResolvedValue({
+      data: [{ id: 'd1', deploymentTime: '2026-11-07T10:00:00.000+0100', name: 'x' }],
+    });
+    const before = new Date('2026-11-07T12:00:00.000Z');
+
+    const list = await new OperatonService().listDeployments({ tenantId: 'TestOnly', before });
+
+    expect(mockGet.mock.calls[0][0]).toBe('/deployment');
+    expect(mockGet.mock.calls[0][1]).toEqual({
+      params: { tenantIdIn: 'TestOnly', before: '2026-11-07T12:00:00.000+0000' },
+    });
+    expect(list).toEqual([{ id: 'd1', deploymentTime: '2026-11-07T10:00:00.000+0100' }]);
+  });
+
+  test('deleteDeployment deletes with cascade', async () => {
+    client.delete.mockResolvedValue({ status: 204 });
+
+    await new OperatonService().deleteDeployment('d1');
+
+    expect(client.delete.mock.calls[0][0]).toBe('/deployment/d1');
+    expect(client.delete.mock.calls[0][1]).toEqual({ params: { cascade: true } });
   });
 });

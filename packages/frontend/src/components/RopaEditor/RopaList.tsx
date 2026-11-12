@@ -1,6 +1,7 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Lock, Plus, Trash2 } from 'lucide-react';
 import React from 'react';
 
+import { useLockedAction } from '../../hooks/useAuth';
 import { BpmnProcess } from '../../types';
 import { RopaRecord, RopaStatus } from '../../types/ropa.types';
 import { groupRopaRecords } from '../../utils/ropaGrouping';
@@ -32,6 +33,7 @@ const RopaList: React.FC<RopaListProps> = ({
   onDelete,
 }) => {
   const { shells, unlinked } = groupRopaRecords(records, processes);
+  const deleteLock = useLockedAction('delete');
 
   const renderSub = (sub: RopaRecord, key: string) => (
     <div key={key} className="flex items-start gap-1">
@@ -66,9 +68,12 @@ const RopaList: React.FC<RopaListProps> = ({
               e.stopPropagation();
               onDelete(record.id);
             }}
-            className="p-1 hover:bg-red-100 hover:text-red-600 text-slate-400 rounded"
+            disabled={deleteLock.locked}
+            aria-label="Delete"
+            title={deleteLock.hint ?? 'Delete'}
+            className="p-1 hover:bg-red-100 hover:text-red-600 text-slate-400 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-slate-400"
           >
-            <Trash2 size={12} />
+            {deleteLock.locked ? <Lock size={12} aria-hidden="true" /> : <Trash2 size={12} />}
           </button>
         </div>
       </div>

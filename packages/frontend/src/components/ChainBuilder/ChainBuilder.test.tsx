@@ -3,6 +3,25 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
+// #163: signed in as an lde-author unless a test says otherwise.
+const authMock = vi.hoisted(() => ({
+  state: { ready: true, signedIn: true, isAuthor: true, name: 'Test' } as {
+    ready: boolean;
+    signedIn: boolean;
+    isAuthor: boolean;
+    name?: string;
+  },
+}));
+vi.mock('../../services/auth', () => ({
+  getAuthState: () => authMock.state,
+  subscribe: () => () => undefined,
+  authHeaders: async (): Promise<Record<string, string>> =>
+    authMock.state.signedIn ? { Authorization: 'Bearer test-token' } : {},
+  initAuth: async () => undefined,
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}));
+
 vi.mock('../../services/defaultTestCases', () => ({
   initializeDefaultTestCases: vi.fn(),
 }));
