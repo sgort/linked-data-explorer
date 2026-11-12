@@ -2,6 +2,204 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.11.2",
+      "status": "Released",
+      "date": "12 nov 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "df2a637",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Frontend dependencies: bpmn-js 18.31.1, properties panel, vite ^6.4.5, vitest 4.1.12",
+          "details": [
+            "Runtime: bpmn-js 18.31.1, bpmn-js-properties-panel 5.65.3 and @bpmn-io/properties-panel 3.58.0. Development: vite ^6.4.5, vitest and @vitest/coverage-v8 4.1.12 (which clears the two @vitest/mocker advisories), postcss, autoprefixer and typescript-eslint. No downgrades (#310)."
+          ]
+        },
+        {
+          "sha": "697fbc3",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Backend dependencies: axios ^1.21.0",
+          "details": [
+            "The declared axios range follows the 1.21.0 the lockfile already installs; @types/n3 1.26.6 and typescript-eslint 8.72.1 are development only (#329)."
+          ]
+        },
+        {
+          "sha": "e41e998",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "test-connection tells a missing dataset from a TriplyDB failure",
+          "details": [
+            "testConnection returns TriplyDB's status and rejects when TriplyDB cannot be reached. The route answers 404 only when TriplyDB says the dataset does not exist; any other non-success is a 502 naming TriplyDB's status. A wrong server token or a TriplyDB outage no longer sends authors looking for a typo in their dataset name (ttl-editor#234)."
+          ]
+        },
+        {
+          "sha": "d4ff884",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Publishing to TriplyDB goes through the backend, as the signed-in author",
+          "details": [
+            "The TriplyDB base URL, account and token now live only in the backend's settings (`TRIPLYDB_BASE_URL`, `TRIPLYDB_ACCOUNT`, `TRIPLYDB_API_TOKEN`). Without account and token the backend still starts; only publishing answers 503.",
+            "`POST /v1/triplydb/publish` (lde-author) uploads the TTL into its graph and the logos as assets, syncs the dataset's service, and logs one line per attempt (who, organisation, service, graph, dataset, outcome); the token never appears in a response or a log line. `GET /v1/triplydb/publish-target` returns the base URL and account, never the token, for ttl-editor's required-services picker.",
+            "update-service, list-graphs and test-connection require lde-author and use the server's credential; a caller's instance, account or token is ignored. Dataset and service names follow TriplyDB's naming rule, so a write cannot leave the configured account (ttl-editor#234)."
+          ]
+        },
+        {
+          "sha": "9112835",
+          "author": "Steven Gort",
+          "type": "test",
+          "subject": "Tests for the test-deploy cleanup and the remaining sign-in branches",
+          "details": [
+            "The per-file branch floor failed the ACC deploy checks for testDeploy.service.ts (66.7%), services/auth.ts (76.5%) and common/LocalOnly.tsx (75%). Adds tests for the hourly cleanup, the token name fallback, a refresh without a token, a browser without BroadcastChannel or storage, and both LocalSaveNotice variants (#163)."
+          ]
+        },
+        {
+          "sha": "ece8c50",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Final review of the sign-in work: real client address, .dmn-only test deploys, no lost saves",
+          "details": [
+            "The anonymous test-deploy rate limit keyed on the first X-Forwarded-For entry, which the client controls; it now uses the entry Azure's front end appends (the last), and the hourly cleanup forgets idle addresses. An anonymous deploy's resource name is reduced to its stem plus .dmn, so it can never be parsed as a process on the shared engine.",
+            "A signed-out edit of a shared BPMN process, form or document template is kept at hydration while it is newer than the server copy; the server still wins when someone saved it later. An author's save whose token cannot be refreshed, or that the backend refuses with 401/403, stays in this browser, marked local-only, instead of being lost (#163)."
+          ]
+        },
+        {
+          "sha": "2c6162b",
+          "author": "renovate[bot]",
+          "type": "ci",
+          "subject": "GitHub Actions: setup-node v7.1.0, upload-artifact v7.0.2, zizmor-action v0.8.0",
+          "details": [
+            "Digest-pinned across nine workflows, with the Node literals in the tooling workflows moved to 24.22.2 (#307)."
+          ]
+        },
+        {
+          "sha": "bfc7a50",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Lock file maintenance: follow-redirects 1.16.2 clears a high advisory",
+          "details": [
+            "All locks refreshed under the 14-day release-age rule: 138 updates, 37 runtime, four new runtime packages (temporal-polyfill, temporal-spec, temporal-utils, @codemirror/streamparser) and no downgrades. bser and fb-watchman moved from Apache-2.0 to MIT.",
+            "follow-redirects 1.16.1 to 1.16.2 fixes GHSA-mrwp-f3q8-3g9p (high), which had failed the daily dependency audit on acc and main since 9 November. Also among the runtime updates: axios 1.21.0, qs 6.16.2, bpmn-js 18.31.1, rdf-data-factory 2.1.0 and the prosemirror and codemirror packages (#301)."
+          ]
+        },
+        {
+          "sha": "200f6df",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "A centred sign-in popup, and a view-only notice without lde-author",
+          "details": [
+            "The sign-in and sign-out popup opens centred on the browser window, also on a second monitor. A user signed in without the lde-author role sees a lasting \"View only\" label next to their name and, once per tab, a dismissible note that saving to the shared library, deploying and publishing need that role (#163)."
+          ]
+        },
+        {
+          "sha": "2736dcc",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Node 24.22.2",
+          "details": [
+            "`.nvmrc` moves from 24.22.1 to 24.22.2; the build, test and deploy workflows read it. Not a security release (#330)."
+          ]
+        },
+        {
+          "sha": "405bdf0",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Sign in and out in a popup, so the page keeps its state",
+          "details": [
+            "The full-page redirect to Keycloak reloaded the app, losing the open process, view state and unsaved edits. Sign-in and sign-out now open Keycloak in a popup that returns to /auth-callback.html, which reports on BroadcastChannel 'lde-auth' and closes; the page then picks up the session with a silent check-sso in a hidden frame (/silent-check-sso.html), also used on load for returning users.",
+            "A blocked popup falls back to the full-page redirect. With Keycloak configured, the CSP admits the frame (frame-src 'self' <keycloak>, frame-ancestors 'self') (#163)."
+          ]
+        },
+        {
+          "sha": "00db801",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Signed-out saves stay in this browser",
+          "details": [
+            "Saving a BPMN process, form or document template without the lde-author role keeps it in localStorage, marked localOnly, and never contacts the backend. Hydration keeps local-only items unless the server has the same id. Signed out, Delete works only on local-only items; shared items show a locked Delete. Each library list shows a notice while saves stay local (#163)."
+          ]
+        },
+        {
+          "sha": "91c48d9",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Deploy, cache refresh and RoPA writes are locked when signed out",
+          "details": [
+            "BPMN canvas Deploy, Chain Builder 'Save as DRD' (which deploys), Refresh Cache and RoPA Save/Delete are disabled with a lock and 'Sign in to <verb>' / 'You need permission to <verb>' unless the user has lde-author; a sequential chain template still saves locally.",
+            "Every write sends the Bearer token, and a 401/403 from the backend shows the same sign-in message instead of a raw error. The RoPA delete button gets the accessible name Delete (#163)."
+          ]
+        },
+        {
+          "sha": "ec9659b",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Sign in with the ronl realm",
+          "details": [
+            "keycloak-js with realm ronl and client linked-data-explorer: a Sign in menu in the header with two routes, Flevoland-account (idpHint entra-flevoland) and Medewerker (login hint __medewerker__). A visitor who never signed in is not redirected on load; after a sign-in a silent check-sso keeps the session across reloads.",
+            "authHeaders() refreshes the token and falls back to signed out when that fails. LockedAction and useLockedAction show a lock with 'Sign in to <verb>' or 'You need permission to <verb>'. VITE_KEYCLOAK_URL per tier, and its origin in the CSP connect-src (#163)."
+          ]
+        },
+        {
+          "sha": "a58abf5",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "The e2e fixtures deploy with the lde-e2e account",
+          "details": [
+            "Deploying needs a sign-in now: the script gets a token for lde-e2e (realm role lde-author) through the confidential client lde-e2e before contacting anything, and sends it on every non-GET call. Without it, POST /v1/dmns/deploy would make TestOnly test deploys instead of the untenanted ones the E2E gate needs.",
+            "New variables: `KEYCLOAK_URL` (default http://localhost:8080), `LDE_E2E_USERNAME` (default lde-e2e), `LDE_E2E_PASSWORD`, `LDE_E2E_CLIENT_SECRET`; the secrets are never printed (#163)."
+          ]
+        },
+        {
+          "sha": "97fa637",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Anonymous TestOnly test deploys on localhost and ACC",
+          "details": [
+            "POST /v1/dmns/deploy without a sign-in, where `TEST_DEPLOY_ENABLED=true` (localhost and ACC), deploys to tenant TestOnly: refused (409) when a decision key exists outside TestOnly, a key that exists only under TestOnly gets a new version, at most 10 per address per hour (429). Signed in it deploys untenanted as before; signed out where test deploys are off it answers 401. Evaluate accepts ?tenantId=TestOnly and no other tenant. GET /v1/dmns/deploy/options tells the apps whether test deploys are on.",
+            "An hourly sweep removes TestOnly deployments 48 hours after their deploy time. Jest pins `TEST_DEPLOY_ENABLED=false` so a developer's .env does not leak into tests. Verified on Operaton 1.0.0 and 2.1.5: tenant-scoped evaluation, versioning beside an untenanted definition, the deploy-time filter and cascading delete (#163)."
+          ]
+        },
+        {
+          "sha": "7dd74a2",
+          "author": "Steven Gort",
+          "type": "refactor",
+          "subject": "The unused eDOCS write routes are removed",
+          "details": [
+            "Only GET /v1/edocs/status remains. POST /workspaces/ensure, POST /documents and GET /workspaces/:workspaceId/documents had no client and ran as stubs on ACC/PROD; the external-task worker calls edocsService directly and is unchanged. Their three error codes and OpenAPI paths go too (#163)."
+          ]
+        },
+        {
+          "sha": "e1f60f8",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "State-changing routes require lde-author",
+          "details": [
+            "Deploys (drd, process, dmn), the TriplyDB service sync, BPMN/form/document/RoPA writes and the cache clear now need a ronl token with the realm role lde-author, on /v1 and on the deprecated /api/* aliases. write-auth.test.ts proves it on every mount and that reads, validation and chain execution stay open. OpenAPI: a bearerAuth scheme and shared 401/403 responses on the 14 closed operations (#163)."
+          ]
+        },
+        {
+          "sha": "248edf8",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Keycloak token check for lde-author",
+          "details": [
+            "requireAuthor answers 401 UNAUTHENTICATED without a valid ronl token from an accepted client, and 403 FORBIDDEN without the realm role lde-author. optionalAuthor lets a request without an Authorization header through anonymously, but refuses a bad token (#163)."
+          ]
+        },
+        {
+          "sha": "b578643",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Configuration for sign-in and test deploys",
+          "details": [
+            "config.auth (Keycloak URL, realm, accepted clients, role lde-author) and config.testDeploy (`TEST_DEPLOY_ENABLED`, tenant TestOnly, 48 hours, 10 per hour). `KEYCLOAK_URL` is required on ACC and PROD. Adds jsonwebtoken, jwks-rsa and @types/jsonwebtoken, at ronl-business-api's versions (#163)."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.11.1",
       "status": "Released",
       "date": "7 nov 2026",

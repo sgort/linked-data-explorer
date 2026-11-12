@@ -92,7 +92,9 @@ The same steps, with three differences:
   `AUTH_CLIENTS=linked-data-explorer,ttl-editor`, since PROD has no `lde-e2e`
   client;
 - step 6: `/v1/dmns/deploy/options` shows `"enabled": false`, and ttl-editor
-  signed out shows a locked Deploy.
+  signed out shows a locked Deploy instead of "Test deploy to Operaton". The
+  LDE checks are the same as on ACC: signed out, Deploy is locked; signed in
+  with `lde-author`, Deploy works.
 
 ## Known limits
 

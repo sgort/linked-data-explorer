@@ -64,6 +64,16 @@ export const config = {
   triplydb: {
     endpoint: process.env.TRIPLYDB_ENDPOINT || '',
     timeout: parseInt(process.env.TRIPLYDB_TIMEOUT || '30000', 10),
+    /**
+     * Where the editors publish to (ttl-editor#234). The token lives only
+     * here, never in a browser. Without account and token the backend still
+     * starts; only publishing answers 503.
+     */
+    publish: {
+      baseUrl: process.env.TRIPLYDB_BASE_URL || 'https://api.open-regels.triply.cc',
+      account: process.env.TRIPLYDB_ACCOUNT || '',
+      apiToken: process.env.TRIPLYDB_API_TOKEN || '',
+    },
   },
 
   operaton: {

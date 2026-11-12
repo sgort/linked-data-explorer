@@ -175,6 +175,34 @@ describe('value parsing', () => {
     expect(config.corsOrigin).toEqual(['https://a.example', 'https://b.example']);
   });
 
+  test('the TriplyDB publish target comes from its three settings (ttl-editor#234)', () => {
+    const config = loadConfig({
+      TRIPLYDB_BASE_URL: 'https://api.other.triply.cc',
+      TRIPLYDB_ACCOUNT: 'stevengort',
+      TRIPLYDB_API_TOKEN: 'secret',
+    });
+
+    expect(config.triplydb.publish).toEqual({
+      baseUrl: 'https://api.other.triply.cc',
+      account: 'stevengort',
+      apiToken: 'secret',
+    });
+  });
+
+  test('the TriplyDB publish target defaults to open-regels, with no account or token', () => {
+    const config = loadConfig({
+      TRIPLYDB_BASE_URL: '',
+      TRIPLYDB_ACCOUNT: '',
+      TRIPLYDB_API_TOKEN: '',
+    });
+
+    expect(config.triplydb.publish).toEqual({
+      baseUrl: 'https://api.open-regels.triply.cc',
+      account: '',
+      apiToken: '',
+    });
+  });
+
   test('CORS_ORIGIN defaults to the local frontend', () => {
     expect(loadConfig({ CORS_ORIGIN: '' }).corsOrigin).toEqual(['http://localhost:3000']);
   });
