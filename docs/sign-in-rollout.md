@@ -63,7 +63,7 @@ serve on `http://localhost:3000` (one at a time; ttl-editor uses `strictPort`).
 4. **e2e secrets.** `LDE_E2E_CLIENT_SECRET` and the `lde-e2e` password go where
    the e2e runs read them (`KEYCLOAK_URL`, `LDE_E2E_USERNAME`,
    `LDE_E2E_PASSWORD`, `LDE_E2E_CLIENT_SECRET` for the LDE fixtures deploy;
-   `E2E_LDE_PASSWORD` for the ttl-editor journeys). Never in a repository.
+   the same `LDE_E2E_PASSWORD` for the ttl-editor journeys). Never in a repository.
 
 5. **Merge the three pull requests**, LDE and ttl-editor in the same release, so
    no frontend is live without sign-in while the backend already checks tokens.
