@@ -3,7 +3,10 @@ import request from 'supertest';
 
 // #163: sign-in is covered by write-auth.test.ts; these suites test behaviour.
 jest.mock('../middleware/auth.middleware', () => ({
-  requireAuthor: (_req: unknown, _res: unknown, next: () => void) => next(),
+  requireAuthor: (_req: unknown, res: { locals: Record<string, unknown> }, next: () => void) => {
+    res.locals.user = { sub: 'sub-1', username: 'author-1', roles: ['lde-author'] };
+    next();
+  },
   optionalAuthor: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 jest.mock('../utils/logger', () => ({
@@ -17,7 +20,12 @@ jest.mock('../services/triplydb.service', () => ({
   updateService: jest.fn(),
   listGraphs: jest.fn(),
   testConnection: jest.fn(),
+  publishTarget: jest.fn(),
+  serverConfig: jest.fn(),
+  uploadTtl: jest.fn(),
+  uploadAsset: jest.fn(),
 }));
+import { logger } from '../utils/logger';
 
 import * as triplydbService from '../services/triplydb.service';
 import triplydbRoutes from './triplydb.routes';
@@ -42,6 +50,9 @@ const CONFIG = {
   apiToken: 'tok-1',
 };
 
+const TARGET = { baseUrl: 'https://api.open-regels.triply.cc', account: 'stevengort' };
+const SERVER_CONFIG = { ...TARGET, dataset: 'PublishTest', apiToken: 'server-secret' };
+
 // /assets calls global fetch directly rather than going through the service.
 const mockFetch = jest.fn();
 const realFetch = global.fetch;
@@ -52,10 +63,192 @@ beforeEach(() => {
   }
   mockFetch.mockReset();
   global.fetch = mockFetch as unknown as typeof fetch;
+  // ttl-editor#234: publishing is configured unless a test says otherwise.
+  svc.publishTarget.mockReturnValue(TARGET);
+  svc.serverConfig.mockImplementation((dataset: string) => ({ ...SERVER_CONFIG, dataset }));
 });
 
 afterAll(() => {
   global.fetch = realFetch;
+});
+
+describe('GET /v1/triplydb/publish-target (ttl-editor#234)', () => {
+  test('answers the base URL and account, never the token', async () => {
+    svc.publishTarget.mockReturnValue(TARGET);
+
+    const res = await request(makeApp()).get('/v1/triplydb/publish-target');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(TARGET);
+    expect(JSON.stringify(res.body)).not.toMatch(/token/i);
+  });
+
+  test('answers 503 when publishing is not configured', async () => {
+    svc.publishTarget.mockReturnValue(null);
+
+    const res = await request(makeApp()).get('/v1/triplydb/publish-target');
+
+    expect(res.status).toBe(503);
+    expect(res.body.title).toBe('Publishing not configured');
+    expect(res.body.detail).toBe('Publishing is not configured on this backend');
+  });
+});
+
+describe('POST /v1/triplydb/publish (ttl-editor#234)', () => {
+  const SERVER = { ...TARGET, dataset: 'PublishTest', apiToken: 'server-secret' };
+  const GRAPH = 'https://regels.overheid.nl/graphs/svb/aow';
+  const PNG = 'data:image/png;base64,cG5n';
+  const BODY = {
+    dataset: 'PublishTest',
+    graph: GRAPH,
+    filename: 'aow',
+    ttl: '@prefix x: <http://x/> .',
+    organization: 'https://identifier.overheid.nl/tooi/id/oorg/oorg10103',
+    service: 'aow',
+    logos: [{ fileName: 'svb_logo.png', dataUrl: PNG }],
+  };
+  const log = logger as unknown as Record<string, jest.Mock>;
+
+  beforeEach(() => {
+    svc.publishTarget.mockReturnValue(TARGET);
+    svc.serverConfig.mockImplementation((dataset: string) => ({ ...SERVER, dataset }));
+    svc.uploadTtl.mockResolvedValue(undefined);
+    svc.uploadAsset.mockResolvedValue(undefined);
+    svc.updateService.mockResolvedValue({ success: true, message: 'ok', graphCount: 3 });
+    for (const fn of Object.values(log)) fn.mockClear();
+  });
+
+  function publishLog(): Record<string, unknown> | undefined {
+    const calls = [...log.info.mock.calls, ...log.warn.mock.calls];
+    return calls.find((c) => c[0] === '[TriplyDB] publish')?.[1] as Record<string, unknown>;
+  }
+
+  test('uploads the TTL, then the logos, then syncs the service, and logs who published', async () => {
+    const res = await request(makeApp()).post('/v1/triplydb/publish').send(BODY);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      url: 'https://open-regels.triply.cc/datasets/stevengort/PublishTest',
+      graph: GRAPH,
+      serviceUpdated: true,
+      logos: [{ fileName: 'svb_logo.png', ok: true }],
+    });
+    expect(svc.uploadTtl).toHaveBeenCalledWith(SERVER, BODY.ttl, 'aow', GRAPH);
+    expect(svc.uploadAsset).toHaveBeenCalledWith(SERVER, 'svb_logo.png', PNG);
+    expect(svc.updateService).toHaveBeenCalledWith(SERVER, 'PublishTest', undefined, GRAPH);
+    expect(svc.uploadTtl.mock.invocationCallOrder[0]).toBeLessThan(
+      svc.uploadAsset.mock.invocationCallOrder[0]
+    );
+    expect(svc.uploadAsset.mock.invocationCallOrder[0]).toBeLessThan(
+      svc.updateService.mock.invocationCallOrder[0]
+    );
+    expect(publishLog()).toEqual({
+      event: 'triplydb.publish',
+      user: 'author-1',
+      organization: BODY.organization,
+      service: 'aow',
+      graph: GRAPH,
+      dataset: 'PublishTest',
+      outcome: 'published',
+    });
+  });
+
+  test('publishes without logos', async () => {
+    const res = await request(makeApp())
+      .post('/v1/triplydb/publish')
+      .send({ ...BODY, logos: undefined });
+
+    expect(res.status).toBe(200);
+    expect(res.body.logos).toEqual([]);
+    expect(svc.uploadAsset).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['a dataset with ..', { dataset: '../x' }],
+    ['a dataset with a slash', { dataset: 'a/b' }],
+    ['an encoded slash', { dataset: 'a%2Fb' }],
+    ['an empty dataset', { dataset: '' }],
+    ['a dataset of 41 characters', { dataset: 'a'.repeat(41) }],
+    ['a graph outside regels.overheid.nl', { graph: 'https://evil.example/graphs/x' }],
+    ['a graph that is not a URL', { graph: 'https://regels.overheid.nl/graphs/ x' }],
+    ['an empty ttl', { ttl: '' }],
+    ['a missing filename', { filename: undefined }],
+    ['a logo name with a slash', { logos: [{ fileName: 'a/b.png', dataUrl: PNG }] }],
+    ['a logo name with ..', { logos: [{ fileName: '..png', dataUrl: PNG }] }],
+    [
+      'a logo that is not an image',
+      { logos: [{ fileName: 'x.png', dataUrl: 'data:text/html;base64,eA==' }] },
+    ],
+    ['logos that are not a list', { logos: 'x' }],
+  ])('refuses %s with 400 and writes nothing', async (_label, patch) => {
+    const res = await request(makeApp())
+      .post('/v1/triplydb/publish')
+      .send({ ...BODY, ...patch });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(svc.uploadTtl).not.toHaveBeenCalled();
+    expect(svc.serverConfig).not.toHaveBeenCalled();
+  });
+
+  test('answers 502 and logs a failure when the TTL upload fails', async () => {
+    svc.uploadTtl.mockRejectedValue(new Error('TriplyDB upload failed: 500 boom'));
+
+    const res = await request(makeApp()).post('/v1/triplydb/publish').send(BODY);
+
+    expect(res.status).toBe(502);
+    expect(res.body.detail).toBe('TriplyDB upload failed: 500 boom');
+    expect(svc.updateService).not.toHaveBeenCalled();
+    expect(publishLog()).toMatchObject({
+      outcome: 'failed',
+      error: 'TriplyDB upload failed: 500 boom',
+    });
+    expect(log.warn).toHaveBeenCalledWith('[TriplyDB] publish', expect.anything());
+  });
+
+  test('answers 200 with a warning when only the service sync fails', async () => {
+    svc.updateService.mockRejectedValue(new Error('sync failed'));
+
+    const res = await request(makeApp()).post('/v1/triplydb/publish').send(BODY);
+
+    expect(res.status).toBe(200);
+    expect(res.body.serviceUpdated).toBe(false);
+    expect(res.body.serviceError).toBe('sync failed');
+    expect(publishLog()).toMatchObject({ outcome: 'published-with-warning', error: 'sync failed' });
+  });
+
+  test('a failing logo only shows in its own entry', async () => {
+    svc.uploadAsset.mockRejectedValue(new Error('asset failed'));
+
+    const res = await request(makeApp()).post('/v1/triplydb/publish').send(BODY);
+
+    expect(res.status).toBe(200);
+    expect(res.body.logos).toEqual([{ fileName: 'svb_logo.png', ok: false }]);
+    expect(res.body.serviceUpdated).toBe(true);
+  });
+
+  test('answers 503 when publishing is not configured', async () => {
+    svc.publishTarget.mockReturnValue(null);
+
+    const res = await request(makeApp()).post('/v1/triplydb/publish').send(BODY);
+
+    expect(res.status).toBe(503);
+    expect(svc.uploadTtl).not.toHaveBeenCalled();
+  });
+
+  test('never shows the server token in a response or a log line', async () => {
+    const answers = [await request(makeApp()).post('/v1/triplydb/publish').send(BODY)];
+    svc.uploadTtl.mockRejectedValueOnce(new Error('boom'));
+    answers.push(await request(makeApp()).post('/v1/triplydb/publish').send(BODY));
+    svc.updateService.mockRejectedValueOnce(new Error('sync'));
+    answers.push(await request(makeApp()).post('/v1/triplydb/publish').send(BODY));
+
+    for (const res of answers) expect(JSON.stringify(res.body)).not.toContain('server-secret');
+    for (const fn of Object.values(log)) {
+      expect(JSON.stringify(fn.mock.calls)).not.toContain('server-secret');
+    }
+  });
 });
 
 describe('POST /v1/triplydb/query', () => {
@@ -142,7 +335,7 @@ describe('POST /v1/triplydb/query', () => {
 });
 
 describe('POST /v1/triplydb/update-service', () => {
-  test('updates the service and returns the service result verbatim', async () => {
+  test('syncs the service with the server credential and returns the result verbatim', async () => {
     svc.updateService.mockResolvedValue({
       success: true,
       message: 'Service PublishTest updated to include 3 graphs',
@@ -151,7 +344,7 @@ describe('POST /v1/triplydb/update-service', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/update-service')
-      .send({ config: CONFIG, serviceName: 'PublishTest', graphName: 'graph:a' });
+      .send({ dataset: 'PublishTest', serviceName: 'PublishTest', graphName: 'graph:a' });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
@@ -159,53 +352,68 @@ describe('POST /v1/triplydb/update-service', () => {
       message: 'Service PublishTest updated to include 3 graphs',
       graphCount: 3,
     });
-    expect(svc.updateService).toHaveBeenCalledWith(CONFIG, 'PublishTest', undefined, 'graph:a');
+    expect(svc.updateService).toHaveBeenCalledWith(
+      SERVER_CONFIG,
+      'PublishTest',
+      undefined,
+      'graph:a'
+    );
   });
 
-  test('the graph name is optional', async () => {
+  test('ignores the instance and token a caller sends, and takes the dataset from config', async () => {
     svc.updateService.mockResolvedValue({ success: true, graphCount: 1 });
 
     await request(makeApp())
       .post('/v1/triplydb/update-service')
-      .send({ config: CONFIG, serviceName: 'PublishTest' });
+      .send({
+        config: {
+          baseUrl: 'https://example.org',
+          account: 'someone',
+          dataset: 'Other',
+          apiToken: 'caller-token',
+        },
+        serviceName: 'Other',
+      });
 
-    expect(svc.updateService).toHaveBeenCalledWith(CONFIG, 'PublishTest', undefined, undefined);
+    expect(svc.serverConfig).toHaveBeenCalledWith('Other');
+    expect(svc.updateService).toHaveBeenCalledWith(
+      { ...SERVER_CONFIG, dataset: 'Other' },
+      'Other',
+      undefined,
+      undefined
+    );
   });
 
   test.each([
-    ['a missing config', { serviceName: 'PublishTest' }],
-    ['a missing serviceName', { config: CONFIG }],
+    ['a missing dataset', { serviceName: 'PublishTest' }],
+    ['a dataset with a slash', { dataset: 'a/b', serviceName: 'PublishTest' }],
+    ['a missing serviceName', { dataset: 'PublishTest' }],
+    ['a serviceName with ..', { dataset: 'PublishTest', serviceName: '../x' }],
   ])('rejects %s with 400', async (_label, body) => {
     const res = await request(makeApp()).post('/v1/triplydb/update-service').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.detail).toBe('Missing required fields: config and serviceName');
+    expect(res.body.code).toBe('INVALID_INPUT');
     expect(svc.updateService).not.toHaveBeenCalled();
   });
 
-  test.each(['baseUrl', 'account', 'dataset', 'apiToken'])(
-    'rejects a config missing %s with 400',
-    async (field) => {
-      const partial = { ...CONFIG, [field]: undefined };
+  test('answers 503 when publishing is not configured', async () => {
+    svc.publishTarget.mockReturnValue(null);
 
-      const res = await request(makeApp())
-        .post('/v1/triplydb/update-service')
-        .send({ config: partial, serviceName: 'PublishTest' });
+    const res = await request(makeApp())
+      .post('/v1/triplydb/update-service')
+      .send({ dataset: 'PublishTest', serviceName: 'PublishTest' });
 
-      expect(res.status).toBe(400);
-      expect(res.body.detail).toBe(
-        'Invalid config: missing baseUrl, account, dataset, or apiToken'
-      );
-      expect(svc.updateService).not.toHaveBeenCalled();
-    }
-  );
+    expect(res.status).toBe(503);
+    expect(svc.updateService).not.toHaveBeenCalled();
+  });
 
   test('returns 500 when the update fails', async () => {
     svc.updateService.mockRejectedValue(new Error('403 Forbidden'));
 
     const res = await request(makeApp())
       .post('/v1/triplydb/update-service')
-      .send({ config: CONFIG, serviceName: 'PublishTest' });
+      .send({ dataset: 'PublishTest', serviceName: 'PublishTest' });
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
@@ -220,17 +428,19 @@ describe('POST /v1/triplydb/update-service', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/update-service')
-      .send({ config: CONFIG, serviceName: 'PublishTest' });
+      .send({ dataset: 'PublishTest', serviceName: 'PublishTest' });
 
     expect(res.body.detail).toBe('Service update failed');
   });
 });
 
 describe('POST /v1/triplydb/list-graphs', () => {
-  test('lists the graphs with a count', async () => {
+  test('lists the graphs of the dataset with the server credential', async () => {
     svc.listGraphs.mockResolvedValue(['graph:default', 'graph:default-1']);
 
-    const res = await request(makeApp()).post('/v1/triplydb/list-graphs').send({ config: CONFIG });
+    const res = await request(makeApp())
+      .post('/v1/triplydb/list-graphs')
+      .send({ dataset: 'PublishTest' });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
@@ -238,33 +448,36 @@ describe('POST /v1/triplydb/list-graphs', () => {
       graphs: ['graph:default', 'graph:default-1'],
       count: 2,
     });
-    expect(svc.listGraphs).toHaveBeenCalledWith(CONFIG);
+    expect(svc.listGraphs).toHaveBeenCalledWith(SERVER_CONFIG);
   });
 
-  test('rejects a missing config with 400', async () => {
-    const res = await request(makeApp()).post('/v1/triplydb/list-graphs').send({});
+  test('takes the dataset from config and ignores the token a caller sends', async () => {
+    svc.listGraphs.mockResolvedValue([]);
+
+    await request(makeApp())
+      .post('/v1/triplydb/list-graphs')
+      .send({ config: { ...CONFIG, apiToken: 'caller-token' } });
+
+    expect(svc.listGraphs).toHaveBeenCalledWith(SERVER_CONFIG);
+  });
+
+  test.each([
+    ['a missing dataset', {}],
+    ['a dataset with ..', { dataset: '..' }],
+  ])('rejects %s with 400', async (_label, body) => {
+    const res = await request(makeApp()).post('/v1/triplydb/list-graphs').send(body);
 
     expect(res.status).toBe(400);
-    expect(res.body.detail).toBe('Invalid or missing config');
+    expect(res.body.code).toBe('INVALID_INPUT');
     expect(svc.listGraphs).not.toHaveBeenCalled();
   });
-
-  test.each(['baseUrl', 'account', 'dataset', 'apiToken'])(
-    'rejects a config missing %s with 400',
-    async (field) => {
-      const res = await request(makeApp())
-        .post('/v1/triplydb/list-graphs')
-        .send({ config: { ...CONFIG, [field]: undefined } });
-
-      expect(res.status).toBe(400);
-      expect(svc.listGraphs).not.toHaveBeenCalled();
-    }
-  );
 
   test('returns 500 when listing fails', async () => {
     svc.listGraphs.mockRejectedValue(new Error('dataset not found'));
 
-    const res = await request(makeApp()).post('/v1/triplydb/list-graphs').send({ config: CONFIG });
+    const res = await request(makeApp())
+      .post('/v1/triplydb/list-graphs')
+      .send({ dataset: 'PublishTest' });
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
@@ -277,44 +490,60 @@ describe('POST /v1/triplydb/list-graphs', () => {
   test('falls back to a generic message for a non-Error rejection', async () => {
     svc.listGraphs.mockRejectedValue('boom');
 
-    const res = await request(makeApp()).post('/v1/triplydb/list-graphs').send({ config: CONFIG });
+    const res = await request(makeApp())
+      .post('/v1/triplydb/list-graphs')
+      .send({ dataset: 'PublishTest' });
 
     expect(res.body.detail).toBe('Failed to list graphs');
   });
 });
 
 describe('POST /v1/triplydb/test-connection', () => {
-  test('answers 200 when the credentials work', async () => {
-    svc.testConnection.mockResolvedValue(true);
+  test('answers 200 when the dataset exists', async () => {
+    svc.testConnection.mockResolvedValue(200);
 
     const res = await request(makeApp())
       .post('/v1/triplydb/test-connection')
-      .send({ config: CONFIG });
+      .send({ dataset: 'PublishTest' });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, message: 'Connection successful', status: 200 });
+    expect(svc.testConnection).toHaveBeenCalledWith(SERVER_CONFIG);
   });
 
-  test('answers 503 when the connection is refused, rather than treating it as a server error', async () => {
-    svc.testConnection.mockResolvedValue(false);
+  test('answers 404 when TriplyDB does not know the dataset', async () => {
+    svc.testConnection.mockResolvedValue(404);
 
     const res = await request(makeApp())
       .post('/v1/triplydb/test-connection')
-      .send({ config: CONFIG });
+      .send({ dataset: 'Missing' });
 
-    expect(res.status).toBe(503);
-    expect(res.body).toMatchObject({
-      status: 503,
-      title: 'Service unavailable',
-      detail: 'Connection failed',
-    });
+    expect(res.status).toBe(404);
+    expect(res.body).toMatchObject({ status: 404, title: 'Dataset not found' });
   });
 
-  test('rejects a missing config with 400', async () => {
+  test.each([401, 403, 500, 503])(
+    'answers 502 when TriplyDB answers %i, not "Dataset not found" (#234)',
+    async (status) => {
+      svc.testConnection.mockResolvedValue(status);
+
+      const res = await request(makeApp())
+        .post('/v1/triplydb/test-connection')
+        .send({ dataset: 'PublishTest' });
+
+      expect(res.status).toBe(502);
+      expect(res.body).toMatchObject({
+        title: 'TriplyDB request failed',
+        detail: `TriplyDB answered HTTP ${status}`,
+      });
+    }
+  );
+
+  test('rejects a missing dataset with 400', async () => {
     const res = await request(makeApp()).post('/v1/triplydb/test-connection').send({});
 
     expect(res.status).toBe(400);
-    expect(res.body.detail).toBe('Missing config');
+    expect(res.body.code).toBe('INVALID_INPUT');
     expect(svc.testConnection).not.toHaveBeenCalled();
   });
 
@@ -323,7 +552,7 @@ describe('POST /v1/triplydb/test-connection', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/test-connection')
-      .send({ config: CONFIG });
+      .send({ dataset: 'PublishTest' });
 
     expect(res.status).toBe(500);
     expect(res.body).toMatchObject({
@@ -338,7 +567,7 @@ describe('POST /v1/triplydb/test-connection', () => {
 
     const res = await request(makeApp())
       .post('/v1/triplydb/test-connection')
-      .send({ config: CONFIG });
+      .send({ dataset: 'PublishTest' });
 
     expect(res.body.detail).toBe('Connection test failed');
   });
@@ -492,28 +721,26 @@ describe('GET /v1/triplydb/assets', () => {
   });
 });
 
-describe('#142 TriplyDB host allowlist', () => {
+describe('#142 / ttl-editor#234 TriplyDB host', () => {
   test.each(['/update-service', '/list-graphs', '/test-connection'])(
-    '%s refuses a host that is not allowed, without calling TriplyDB',
+    '%s never goes to a host the caller names, only to the server target',
     async (path) => {
-      const res = await request(makeApp())
+      svc.updateService.mockResolvedValue({ success: true, graphCount: 0 });
+      svc.listGraphs.mockResolvedValue([]);
+      svc.testConnection.mockResolvedValue(200);
+
+      await request(makeApp())
         .post(`/v1/triplydb${path}`)
         .send({ config: { ...CONFIG, baseUrl: 'https://example.org' }, serviceName: 'svc' });
-      expect(res.status).toBe(400);
-      expect(res.body.detail).toBe(
-        '`config.baseUrl` host example.org is not an allowed TriplyDB host'
-      );
-      for (const fn of Object.values(svc)) {
-        if (typeof fn === 'function') expect(fn).not.toHaveBeenCalled();
+
+      for (const fn of [svc.updateService, svc.listGraphs, svc.testConnection]) {
+        for (const call of fn.mock.calls) {
+          expect(call[0].baseUrl).toBe('https://api.open-regels.triply.cc');
+          expect(call[0].apiToken).toBe('server-secret');
+        }
       }
     }
   );
-
-  test('test-connection refuses a config with missing fields', async () => {
-    const res = await request(makeApp()).post('/v1/triplydb/test-connection').send({ config: {} });
-    expect(res.status).toBe(400);
-    expect(svc.testConnection).not.toHaveBeenCalled();
-  });
 });
 
 describe('#142 GET /v1/triplydb/assets token', () => {
@@ -682,7 +909,7 @@ describe('/v1/triplydb matches its OpenAPI description', () => {
       graphName: 'graph:a',
     });
     const ok = await post('/update-service').send({
-      config: CONFIG,
+      dataset: 'PublishTest',
       serviceName: 'PublishTest',
       graphName: 'graph:a',
     });
@@ -695,16 +922,24 @@ describe('/v1/triplydb matches its OpenAPI description', () => {
 
     svc.updateService.mockRejectedValue(new Error('Failed to update service: 403'));
     const failed = await post('/update-service').send({
-      config: CONFIG,
+      dataset: 'PublishTest',
       serviceName: 'PublishTest',
     });
     expect(failed.status).toBe(500);
     expectToMatchOperation(failed, 'post', '/triplydb/update-service');
+
+    svc.publishTarget.mockReturnValue(null);
+    const off = await post('/update-service').send({
+      dataset: 'PublishTest',
+      serviceName: 'PublishTest',
+    });
+    expect(off.status).toBe(503);
+    expectToMatchOperation(off, 'post', '/triplydb/update-service');
   });
 
   test('POST /list-graphs 200, 400 and 500, as documented', async () => {
     svc.listGraphs.mockResolvedValue(['graph:default', 'graph:default-1']);
-    const ok = await post('/list-graphs').send({ config: CONFIG });
+    const ok = await post('/list-graphs').send({ dataset: 'PublishTest' });
     expect(ok.status).toBe(200);
     expectToMatchOperation(ok, 'post', '/triplydb/list-graphs');
 
@@ -713,20 +948,25 @@ describe('/v1/triplydb matches its OpenAPI description', () => {
     expectToMatchOperation(bad, 'post', '/triplydb/list-graphs');
 
     svc.listGraphs.mockRejectedValue(new Error('Failed to list graphs: 404'));
-    const failed = await post('/list-graphs').send({ config: CONFIG });
+    const failed = await post('/list-graphs').send({ dataset: 'PublishTest' });
     expect(failed.status).toBe(500);
     expectToMatchOperation(failed, 'post', '/triplydb/list-graphs');
   });
 
-  test('POST /test-connection 200, 503, 400 and 500, as documented', async () => {
-    svc.testConnection.mockResolvedValue(true);
-    const ok = await post('/test-connection').send({ config: CONFIG });
+  test('POST /test-connection 200, 404, 502, 400 and 500, as documented', async () => {
+    svc.testConnection.mockResolvedValue(200);
+    const ok = await post('/test-connection').send({ dataset: 'PublishTest' });
     expect(ok.status).toBe(200);
     expectToMatchOperation(ok, 'post', '/triplydb/test-connection');
 
-    svc.testConnection.mockResolvedValue(false);
-    const refused = await post('/test-connection').send({ config: CONFIG });
-    expect(refused.status).toBe(503);
+    svc.testConnection.mockResolvedValue(404);
+    const missing = await post('/test-connection').send({ dataset: 'Missing' });
+    expect(missing.status).toBe(404);
+    expectToMatchOperation(missing, 'post', '/triplydb/test-connection');
+
+    svc.testConnection.mockResolvedValue(401);
+    const refused = await post('/test-connection').send({ dataset: 'PublishTest' });
+    expect(refused.status).toBe(502);
     expectToMatchOperation(refused, 'post', '/triplydb/test-connection');
 
     const bad = await post('/test-connection').send({});
@@ -734,9 +974,44 @@ describe('/v1/triplydb matches its OpenAPI description', () => {
     expectToMatchOperation(bad, 'post', '/triplydb/test-connection');
 
     svc.testConnection.mockRejectedValue(new Error('DNS failure'));
-    const failed = await post('/test-connection').send({ config: CONFIG });
+    const failed = await post('/test-connection').send({ dataset: 'PublishTest' });
     expect(failed.status).toBe(500);
     expectToMatchOperation(failed, 'post', '/triplydb/test-connection');
+  });
+
+  test('POST /publish and GET /publish-target, as documented (ttl-editor#234)', async () => {
+    svc.uploadTtl.mockResolvedValue(undefined);
+    svc.updateService.mockResolvedValue({ success: true, graphCount: 1 });
+    const body = {
+      dataset: 'PublishTest',
+      graph: 'https://regels.overheid.nl/graphs/svb/aow',
+      filename: 'aow',
+      ttl: '@prefix x: <http://x/> .',
+    };
+    const ok = await post('/publish').send(body);
+    expect(ok.status).toBe(200);
+    expectToMatchOperation(ok, 'post', '/triplydb/publish');
+
+    const bad = await post('/publish').send({ ...body, dataset: 'a/b' });
+    expect(bad.status).toBe(400);
+    expectToMatchOperation(bad, 'post', '/triplydb/publish');
+
+    svc.uploadTtl.mockRejectedValue(new Error('TriplyDB upload failed: 500'));
+    const failed = await post('/publish').send(body);
+    expect(failed.status).toBe(502);
+    expectToMatchOperation(failed, 'post', '/triplydb/publish');
+
+    const target = await request(makeDocumentedApp()).get('/v1/triplydb/publish-target');
+    expect(target.status).toBe(200);
+    expectToMatchOperation(target, 'get', '/triplydb/publish-target');
+
+    svc.publishTarget.mockReturnValue(null);
+    const off = await post('/publish').send(body);
+    expect(off.status).toBe(503);
+    expectToMatchOperation(off, 'post', '/triplydb/publish');
+    const targetOff = await request(makeDocumentedApp()).get('/v1/triplydb/publish-target');
+    expect(targetOff.status).toBe(503);
+    expectToMatchOperation(targetOff, 'get', '/triplydb/publish-target');
   });
 
   test('GET /assets 200, 400, upstream status and 500, as documented', async () => {

@@ -13,9 +13,14 @@ import {
   constructGraph,
   executeQuery,
   listGraphs,
+  publishTarget,
+  serverConfig,
   testConnection,
   updateService,
+  uploadAsset,
+  uploadTtl,
 } from './triplydb.service';
+import { config } from '../utils/config';
 
 const CONFIG = {
   baseUrl: 'https://api.open-regels.triply.cc',
@@ -311,10 +316,10 @@ describe('updateService', () => {
 });
 
 describe('testConnection', () => {
-  test('returns true for a reachable, authorised dataset', async () => {
+  test('answers 200 for a reachable, authorised dataset', async () => {
     mockRequest.mockResolvedValue(reply(200, ''));
 
-    await expect(testConnection(CONFIG)).resolves.toBe(true);
+    await expect(testConnection(CONFIG)).resolves.toBe(200);
     expect(mockRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         url: 'https://api.open-regels.triply.cc/datasets/stevengort/PublishTest',
@@ -324,22 +329,30 @@ describe('testConnection', () => {
     );
   });
 
-  test('returns false rather than throwing when the credentials are rejected', async () => {
+  test("answers TriplyDB's status when it refuses, so a bad token is not a missing dataset (#234)", async () => {
     mockRequest.mockResolvedValue(reply(401, ''));
 
-    await expect(testConnection(CONFIG)).resolves.toBe(false);
+    await expect(testConnection(CONFIG)).resolves.toBe(401);
   });
 
-  test('returns false rather than throwing when the host is unreachable', async () => {
+  test('answers 404 for a dataset that does not exist', async () => {
+    mockRequest.mockResolvedValue(reply(404, ''));
+
+    await expect(testConnection(CONFIG)).resolves.toBe(404);
+  });
+
+  test('rejects when the host is unreachable, rather than calling it a missing dataset', async () => {
     mockRequest.mockRejectedValue(new Error('ENOTFOUND'));
 
-    await expect(testConnection(CONFIG)).resolves.toBe(false);
+    await expect(testConnection(CONFIG)).rejects.toThrow('ENOTFOUND');
   });
 
-  test('returns false when the guard refuses the target', async () => {
+  test('rejects when the guard refuses the target', async () => {
     mockRequest.mockRejectedValue(guardRefusal('x.example resolves to an internal address'));
 
-    await expect(testConnection({ ...CONFIG, baseUrl: 'https://x.example' })).resolves.toBe(false);
+    await expect(testConnection({ ...CONFIG, baseUrl: 'https://x.example' })).rejects.toThrow(
+      'internal address'
+    );
   });
 });
 
@@ -372,9 +385,149 @@ describe('non-Error transport failures', () => {
     await expect(updateService(CONFIG, 'svc', ['g1'])).rejects.toThrow('Failed to update service:');
   });
 
-  test('testConnection returns false for a rejection that is not an Error', async () => {
+  test('testConnection passes on a rejection that is not an Error', async () => {
     mockRequest.mockRejectedValue('socket hang up');
 
-    await expect(testConnection(CONFIG)).resolves.toBe(false);
+    await expect(testConnection(CONFIG)).rejects.toBe('socket hang up');
+  });
+});
+
+describe('publishTarget (ttl-editor#234)', () => {
+  const saved = { ...config.triplydb.publish };
+  afterEach(() => {
+    Object.assign(config.triplydb.publish, saved);
+  });
+
+  function set(baseUrl: string, account: string, apiToken: string) {
+    Object.assign(config.triplydb.publish, { baseUrl, account, apiToken });
+  }
+
+  test('answers base URL and account, without the token, when all three are set', () => {
+    set('https://api.open-regels.triply.cc', 'stevengort', 'secret');
+
+    expect(publishTarget()).toEqual({
+      baseUrl: 'https://api.open-regels.triply.cc',
+      account: 'stevengort',
+    });
+  });
+
+  test.each([
+    ['no account', 'https://api.open-regels.triply.cc', '', 'secret'],
+    ['no token', 'https://api.open-regels.triply.cc', 'stevengort', ''],
+    ['a host outside TRIPLYDB_ALLOWED_HOSTS', 'https://evil.example', 'stevengort', 'secret'],
+    ['plain http', 'http://api.open-regels.triply.cc', 'stevengort', 'secret'],
+  ])('answers null with %s', (_label, baseUrl, account, token) => {
+    set(baseUrl, account, token);
+
+    expect(publishTarget()).toBeNull();
+  });
+});
+
+describe('serverConfig (ttl-editor#234)', () => {
+  const saved = { ...config.triplydb.publish };
+  afterEach(() => {
+    Object.assign(config.triplydb.publish, saved);
+  });
+
+  test('builds the config from the server settings plus the dataset', () => {
+    Object.assign(config.triplydb.publish, {
+      baseUrl: 'https://api.open-regels.triply.cc',
+      account: 'stevengort',
+      apiToken: 'secret',
+    });
+
+    expect(serverConfig('PublishTest')).toEqual({
+      baseUrl: 'https://api.open-regels.triply.cc',
+      account: 'stevengort',
+      dataset: 'PublishTest',
+      apiToken: 'secret',
+    });
+  });
+
+  test('throws when publishing is not configured', () => {
+    Object.assign(config.triplydb.publish, { account: '', apiToken: '' });
+
+    expect(() => serverConfig('PublishTest')).toThrow('Publishing is not configured');
+  });
+});
+
+describe('uploadTtl (ttl-editor#234)', () => {
+  const GRAPH = 'https://regels.overheid.nl/graphs/svb/aow';
+
+  test('POSTs the TTL as a multipart job into the given graph, with the token', async () => {
+    mockRequest.mockResolvedValue(reply(200, '{}'));
+
+    await uploadTtl(CONFIG, '@prefix x: <http://x/> .', 'aow', GRAPH);
+
+    const call = mockRequest.mock.calls[0][0];
+    expect(call.method).toBe('POST');
+    expect(call.url).toBe(
+      'https://api.open-regels.triply.cc/datasets/stevengort/PublishTest/jobs?defaultGraphName=' +
+        encodeURIComponent(GRAPH)
+    );
+    expect(call.headers).toEqual({ Authorization: 'Bearer tok-1' });
+    const form = call.data as FormData;
+    expect(form).toBeInstanceOf(FormData);
+    expect(form.get('defaultGraphName')).toBe(GRAPH);
+    const file = form.get('file') as File;
+    expect(file.name).toBe('aow.ttl');
+    expect(file.type).toBe('text/turtle;charset=utf-8');
+    expect(await file.text()).toBe('@prefix x: <http://x/> .');
+  });
+
+  test('keeps a filename that already ends in .ttl', async () => {
+    mockRequest.mockResolvedValue(reply(200, '{}'));
+
+    await uploadTtl(CONFIG, 'x', 'aow.ttl', GRAPH);
+
+    expect(((mockRequest.mock.calls[0][0].data as FormData).get('file') as File).name).toBe(
+      'aow.ttl'
+    );
+  });
+
+  test('rejects on a non-2xx answer, without the token in the message', async () => {
+    mockRequest.mockResolvedValue(reply(500, 'boom'));
+
+    const error = await uploadTtl(CONFIG, 'x', 'aow', GRAPH).catch((e: Error) => e);
+
+    expect((error as Error).message).toBe('TriplyDB upload failed: 500 boom');
+    expect((error as Error).message).not.toContain('tok-1');
+  });
+});
+
+describe('uploadAsset (ttl-editor#234)', () => {
+  const PNG = 'data:image/png;base64,' + Buffer.from('png-bytes').toString('base64');
+
+  test('POSTs the decoded image as a multipart asset, with the token', async () => {
+    mockRequest.mockResolvedValue(reply(201, '{}'));
+
+    await uploadAsset(CONFIG, 'svb_logo.png', PNG);
+
+    const call = mockRequest.mock.calls[0][0];
+    expect(call.method).toBe('POST');
+    expect(call.url).toBe(
+      'https://api.open-regels.triply.cc/datasets/stevengort/PublishTest/assets'
+    );
+    expect(call.headers).toEqual({ Authorization: 'Bearer tok-1' });
+    const file = (call.data as FormData).get('file') as File;
+    expect(file.name).toBe('svb_logo.png');
+    expect(file.type).toBe('image/png');
+    expect(await file.text()).toBe('png-bytes');
+  });
+
+  test('rejects on a non-2xx answer, without the token in the message', async () => {
+    mockRequest.mockResolvedValue(reply(400, 'bad'));
+
+    const error = await uploadAsset(CONFIG, 'svb_logo.png', PNG).catch((e: Error) => e);
+
+    expect((error as Error).message).toBe('TriplyDB asset upload failed: 400 bad');
+    expect((error as Error).message).not.toContain('tok-1');
+  });
+
+  test('refuses something that is not a base64 data URL, without a request', async () => {
+    await expect(uploadAsset(CONFIG, 'x.png', 'https://example.org/x.png')).rejects.toThrow(
+      'Invalid image data URL'
+    );
+    expect(mockRequest).not.toHaveBeenCalled();
   });
 });
