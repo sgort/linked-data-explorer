@@ -500,7 +500,7 @@ describe('POST /v1/triplydb/list-graphs', () => {
 
 describe('POST /v1/triplydb/test-connection', () => {
   test('answers 200 when the dataset exists', async () => {
-    svc.testConnection.mockResolvedValue(true);
+    svc.testConnection.mockResolvedValue(200);
 
     const res = await request(makeApp())
       .post('/v1/triplydb/test-connection')
@@ -511,8 +511,8 @@ describe('POST /v1/triplydb/test-connection', () => {
     expect(svc.testConnection).toHaveBeenCalledWith(SERVER_CONFIG);
   });
 
-  test('answers 404 when the dataset does not answer', async () => {
-    svc.testConnection.mockResolvedValue(false);
+  test('answers 404 when TriplyDB does not know the dataset', async () => {
+    svc.testConnection.mockResolvedValue(404);
 
     const res = await request(makeApp())
       .post('/v1/triplydb/test-connection')
@@ -521,6 +521,23 @@ describe('POST /v1/triplydb/test-connection', () => {
     expect(res.status).toBe(404);
     expect(res.body).toMatchObject({ status: 404, title: 'Dataset not found' });
   });
+
+  test.each([401, 403, 500, 503])(
+    'answers 502 when TriplyDB answers %i, not "Dataset not found" (#234)',
+    async (status) => {
+      svc.testConnection.mockResolvedValue(status);
+
+      const res = await request(makeApp())
+        .post('/v1/triplydb/test-connection')
+        .send({ dataset: 'PublishTest' });
+
+      expect(res.status).toBe(502);
+      expect(res.body).toMatchObject({
+        title: 'TriplyDB request failed',
+        detail: `TriplyDB answered HTTP ${status}`,
+      });
+    }
+  );
 
   test('rejects a missing dataset with 400', async () => {
     const res = await request(makeApp()).post('/v1/triplydb/test-connection').send({});
@@ -710,7 +727,7 @@ describe('#142 / ttl-editor#234 TriplyDB host', () => {
     async (path) => {
       svc.updateService.mockResolvedValue({ success: true, graphCount: 0 });
       svc.listGraphs.mockResolvedValue([]);
-      svc.testConnection.mockResolvedValue(true);
+      svc.testConnection.mockResolvedValue(200);
 
       await request(makeApp())
         .post(`/v1/triplydb${path}`)
@@ -936,16 +953,21 @@ describe('/v1/triplydb matches its OpenAPI description', () => {
     expectToMatchOperation(failed, 'post', '/triplydb/list-graphs');
   });
 
-  test('POST /test-connection 200, 404, 400 and 500, as documented', async () => {
-    svc.testConnection.mockResolvedValue(true);
+  test('POST /test-connection 200, 404, 502, 400 and 500, as documented', async () => {
+    svc.testConnection.mockResolvedValue(200);
     const ok = await post('/test-connection').send({ dataset: 'PublishTest' });
     expect(ok.status).toBe(200);
     expectToMatchOperation(ok, 'post', '/triplydb/test-connection');
 
-    svc.testConnection.mockResolvedValue(false);
+    svc.testConnection.mockResolvedValue(404);
     const missing = await post('/test-connection').send({ dataset: 'Missing' });
     expect(missing.status).toBe(404);
     expectToMatchOperation(missing, 'post', '/triplydb/test-connection');
+
+    svc.testConnection.mockResolvedValue(401);
+    const refused = await post('/test-connection').send({ dataset: 'PublishTest' });
+    expect(refused.status).toBe(502);
+    expectToMatchOperation(refused, 'post', '/triplydb/test-connection');
 
     const bad = await post('/test-connection').send({});
     expect(bad.status).toBe(400);

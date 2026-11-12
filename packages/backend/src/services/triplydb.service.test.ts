@@ -316,10 +316,10 @@ describe('updateService', () => {
 });
 
 describe('testConnection', () => {
-  test('returns true for a reachable, authorised dataset', async () => {
+  test('answers 200 for a reachable, authorised dataset', async () => {
     mockRequest.mockResolvedValue(reply(200, ''));
 
-    await expect(testConnection(CONFIG)).resolves.toBe(true);
+    await expect(testConnection(CONFIG)).resolves.toBe(200);
     expect(mockRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         url: 'https://api.open-regels.triply.cc/datasets/stevengort/PublishTest',
@@ -329,22 +329,30 @@ describe('testConnection', () => {
     );
   });
 
-  test('returns false rather than throwing when the credentials are rejected', async () => {
+  test("answers TriplyDB's status when it refuses, so a bad token is not a missing dataset (#234)", async () => {
     mockRequest.mockResolvedValue(reply(401, ''));
 
-    await expect(testConnection(CONFIG)).resolves.toBe(false);
+    await expect(testConnection(CONFIG)).resolves.toBe(401);
   });
 
-  test('returns false rather than throwing when the host is unreachable', async () => {
+  test('answers 404 for a dataset that does not exist', async () => {
+    mockRequest.mockResolvedValue(reply(404, ''));
+
+    await expect(testConnection(CONFIG)).resolves.toBe(404);
+  });
+
+  test('rejects when the host is unreachable, rather than calling it a missing dataset', async () => {
     mockRequest.mockRejectedValue(new Error('ENOTFOUND'));
 
-    await expect(testConnection(CONFIG)).resolves.toBe(false);
+    await expect(testConnection(CONFIG)).rejects.toThrow('ENOTFOUND');
   });
 
-  test('returns false when the guard refuses the target', async () => {
+  test('rejects when the guard refuses the target', async () => {
     mockRequest.mockRejectedValue(guardRefusal('x.example resolves to an internal address'));
 
-    await expect(testConnection({ ...CONFIG, baseUrl: 'https://x.example' })).resolves.toBe(false);
+    await expect(testConnection({ ...CONFIG, baseUrl: 'https://x.example' })).rejects.toThrow(
+      'internal address'
+    );
   });
 });
 
@@ -377,10 +385,10 @@ describe('non-Error transport failures', () => {
     await expect(updateService(CONFIG, 'svc', ['g1'])).rejects.toThrow('Failed to update service:');
   });
 
-  test('testConnection returns false for a rejection that is not an Error', async () => {
+  test('testConnection passes on a rejection that is not an Error', async () => {
     mockRequest.mockRejectedValue('socket hang up');
 
-    await expect(testConnection(CONFIG)).resolves.toBe(false);
+    await expect(testConnection(CONFIG)).rejects.toBe('socket hang up');
   });
 });
 

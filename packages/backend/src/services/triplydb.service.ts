@@ -397,9 +397,11 @@ export async function updateService(
 }
 
 /**
- * Test TriplyDB connection
+ * Check a dataset: TriplyDB's HTTP status for it (200 when it exists, 404 when
+ * it does not, 401/403 for a refused token). A transport failure rejects, so
+ * an unreachable TriplyDB is not mistaken for a missing dataset (ttl-editor#234).
  */
-export async function testConnection(dbConfig: TriplyDBConfig): Promise<boolean> {
+export async function testConnection(dbConfig: TriplyDBConfig): Promise<number> {
   const testUrl = `${dbConfig.baseUrl}/datasets/${dbConfig.account}/${dbConfig.dataset}`;
 
   logger.info('[TriplyDB Service] Testing connection', {
@@ -408,27 +410,18 @@ export async function testConnection(dbConfig: TriplyDBConfig): Promise<boolean>
     dataset: dbConfig.dataset,
   });
 
-  try {
-    const response = await send(testUrl, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${dbConfig.apiToken}`,
-        Accept: 'application/json',
-      },
-    });
+  const response = await send(testUrl, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${dbConfig.apiToken}`,
+      Accept: 'application/json',
+    },
+  });
 
-    const success = response.ok;
+  logger.info('[TriplyDB Service] Connection test completed', {
+    success: response.ok,
+    status: response.status,
+  });
 
-    logger.info('[TriplyDB Service] Connection test completed', {
-      success: success,
-      status: response.status,
-    });
-
-    return success;
-  } catch (error) {
-    logger.error('[TriplyDB Service] Connection test failed', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-    return false;
-  }
+  return response.status;
 }

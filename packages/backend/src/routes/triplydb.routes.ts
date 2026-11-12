@@ -386,12 +386,22 @@ router.post(
     }
 
     try {
-      const exists = await triplydbService.testConnection(triplydbService.serverConfig(dataset));
-      if (!exists) {
+      const status = await triplydbService.testConnection(triplydbService.serverConfig(dataset));
+      if (status === 404) {
         sendProblem(res, req, {
           status: 404,
           title: 'Dataset not found',
           detail: `Dataset ${dataset} was not found in the publishing account`,
+        });
+        return;
+      }
+      // Anything else that is not a success is TriplyDB's problem or the
+      // server's token, not the author's dataset name.
+      if (status < 200 || status >= 300) {
+        sendProblem(res, req, {
+          status: 502,
+          title: 'TriplyDB request failed',
+          detail: `TriplyDB answered HTTP ${status}`,
         });
         return;
       }

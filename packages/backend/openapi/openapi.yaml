@@ -2231,6 +2231,14 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '502':
+          description: >-
+            TriplyDB answered something other than success or 404, for example
+            a refused server token; the detail gives its status.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '400':
           description: >-
             `dataset` is missing or not 1 to 40 letters, digits or hyphens
