@@ -342,3 +342,59 @@ describe('auth service', () => {
     expect(auth.getAuthState()).toMatchObject({ ready: true, signedIn: false });
   });
 });
+
+describe('auth service — the remaining branches', () => {
+  test('without a name in the token, the username is shown', async () => {
+    localStorage.setItem('lde.auth.wasSignedIn', '1');
+    const { auth, fake } = await load();
+    signInFake(fake);
+    fake.tokenParsed = { preferred_username: 'jdoe' };
+    await auth.initAuth();
+    expect(auth.getAuthState()).toEqual({
+      ready: true,
+      signedIn: true,
+      isAuthor: false,
+      name: 'jdoe',
+    });
+  });
+
+  test('a token without name or claims still signs in, nameless', async () => {
+    localStorage.setItem('lde.auth.wasSignedIn', '1');
+    const { auth, fake } = await load();
+    signInFake(fake);
+    fake.tokenParsed = undefined;
+    await auth.initAuth();
+    expect(auth.getAuthState()).toEqual({ ready: true, signedIn: true, isAuthor: false });
+  });
+
+  test('without a token after the refresh, no header is sent', async () => {
+    localStorage.setItem('lde.auth.wasSignedIn', '1');
+    const { auth, fake } = await load();
+    signInFake(fake);
+    await auth.initAuth();
+    fake.token = undefined;
+    await expect(auth.authHeaders()).resolves.toEqual({});
+  });
+
+  test('without BroadcastChannel, it still loads', async () => {
+    vi.stubGlobal('BroadcastChannel', undefined);
+    const { auth } = await load();
+    await auth.initAuth();
+    expect(auth.getAuthState()).toMatchObject({ ready: true, signedIn: false });
+  });
+
+  test('with storage unavailable, it still works, signed out on load', async () => {
+    const { auth, fake } = await load();
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    await auth.initAuth();
+    expect(fake.init.mock.calls[0][0].onLoad).toBeUndefined();
+    vi.spyOn(window, 'open').mockReturnValue(null);
+    await auth.signIn('medewerker');
+    expect(fake.login).toHaveBeenCalled();
+  });
+});

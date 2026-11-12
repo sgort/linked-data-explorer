@@ -23,6 +23,7 @@ import {
   findBlockingKey,
   pruneRateSlots,
   resetRateSlots,
+  startTestDeployCleanup,
   sweepTestDeployments,
   takeRateSlot,
   trackedAddresses,
@@ -164,5 +165,63 @@ describe('sweepTestDeployments', () => {
     op.deleteDeployment.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(undefined);
 
     await expect(sweepTestDeployments(new Date())).resolves.toBe(1);
+  });
+});
+
+describe('startTestDeployCleanup', () => {
+  const log = jest.requireMock('../utils/logger').default as Record<string, jest.Mock>;
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    log.info.mockClear();
+    log.warn.mockClear();
+    op.listDeployments.mockReset();
+    op.deleteDeployment.mockReset();
+  });
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+    configMock.testDeploy.enabled = true;
+  });
+
+  test('does nothing when test deploys are off', () => {
+    configMock.testDeploy.enabled = false;
+    startTestDeployCleanup();
+    expect(op.listDeployments).not.toHaveBeenCalled();
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test('sweeps at once, logs what went, and again every hour', async () => {
+    op.listDeployments.mockResolvedValue([{ id: 'd1' }]);
+    op.deleteDeployment.mockResolvedValue(undefined);
+    startTestDeployCleanup();
+    await flush();
+    expect(log.info).toHaveBeenCalledWith('Test deploy cleanup', { removed: 1 });
+
+    jest.advanceTimersByTime(60 * 60 * 1000);
+    await flush();
+    expect(op.listDeployments).toHaveBeenCalledTimes(2);
+  });
+
+  test('a sweep with nothing to remove logs nothing', async () => {
+    op.listDeployments.mockResolvedValue([]);
+    startTestDeployCleanup();
+    await flush();
+    expect(log.info).not.toHaveBeenCalled();
+  });
+
+  test('a failing sweep is logged, not thrown', async () => {
+    op.listDeployments.mockRejectedValueOnce(new Error('engine down'));
+    startTestDeployCleanup();
+    await flush();
+    expect(log.warn).toHaveBeenCalledWith('Test deploy cleanup failed', { error: 'engine down' });
+  });
+
+  test('a non-Error failure is logged as text', async () => {
+    op.listDeployments.mockRejectedValueOnce('boom');
+    startTestDeployCleanup();
+    await flush();
+    expect(log.warn).toHaveBeenCalledWith('Test deploy cleanup failed', { error: 'boom' });
   });
 });
