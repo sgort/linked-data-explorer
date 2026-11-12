@@ -1,13 +1,15 @@
-import { ChevronDown, ChevronRight, FileText, Plus, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Lock, Plus, Trash2, Upload } from 'lucide-react';
 import { useMemo, useRef } from 'react';
 import React, { useState } from 'react';
 
+import { useDeleteLock } from '../../hooks/useAuth';
 import { BpmnProcess } from '../../types';
 import ArtefactListToolbar, {
   filterArtefacts,
   LanguageFilter,
 } from '../common/ArtefactListToolbar';
 import LanguageSelector, { LanguageCode } from '../common/LanguageSelector';
+import { LocalOnlyBadge, LocalSaveNotice } from '../common/LocalOnly';
 import OrganizationSelector from '../common/OrganizationSelector';
 import StatusBadge from '../common/StatusBadge';
 import DsoActiviteitSelector from './DsoActiviteitSelector';
@@ -54,6 +56,7 @@ const ProcessList: React.FC<ProcessListProps> = ({
   onLanguageChange,
   onOrganizationChange,
 }) => {
+  const deleteLock = useDeleteLock();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [search, setSearch] = useState('');
@@ -198,6 +201,7 @@ const ProcessList: React.FC<ProcessListProps> = ({
       />
       {/* Process List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <LocalSaveNotice />
         {(() => {
           if (processes.length === 0) {
             return (
@@ -253,6 +257,7 @@ const ProcessList: React.FC<ProcessListProps> = ({
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-medium text-slate-800 text-sm">{process.name}</h3>
                       <StatusBadge status={process.status} />
+                      {process.localOnly && <LocalOnlyBadge />}
                       {process.processRole === 'shell' && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-medium">
                           SHELL
@@ -274,10 +279,18 @@ const ProcessList: React.FC<ProcessListProps> = ({
                     e.stopPropagation();
                     onDeleteProcess(process.id);
                   }}
-                  disabled={process.status === 'example'}
-                  title={process.status === 'example' ? 'Cannot delete example' : 'Delete'}
+                  disabled={process.status === 'example' || deleteLock(process).locked}
+                  title={
+                    process.status === 'example'
+                      ? 'Cannot delete example'
+                      : (deleteLock(process).hint ?? 'Delete')
+                  }
                 >
-                  <Trash2 size={14} />
+                  {deleteLock(process).locked ? (
+                    <Lock size={14} aria-hidden="true" />
+                  ) : (
+                    <Trash2 size={14} />
+                  )}
                 </button>
               </div>
             </div>

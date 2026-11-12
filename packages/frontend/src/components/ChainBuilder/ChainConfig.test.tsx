@@ -3,6 +3,25 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
+// #163: signed in as an lde-author unless a test says otherwise.
+const authMock = vi.hoisted(() => ({
+  state: { ready: true, signedIn: true, isAuthor: true, name: 'Test' } as {
+    ready: boolean;
+    signedIn: boolean;
+    isAuthor: boolean;
+    name?: string;
+  },
+}));
+vi.mock('../../services/auth', () => ({
+  getAuthState: () => authMock.state,
+  subscribe: () => () => undefined,
+  authHeaders: async (): Promise<Record<string, string>> =>
+    authMock.state.signedIn ? { Authorization: 'Bearer test-token' } : {},
+  initAuth: async () => undefined,
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}));
+
 const getAllTemplates = vi.fn();
 const getTemplatesByCategory = vi.fn();
 const getUserTemplates = vi.fn();
@@ -604,5 +623,67 @@ describe('ChainConfig — populated chain', () => {
     );
 
     expect(screen.getByText('Sequential execution required (semantic links)')).toBeTruthy();
+  });
+});
+
+describe('ChainConfig — deploying a DRD needs a sign-in (#163)', () => {
+  afterEach(() => {
+    authMock.state = { ready: true, signedIn: true, isAuthor: true, name: 'Test' };
+  });
+
+  test('signed out, "Save as DRD" is locked with "Sign in to deploy"', async () => {
+    authMock.state = { ready: true, signedIn: false, isAuthor: false };
+    getAllTemplates.mockResolvedValue([]);
+    getUserTemplates.mockReturnValue([]);
+    render(
+      <ChainConfig
+        {...baseProps}
+        chain={[dmn()]}
+        validation={validation({ isDrdCompatible: true })}
+      />
+    );
+    await userEvent.click(screen.getByTitle('Save as DRD'));
+    await userEvent.type(screen.getByPlaceholderText(/My Eligibility Check/), 'My DRD');
+    expect(screen.getByRole('button', { name: /Save as DRD/ })).toBeDisabled();
+    expect(screen.getByText('Sign in to deploy')).toBeInTheDocument();
+  });
+
+  test('signed out, a sequential template still saves (it stays in this browser)', async () => {
+    authMock.state = { ready: true, signedIn: false, isAuthor: false };
+    getAllTemplates.mockResolvedValue([]);
+    getUserTemplates.mockReturnValue([]);
+    render(
+      <ChainConfig
+        {...baseProps}
+        chain={[dmn()]}
+        validation={validation({ isDrdCompatible: false })}
+      />
+    );
+    await userEvent.click(screen.getByTitle('Save template'));
+    await userEvent.type(screen.getByPlaceholderText(/My Eligibility Check/), 'My chain');
+    expect(screen.getByRole('button', { name: 'Save Template' })).toBeEnabled();
+  });
+
+  test("an author's DRD deploy sends the token", async () => {
+    getAllTemplates.mockResolvedValue([]);
+    getUserTemplates.mockReturnValue([]);
+    saveUserTemplate.mockReturnValue({ ...template(), name: 'My DRD' });
+    vi.spyOn(window, 'alert').mockImplementation(() => {});
+    global.fetch = vi.fn().mockResolvedValue({
+      json: async () => ({ success: true, data: { entryPointId: 'e', deploymentId: 'd' } }),
+    });
+    render(
+      <ChainConfig
+        {...baseProps}
+        chain={[dmn()]}
+        validation={validation({ isDrdCompatible: true })}
+      />
+    );
+    await userEvent.click(screen.getByTitle('Save as DRD'));
+    await userEvent.type(screen.getByPlaceholderText(/My Eligibility Check/), 'My DRD');
+    await userEvent.click(screen.getByRole('button', { name: 'Save as DRD' }));
+    await vi.waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(options.headers).toMatchObject({ Authorization: 'Bearer test-token' });
   });
 });

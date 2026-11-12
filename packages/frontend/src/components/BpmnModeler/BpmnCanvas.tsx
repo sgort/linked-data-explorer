@@ -10,16 +10,19 @@ import {
   CamundaPlatformPropertiesProviderModule,
 } from 'bpmn-js-properties-panel';
 import camundaModdleDescriptor from 'camunda-bpmn-moddle/resources/camunda.json';
-import { Download, Rocket, Save, X } from 'lucide-react';
+import { Download, Lock, Rocket, Save, X } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 
 import { BpmnService } from '@/src/services/bpmnService';
 
+import { useLockedAction } from '../../hooks/useAuth';
+import { authHeaders } from '../../services/auth';
 import { getDeployTarget } from '../../services/deployTargetService';
 import { DocumentService } from '../../services/documentService';
 import { FormService } from '../../services/formService';
 import { DocumentTemplate } from '../../types/document.types';
+import { authProblemMessage } from '../../utils/authProblem';
 import { collectBundleRefs, findProcessId, resolveSubProcesses } from '../../utils/deployBundle';
 import { parseDocumentRefs } from '../../utils/documentRefs';
 import { EMPTY_PHASE_VIEW, PhaseView, phaseViewFromXml } from '../../utils/phases/assignPhases';
@@ -140,6 +143,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
   const [hasChanges, setHasChanges] = useState(false);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showDeployModal, setShowDeployModal] = useState(false);
+  const deployLock = useLockedAction('deploy');
   const [isDeploying, setIsDeploying] = useState(false);
   // `warning` is the deploy that worked while its bundle did not get recorded
   // (#155): a success for Operaton, but not something to show a green tick
@@ -793,7 +797,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
 
       const response = await fetch(`${API_BASE_URL}/api/dmns/process/deploy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           bpmnXml: xml,
           deploymentName: processKey,
@@ -804,6 +808,12 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           organization: deployOrganization,
         }),
       });
+
+      const signInProblem = authProblemMessage(response.status, 'deploy');
+      if (signInProblem) {
+        setDeployResult({ success: false, message: signInProblem });
+        return;
+      }
 
       const data = await response.json();
 
@@ -891,11 +901,14 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
           </button>
           <button
             onClick={handleOpenDeployModal}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            disabled={deployLock.locked}
+            title={deployLock.hint ?? undefined}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
           >
-            <Rocket size={16} />
+            {deployLock.locked ? <Lock size={16} aria-hidden="true" /> : <Rocket size={16} />}
             Deploy
           </button>
+          {deployLock.hint && <span className="text-xs text-slate-500">{deployLock.hint}</span>}
 
           {deployResult && (
             <span

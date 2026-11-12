@@ -6,3 +6,6 @@
 // the ACC/PROD defaults (#142).
 process.env.ALLOW_LOCAL_ENDPOINTS = 'false';
 process.env.TRIPLYDB_ALLOWED_HOSTS = 'api.open-regels.triply.cc';
+// #163: anonymous test deploys are off unless a test turns them on, whatever a
+// developer's .env says (localhost sets TEST_DEPLOY_ENABLED=true).
+process.env.TEST_DEPLOY_ENABLED = 'false';

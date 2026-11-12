@@ -204,6 +204,8 @@ export interface BpmnProcess {
   updatedAt: string;
   linkedDmnTemplates: string[];
   readonly?: boolean;
+  /** Saved while signed out: kept in this browser only, not in the shared library (#163). */
+  localOnly?: boolean;
   status?: 'example' | 'wip' | 'e2e';
   bpmnProcessId?: string;
   processRole?: 'shell' | 'subprocess' | 'standalone';
@@ -289,6 +291,8 @@ export interface FormSchema {
   createdAt: string;
   updatedAt: string;
   readonly?: boolean;
+  /** Saved while signed out: kept in this browser only, not in the shared library (#163). */
+  localOnly?: boolean;
   status?: 'example' | 'wip' | 'dso' | 'e2e';
   language?: 'en' | 'nl' | 'de';
   organization?: string;

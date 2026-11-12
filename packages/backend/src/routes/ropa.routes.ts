@@ -12,6 +12,7 @@ import logger from '../utils/logger';
 import pool from '../db/pool';
 import { sendProblem } from '../utils/problem';
 import { asRecord, checkField, FieldErrors, isUuid, prefixErrors } from '../utils/validation';
+import { requireAuthor } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -125,7 +126,7 @@ router.get('/by-bpmn-id/:bpmnProcessId', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireAuthor, async (req, res) => {
   if (!dbRequired(req, res)) return;
   const errors = validateRopaUpsert(asRecord(req.body));
   if (errors.length > 0) {
@@ -141,7 +142,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuthor, async (req, res) => {
   if (!dbRequired(req, res)) return;
   if (!isUuid(req.params.id)) {
     sendProblem(res, req, {

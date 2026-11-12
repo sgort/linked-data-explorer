@@ -1,6 +1,7 @@
-import { Loader2, Save, X } from 'lucide-react';
+import { Loader2, Lock, Save, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+import { useLockedAction } from '../../hooks/useAuth';
 import { BpmnService } from '../../services/bpmnService';
 import { FormService } from '../../services/formService';
 import { DataCategory, RopaPersonalDataField, RopaRecord } from '../../types/ropa.types';
@@ -77,6 +78,7 @@ const RopaRecordEditor: React.FC<RopaRecordEditorProps> = ({ record, onSave, onC
   const [local, setLocal] = useState<RopaRecord>(record ?? blankRecord());
   const [activeTab, setActiveTab] = useState<Tab>('record');
   const [isSaving, setIsSaving] = useState(false);
+  const saveLock = useLockedAction('save');
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Legal basis lookup state
@@ -307,12 +309,20 @@ ORDER BY ?serviceTitle`;
           >
             <X size={16} />
           </button>
+          {saveLock.hint && <span className="text-xs text-slate-500">{saveLock.hint}</span>}
           <button
             onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors"
+            disabled={isSaving || saveLock.locked}
+            title={saveLock.hint ?? undefined}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {isSaving ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : saveLock.locked ? (
+              <Lock size={14} aria-hidden="true" />
+            ) : (
+              <Save size={14} />
+            )}
             Save
           </button>
         </div>

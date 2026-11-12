@@ -11,6 +11,7 @@ const router = Router();
 
 // Get package.json for version info
 import packageJson from '../../package.json';
+import { requireAuthor } from '../middleware/auth.middleware';
 
 /**
  * POST /v1/triplydb/query
@@ -130,7 +131,7 @@ router.post('/query', async (req: Request, res: Response) => {
  *   "graphCount": 3
  * }
  */
-router.post('/update-service', async (req: Request, res: Response) => {
+router.post('/update-service', requireAuthor, async (req: Request, res: Response) => {
   // Set API-Version header (API-57 requirement)
   res.set('API-Version', packageJson.version);
   res.set('Content-Type', 'application/json');

@@ -3,6 +3,26 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
+// #163: signed in as an lde-author unless a test says otherwise.
+const authMock = vi.hoisted(() => ({
+  // A token that can no longer be refreshed: authHeaders() then returns {}.
+  refreshFails: false,
+  state: { ready: true, signedIn: true, isAuthor: true, name: 'Test' } as {
+    ready: boolean;
+    signedIn: boolean;
+    isAuthor: boolean;
+    name?: string;
+  },
+}));
+vi.mock('./auth', () => ({
+  getAuthState: () => authMock.state,
+  subscribe: () => () => undefined,
+  authHeaders: async (): Promise<Record<string, string>> =>
+    authMock.state.isAuthor && !authMock.refreshFails ? { Authorization: 'Bearer test-token' } : {},
+}));
+const AUTHOR = { ready: true, signedIn: true, isAuthor: true, name: 'Test' };
+const SIGNED_OUT = { ready: true, signedIn: false, isAuthor: false };
+
 import { DocumentTemplate } from '../types/document.types';
 import { DocumentService } from './documentService';
 
@@ -133,5 +153,146 @@ describe('DocumentService.hydrateFromServer', () => {
     const result = await DocumentService.hydrateFromServer();
 
     expect(result).toEqual([template()]);
+  });
+});
+
+describe('DocumentService — saving signed out keeps it in this browser (#163)', () => {
+  afterEach(() => {
+    authMock.state = AUTHOR;
+  });
+
+  test('a signed-out save does not call the backend and marks it local-only', () => {
+    authMock.state = SIGNED_OUT;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockClear();
+    expect(DocumentService.saveTemplate(template())).toEqual({ localOnly: true });
+    expect(DocumentService.getTemplate('d1')?.localOnly).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("an author's save sends the token and clears the local-only mark", async () => {
+    let auth: string | null = null;
+    server.use(
+      http.post('*/v1/assets/documents', ({ request }) => {
+        auth = request.headers.get('Authorization');
+        return HttpResponse.json({ data: { id: 'd1' } });
+      })
+    );
+    expect(DocumentService.saveTemplate(template({ localOnly: true }))).toEqual({
+      localOnly: false,
+    });
+    await vi.waitFor(() => expect(auth).toBe('Bearer test-token'));
+    expect(DocumentService.getTemplate('d1')?.localOnly).toBeUndefined();
+  });
+
+  test('hydration keeps a local-only item the server does not have, and the server wins on the same id', async () => {
+    localStorage.setItem(
+      'linkedDataExplorer_documentTemplates',
+      JSON.stringify([
+        template({ id: 'mine', localOnly: true }),
+        template({ id: 'both', name: 'Mine', localOnly: true }),
+      ])
+    );
+    server.use(
+      http.get('*/v1/assets/documents', () =>
+        HttpResponse.json({ data: [template({ id: 'both', name: 'Shared' })] })
+      )
+    );
+    const all = await DocumentService.hydrateFromServer();
+    expect(all.map((x) => x.id).sort()).toEqual(['both', 'mine']);
+    expect(all.find((x) => x.id === 'both')).toMatchObject({ name: 'Shared' });
+    expect(all.find((x) => x.id === 'both')?.localOnly).toBeUndefined();
+  });
+
+  test('signed out, deleting a local-only item stays local and a shared item is kept', () => {
+    authMock.state = SIGNED_OUT;
+    localStorage.setItem(
+      'linkedDataExplorer_documentTemplates',
+      JSON.stringify([template({ id: 'mine', localOnly: true }), template({ id: 'shared' })])
+    );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockClear();
+    DocumentService.deleteTemplate('mine');
+    DocumentService.deleteTemplate('shared');
+    expect(DocumentService.getTemplate('mine')).toBeNull();
+    expect(DocumentService.getTemplate('shared')).not.toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('DocumentService — saves that must not be lost (#163 final review)', () => {
+  afterEach(() => {
+    authMock.state = AUTHOR;
+    authMock.refreshFails = false;
+  });
+
+  test('a signed-out edit of a shared item survives hydration while it is newer (I-2)', async () => {
+    localStorage.setItem(
+      'linkedDataExplorer_documentTemplates',
+      JSON.stringify([
+        template({
+          id: 'both',
+          name: 'My edit',
+          updatedAt: '2026-11-10T00:00:00.000Z',
+          localOnly: true,
+        }),
+      ])
+    );
+    server.use(
+      http.get('*/v1/assets/documents', () =>
+        HttpResponse.json({
+          data: [template({ id: 'both', name: 'Shared', updatedAt: '2026-11-01T00:00:00.000Z' })],
+        })
+      )
+    );
+    const all = await DocumentService.hydrateFromServer();
+    expect(all.filter((x) => x.id === 'both')).toHaveLength(1);
+    expect(all.find((x) => x.id === 'both')).toMatchObject({ name: 'My edit', localOnly: true });
+  });
+
+  test('a server copy saved after the local edit wins (Review Focus 5)', async () => {
+    localStorage.setItem(
+      'linkedDataExplorer_documentTemplates',
+      JSON.stringify([
+        template({
+          id: 'both',
+          name: 'My edit',
+          updatedAt: '2026-11-01T00:00:00.000Z',
+          localOnly: true,
+        }),
+      ])
+    );
+    server.use(
+      http.get('*/v1/assets/documents', () =>
+        HttpResponse.json({
+          data: [template({ id: 'both', name: 'Shared', updatedAt: '2026-11-10T00:00:00.000Z' })],
+        })
+      )
+    );
+    const all = await DocumentService.hydrateFromServer();
+    expect(all.filter((x) => x.id === 'both')).toHaveLength(1);
+    expect(all.find((x) => x.id === 'both')).toMatchObject({ name: 'Shared' });
+    expect(all.find((x) => x.id === 'both')?.localOnly).toBeUndefined();
+  });
+
+  test("an author's save whose token cannot be refreshed stays in this browser (I-3)", async () => {
+    authMock.refreshFails = true;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockClear();
+    DocumentService.saveTemplate(template());
+    await vi.waitFor(() => expect(DocumentService.getTemplate('d1')?.localOnly).toBe(true));
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("an author's save the backend refuses with 401 stays in this browser (I-3)", async () => {
+    server.use(http.post('*/v1/assets/documents', () => HttpResponse.json({}, { status: 401 })));
+    DocumentService.saveTemplate(template());
+    await vi.waitFor(() => expect(DocumentService.getTemplate('d1')?.localOnly).toBe(true));
+  });
+
+  test("an author's save the backend refuses with 403 stays in this browser (I-3)", async () => {
+    server.use(http.post('*/v1/assets/documents', () => HttpResponse.json({}, { status: 403 })));
+    DocumentService.saveTemplate(template());
+    await vi.waitFor(() => expect(DocumentService.getTemplate('d1')?.localOnly).toBe(true));
   });
 });

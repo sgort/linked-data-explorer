@@ -3,6 +3,26 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
+// #163: signed in as an lde-author unless a test says otherwise.
+const authMock = vi.hoisted(() => ({
+  // A token that can no longer be refreshed: authHeaders() then returns {}.
+  refreshFails: false,
+  state: { ready: true, signedIn: true, isAuthor: true, name: 'Test' } as {
+    ready: boolean;
+    signedIn: boolean;
+    isAuthor: boolean;
+    name?: string;
+  },
+}));
+vi.mock('./auth', () => ({
+  getAuthState: () => authMock.state,
+  subscribe: () => () => undefined,
+  authHeaders: async (): Promise<Record<string, string>> =>
+    authMock.state.isAuthor && !authMock.refreshFails ? { Authorization: 'Bearer test-token' } : {},
+}));
+const AUTHOR = { ready: true, signedIn: true, isAuthor: true, name: 'Test' };
+const SIGNED_OUT = { ready: true, signedIn: false, isAuthor: false };
+
 import { BpmnProcess } from '../types';
 import { BpmnService } from './bpmnService';
 
@@ -215,5 +235,163 @@ describe('BpmnService.hydrateFromServer', () => {
     server.use(http.get('*/v1/assets/bpmn', () => new HttpResponse(null, { status: 500 })));
 
     expect(await BpmnService.hydrateFromServer()).toEqual([process()]);
+  });
+});
+
+describe('BpmnService — saving signed out keeps the process in this browser (#163)', () => {
+  afterEach(() => {
+    authMock.state = AUTHOR;
+  });
+
+  test('a signed-out save does not call the backend and marks the process local-only', async () => {
+    authMock.state = SIGNED_OUT;
+    // msw answers any request with an error (onUnhandledRequest: 'error').
+    const outcome = await BpmnService.saveProcessDetailed(process());
+    expect(outcome).toEqual({ saved: true, localOnly: true });
+    expect(BpmnService.getProcess('p1')?.localOnly).toBe(true);
+  });
+
+  test("an author's save sends the token and clears the local-only mark", async () => {
+    let auth: string | null = null;
+    server.use(
+      http.post('*/v1/assets/bpmn', ({ request }) => {
+        auth = request.headers.get('Authorization');
+        return HttpResponse.json({ data: { id: 'p1' } });
+      })
+    );
+    const outcome = await BpmnService.saveProcessDetailed(process({ localOnly: true }));
+    expect(outcome).toEqual({ saved: true });
+    expect(auth).toBe('Bearer test-token');
+    expect(BpmnService.getProcess('p1')?.localOnly).toBeUndefined();
+  });
+
+  test('hydration keeps a local-only process the server does not have', async () => {
+    localStorage.setItem(
+      'linkedDataExplorer_bpmnProcesses',
+      JSON.stringify([process({ id: 'mine', localOnly: true })])
+    );
+    server.use(
+      http.get('*/v1/assets/bpmn', () => HttpResponse.json({ data: [process({ id: 's1' })] }))
+    );
+    const all = await BpmnService.hydrateFromServer();
+    expect(all.map((p) => p.id).sort()).toEqual(['mine', 's1']);
+  });
+
+  test('hydration lets the server copy win over a local-only one with the same id', async () => {
+    localStorage.setItem(
+      'linkedDataExplorer_bpmnProcesses',
+      JSON.stringify([process({ id: 'p1', name: 'Mine', localOnly: true })])
+    );
+    server.use(
+      http.get('*/v1/assets/bpmn', () =>
+        HttpResponse.json({ data: [process({ id: 'p1', name: 'Shared' })] })
+      )
+    );
+    const all = await BpmnService.hydrateFromServer();
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({ id: 'p1', name: 'Shared' });
+    expect(all[0].localOnly).toBeUndefined();
+  });
+
+  test('a signed-out delete of a local-only process stays local', () => {
+    authMock.state = SIGNED_OUT;
+    localStorage.setItem(
+      'linkedDataExplorer_bpmnProcesses',
+      JSON.stringify([process({ localOnly: true })])
+    );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockClear();
+    BpmnService.deleteProcess('p1');
+    expect(BpmnService.getProcess('p1')).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test('a signed-out delete of a shared process changes nothing', () => {
+    authMock.state = SIGNED_OUT;
+    localStorage.setItem('linkedDataExplorer_bpmnProcesses', JSON.stringify([process()]));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockClear();
+    BpmnService.deleteProcess('p1');
+    expect(BpmnService.getProcess('p1')).not.toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('BpmnService — saves that must not be lost (#163 final review)', () => {
+  afterEach(() => {
+    authMock.state = AUTHOR;
+    authMock.refreshFails = false;
+  });
+
+  test('a signed-out edit of a shared item survives hydration while it is newer (I-2)', async () => {
+    localStorage.setItem(
+      'linkedDataExplorer_bpmnProcesses',
+      JSON.stringify([
+        process({
+          id: 'both',
+          name: 'My edit',
+          updatedAt: '2026-11-10T00:00:00.000Z',
+          localOnly: true,
+        }),
+      ])
+    );
+    server.use(
+      http.get('*/v1/assets/bpmn', () =>
+        HttpResponse.json({
+          data: [process({ id: 'both', name: 'Shared', updatedAt: '2026-11-01T00:00:00.000Z' })],
+        })
+      )
+    );
+    const all = await BpmnService.hydrateFromServer();
+    expect(all.filter((x) => x.id === 'both')).toHaveLength(1);
+    expect(all.find((x) => x.id === 'both')).toMatchObject({ name: 'My edit', localOnly: true });
+  });
+
+  test('a server copy saved after the local edit wins (Review Focus 5)', async () => {
+    localStorage.setItem(
+      'linkedDataExplorer_bpmnProcesses',
+      JSON.stringify([
+        process({
+          id: 'both',
+          name: 'My edit',
+          updatedAt: '2026-11-01T00:00:00.000Z',
+          localOnly: true,
+        }),
+      ])
+    );
+    server.use(
+      http.get('*/v1/assets/bpmn', () =>
+        HttpResponse.json({
+          data: [process({ id: 'both', name: 'Shared', updatedAt: '2026-11-10T00:00:00.000Z' })],
+        })
+      )
+    );
+    const all = await BpmnService.hydrateFromServer();
+    expect(all.filter((x) => x.id === 'both')).toHaveLength(1);
+    expect(all.find((x) => x.id === 'both')).toMatchObject({ name: 'Shared' });
+    expect(all.find((x) => x.id === 'both')?.localOnly).toBeUndefined();
+  });
+
+  test("an author's save whose token cannot be refreshed stays in this browser (I-3)", async () => {
+    authMock.refreshFails = true;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockClear();
+    expect(await BpmnService.saveProcessDetailed(process())).toEqual({
+      saved: true,
+      localOnly: true,
+    });
+    expect(BpmnService.getProcess('p1')?.localOnly).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("an author's save the backend refuses with 401 or 403 stays in this browser (I-3)", async () => {
+    for (const status of [401, 403]) {
+      server.use(http.post('*/v1/assets/bpmn', () => HttpResponse.json({}, { status })));
+      expect(await BpmnService.saveProcessDetailed(process())).toEqual({
+        saved: true,
+        localOnly: true,
+      });
+      expect(BpmnService.getProcess('p1')?.localOnly).toBe(true);
+    }
   });
 });

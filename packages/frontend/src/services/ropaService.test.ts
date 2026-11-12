@@ -1,6 +1,25 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
+
+// #163: signed in as an lde-author unless a test says otherwise.
+const authMock = vi.hoisted(() => ({
+  state: { ready: true, signedIn: true, isAuthor: true, name: 'Test' } as {
+    ready: boolean;
+    signedIn: boolean;
+    isAuthor: boolean;
+    name?: string;
+  },
+}));
+vi.mock('./auth', () => ({
+  getAuthState: () => authMock.state,
+  subscribe: () => () => undefined,
+  authHeaders: async (): Promise<Record<string, string>> =>
+    authMock.state.signedIn ? { Authorization: 'Bearer test-token' } : {},
+  initAuth: async () => undefined,
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}));
 
 import { RopaRecord } from '../types/ropa.types';
 import { RopaService } from './ropaService';
@@ -164,5 +183,43 @@ describe('RopaService.deleteRopa', () => {
       )
     );
     await expect(RopaService.deleteRopa('r1')).rejects.toThrow('record is referenced');
+  });
+});
+
+describe('RopaService writes carry the sign-in (#163)', () => {
+  test('upsertRopa sends the Bearer token', async () => {
+    let auth: string | null = null;
+    server.use(
+      http.post('*/v1/assets/ropa', ({ request }) => {
+        auth = request.headers.get('Authorization');
+        return HttpResponse.json({ data: { id: 'new-id' } });
+      })
+    );
+    const { id: _id, createdAt: _c, updatedAt: _u, ...input } = ropaRecord();
+    await RopaService.upsertRopa(input);
+    expect(auth).toBe('Bearer test-token');
+  });
+
+  test('deleteRopa sends the Bearer token', async () => {
+    let auth: string | null = null;
+    server.use(
+      http.delete('*/v1/assets/ropa/:id', ({ request }) => {
+        auth = request.headers.get('Authorization');
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+    await RopaService.deleteRopa('r1');
+    expect(auth).toBe('Bearer test-token');
+  });
+
+  test('a 401 on save reads "Sign in to save"', async () => {
+    server.use(http.post('*/v1/assets/ropa', () => new HttpResponse(null, { status: 401 })));
+    const { id: _id, createdAt: _c, updatedAt: _u, ...input } = ropaRecord();
+    await expect(RopaService.upsertRopa(input)).rejects.toThrow('Sign in to save');
+  });
+
+  test('a 403 on delete reads "You need permission to delete"', async () => {
+    server.use(http.delete('*/v1/assets/ropa/:id', () => new HttpResponse(null, { status: 403 })));
+    await expect(RopaService.deleteRopa('r1')).rejects.toThrow('You need permission to delete');
   });
 });

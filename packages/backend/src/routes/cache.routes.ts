@@ -8,6 +8,7 @@ import { ApiResponse } from '../types/api.types';
 import { getErrorMessage, getErrorDetails } from '../utils/errors';
 import { sendProblem } from '../utils/problem';
 import { allCacheStats, clearNamedCaches } from '../utils/ttl-cache';
+import { requireAuthor } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -45,7 +46,7 @@ router.get('/stats', async (req: Request, res: Response) => {
  * Query parameters:
  * - endpoint (optional): Specific endpoint to clear. If omitted, clears all caches.
  */
-router.delete('/clear', async (req: Request, res: Response) => {
+router.delete('/clear', requireAuthor, async (req: Request, res: Response) => {
   try {
     const endpoint = req.query.endpoint as string | undefined;
 
