@@ -61,9 +61,16 @@ export class BpmnService {
     }
 
     try {
+      // A session that can no longer be refreshed, or a refusal, must not lose
+      // the save: it stays in this browser, marked, like a signed-out save.
+      const headers = await authHeaders();
+      if (!headers.Authorization) {
+        this.setLocalOnly(process.id, true);
+        return { saved: true, localOnly: true };
+      }
       const res = await fetch(`${API_BASE}/v1/assets/bpmn`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
           id: process.id,
           bpmnProcessId: process.bpmnProcessId ?? 'unknown',
@@ -96,6 +103,10 @@ export class BpmnService {
             },
           };
         }
+      }
+      if (res.status === 401 || res.status === 403) {
+        this.setLocalOnly(process.id, true);
+        return { saved: true, localOnly: true };
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       this.setLocalOnly(process.id, false);
@@ -165,10 +176,18 @@ export class BpmnService {
       const { data } = (await res.json()) as { data: BpmnProcess[] };
       const local = this.getProcesses();
       const examples = local.filter((p) => p.readonly);
-      // #163: keep what was saved signed out, unless the server has that id.
-      const serverIds = new Set(data.map((p) => p.id));
-      const localOnly = local.filter((p) => p.localOnly && !serverIds.has(p.id));
-      const merged = [...examples, ...data, ...localOnly];
+      // #163: keep what was saved in this browser, unless the server holds a
+      // copy at least as recent: then someone saved it since, and the server
+      // wins. A signed-out edit of a shared process is newer than its server
+      // copy, so it stays, still marked, instead of vanishing on reload.
+      const serverById = new Map(data.map((p) => [p.id, p]));
+      const localOnly = local.filter((p) => {
+        if (!p.localOnly) return false;
+        const onServer = serverById.get(p.id);
+        return !onServer || Date.parse(p.updatedAt) > Date.parse(onServer.updatedAt);
+      });
+      const keptIds = new Set(localOnly.map((p) => p.id));
+      const merged = [...examples, ...data.filter((p) => !keptIds.has(p.id)), ...localOnly];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
       return merged;
     } catch (err) {

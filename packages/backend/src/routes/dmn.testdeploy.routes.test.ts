@@ -79,6 +79,30 @@ describe('POST /v1/dmns/deploy', () => {
     expect(expires - Date.now()).toBeLessThanOrEqual(48 * 3600_000);
   });
 
+  test('signed out, any other resource name is deployed as a .dmn (final review M-2)', async () => {
+    // Operaton picks the parser by extension: an anonymous `.bpmn` would be
+    // parsed as a process, and a process can run code on the engine.
+    for (const filename of ['evil.bpmn', 'evil.bpmn20.xml', 'evil', 'x.dmn.bpmn']) {
+      op.deployDrd.mockClear();
+      const res = await request(makeApp())
+        .post('/v1/dmns/deploy')
+        .send({ ...body, filename });
+      expect(res.status).toBe(200);
+      const resourceName = op.deployDrd.mock.calls[0][2] as string;
+      expect(resourceName.endsWith('.dmn')).toBe(true);
+      expect(resourceName).not.toMatch(/\.bpmn/);
+    }
+  });
+
+  test('signed out, a deployment name ending in .bpmn without a filename still gives a .dmn', async () => {
+    const res = await request(makeApp())
+      .post('/v1/dmns/deploy')
+      .send({ xml: DMN, deploymentName: 'evil.bpmn' });
+    expect(res.status).toBe(200);
+    expect(op.deployDrd.mock.calls[0][2]).toMatch(/\.dmn$/);
+    expect(op.deployDrd.mock.calls[0][2]).not.toMatch(/\.bpmn/);
+  });
+
   test('signed out, key deployed untenanted: 409 naming the key, nothing deployed', async () => {
     op.findDecisionTenants.mockResolvedValue([null]);
 

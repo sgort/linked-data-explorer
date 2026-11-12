@@ -520,7 +520,12 @@ router.post('/deploy', optionalAuthor, async (req: Request, res: Response) => {
       return;
     }
     const { tenantId, ttlHours } = config.testDeploy;
-    const result = await operatonService.deployDrd(xml, deploymentName, resourceName, tenantId);
+    // Operaton picks the parser by the resource's extension. An anonymous caller
+    // may only ever deploy a decision model: a `.bpmn` resource would be parsed
+    // as a process, and a process can run code on the engine. So the name is
+    // reduced to its stem and always ends in `.dmn`.
+    const stem = resourceName.split(/[\\/]/).pop()?.split('.')[0] || 'test-deploy';
+    const result = await operatonService.deployDrd(xml, deploymentName, `${stem}.dmn`, tenantId);
     res.json({
       success: true,
       data: {

@@ -29,17 +29,32 @@ export class FormService {
     if (!form.readonly && !localOnly) {
       void (async () => {
         try {
-          await fetch(`${API_BASE}/v1/assets/forms`, {
+          // A session that can no longer be refreshed, or a refusal, must not
+          // lose the save: it stays in this browser, marked, like a signed-out
+          // save (#163).
+          const headers = await authHeaders();
+          if (!headers.Authorization) {
+            this.markLocalOnly(form.id);
+            return;
+          }
+          const res = await fetch(`${API_BASE}/v1/assets/forms`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+            headers: { 'Content-Type': 'application/json', ...headers },
             body: JSON.stringify({ ...rest, schema_version: 1 }),
           });
+          if (res.status === 401 || res.status === 403) this.markLocalOnly(form.id);
         } catch (err) {
           console.warn('[FormService] Background save failed:', err);
         }
       })();
     }
     return { localOnly };
+  }
+
+  /** Marks a stored form as kept in this browser only (#163). */
+  static markLocalOnly(formId: string): void {
+    const forms = this.getForms().map((f) => (f.id === formId ? { ...f, localOnly: true } : f));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(forms));
   }
 
   /** Signed out (#163), only a form kept in this browser can be deleted. */
@@ -76,10 +91,18 @@ export class FormService {
       const { data } = (await res.json()) as { data: FormSchema[] };
       const local = this.getForms();
       const examples = local.filter((f) => f.readonly);
-      // #163: keep what was saved signed out, unless the server has that id.
-      const serverIds = new Set(data.map((f) => f.id));
-      const localOnly = local.filter((f) => f.localOnly && !serverIds.has(f.id));
-      const merged = [...examples, ...data, ...localOnly];
+      // #163: keep what was saved in this browser, unless the server holds a
+      // copy at least as recent: then someone saved it since, and the server
+      // wins. A signed-out edit of a shared form is newer than its server
+      // copy, so it stays, still marked, instead of vanishing on reload.
+      const serverById = new Map(data.map((f) => [f.id, f]));
+      const localOnly = local.filter((f) => {
+        if (!f.localOnly) return false;
+        const onServer = serverById.get(f.id);
+        return !onServer || Date.parse(f.updatedAt) > Date.parse(onServer.updatedAt);
+      });
+      const keptIds = new Set(localOnly.map((f) => f.id));
+      const merged = [...examples, ...data.filter((f) => !keptIds.has(f.id)), ...localOnly];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
       return merged;
     } catch (err) {

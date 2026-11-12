@@ -21,9 +21,11 @@ import {
   clientAddress,
   extractDecisionKeys,
   findBlockingKey,
+  pruneRateSlots,
   resetRateSlots,
   sweepTestDeployments,
   takeRateSlot,
+  trackedAddresses,
 } from './testDeploy.service';
 
 const op = operatonService as unknown as Record<string, jest.Mock>;
@@ -83,10 +85,21 @@ describe('clientAddress', () => {
   const req = (headers: Record<string, string>, remote = '10.1.1.1') =>
     ({ headers, socket: { remoteAddress: remote } }) as unknown as Request;
 
-  test("takes the first X-Forwarded-For entry and drops Azure's port", () => {
-    expect(clientAddress(req({ 'x-forwarded-for': '203.0.113.7:51234, 10.0.0.1' }))).toBe(
+  test("takes the X-Forwarded-For entry Azure's front end added, the last, and drops its port", () => {
+    expect(clientAddress(req({ 'x-forwarded-for': '198.51.100.9, 203.0.113.7:51234' }))).toBe(
       '203.0.113.7'
     );
+  });
+
+  test('a forged first entry does not change the address (final review I-1)', () => {
+    const a = clientAddress(req({ 'x-forwarded-for': '192.0.2.1, 203.0.113.7:51234' }));
+    const b = clientAddress(req({ 'x-forwarded-for': '192.0.2.99, 203.0.113.7:40000' }));
+    expect(a).toBe('203.0.113.7');
+    expect(b).toBe(a);
+  });
+
+  test('a single entry is the client', () => {
+    expect(clientAddress(req({ 'x-forwarded-for': '203.0.113.7:51234' }))).toBe('203.0.113.7');
   });
 
   test('keeps an IPv6 address intact and drops its port', () => {
@@ -108,6 +121,14 @@ describe('takeRateSlot', () => {
     for (let i = 0; i < 10; i++) expect(takeRateSlot('a', t0)).toBe(true);
     expect(takeRateSlot('a', t0)).toBe(false);
     expect(takeRateSlot('b', t0)).toBe(true);
+  });
+
+  test('forgets addresses with no slot left in the last hour (final review I-1)', () => {
+    const t0 = new Date('2026-11-09T10:00:00Z');
+    takeRateSlot('old', t0);
+    takeRateSlot('recent', new Date('2026-11-09T10:50:00Z'));
+    pruneRateSlots(new Date('2026-11-09T11:10:00Z'));
+    expect(trackedAddresses()).toEqual(['recent']);
   });
 
   test('frees the slots after an hour', () => {

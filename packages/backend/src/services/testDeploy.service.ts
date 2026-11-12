@@ -47,19 +47,23 @@ export async function findBlockingKey(keys: string[]): Promise<string | null> {
 }
 
 /**
- * The caller's address. Azure App Service passes the client first in
- * X-Forwarded-For, as `ip:port` (`[v6]:port` for IPv6); the port is dropped so
- * the limit counts per address, not per connection.
+ * The caller's address, as Azure App Service's front end saw it. The front end
+ * APPENDS the client to X-Forwarded-For, as `ip:port` (`[v6]:port` for IPv6),
+ * after whatever the request already carried, so only the last entry is
+ * trustworthy: the first is the client's own claim, and keying the limit on it
+ * let a caller pick a fresh address per request. The port is dropped so the
+ * limit counts per address, not per connection.
  */
 export function clientAddress(req: Request): string {
   const header = req.headers['x-forwarded-for'];
-  const first = (Array.isArray(header) ? header[0] : header)?.split(',')[0]?.trim();
-  if (first) {
-    const bracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(first);
+  const entries = (Array.isArray(header) ? header.join(',') : header)?.split(',') ?? [];
+  const client = entries[entries.length - 1]?.trim();
+  if (client) {
+    const bracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(client);
     if (bracketed) return bracketed[1];
-    const v4WithPort = /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(first);
+    const v4WithPort = /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(client);
     if (v4WithPort) return v4WithPort[1];
-    return first;
+    return client;
   }
   return req.socket?.remoteAddress ?? 'unknown';
 }
@@ -110,6 +114,7 @@ export async function sweepTestDeployments(now: Date = new Date()): Promise<numb
 export function startTestDeployCleanup(): void {
   if (!config.testDeploy.enabled) return;
   const run = (): void => {
+    pruneRateSlots();
     sweepTestDeployments()
       .then((removed) => {
         if (removed > 0) logger.info('Test deploy cleanup', { removed });
@@ -122,4 +127,20 @@ export function startTestDeployCleanup(): void {
   };
   run();
   setInterval(run, HOUR_MS).unref();
+}
+
+/**
+ * Forgets addresses without a slot in the last hour, so the limiter's memory
+ * stays bounded by an hour's callers. Run by the hourly cleanup.
+ */
+export function pruneRateSlots(now: Date = new Date()): void {
+  const t = now.getTime();
+  for (const [address, times] of slots) {
+    if (!times.some((at) => t - at < HOUR_MS)) slots.delete(address);
+  }
+}
+
+/** The addresses the limiter currently holds. For tests. */
+export function trackedAddresses(): string[] {
+  return [...slots.keys()];
 }
