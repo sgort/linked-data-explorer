@@ -493,14 +493,6 @@ router.post('/deploy', optionalAuthor, async (req: Request, res: Response) => {
       });
       return;
     }
-    if (!takeRateSlot(clientAddress(req))) {
-      sendProblem(res, req, {
-        status: 429,
-        code: 'TEST_DEPLOY_RATE_LIMITED',
-        detail: `At most ${config.testDeploy.maxPerHour} test deploys per hour from one address.`,
-      });
-      return;
-    }
     const keys = extractDecisionKeys(xml);
     if (keys.length === 0) {
       sendProblem(res, req, {
@@ -516,6 +508,18 @@ router.post('/deploy', optionalAuthor, async (req: Request, res: Response) => {
         status: 409,
         code: 'TEST_DEPLOY_KEY_EXISTS',
         detail: `Decision key "${blocking}" already exists in the engine. Sign in to deploy it, or rename the decision to test it.`,
+      });
+      return;
+    }
+    // The slot is taken only once the request would deploy (#332 M-3): a DMN
+    // refused for having no decision, or for a key that exists, spends none.
+    // The key lookup above is an anonymous engine read, as the open evaluate
+    // route already is, so counting it would protect nothing new.
+    if (!takeRateSlot(clientAddress(req))) {
+      sendProblem(res, req, {
+        status: 429,
+        code: 'TEST_DEPLOY_RATE_LIMITED',
+        detail: `At most ${config.testDeploy.maxPerHour} test deploys per hour from one address.`,
       });
       return;
     }

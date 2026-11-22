@@ -148,6 +148,30 @@ describe('POST /v1/dmns/deploy', () => {
     expect(res.body.code).toBe('TEST_DEPLOY_RATE_LIMITED');
   });
 
+  test('refused test deploys spend no slot: ten refusals, then a deploy still goes through (#332 M-3)', async () => {
+    // Fixing a DMN that keeps being refused ("no decision", "key exists")
+    // must not use up the hour's test deploys before anything was deployed.
+    const from = (port: number) => ({ 'X-Forwarded-For': `203.0.113.8:${port}` });
+    for (let i = 0; i < 5; i++) {
+      const res = await request(makeApp())
+        .post('/v1/dmns/deploy')
+        .set(from(i))
+        .send({ ...body, xml: '<definitions id="d"/>' });
+      expect(res.status).toBe(400);
+    }
+    op.findDecisionTenants.mockResolvedValue([null]);
+    for (let i = 0; i < 5; i++) {
+      const res = await request(makeApp()).post('/v1/dmns/deploy').set(from(i)).send(body);
+      expect(res.status).toBe(409);
+    }
+    op.findDecisionTenants.mockResolvedValue([]);
+
+    const res = await request(makeApp()).post('/v1/dmns/deploy').set(from(99)).send(body);
+
+    expect(res.status).toBe(200);
+    expect(op.deployDrd).toHaveBeenCalledTimes(1);
+  });
+
   test('signed out, test deploys off: 401', async () => {
     (config.testDeploy as { enabled: boolean }).enabled = false;
 

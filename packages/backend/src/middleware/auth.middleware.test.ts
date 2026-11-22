@@ -32,6 +32,8 @@ function token(
     {
       iss: ISSUER,
       sub: 'user-1',
+      // Keycloak access tokens carry typ Bearer; ID tokens carry typ ID (#332 M-4).
+      typ: 'Bearer',
       azp: 'ttl-editor',
       realm_access: { roles: ['lde-author'] },
       ...claims,
@@ -93,6 +95,23 @@ describe('requireAuthor', () => {
     expect(res.status).toBe(401);
   });
 
+  test('an ID token is refused as a Bearer token (#332 M-4)', async () => {
+    // Its mappers carry realm_access.roles too, so without the typ check it
+    // would pass as an author's access token.
+    const res = await request(app)
+      .post('/x')
+      .set('Authorization', `Bearer ${token({ typ: 'ID' })}`);
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHENTICATED');
+  });
+
+  test('a token without a typ is refused', async () => {
+    const res = await request(app)
+      .post('/x')
+      .set('Authorization', `Bearer ${token({ typ: undefined })}`);
+    expect(res.status).toBe(401);
+  });
+
   test('a valid token without lde-author answers 403 FORBIDDEN', async () => {
     const res = await request(app)
       .post('/x')
@@ -112,6 +131,43 @@ describe('requireAuthor', () => {
       name: 'X Y',
       roles: ['lde-author'],
     });
+  });
+});
+
+describe('when the signing keys cannot be fetched (#332 M-4)', () => {
+  // "Sign in again" cannot help when Keycloak itself is down, so a failed key
+  // fetch answers 503, while a token naming a key the realm does not have is
+  // still the caller's problem: 401.
+  const withKeyError = (err: Error) =>
+    createAuth({
+      getKey: (_header, callback) => callback(err),
+      issuer: ISSUER,
+      clients: ['ttl-editor'],
+      role: 'lde-author',
+    });
+
+  test('a Keycloak outage answers 503 AUTH_UNAVAILABLE, for required and optional sign-in', async () => {
+    const outage = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:8080'), {
+      name: 'JwksError',
+    });
+    const { requireAuthor: req, optionalAuthor: opt } = withKeyError(outage);
+
+    for (const mw of [req, opt]) {
+      const res = await request(appWith(mw)).post('/x').set('Authorization', `Bearer ${token()}`);
+      expect(res.status).toBe(503);
+      expect(res.body.code).toBe('AUTH_UNAVAILABLE');
+    }
+  });
+
+  test('a token whose key the realm does not have still answers 401', async () => {
+    const unknownKey = Object.assign(new Error('Unable to find a signing key that matches'), {
+      name: 'SigningKeyNotFoundError',
+    });
+    const res = await request(appWith(withKeyError(unknownKey).requireAuthor))
+      .post('/x')
+      .set('Authorization', `Bearer ${token()}`);
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHENTICATED');
   });
 });
 

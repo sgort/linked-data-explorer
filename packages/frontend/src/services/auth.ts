@@ -44,6 +44,11 @@ const POPUP_WIDTH = 520;
 const POPUP_HEIGHT = 720;
 /** How often to look whether the popup was closed without reporting back. */
 const POPUP_POLL_MS = 500;
+/**
+ * After the poll sees this tab's popup closed, its own report can still be on
+ * the way; for this long a report is taken to be that one, already handled.
+ */
+const LATE_REPORT_MS = 1000;
 
 function createKeycloak(): Keycloak {
   return new Keycloak({
@@ -60,6 +65,9 @@ let channel: BroadcastChannel | null = null;
 // Set while this tab waits for its own popup, so its report finishes that wait
 // instead of starting a second session check.
 let popupReported: (() => void) | null = null;
+// Until when a report is this tab's own, arriving after the poll finished the
+// wait (#332 M-10): it would only start a second, identical session check.
+let ignoreReportsUntil = 0;
 
 let state: AuthState = { ready: false, signedIn: false, isAuthor: false };
 const listeners = new Set<() => void>();
@@ -144,7 +152,7 @@ function listen(): void {
   channel = new BroadcastChannel(CHANNEL);
   channel.onmessage = () => {
     if (popupReported) popupReported();
-    else void checkSession();
+    else if (Date.now() >= ignoreReportsUntil) void checkSession();
   };
 }
 
@@ -158,7 +166,10 @@ function waitForPopup(popup: Window): Promise<void> {
     };
     popupReported = finish;
     const timer = setInterval(() => {
-      if (popup.closed) finish();
+      if (popup.closed) {
+        ignoreReportsUntil = Date.now() + LATE_REPORT_MS;
+        finish();
+      }
     }, POPUP_POLL_MS);
   });
 }

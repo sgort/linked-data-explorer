@@ -36,7 +36,16 @@ interface AuthOptions {
   role: string;
 }
 
-type Outcome = { ok: true; user: AuthUser; isAuthor: boolean } | { ok: false; reason: string };
+type Outcome =
+  | { ok: true; user: AuthUser; isAuthor: boolean }
+  | { ok: false; reason: string; keysUnavailable?: boolean };
+
+/**
+ * A key error that means the keys could not be fetched (Keycloak down,
+ * unreachable, rate-limited), as opposed to a token naming a key the realm
+ * does not have, which jwks-rsa reports as SigningKeyNotFoundError (#332).
+ */
+const isKeyOutage = (err: Error): boolean => err.name !== 'SigningKeyNotFoundError';
 
 function bearerToken(req: Request): string | null {
   const header = req.headers.authorization;
@@ -51,35 +60,50 @@ export function createAuth(opts: AuthOptions): {
 } {
   const verify = (token: string): Promise<Outcome> =>
     new Promise((resolve) => {
-      jwt.verify(
-        token,
-        opts.getKey,
-        { issuer: opts.issuer, algorithms: ['RS256'] },
-        (err, decoded) => {
-          if (err || !decoded || typeof decoded === 'string') {
-            resolve({ ok: false, reason: err?.message ?? 'malformed token' });
-            return;
-          }
-          const payload = decoded as JwtPayload & {
-            azp?: string;
-            preferred_username?: string;
-            name?: string;
-            realm_access?: { roles?: string[] };
-          };
-          if (!payload.azp || !opts.clients.includes(payload.azp)) {
-            resolve({ ok: false, reason: `token issued to client '${payload.azp ?? ''}'` });
-            return;
-          }
-          const roles = payload.realm_access?.roles ?? [];
-          const user: AuthUser = {
-            sub: String(payload.sub ?? ''),
-            ...(payload.preferred_username ? { username: payload.preferred_username } : {}),
-            ...(payload.name ? { name: payload.name } : {}),
-            roles,
-          };
-          resolve({ ok: true, user, isAuthor: roles.includes(opts.role) });
+      // jsonwebtoken wraps a key-callback error in a generic
+      // JsonWebTokenError, so remember the original to tell an outage apart.
+      let keyError: Error | null = null;
+      const getKey: GetPublicKeyOrSecret = (header, callback) => {
+        opts.getKey(header, (err, key) => {
+          if (err) keyError = err;
+          callback(err, key);
+        });
+      };
+      jwt.verify(token, getKey, { issuer: opts.issuer, algorithms: ['RS256'] }, (err, decoded) => {
+        if (err || !decoded || typeof decoded === 'string') {
+          resolve({
+            ok: false,
+            reason: err?.message ?? 'malformed token',
+            ...(keyError && isKeyOutage(keyError) ? { keysUnavailable: true } : {}),
+          });
+          return;
         }
-      );
+        const payload = decoded as JwtPayload & {
+          typ?: string;
+          azp?: string;
+          preferred_username?: string;
+          name?: string;
+          realm_access?: { roles?: string[] };
+        };
+        // An ID token's mappers carry realm_access.roles as well, so only an
+        // access token (typ Bearer) is accepted as one (#332 M-4).
+        if (payload.typ !== 'Bearer') {
+          resolve({ ok: false, reason: `token of type '${payload.typ ?? ''}', not Bearer` });
+          return;
+        }
+        if (!payload.azp || !opts.clients.includes(payload.azp)) {
+          resolve({ ok: false, reason: `token issued to client '${payload.azp ?? ''}'` });
+          return;
+        }
+        const roles = payload.realm_access?.roles ?? [];
+        const user: AuthUser = {
+          sub: String(payload.sub ?? ''),
+          ...(payload.preferred_username ? { username: payload.preferred_username } : {}),
+          ...(payload.name ? { name: payload.name } : {}),
+          roles,
+        };
+        resolve({ ok: true, user, isAuthor: roles.includes(opts.role) });
+      });
     });
 
   const check = async (
@@ -102,6 +126,19 @@ export function createAuth(opts: AuthOptions): {
       return;
     }
     const outcome = await verify(token);
+    if (!outcome.ok && outcome.keysUnavailable) {
+      // Signing in again cannot help while Keycloak's keys are unreachable.
+      logger.error('Sign-in cannot be checked: signing keys unavailable', {
+        path: req.path,
+        reason: outcome.reason,
+      });
+      sendProblem(res, req, {
+        status: 503,
+        code: 'AUTH_UNAVAILABLE',
+        detail: 'Sign-in cannot be checked right now. Try again in a moment.',
+      });
+      return;
+    }
     if (!outcome.ok) {
       logger.warn('Token refused', { path: req.path, reason: outcome.reason });
       sendProblem(res, req, {

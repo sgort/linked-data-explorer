@@ -88,9 +88,9 @@ The same steps, with three differences:
 - step 1 **without** `--with-e2e` and `--with-test-author` (the script refuses
   them on PROD anyway);
 - step 3: `KEYCLOAK_URL=https://keycloak.open-regels.nl` only;
-  `TEST_DEPLOY_ENABLED` stays unset, so there is no anonymous test deploy. Optionally
-  `AUTH_CLIENTS=linked-data-explorer,ttl-editor`, since PROD has no `lde-e2e`
-  client;
+  `TEST_DEPLOY_ENABLED` stays unset, so there is no anonymous test deploy.
+  `AUTH_CLIENTS` can stay unset too: on PROD its default is
+  `linked-data-explorer,ttl-editor`, since PROD has no `lde-e2e` client (#332);
 - step 6: `/v1/dmns/deploy/options` shows `"enabled": false`, and ttl-editor
   signed out shows a locked Deploy instead of "Test deploy to Operaton". The
   LDE checks are the same as on ACC: signed out, Deploy is locked; signed in
