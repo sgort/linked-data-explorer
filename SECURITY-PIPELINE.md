@@ -22,7 +22,8 @@ release cannot reach this repository merely by being published.
 
 ## What is pinned
 
-Every action reference in all eleven workflows is a 40-character commit hash with
+Every action reference in every workflow in `.github/workflows/` (twelve on
+22 November 2026) is a 40-character commit hash with
 its human-readable version in a trailing comment. The comment is not decoration:
 a digest nobody can read is a pin nobody will maintain, and Renovate moves the
 two together.
@@ -36,7 +37,9 @@ two together.
 | `azure/webapps-deploy`         | `02a81bead70021f5284939794bcec79c271ab383` | v3.0.8           |
 | `zizmorcore/zizmor-action`     | `53290badfa369cb0bf7ad16342cb62c2fa47ac7b` | v0.8.0           |
 
-`zizmor 1.29.0` reports **0 findings** across all eleven workflows.
+`zizmor 1.29.0` reports **0 findings** across all twelve workflows (offline, as
+CI runs it, with the suppressions in `.github/zizmor.yml`; re-run on
+22 November 2026).
 
 **Tools pinned outside `uses:`.** Three tools are pinned by a version argument or
 input rather than by a `uses:` digest. None appears in the table above, which

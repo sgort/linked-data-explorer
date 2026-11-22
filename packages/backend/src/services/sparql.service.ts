@@ -14,6 +14,7 @@ import {
   ChainCycle,
   ServiceLink,
 } from '../types/dmn.types';
+import { getErrorMessage, getErrorDetails } from '../utils/errors';
 
 /** One dct:requires pair: `service` relies on `required`. */
 export interface ServiceRequirement {
@@ -22,7 +23,6 @@ export interface ServiceRequirement {
   required: string;
   requiredTitle?: string;
 }
-import { getErrorMessage, getErrorDetails } from '../utils/errors';
 
 /**
  * Type for SPARQL query result bindings
@@ -953,8 +953,14 @@ SELECT ?service ?serviceTitle ?required ?requiredTitle WHERE {
         const key = `${service} ${required}`;
         const existing = pairs.get(key);
         if (existing) {
-          existing.serviceTitle ??= binding.serviceTitle?.value;
-          existing.requiredTitle ??= binding.requiredTitle?.value;
+          // Only set a title that arrives; `??=` with an undefined value would
+          // add an explicit `undefined` key (#318).
+          if (!existing.serviceTitle && binding.serviceTitle?.value) {
+            existing.serviceTitle = binding.serviceTitle.value;
+          }
+          if (!existing.requiredTitle && binding.requiredTitle?.value) {
+            existing.requiredTitle = binding.requiredTitle.value;
+          }
           continue;
         }
         pairs.set(key, {

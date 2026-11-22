@@ -742,6 +742,32 @@ describe('getServiceRequirements', () => {
     expect(mockPost.mock.calls[0][1]).toContain('dct:requires');
   });
 
+  test('a pair seen twice without titles carries no title keys at all (#318)', async () => {
+    // toEqual ignores undefined properties, so compare the keys: an explicit
+    // `serviceTitle: undefined` breaks the file's "absent, not undefined" style.
+    mockPost.mockResolvedValue(
+      bindings([requiresRow(HOOGTE_SVC, RECHT_SVC), requiresRow(HOOGTE_SVC, RECHT_SVC)])
+    );
+
+    const [pair] = await service().getServiceRequirements();
+
+    expect(Object.keys(pair).sort()).toEqual(['required', 'service']);
+  });
+
+  test('a title arriving on a later row of the same pair is kept', async () => {
+    mockPost.mockResolvedValue(
+      bindings([
+        requiresRow(HOOGTE_SVC, RECHT_SVC),
+        requiresRow(HOOGTE_SVC, RECHT_SVC, { serviceTitle: HOOGTE_TITLE }),
+      ])
+    );
+
+    const [pair] = await service().getServiceRequirements();
+
+    expect(Object.keys(pair).sort()).toEqual(['required', 'service', 'serviceTitle']);
+    expect(pair.serviceTitle).toBe(HOOGTE_TITLE);
+  });
+
   test('degrades to an empty list rather than failing the caller', async () => {
     mockPost.mockRejectedValue(new Error('endpoint unreachable'));
 
