@@ -159,7 +159,7 @@ const App: React.FC = () => {
    *
    * The backend maintains a 5-minute TTL cache of DMN lists keyed by endpoint URL.
    * This handler:
-   *   1. Calls DELETE /api/cache/clear?endpoint=... to invalidate the cache entry.
+   *   1. Calls DELETE /v1/cache/clear?endpoint=... to invalidate the cache entry.
    *   2. Briefly sets the endpoint to an empty string, then restores it after 10 ms.
    *      ChainBuilder detects the endpoint prop change and re-fetches the DMN list,
    *      which will now hit the backend fresh (cache was just cleared).
@@ -173,7 +173,7 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      const clearUrl = `${API_BASE_URL}/api/cache/clear?endpoint=${encodeURIComponent(endpoint)}`;
+      const clearUrl = `${API_BASE_URL}/v1/cache/clear?endpoint=${encodeURIComponent(endpoint)}`;
       const clearResponse = await fetch(clearUrl, {
         method: 'DELETE',
         headers: await authHeaders(),

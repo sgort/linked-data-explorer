@@ -9,7 +9,7 @@
 // Provincie_Flevoland, path foaf:homepage. Independent of whether the CPSV-AP layer
 // is vendored (which, once present, also flags this fixture for missing dct:spatial).
 //
-// Run from packages/backend:  npx ts-node scripts/shacl-smoke.ts
+// Run from packages/backend:  npx tsx scripts/shacl-smoke.ts
 
 import { shaclValidationService } from '../src/services/shacl-validation.service';
 

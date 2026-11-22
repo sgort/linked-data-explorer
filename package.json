@@ -1,6 +1,6 @@
 {
   "name": "linked-data-explorer-monorepo",
-  "version": "2026.11.2",
+  "version": "2026.11.3",
   "private": true,
   "description": "Monorepo for Linked Data Explorer - RONL DMN Orchestration Platform",
   "workspaces": [
@@ -33,7 +33,7 @@
     "postinstall": "node scripts/write-deps-marker.mjs"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6",
+    "concurrently": "^10.0.7",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0"
   },

@@ -699,6 +699,34 @@ describe('getAllDmns service requirements', () => {
     }
   });
 
+  test('runs the requirements query alongside the vendor counts, not after them (#319)', async () => {
+    // The vendor query only answers once the requirements query has started.
+    // Run one after the other, that never happens and the call times out.
+    let requirementsStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      requirementsStarted = resolve;
+    });
+    mockPost.mockImplementation(async (_url: string, query: string) => {
+      if (query.includes('dct:requires')) {
+        requirementsStarted();
+        return bindings([]);
+      }
+      if (query.includes('ronl:VendorService')) {
+        await started;
+        return bindings([]);
+      }
+      if (query.includes('cpsv:isRequiredBy <')) return bindings([]);
+      if (query.includes('cpsv:produces <')) return bindings([]);
+      return bindings(thuisbatterijRows());
+    });
+
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('queries ran one after the other')), 1000)
+    );
+
+    await expect(Promise.race([service().getAllDmns(), timeout])).resolves.toHaveLength(2);
+  });
+
   test('a failing requirements query still returns the DMN list', async () => {
     mockPost.mockImplementation(async (_url: string, query: string) => {
       if (query.includes('dct:requires')) throw new Error('requirements query timed out');
@@ -740,6 +768,79 @@ describe('getServiceRequirements', () => {
       },
     ]);
     expect(mockPost.mock.calls[0][1]).toContain('dct:requires');
+  });
+
+  test('a pair seen twice without titles carries no title keys at all (#318)', async () => {
+    // toEqual ignores undefined properties, so compare the keys: an explicit
+    // `serviceTitle: undefined` breaks the file's "absent, not undefined" style.
+    mockPost.mockResolvedValue(
+      bindings([requiresRow(HOOGTE_SVC, RECHT_SVC), requiresRow(HOOGTE_SVC, RECHT_SVC)])
+    );
+
+    const [pair] = await service().getServiceRequirements();
+
+    expect(Object.keys(pair).sort()).toEqual(['required', 'service']);
+  });
+
+  test('a title arriving on a later row of the same pair is kept', async () => {
+    mockPost.mockResolvedValue(
+      bindings([
+        requiresRow(HOOGTE_SVC, RECHT_SVC),
+        requiresRow(HOOGTE_SVC, RECHT_SVC, { serviceTitle: HOOGTE_TITLE }),
+      ])
+    );
+
+    const [pair] = await service().getServiceRequirements();
+
+    expect(Object.keys(pair).sort()).toEqual(['required', 'service', 'serviceTitle']);
+    expect(pair.serviceTitle).toBe(HOOGTE_TITLE);
+  });
+
+  // A title in several languages gives one row per title, in no fixed order,
+  // so the kept title could flip from Dutch to English after a cache refresh
+  // (#317). Preference: @nl, then untagged, then any other language.
+  const titled = (svc: string, required: string, title: string, lang?: string): Binding => ({
+    service: lit(svc),
+    required: lit(required),
+    requiredTitle: (lang ? { value: title, 'xml:lang': lang } : lit(title)) as { value: string },
+  });
+
+  test.each([
+    [
+      'an @en row before an @nl row',
+      [
+        ['Right to subsidy', 'en'],
+        ['Recht op subsidie', 'nl'],
+      ],
+    ],
+    [
+      'an @nl row before an @en row',
+      [
+        ['Recht op subsidie', 'nl'],
+        ['Right to subsidy', 'en'],
+      ],
+    ],
+  ])('keeps the Dutch title with %s (#317)', async (_label, rows) => {
+    mockPost.mockResolvedValue(
+      bindings(rows.map(([title, lang]) => titled(HOOGTE_SVC, RECHT_SVC, title, lang)))
+    );
+
+    const [pair] = await service().getServiceRequirements();
+
+    expect(pair.requiredTitle).toBe('Recht op subsidie');
+  });
+
+  test('prefers an untagged title over another language', async () => {
+    mockPost.mockResolvedValue(
+      bindings([
+        titled(HOOGTE_SVC, RECHT_SVC, 'Right to subsidy', 'en'),
+        titled(HOOGTE_SVC, RECHT_SVC, 'recht subsidie'),
+      ])
+    );
+
+    const [pair] = await service().getServiceRequirements();
+
+    expect(pair.requiredTitle).toBe('recht subsidie');
   });
 
   test('degrades to an empty list rather than failing the caller', async () => {

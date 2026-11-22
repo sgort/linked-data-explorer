@@ -78,7 +78,7 @@ export interface ShaclLayerStatus {
 // ── Shape layer configuration ─────────────────────────────────────────────────
 
 // shapes/ lives at the package root (packages/backend/shapes). __dirname is
-// .../src/services under ts-node and .../dist/services after build; ../../shapes
+// .../src/services under tsx and .../dist/services after build; ../../shapes
 // resolves to packages/backend/shapes in both. NOTE: the build only emits dist/,
 // so both backend deploy workflows copy shapes/ into the deploy bundle and verify
 // the files LAYER_SPECS names are there. Keep those checks in step with this list.
@@ -132,6 +132,32 @@ function severityFromTerm(term: { value: string } | null): 'error' | 'warning' |
     default:
       return 'error';
   }
+}
+
+const DCT_REQUIRES = 'http://purl.org/dc/terms/requires';
+
+/**
+ * An sh:class failure on dct:requires whose object this data does not
+ * describe (#315). ttl-editor publishes `dct:requires <other-service>` without
+ * a type stub, because the required service lives in its own graph; CPSV-AP's
+ * `sh:class cpsv:PublicService` can then never pass file-locally. Such a
+ * result is reported as a warning. Every other sh:class, and dct:requires to
+ * a service described here with the wrong type, stays an error.
+ */
+function isExternalRequires(
+  data: RdfDataset,
+  result: {
+    sourceConstraintComponent: { value: string } | null;
+    path: RdfTerm | null;
+    value?: RdfTerm | null;
+  }
+): boolean {
+  if (result.sourceConstraintComponent?.value !== `${SH}ClassConstraintComponent`) return false;
+  if (result.path?.termType !== 'NamedNode' || result.path.value !== DCT_REQUIRES) return false;
+  const value = result.value;
+  if (!value || value.termType !== 'NamedNode') return false;
+  for (const _quad of data.match(value, null, null)) return false;
+  return true;
 }
 
 // e.g. http://www.w3.org/ns/shacl#MaxCountConstraintComponent -> "SHACL-MAXCOUNT"
@@ -310,10 +336,15 @@ export class ShaclValidationService {
       const report = await layer.validator.validate(data);
 
       for (const result of report.results) {
-        const severity = severityFromTerm(result.severity);
-        const baseMessage =
+        const external = isExternalRequires(data, result);
+        const severity = external ? 'warning' : severityFromTerm(result.severity);
+        const shapeMessage =
           result.message.map((m) => m.value).join('; ') ||
           codeFromComponent(result.sourceConstraintComponent);
+        const baseMessage = external
+          ? `${shapeMessage} The required service is not described in this file, so its type ` +
+            'cannot be checked here; it is checked where that service is published.'
+          : shapeMessage;
 
         const values = this.offendingValues(data, result.focusNode, result.path);
         const message =

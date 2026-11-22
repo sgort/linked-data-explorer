@@ -16,9 +16,9 @@ const getNestedProperty = (obj: Record<string, unknown>, path: string): unknown 
 };
 
 /**
- * Deployment tier display label. NODE_ENV alone can't distinguish ACC from PROD
- * because both deployments run with NODE_ENV=production; the dedicated
- * DEPLOYMENT_ENV variable carries the tier signal, set per Azure App Service:
+ * Deployment tier display label. ACC runs NODE_ENV=acceptance and PROD
+ * NODE_ENV=production, but DEPLOYMENT_ENV names the tier explicitly, set per
+ * Azure App Service, and NODE_ENV is only the fallback (#328):
  *   az webapp config appsettings set -g rg-... -n ronl-linkeddata-backend-acc  --settings DEPLOYMENT_ENV=acc
  *   az webapp config appsettings set -g rg-... -n ronl-linkeddata-backend-prod --settings DEPLOYMENT_ENV=prod
  * Falls back to NODE_ENV when unset so local development stays zero-config.
@@ -70,7 +70,11 @@ export const config = {
      * starts; only publishing answers 503.
      */
     publish: {
-      baseUrl: process.env.TRIPLYDB_BASE_URL || 'https://api.open-regels.triply.cc',
+      // A trailing slash made every TriplyDB URL `…//datasets/` (#336).
+      baseUrl: (process.env.TRIPLYDB_BASE_URL || 'https://api.open-regels.triply.cc').replace(
+        /\/+$/,
+        ''
+      ),
       account: process.env.TRIPLYDB_ACCOUNT || '',
       apiToken: process.env.TRIPLYDB_API_TOKEN || '',
     },
@@ -97,7 +101,14 @@ export const config = {
         : 'http://localhost:8080')
     ).replace(/\/+$/, ''),
     realm: process.env.KEYCLOAK_REALM || 'ronl',
-    clients: (process.env.AUTH_CLIENTS || 'linked-data-explorer,ttl-editor,lde-e2e')
+    // PROD has no lde-e2e client, so it is not trusted there by default
+    // (#332 M-5); AUTH_CLIENTS still overrides on any tier.
+    clients: (
+      process.env.AUTH_CLIENTS ||
+      (formatDeploymentEnv(rawDeploymentEnv) === 'PROD'
+        ? 'linked-data-explorer,ttl-editor'
+        : 'linked-data-explorer,ttl-editor,lde-e2e')
+    )
       .split(',')
       .map((c) => c.trim())
       .filter(Boolean),

@@ -52,6 +52,8 @@
  *   LDE_E2E_USERNAME       e2e account            default lde-e2e
  *   LDE_E2E_PASSWORD       its password           required
  *   LDE_E2E_CLIENT_SECRET  client lde-e2e secret  required
+ *   OPERATON_USERNAME      engine login, only to  optional (ldeBackend
+ *   OPERATON_PASSWORD      show its version          locally)
  *
  * Deploying needs a sign-in (#163): the script gets a token for the lde-e2e
  * account (realm role lde-author) from the confidential client lde-e2e, created
@@ -115,9 +117,29 @@ function readJson(path) {
   }
 }
 
-let tokenPromise = null;
+/** The current lde-e2e token and when it expires: `{ token, expiresAt }`. */
+let cachedToken = null;
+/** Fetch a new token when the cached one has less than this left (#332 M-7). */
+const TOKEN_MARGIN_MS = 30_000;
 
-/** A token for the lde-e2e account (realm role lde-author), fetched once. */
+/**
+ * A token for the lde-e2e account, reused until shortly before it expires. A
+ * run can outlast an access token (5 minutes by default); fetching it once
+ * failed such a run part-way with 401 (#332 M-7).
+ */
+async function e2eToken({ fresh = false } = {}) {
+  if (
+    !fresh &&
+    cachedToken &&
+    cachedToken.expiresAt - Date.now() > TOKEN_MARGIN_MS
+  ) {
+    return cachedToken.token;
+  }
+  cachedToken = await getE2eToken();
+  return cachedToken.token;
+}
+
+/** Signs in as the lde-e2e account (realm role lde-author). */
 async function getE2eToken() {
   const password = process.env.LDE_E2E_PASSWORD;
   const secret = process.env.LDE_E2E_CLIENT_SECRET;
@@ -159,29 +181,35 @@ async function getE2eToken() {
       `Sign-in as lde-e2e failed: ${data.error_description ?? data.error ?? `HTTP ${res.status}`}`,
     );
   }
-  return data.access_token;
+  return {
+    token: data.access_token,
+    expiresAt: Date.now() + (Number(data.expires_in) || 300) * 1000,
+  };
 }
 
 async function ldeRequest(method, path, body) {
-  let res;
-  const headers = {};
-  if (body) headers["Content-Type"] = "application/json";
-  if (method !== "GET") {
-    tokenPromise ??= getE2eToken();
-    headers.Authorization = `Bearer ${await tokenPromise}`;
-  }
-  try {
-    res = await fetch(`${LDE_URL}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch (err) {
-    fail(
-      `LDE backend not reachable at ${LDE_URL} (${err.cause?.code ?? err.message}). ` +
-        "Start it with `npm run dev:backend` in this repo.",
-    );
-  }
+  const signed = method !== "GET";
+  const send = async (fresh) => {
+    const headers = {};
+    if (body) headers["Content-Type"] = "application/json";
+    if (signed) headers.Authorization = `Bearer ${await e2eToken({ fresh })}`;
+    try {
+      return await fetch(`${LDE_URL}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (err) {
+      fail(
+        `LDE backend not reachable at ${LDE_URL} (${err.cause?.code ?? err.message}). ` +
+          "Start it with `npm run dev:backend` in this repo.",
+      );
+    }
+  };
+  let res = await send(false);
+  // A token can still lapse between the expiry check and the backend's own
+  // (clock skew, a long request): one retry with a fresh token (#332 M-7).
+  if (signed && res.status === 401) res = await send(true);
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.success === false) {
     // LDE answers errors as RFC 9457 problem details.
@@ -222,15 +250,31 @@ async function assertOperatonUp(operatonUrl) {
     "Start it from the ronl-business-api repo with `npm run docker:up`, which is " +
     "where the local Operaton container is defined; a fresh container needs " +
     "about half a minute before it answers.";
+  // /version needs the engine login since #415 in ronl-business-api. Send it
+  // when given, the same account the backend uses; without it a 401 still
+  // proves the engine answers, and deploying goes through the backend's own
+  // login anyway (#328).
+  const user = process.env.OPERATON_USERNAME;
+  const pass = process.env.OPERATON_PASSWORD;
+  const headers =
+    user && pass
+      ? {
+          Authorization: `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}`,
+        }
+      : {};
   let res;
   try {
     res = await fetch(`${operatonUrl.replace(/\/$/, "")}/version`, {
+      headers,
       signal: AbortSignal.timeout(5000),
     });
   } catch (err) {
     fail(
       `Operaton not reachable at ${operatonUrl} (${err.cause?.code ?? err.name}). ${hint}`,
     );
+  }
+  if (res.status === 401 || res.status === 403) {
+    return "version not shown: the engine wants a login (set OPERATON_USERNAME and OPERATON_PASSWORD)";
   }
   if (!res.ok)
     fail(`Operaton at ${operatonUrl} answered HTTP ${res.status}. ${hint}`);
@@ -343,8 +387,7 @@ async function main() {
   const manifest = readJson(join(FIXTURES, "manifest.json"));
 
   // Sign in first: missing credentials fail before anything is contacted.
-  tokenPromise = getE2eToken();
-  await tokenPromise;
+  await e2eToken();
 
   const operatonUrl = await assertLocalTarget();
   const operatonVersion = await assertOperatonUp(operatonUrl);

@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler, BODY_SIZE_LIMIT } from './middleware/err
 import { versionMiddleware } from './middleware/version.middleware';
 import { externalTaskWorker } from './services/externalTaskWorker.service';
 import { startTestDeployCleanup } from './services/testDeploy.service';
+import { publishConfigProblem } from './services/triplydb.service';
 import { migrate } from './db/migrate';
 import { rootHandler } from './utils/rootViews';
 
@@ -79,6 +80,15 @@ const startServer = async () => {
     logger.info(`API available at: http://${host}:${port}/v1`);
     logger.info(`Health check: http://${host}:${port}/v1/health`);
     logger.info(`Legacy API: http://${host}:${port}/api (deprecated)`);
+
+    // Account and token set but the base URL refused: every publish would
+    // answer 503 without saying why (#336).
+    const publishProblem = publishConfigProblem();
+    if (publishProblem) {
+      logger.warn('Publishing is off: TRIPLYDB_BASE_URL is refused', {
+        reason: publishProblem,
+      });
+    }
 
     externalTaskWorker.start();
     // #163: removes TestOnly deployments after 48 hours; a no-op unless

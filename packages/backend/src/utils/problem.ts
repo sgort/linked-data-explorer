@@ -60,6 +60,7 @@ const CODE_TITLES = {
   OPERATON_NOT_CONFIGURED: 'Operaton not configured',
   UNAUTHENTICATED: 'Sign-in required',
   FORBIDDEN: 'Permission required',
+  AUTH_UNAVAILABLE: 'Sign-in unavailable',
   TEST_DEPLOY_KEY_EXISTS: 'Decision key already in use',
   TEST_DEPLOY_RATE_LIMITED: 'Too many test deploys',
 } as const satisfies Record<string, string>;

@@ -4,7 +4,9 @@ const logLevel = process.env.LOG_LEVEL || 'info';
 const logFormat = process.env.LOG_FORMAT || 'json';
 
 const formats = {
-  json: winston.format.json(),
+  // Each line carries its own time (#336): Azure's log stream adds one, but a
+  // line read anywhere else (a file, another host's collector) had none.
+  json: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   pretty: winston.format.combine(
     winston.format.colorize(),
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -28,7 +30,7 @@ export const logger = winston.createLogger({
 // Ensure the logs/ directory exists before Winston tries to open the log files.
 // This runs as a module-level side-effect so it executes once on startup, before
 // any logger calls are made. The path is relative to the process working directory
-// (i.e. packages/backend/ when started with `npm start` or `ts-node src/index.ts`).
+// (i.e. packages/backend/ when started with `npm start` or `tsx src/index.ts`).
 import { existsSync, mkdirSync } from 'fs';
 if (!existsSync('logs')) {
   mkdirSync('logs');

@@ -8,7 +8,7 @@
 //   - rule-collision-pass.ttl : the same three rules under unique URIs -> 0 RONL errors.
 //   - cpsv-ap-conformant.ttl  : a fully conformant Rule -> valid, 0 errors in both layers.
 //
-// Run from packages/backend:  npx ts-node scripts/shacl-smoke-rules.ts
+// Run from packages/backend:  npx tsx scripts/shacl-smoke-rules.ts
 
 import { readFileSync } from 'fs';
 import path from 'path';

@@ -59,6 +59,27 @@ async function send(
   };
 }
 
+/** Longest piece of a plain-text error body that reaches a message. */
+const REASON_MAX = 200;
+
+/**
+ * TriplyDB's reason for a failed write, short enough for the editor's message
+ * (#336). The whole body used to go into the error, and on a gateway error
+ * that is an HTML page. A JSON body gives its `message`; an HTML page gives
+ * only the status text; any other text is cut at REASON_MAX characters.
+ */
+function failureReason(response: { statusText: string; text: string }): string {
+  const text = response.text.trim();
+  try {
+    const body = JSON.parse(text) as { message?: unknown };
+    if (typeof body?.message === 'string' && body.message) return body.message;
+  } catch {
+    // Not JSON: fall through.
+  }
+  if (text.startsWith('<')) return response.statusText || 'unreadable answer';
+  return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX)}…` : text;
+}
+
 /**
  * Execute a SPARQL query against any TriplyDB endpoint
  * Used by the /v1/triplydb/query endpoint to enable dynamic endpoint selection
@@ -171,6 +192,20 @@ export function publishTarget(): { baseUrl: string; account: string } | null {
 }
 
 /**
+ * Why publishing is off although it was meant to be on, or null. With account
+ * and token set but the base URL refused (a host outside
+ * TRIPLYDB_ALLOWED_HOSTS, or plain http), every publish answers 503; the
+ * server logs this reason at startup so the cause is not silent (#336). With
+ * no account or token, publishing is simply not set up, which is no problem.
+ */
+export function publishConfigProblem(): string | null {
+  const { baseUrl, account, apiToken } = config.triplydb.publish;
+  if (!account || !apiToken) return null;
+  const check = checkTriplyDbBaseUrl(baseUrl, 'TRIPLYDB_BASE_URL');
+  return check.ok ? null : check.reason;
+}
+
+/**
  * The full TriplyDB config for a publish: the server's base URL, account and
  * token, plus the dataset the author chose (ttl-editor#234).
  */
@@ -204,7 +239,7 @@ export async function uploadTtl(
     body: form,
   });
   if (!response.ok) {
-    throw new Error(`TriplyDB upload failed: ${response.status} ${response.text}`);
+    throw new Error(`TriplyDB upload failed: ${response.status} ${failureReason(response)}`);
   }
 }
 
@@ -229,7 +264,7 @@ export async function uploadAsset(
     }
   );
   if (!response.ok) {
-    throw new Error(`TriplyDB asset upload failed: ${response.status} ${response.text}`);
+    throw new Error(`TriplyDB asset upload failed: ${response.status} ${failureReason(response)}`);
   }
 }
 

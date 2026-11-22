@@ -189,6 +189,13 @@ describe('value parsing', () => {
     });
   });
 
+  test('a trailing slash on TRIPLYDB_BASE_URL is stripped (#336)', () => {
+    // Kept, every TriplyDB URL and the editors' picker URL got `//datasets/`.
+    expect(
+      loadConfig({ TRIPLYDB_BASE_URL: 'https://api.other.triply.cc//' }).triplydb.publish.baseUrl
+    ).toBe('https://api.other.triply.cc');
+  });
+
   test('the TriplyDB publish target defaults to open-regels, with no account or token', () => {
     const config = loadConfig({
       TRIPLYDB_BASE_URL: '',
@@ -344,6 +351,33 @@ describe('sign-in and test deploys (#163)', () => {
     expect(
       loadConfig({ KEYCLOAK_URL: 'https://acc.keycloak.open-regels.nl/' }).auth.keycloakUrl
     ).toBe('https://acc.keycloak.open-regels.nl');
+  });
+
+  test('on PROD the default clients leave out lde-e2e, which PROD does not have (#332 M-5)', () => {
+    const config = loadConfig({
+      DEPLOYMENT_ENV: 'prod',
+      KEYCLOAK_URL: 'https://keycloak.open-regels.nl',
+      AUTH_CLIENTS: '',
+    });
+    expect(config.auth.clients).toEqual(['linked-data-explorer', 'ttl-editor']);
+  });
+
+  test('on ACC the default clients include lde-e2e', () => {
+    const config = loadConfig({
+      DEPLOYMENT_ENV: 'acc',
+      KEYCLOAK_URL: 'https://acc.keycloak.open-regels.nl',
+      AUTH_CLIENTS: '',
+    });
+    expect(config.auth.clients).toEqual(['linked-data-explorer', 'ttl-editor', 'lde-e2e']);
+  });
+
+  test('an explicit AUTH_CLIENTS on PROD is used as given', () => {
+    const config = loadConfig({
+      DEPLOYMENT_ENV: 'prod',
+      KEYCLOAK_URL: 'https://keycloak.open-regels.nl',
+      AUTH_CLIENTS: 'linked-data-explorer',
+    });
+    expect(config.auth.clients).toEqual(['linked-data-explorer']);
   });
 
   test('AUTH_CLIENTS is a comma-separated list, trimmed', () => {

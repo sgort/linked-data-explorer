@@ -162,6 +162,12 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
     documentFiles: string[];
     unmatchedForms: string[];
     unmatchedDocuments: string[];
+    // Set when the deploy modal opens; declared here so they are read typed,
+    // not through `as any`, which would hide a rename (#300).
+    ropaRefMissing?: boolean;
+    languageMismatch?: boolean;
+    languageList?: string[];
+    phaseFindings?: PhaseFinding[];
   }>({
     processKey: '',
     bpmnFiles: [],
@@ -733,11 +739,6 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
       languageMismatch,
       languageList,
       phaseFindings,
-    } as typeof deployResources & {
-      ropaRefMissing?: boolean;
-      languageMismatch?: boolean;
-      languageList?: string[];
-      phaseFindings?: PhaseFinding[];
     });
     // Pre-fill the board-ownership picker with the auto-detected board.
     setBoardAuto(deriveBoardOwnerFromXml(xml));
@@ -1134,38 +1135,36 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                     Import them in the Form editor or Document composer first.
                   </div>
                 )}
-                {(deployResources as any).ropaRefMissing && (
+                {deployResources.ropaRefMissing && (
                   <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
                     ⚠️ No <code className="font-mono">ronl:ropaRef</code> found on the process
                     element. Link a RoPA record in the BPMN properties panel before deploying to
                     production.
                   </div>
                 )}
-                {(deployResources as any).languageMismatch && (
+                {deployResources.languageMismatch && (
                   <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
                     ⚠️ Bundle mixes languages:{' '}
                     <span className="font-mono">
-                      {((deployResources as any).languageList as string[]).join(', ')}
+                      {(deployResources.languageList ?? []).join(', ')}
                     </span>
                     . A deployed bundle should be a single language. Untag or retag the mismatched
                     artefact(s) before deploying.
                   </div>
                 )}
-                {((deployResources as any).phaseFindings as PhaseFinding[] | undefined)?.map(
-                  (f) => (
-                    <div
-                      key={f.code}
-                      className={`mb-3 p-3 rounded-lg text-xs ${
-                        f.severity === 'error'
-                          ? 'bg-red-50 border border-red-200 text-red-800'
-                          : 'bg-amber-50 border border-amber-200 text-amber-800'
-                      }`}
-                    >
-                      {f.severity === 'error' ? '✗ ' : '⚠️ '}
-                      {f.message}
-                    </div>
-                  )
-                )}
+                {deployResources.phaseFindings?.map((f) => (
+                  <div
+                    key={f.code}
+                    className={`mb-3 p-3 rounded-lg text-xs ${
+                      f.severity === 'error'
+                        ? 'bg-red-50 border border-red-200 text-red-800'
+                        : 'bg-amber-50 border border-amber-200 text-amber-800'
+                    }`}
+                  >
+                    {f.severity === 'error' ? '✗ ' : '⚠️ '}
+                    {f.message}
+                  </div>
+                ))}
                 <div className="mt-2 text-xs text-slate-500">
                   {deployResources.bpmnFiles.length +
                     deployResources.formFiles.length +
@@ -1216,9 +1215,7 @@ const BpmnCanvas: React.FC<BpmnCanvasProps> = ({
                     !deployOrganization ||
                     deployResources.unmatchedForms.length > 0 ||
                     deployResources.unmatchedDocuments.length > 0 ||
-                    ((deployResources as any).phaseFindings as PhaseFinding[] | undefined)?.some(
-                      (f) => f.severity === 'error'
-                    ) === true
+                    deployResources.phaseFindings?.some((f) => f.severity === 'error') === true
                   }
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                 >
