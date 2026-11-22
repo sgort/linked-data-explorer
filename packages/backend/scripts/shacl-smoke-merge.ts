@@ -7,7 +7,7 @@
 // file-local validation cannot see, because the offending values live in different
 // files (one uploaded, one already in the store).
 //
-// Run from packages/backend:  npx ts-node scripts/shacl-smoke-merge.ts
+// Run from packages/backend:  npx tsx scripts/shacl-smoke-merge.ts
 
 import { ShaclValidationService } from '../src/services/shacl-validation.service';
 

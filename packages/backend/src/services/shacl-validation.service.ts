@@ -78,7 +78,7 @@ export interface ShaclLayerStatus {
 // ── Shape layer configuration ─────────────────────────────────────────────────
 
 // shapes/ lives at the package root (packages/backend/shapes). __dirname is
-// .../src/services under ts-node and .../dist/services after build; ../../shapes
+// .../src/services under tsx and .../dist/services after build; ../../shapes
 // resolves to packages/backend/shapes in both. NOTE: the build only emits dist/,
 // so both backend deploy workflows copy shapes/ into the deploy bundle and verify
 // the files LAYER_SPECS names are there. Keep those checks in step with this list.
