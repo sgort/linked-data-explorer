@@ -108,6 +108,7 @@ function shaclResult(over: Partial<Record<string, any>> = {}) {
     }),
     focusNode: pick('focusNode', null),
     path: pick('path', null),
+    value: pick('value', null),
   };
 }
 
@@ -301,6 +302,78 @@ describe('severity mapping', () => {
   test('treats an unknown or absent severity as an error', async () => {
     allShapesPresent();
     validatorState.reports = [{ results: [shaclResult({ severity: null })] }];
+
+    const result = await service().validateFile(ttl([]));
+
+    expect(result.layers['cpsv-ap'].issues[0].severity).toBe('error');
+  });
+});
+
+describe('dct:requires to a service this file does not describe (#315)', () => {
+  // CPSV-AP checks PublicService.requires with sh:class cpsv:PublicService. A
+  // required service published in its own graph is not in the validated data,
+  // so the check can never pass file-locally. Reported as a warning instead,
+  // and only for dct:requires: every other sh:class stays strict.
+  const SERVICE = 'https://regels.overheid.nl/services/hoogte';
+  const OTHER = 'https://regels.overheid.nl/services/other';
+  const DCT = 'http://purl.org/dc/terms/';
+
+  const classResult = (path: string) =>
+    shaclResult({
+      sourceConstraintComponent: { value: `${SH}ClassConstraintComponent` },
+      focusNode: { termType: 'NamedNode', value: SERVICE },
+      path: { termType: 'NamedNode', value: path },
+      value: { termType: 'NamedNode', value: OTHER },
+    });
+
+  test('is a warning that says why, and leaves the file valid', async () => {
+    allShapesPresent();
+    validatorState.reports = [{ results: [classResult(`${DCT}requires`)] }];
+
+    const result = await service().validateFile(ttl([]));
+
+    const [issue] = result.layers['cpsv-ap'].issues;
+    expect(issue).toMatchObject({ severity: 'warning', code: 'SHACL-CLASS' });
+    expect(issue.message).toMatch(/not described in this file/);
+    expect(result.summary).toEqual({ errors: 0, warnings: 1, infos: 0 });
+    expect(result.valid).toBe(true);
+  });
+
+  test('stays an error when the required service is described here', async () => {
+    allShapesPresent();
+    validatorState.reports = [{ results: [classResult(`${DCT}requires`)] }];
+
+    const result = await service().validateFile(ttl([{ s: OTHER, p: `${DCT}title`, o: 'Ander' }]));
+
+    expect(result.layers['cpsv-ap'].issues[0].severity).toBe('error');
+    expect(result.valid).toBe(false);
+  });
+
+  test('stays an error for an sh:class failure on any other path', async () => {
+    allShapesPresent();
+    validatorState.reports = [
+      { results: [classResult('http://data.europa.eu/m8g/hasCompetentAuthority')] },
+    ];
+
+    const result = await service().validateFile(ttl([]));
+
+    expect(result.layers['cpsv-ap'].issues[0].severity).toBe('error');
+  });
+
+  test('stays an error for another constraint on dct:requires', async () => {
+    allShapesPresent();
+    validatorState.reports = [
+      {
+        results: [
+          shaclResult({
+            sourceConstraintComponent: { value: `${SH}NodeKindConstraintComponent` },
+            focusNode: { termType: 'NamedNode', value: SERVICE },
+            path: { termType: 'NamedNode', value: `${DCT}requires` },
+            value: { termType: 'NamedNode', value: OTHER },
+          }),
+        ],
+      },
+    ];
 
     const result = await service().validateFile(ttl([]));
 

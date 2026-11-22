@@ -1,0 +1,24 @@
+@prefix cpsv: <http://purl.org/vocab/cpsv#> .
+@prefix cv:   <http://data.europa.eu/m8g/> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# A minimal CPSV-AP 3.2.0 PublicService that requires another service
+# (dct:requires, sgort/ttl-editor#223) described in its own graph, not in this
+# file, as ttl-editor publishes it. Validated file-locally, the validator cannot
+# see that the required service is a cpsv:PublicService (#315, #316).
+
+<https://regels.overheid.nl/services/hoogte-subsidie> a cpsv:PublicService ;
+    dct:identifier "hoogte-subsidie" ;
+    dct:title "Hoogte subsidie"@nl ;
+    dct:description "Berekent de hoogte van de subsidie."@nl ;
+    cv:hasCompetentAuthority <https://organisaties.overheid.nl/14866/Provincie_Flevoland> ;
+    dct:requires <https://regels.overheid.nl/services/other> .
+
+<https://organisaties.overheid.nl/14866/Provincie_Flevoland> a cv:PublicOrganisation ;
+    dct:identifier "Provincie_Flevoland" ;
+    skos:prefLabel "Provincie Flevoland"@nl ;
+    dct:spatial <https://publications.europa.eu/resource/authority/country/NLD> .
+
+# The stub the generator writes, as CPSV-AP requires dct:spatial to be a dct:Location.
+<https://publications.europa.eu/resource/authority/country/NLD> a dct:Location .

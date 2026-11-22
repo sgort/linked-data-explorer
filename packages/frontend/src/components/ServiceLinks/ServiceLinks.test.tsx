@@ -36,6 +36,14 @@ describe('serviceLinkName', () => {
     );
   });
 
+  test('takes the fragment of a hash IRI (#321)', () => {
+    expect(serviceLinkName({ service: 'https://example.org/def#recht' })).toBe('recht');
+  });
+
+  test('ignores an empty fragment and takes the last path segment', () => {
+    expect(serviceLinkName({ service: 'https://example.org/services/recht#' })).toBe('recht');
+  });
+
   test('falls back to the whole URI when it has no path segment', () => {
     expect(serviceLinkName({ service: 'urn:x' })).toBe('urn:x');
   });
