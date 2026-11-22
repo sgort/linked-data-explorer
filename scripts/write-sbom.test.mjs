@@ -121,6 +121,57 @@ check(
   true,
 );
 
+// ── --check compares content, not provenance (#299) ─────────────────────────
+// A release SBOM made with another npm than CI's failed the release pull
+// request although every component was identical (ronl-business-api#369): the
+// strict check also compared metadata.tools. It now ignores which npm made the
+// document, and still fails on any difference in what it lists (#274).
+const doc = (over = {}) =>
+  JSON.stringify({
+    bomFormat: "CycloneDX",
+    serialNumber: over.serialNumber ?? "urn:uuid:1",
+    metadata: {
+      timestamp: over.timestamp ?? "2026-11-01T00:00:00Z",
+      tools: over.tools ?? [{ vendor: "npm", name: "cli", version: "11.19.1" }],
+      component: { "bom-ref": "app@1.0.0", name: "app" },
+    },
+    components: over.components ?? [component("react", "19.3.0")],
+    dependencies: over.dependencies ?? [
+      { ref: "app@1.0.0", dependsOn: ["react@19.3.0"] },
+    ],
+  });
+check(
+  "another npm with the same components compares equal",
+  W.comparable(
+    doc({ tools: [{ vendor: "npm", name: "cli", version: "11.21.0" }] }),
+  ) === W.comparable(doc()),
+  true,
+);
+check(
+  "a new serial number and timestamp compare equal",
+  W.comparable(
+    doc({ serialNumber: "urn:uuid:2", timestamp: "2026-12-01T00:00:00Z" }),
+  ) === W.comparable(doc()),
+  true,
+);
+check(
+  "a different component list still differs",
+  W.comparable(doc({ components: [component("react", "19.3.1")] })) ===
+    W.comparable(doc()),
+  false,
+);
+check(
+  "a different dependency graph still differs",
+  W.comparable(doc({ dependencies: [{ ref: "app@1.0.0", dependsOn: [] }] })) ===
+    W.comparable(doc()),
+  false,
+);
+check(
+  "the document itself keeps its tools entry",
+  JSON.parse(doc()).metadata.tools.length,
+  1,
+);
+
 // ── summary ─────────────────────────────────────────────────────────────────
 if (failures.length) {
   console.error(

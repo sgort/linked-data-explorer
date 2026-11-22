@@ -13,7 +13,7 @@
 //     cpsv:PublicService : the class check still applies, so it stays an ERROR.
 //     The warning is only for what this file cannot see.
 //
-// Run from packages/backend:  npx ts-node scripts/shacl-smoke-requires.ts
+// Run from packages/backend:  npx tsx scripts/shacl-smoke-requires.ts
 
 import { readFileSync } from 'fs';
 import path from 'path';

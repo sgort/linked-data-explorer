@@ -81,14 +81,21 @@ export function missingFromSbom(sbom, lockfile) {
   return [...productionRefs(lockfile)].filter((ref) => !listed.has(ref)).sort();
 }
 
-// serialNumber is a fresh UUID on every run, and metadata.timestamp is the
-// moment of generation. Both change when nothing else does, so --check
-// compares the document WITHOUT them; the file keeps them, because a CycloneDX
-// document is expected to carry them.
-const strip = (text) => {
+// What --check compares: the document without the fields that change when its
+// content does not. serialNumber is a fresh UUID on every run,
+// metadata.timestamp the moment of generation, and metadata.tools the npm that
+// generated it. A release SBOM made with another npm than CI's failed the
+// release pull request with identical components (#299, ronl-business-api#369);
+// a different component list or dependency graph still fails (#274). The file
+// keeps all three, because a CycloneDX document is expected to say when, and
+// with what, it was made.
+export const comparable = (text) => {
   const doc = JSON.parse(text);
   delete doc.serialNumber;
-  if (doc.metadata) delete doc.metadata.timestamp;
+  if (doc.metadata) {
+    delete doc.metadata.timestamp;
+    delete doc.metadata.tools;
+  }
   return JSON.stringify(doc);
 };
 
@@ -142,7 +149,8 @@ function main(argv) {
       console.error(`::error::${out} is missing. Run: npm run sbom`);
       return 1;
     }
-    const drifted = strip(readFileSync(out, "utf8")) !== strip(generated);
+    const drifted =
+      comparable(readFileSync(out, "utf8")) !== comparable(generated);
     if (drifted && strictCheck) {
       console.error(
         `::error::${out} does not match the current lockfile. Run: npm run sbom`,
