@@ -254,10 +254,13 @@ ORDER BY ?identifier
 
     // Fetch vendor counts in a single aggregated query up front so we avoid
     // issuing one extra SPARQL request per DMN when building the final list.
-    const vendorCounts = await this.getVendorCounts(targetEndpoint);
     // Same pattern for dct:requires between services: one query for the whole
-    // endpoint, attached per DMN below (sgort/ttl-editor#223).
-    const requirements = await this.getServiceRequirements(targetEndpoint);
+    // endpoint, attached per DMN below (sgort/ttl-editor#223). The two run side
+    // by side (#319); both degrade to empty rather than throwing.
+    const [vendorCounts, requirements] = await Promise.all([
+      this.getVendorCounts(targetEndpoint),
+      this.getServiceRequirements(targetEndpoint),
+    ]);
 
     logger.info(`Found ${bindings.length} DMN records`);
 
@@ -944,31 +947,43 @@ SELECT ?service ?serviceTitle ?required ?requiredTitle WHERE {
       const data = await this.executeQuery(query, endpoint);
       const bindings = data.results?.bindings || [];
 
+      // A title in several languages gives one row per title, in no fixed
+      // order. Keep the best-ranked one so the name does not flip between
+      // languages after a cache refresh (#317): @nl, then untagged, then any
+      // other language.
+      const titleRank = (title: SparqlBinding): number => {
+        const lang = title['xml:lang']?.toLowerCase();
+        if (lang === 'nl') return 0;
+        return lang ? 2 : 1;
+      };
+
       const pairs = new Map<string, ServiceRequirement>();
+      const ranks = new Map<string, { service: number; required: number }>();
       for (const binding of bindings) {
         const service = binding.service?.value;
         const required = binding.required?.value;
         if (!service || !required || service === required) continue;
 
         const key = `${service} ${required}`;
-        const existing = pairs.get(key);
-        if (existing) {
-          // Only set a title that arrives; `??=` with an undefined value would
-          // add an explicit `undefined` key (#318).
-          if (!existing.serviceTitle && binding.serviceTitle?.value) {
-            existing.serviceTitle = binding.serviceTitle.value;
-          }
-          if (!existing.requiredTitle && binding.requiredTitle?.value) {
-            existing.requiredTitle = binding.requiredTitle.value;
-          }
-          continue;
+        let pair = pairs.get(key);
+        let rank = ranks.get(key);
+        if (!pair || !rank) {
+          pair = { service, required };
+          rank = { service: Infinity, required: Infinity };
+          pairs.set(key, pair);
+          ranks.set(key, rank);
         }
-        pairs.set(key, {
-          service,
-          required,
-          ...(binding.serviceTitle?.value ? { serviceTitle: binding.serviceTitle.value } : {}),
-          ...(binding.requiredTitle?.value ? { requiredTitle: binding.requiredTitle.value } : {}),
-        });
+        // A title is set only when one arrives, so a pair without any keeps
+        // no title keys at all (#318).
+        const { serviceTitle, requiredTitle } = binding;
+        if (serviceTitle?.value && titleRank(serviceTitle) < rank.service) {
+          pair.serviceTitle = serviceTitle.value;
+          rank.service = titleRank(serviceTitle);
+        }
+        if (requiredTitle?.value && titleRank(requiredTitle) < rank.required) {
+          pair.requiredTitle = requiredTitle.value;
+          rank.required = titleRank(requiredTitle);
+        }
       }
 
       logger.debug(`Fetched ${pairs.size} service requirements`);

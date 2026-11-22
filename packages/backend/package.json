@@ -16,6 +16,7 @@
     "test:coverage": "jest --coverage",
     "test:openapi-coverage": "jest --config jest.config.js src/openapi --coverage=false",
     "test:contract": "jest --config jest.config.js src/openapi src/routes --coverage=false",
+    "test:shacl-smoke": "ts-node scripts/shacl-smoke.ts && ts-node scripts/shacl-smoke-rules.ts && ts-node scripts/shacl-smoke-merge.ts && ts-node scripts/shacl-smoke-requires.ts",
     "lint": "eslint .",
     "lint:openapi": "npm run build:openapi && spectral lint openapi/openapi.json openapi/openapi.v2.json --ruleset openapi/.spectral.yaml --fail-severity error",
     "typecheck": "tsc --noEmit",
