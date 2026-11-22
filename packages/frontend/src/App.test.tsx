@@ -369,7 +369,9 @@ describe('App — cache refresh (Orchestration view)', () => {
     await userEvent.click(screen.getByTitle('DMN Orchestration'));
     await userEvent.click(screen.getByText('Refresh Cache'));
 
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/cache/clear?endpoint='), {
+    // The versioned route, not the deprecated /api alias (#340): a test pinned
+    // to the alias would keep it alive.
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/v1/cache/clear?endpoint='), {
       method: 'DELETE',
       headers: { Authorization: 'Bearer test-token' },
     });

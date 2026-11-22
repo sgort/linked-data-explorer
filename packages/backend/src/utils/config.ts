@@ -16,9 +16,9 @@ const getNestedProperty = (obj: Record<string, unknown>, path: string): unknown 
 };
 
 /**
- * Deployment tier display label. NODE_ENV alone can't distinguish ACC from PROD
- * because both deployments run with NODE_ENV=production; the dedicated
- * DEPLOYMENT_ENV variable carries the tier signal, set per Azure App Service:
+ * Deployment tier display label. ACC runs NODE_ENV=acceptance and PROD
+ * NODE_ENV=production, but DEPLOYMENT_ENV names the tier explicitly, set per
+ * Azure App Service, and NODE_ENV is only the fallback (#328):
  *   az webapp config appsettings set -g rg-... -n ronl-linkeddata-backend-acc  --settings DEPLOYMENT_ENV=acc
  *   az webapp config appsettings set -g rg-... -n ronl-linkeddata-backend-prod --settings DEPLOYMENT_ENV=prod
  * Falls back to NODE_ENV when unset so local development stays zero-config.
