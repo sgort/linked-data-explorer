@@ -119,7 +119,20 @@ router.post(
       dataset,
     };
 
-    const dbConfig = triplydbService.serverConfig(dataset);
+    // Inside a try, as every other route here: under Express 4 a throw in an
+    // async handler leaves the request hanging. requirePublishTarget makes
+    // this unreachable today (#336).
+    let dbConfig: triplydbService.TriplyDBConfig;
+    try {
+      dbConfig = triplydbService.serverConfig(dataset);
+    } catch (error) {
+      sendProblem(res, req, {
+        status: 503,
+        title: 'Publishing not configured',
+        detail: error instanceof Error ? error.message : 'Publishing is not configured',
+      });
+      return;
+    }
 
     try {
       await triplydbService.uploadTtl(dbConfig, body.ttl as string, body.filename as string, graph);
@@ -135,7 +148,13 @@ router.post(
       try {
         await triplydbService.uploadAsset(dbConfig, logo.fileName, logo.dataUrl);
         logoResults.push({ fileName: logo.fileName, ok: true });
-      } catch {
+      } catch (error) {
+        // The reason used to be dropped: only `ok: false` reached the log (#336).
+        logger.warn('[TriplyDB] publish logo failed', {
+          ...entry,
+          fileName: logo.fileName,
+          error: error instanceof Error ? error.message : 'Logo upload failed',
+        });
         logoResults.push({ fileName: logo.fileName, ok: false });
       }
     }

@@ -13,6 +13,7 @@ import {
   constructGraph,
   executeQuery,
   listGraphs,
+  publishConfigProblem,
   publishTarget,
   serverConfig,
   testConnection,
@@ -420,6 +421,80 @@ describe('publishTarget (ttl-editor#234)', () => {
     set(baseUrl, account, token);
 
     expect(publishTarget()).toBeNull();
+  });
+});
+
+describe('publishConfigProblem (#336)', () => {
+  // Account and token set but the base URL refused used to disable publishing
+  // without a word: every publish answered 503 and nothing said why.
+  const saved = { ...config.triplydb.publish };
+  afterEach(() => {
+    Object.assign(config.triplydb.publish, saved);
+  });
+
+  function set(baseUrl: string, account: string, apiToken: string) {
+    Object.assign(config.triplydb.publish, { baseUrl, account, apiToken });
+  }
+
+  test.each([
+    [
+      'a host outside TRIPLYDB_ALLOWED_HOSTS',
+      'https://evil.example',
+      /not an allowed TriplyDB host/,
+    ],
+    ['plain http', 'http://api.open-regels.triply.cc', /must use https/],
+  ])('names the reason with %s', (_label, baseUrl, reason) => {
+    set(baseUrl, 'stevengort', 'secret');
+
+    expect(publishConfigProblem()).toMatch(reason);
+  });
+
+  test('is null when publishing is configured', () => {
+    set('https://api.open-regels.triply.cc', 'stevengort', 'secret');
+
+    expect(publishConfigProblem()).toBeNull();
+  });
+
+  test('is null when publishing is simply not set up (no account or token)', () => {
+    set('https://evil.example', '', '');
+
+    expect(publishConfigProblem()).toBeNull();
+  });
+});
+
+describe('a failed upload names TriplyDB’s reason, not its whole answer (#336)', () => {
+  const GRAPH = 'https://regels.overheid.nl/graphs/svb/aow';
+  const PNG = 'data:image/png;base64,' + Buffer.from('png').toString('base64');
+
+  test('a gateway’s HTML page is reduced to the status text', async () => {
+    mockRequest.mockResolvedValue(
+      reply(
+        502,
+        '<!DOCTYPE html><html><body><h1>502 Bad Gateway</h1>…</body></html>',
+        'Bad Gateway'
+      )
+    );
+
+    const error = (await uploadTtl(CONFIG, 'x', 'aow', GRAPH).catch((e: Error) => e)) as Error;
+
+    expect(error.message).toBe('TriplyDB upload failed: 502 Bad Gateway');
+  });
+
+  test('a JSON error body gives its message', async () => {
+    mockRequest.mockResolvedValue(reply(400, { message: 'Dataset not found' }, 'Bad Request'));
+
+    const error = (await uploadAsset(CONFIG, 'x.png', PNG).catch((e: Error) => e)) as Error;
+
+    expect(error.message).toBe('TriplyDB asset upload failed: 400 Dataset not found');
+  });
+
+  test('a long plain body is cut short', async () => {
+    mockRequest.mockResolvedValue(reply(500, 'x'.repeat(5000)));
+
+    const error = (await uploadTtl(CONFIG, 'x', 'aow', GRAPH).catch((e: Error) => e)) as Error;
+
+    expect(error.message.length).toBeLessThan(260);
+    expect(error.message).toMatch(/^TriplyDB upload failed: 500 x+…$/);
   });
 });
 
