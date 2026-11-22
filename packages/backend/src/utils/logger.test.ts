@@ -128,16 +128,25 @@ describe('log level', () => {
 });
 
 describe('log format', () => {
+  // Every JSON line carries its own ISO timestamp (#336): Azure's log stream
+  // adds one, but a line read anywhere else had none.
+  const ISO = expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+
   test('emits machine-readable JSON by default', async () => {
     const line = await capture(loadLogger({ LOG_FORMAT: '' }), 'info', 'started', { port: 3001 });
 
-    expect(JSON.parse(line)).toEqual({ level: 'info', message: 'started', port: 3001 });
+    expect(JSON.parse(line)).toEqual({
+      level: 'info',
+      message: 'started',
+      port: 3001,
+      timestamp: ISO,
+    });
   });
 
   test('emits JSON when LOG_FORMAT is explicitly json', async () => {
     const line = await capture(loadLogger({ LOG_FORMAT: 'json' }), 'warn', 'slow');
 
-    expect(JSON.parse(line)).toEqual({ level: 'warn', message: 'slow' });
+    expect(JSON.parse(line)).toEqual({ level: 'warn', message: 'slow', timestamp: ISO });
   });
 
   test('renders a timestamped human-readable line when LOG_FORMAT is pretty', async () => {

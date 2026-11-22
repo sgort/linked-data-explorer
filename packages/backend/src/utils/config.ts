@@ -70,7 +70,11 @@ export const config = {
      * starts; only publishing answers 503.
      */
     publish: {
-      baseUrl: process.env.TRIPLYDB_BASE_URL || 'https://api.open-regels.triply.cc',
+      // A trailing slash made every TriplyDB URL `…//datasets/` (#336).
+      baseUrl: (process.env.TRIPLYDB_BASE_URL || 'https://api.open-regels.triply.cc').replace(
+        /\/+$/,
+        ''
+      ),
       account: process.env.TRIPLYDB_ACCOUNT || '',
       apiToken: process.env.TRIPLYDB_API_TOKEN || '',
     },

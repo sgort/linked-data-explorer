@@ -4,7 +4,9 @@ const logLevel = process.env.LOG_LEVEL || 'info';
 const logFormat = process.env.LOG_FORMAT || 'json';
 
 const formats = {
-  json: winston.format.json(),
+  // Each line carries its own time (#336): Azure's log stream adds one, but a
+  // line read anywhere else (a file, another host's collector) had none.
+  json: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   pretty: winston.format.combine(
     winston.format.colorize(),
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),

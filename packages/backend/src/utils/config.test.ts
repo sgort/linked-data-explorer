@@ -189,6 +189,13 @@ describe('value parsing', () => {
     });
   });
 
+  test('a trailing slash on TRIPLYDB_BASE_URL is stripped (#336)', () => {
+    // Kept, every TriplyDB URL and the editors' picker URL got `//datasets/`.
+    expect(
+      loadConfig({ TRIPLYDB_BASE_URL: 'https://api.other.triply.cc//' }).triplydb.publish.baseUrl
+    ).toBe('https://api.other.triply.cc');
+  });
+
   test('the TriplyDB publish target defaults to open-regels, with no account or token', () => {
     const config = loadConfig({
       TRIPLYDB_BASE_URL: '',

@@ -228,6 +228,34 @@ describe('POST /v1/triplydb/publish (ttl-editor#234)', () => {
     expect(res.body.serviceUpdated).toBe(true);
   });
 
+  test('a failing logo is logged with its file name and the reason (#336)', async () => {
+    svc.uploadAsset.mockRejectedValue(new Error('TriplyDB asset upload failed: 413 too large'));
+
+    await request(makeApp()).post('/v1/triplydb/publish').send(BODY);
+
+    expect(log.warn).toHaveBeenCalledWith(
+      '[TriplyDB] publish logo failed',
+      expect.objectContaining({
+        event: 'triplydb.publish',
+        fileName: 'svb_logo.png',
+        error: 'TriplyDB asset upload failed: 413 too large',
+      })
+    );
+  });
+
+  test('answers 503, and does not hang, when the server config cannot be built (#336)', async () => {
+    // Unreachable today (requirePublishTarget runs first), but a throw outside
+    // the try left the request hanging under Express 4.
+    svc.serverConfig.mockImplementation(() => {
+      throw new Error('Publishing is not configured on this backend');
+    });
+
+    const res = await request(makeApp()).post('/v1/triplydb/publish').send(BODY).timeout(2000);
+
+    expect(res.status).toBe(503);
+    expect(svc.uploadTtl).not.toHaveBeenCalled();
+  });
+
   test('answers 503 when publishing is not configured', async () => {
     svc.publishTarget.mockReturnValue(null);
 
