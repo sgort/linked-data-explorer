@@ -403,6 +403,8 @@ paths:
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/bpmn` operation can answer this.
+            Signed in, it can also answer 503 with code AUTH_UNAVAILABLE
+            when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -522,6 +524,8 @@ paths:
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/bpmn` operation can answer this.
+            Signed in, it can also answer 503 with code AUTH_UNAVAILABLE
+            when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -648,6 +652,8 @@ paths:
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/bpmn` operation can answer this.
+            Signed in, it can also answer 503 with code AUTH_UNAVAILABLE
+            when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -805,6 +811,8 @@ paths:
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/forms` operation can answer this.
+            Signed in, it can also answer 503 with code AUTH_UNAVAILABLE
+            when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -856,6 +864,8 @@ paths:
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/forms` operation can answer this.
+            Signed in, it can also answer 503 with code AUTH_UNAVAILABLE
+            when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -1040,6 +1050,8 @@ paths:
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/documents` operation can answer this.
+            Signed in, it can also answer 503 with code AUTH_UNAVAILABLE
+            when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -1091,6 +1103,8 @@ paths:
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/documents` operation can answer this.
+            Signed in, it can also answer 503 with code AUTH_UNAVAILABLE
+            when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -1329,6 +1343,8 @@ paths:
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/ropa` operation can answer this.
+            Signed in, it can also answer 503 with code AUTH_UNAVAILABLE
+            when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -1450,6 +1466,8 @@ paths:
           description: >-
             The database pool is not configured (code DB_NOT_CONFIGURED).
             Every `/assets/ropa` operation can answer this.
+            Signed in, it can also answer 503 with code AUTH_UNAVAILABLE
+            when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -1509,6 +1527,8 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/AuthUnavailable'
         '200':
           description: The cache was cleared.
           headers:
@@ -1996,7 +2016,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         '503':
-          description: Publishing is not configured on this backend.
+          description: >-
+            Publishing is not configured on this backend. Signed in, it can also answer 503 with code
+            AUTH_UNAVAILABLE when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -2081,7 +2103,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         '503':
-          description: Publishing is not configured on this backend.
+          description: >-
+            Publishing is not configured on this backend. Signed in, it can also answer 503 with code
+            AUTH_UNAVAILABLE when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -2165,7 +2189,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         '503':
-          description: Publishing is not configured on this backend.
+          description: >-
+            Publishing is not configured on this backend. Signed in, it can also answer 503 with code
+            AUTH_UNAVAILABLE when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -2261,7 +2287,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
         '503':
-          description: Publishing is not configured on this backend.
+          description: >-
+            Publishing is not configured on this backend. Signed in, it can also answer 503 with code
+            AUTH_UNAVAILABLE when the realm's signing keys cannot be fetched.
           content:
             application/problem+json:
               schema:
@@ -2731,6 +2759,8 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/AuthUnavailable'
         '200':
           description: The DRD was deployed.
           headers:
@@ -2879,6 +2909,8 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/AuthUnavailable'
         '200':
           description: The bundle was deployed.
           headers:
@@ -3023,6 +3055,8 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/AuthUnavailable'
         '409':
           description: >-
             Test deploy only: a decision key in the model already exists
@@ -5536,8 +5570,10 @@ components:
       bearerFormat: JWT
       description: >-
         A Keycloak access token from realm `ronl`, issued to the LDE frontend
-        (`linked-data-explorer`), ttl-editor (`ttl-editor`) or the e2e client
-        (`lde-e2e`), carrying the realm role `lde-author` (#163).
+        (`linked-data-explorer`), ttl-editor (`ttl-editor`) or, except on PROD,
+        the e2e client (`lde-e2e`), carrying the realm role `lde-author` (#163).
+        When the realm's signing keys cannot be fetched, a signed-in operation
+        answers 503 (code AUTH_UNAVAILABLE) instead of 401.
   responses:
     Unauthenticated:
       description: No sign-in, or the token is invalid or expired (code UNAUTHENTICATED).
@@ -5547,6 +5583,15 @@ components:
             $ref: '#/components/schemas/Problem'
     Forbidden:
       description: Signed in without the role lde-author (code FORBIDDEN).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    AuthUnavailable:
+      description: >-
+        Sign-in cannot be checked: Keycloak's signing keys could not be
+        fetched (code AUTH_UNAVAILABLE). Signing in again does not help; retry
+        later.
       content:
         application/problem+json:
           schema:

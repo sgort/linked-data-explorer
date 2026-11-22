@@ -97,7 +97,14 @@ export const config = {
         : 'http://localhost:8080')
     ).replace(/\/+$/, ''),
     realm: process.env.KEYCLOAK_REALM || 'ronl',
-    clients: (process.env.AUTH_CLIENTS || 'linked-data-explorer,ttl-editor,lde-e2e')
+    // PROD has no lde-e2e client, so it is not trusted there by default
+    // (#332 M-5); AUTH_CLIENTS still overrides on any tier.
+    clients: (
+      process.env.AUTH_CLIENTS ||
+      (formatDeploymentEnv(rawDeploymentEnv) === 'PROD'
+        ? 'linked-data-explorer,ttl-editor'
+        : 'linked-data-explorer,ttl-editor,lde-e2e')
+    )
       .split(',')
       .map((c) => c.trim())
       .filter(Boolean),
