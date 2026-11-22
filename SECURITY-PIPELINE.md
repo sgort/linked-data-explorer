@@ -34,7 +34,7 @@ two together.
 | `actions/upload-artifact`      | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` | v7.0.2           |
 | `Azure/static-web-apps-deploy` | `4d27395796ac319302594769cfe812bd207490b1` | v1 (branch head) |
 | `azure/webapps-deploy`         | `02a81bead70021f5284939794bcec79c271ab383` | v3.0.8           |
-| `zizmorcore/zizmor-action`     | `53290badfa369cb0bf7ad16342cb62c2fa47ac7b` | v0.8.0           |
+| `zizmorcore/zizmor-action`     | `45d7276c9ca790aabd705e31ca99c6185c3e76dd` | v0.8.1           |
 
 `zizmor 1.29.0` reports **0 findings** across all eleven workflows.
 
@@ -161,13 +161,24 @@ fetches — so nothing floats. Renovate maintains the input too, although this
 section said otherwise until September 2026. Its `github-actions` manager maps
 `zizmor-action` to the Docker image `ghcr.io/zizmorcore/zizmor`
 (`known-actions.ts` in Renovate), and the Dependency Dashboard (#36) lists
-`ghcr.io/zizmorcore/zizmor 1.29.0` with an update to 1.30.1 pending.
+`ghcr.io/zizmorcore/zizmor 1.29.0` with an update to 1.30.1 pending. That
+mapping is only how Renovate notices a release: the action does not run the
+image.
+
+Since v0.8.0 the action installs zizmor from the lock file it ships for the
+requested version (`support/locks/zizmor-1.29.0.txt`), which pins every zizmor
+wheel for that release by `sha256`, with `pip download --require-hashes`. pip
+picks the wheel for the runner and refuses it unless its hash is listed: the
+same guarantee the digest-pinned container gave before v0.8.0. The lock files
+live in the action's repository, so the action's own pin fixes them. Until
+November 2026 this section still described the container.
 
 Two things follow:
 
 - **The action and the input move together.** `zizmor-action` runs only the
-  zizmor versions in its own digest table: 1.30.1 is in v0.6.4's table and not
-  in v0.6.3's. Here the two normally arrive in one pull request, because the
+  zizmor versions it ships a lock file for: 1.32.0 is in v0.8.1's
+  `support/locks/` and not in v0.8.0's (before v0.8.0, its digest table played
+  that part: 1.30.1 needed v0.6.4). Here the two normally arrive in one pull request, because the
   `github actions` group collects minor, patch and digest updates for every
   `github-actions` dependency, the zizmor image included. Normally, not always:
   each update clears the 14-day cooldown on its own clock, and zizmor is
