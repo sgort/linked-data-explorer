@@ -1,6 +1,6 @@
 {
   "name": "linked-data-explorer-monorepo",
-  "version": "2026.11.2",
+  "version": "2026.11.3",
   "private": true,
   "description": "Monorepo for Linked Data Explorer - RONL DMN Orchestration Platform",
   "workspaces": [
