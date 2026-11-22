@@ -2,6 +2,107 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.11.3",
+      "status": "Released",
+      "date": "22 nov 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "c0065c8",
+          "author": "Steven Gort",
+          "type": "docs",
+          "subject": "Pin register: zizmor-action v0.8.1, and how it pins zizmor now",
+          "details": [
+            "The Pinned table records zizmorcore/zizmor-action at 45d7276c (v0.8.1), the digest zizmor.yml pins, so the register check in the required audit job passes.",
+            "Since v0.8.0 the action no longer runs zizmor from a digest-pinned container: it installs the wheel from the lock file it ships per version (support/locks/zizmor-<version>.txt) with pip --require-hashes. SECURITY-PIPELINE.md section 4 and the comment in zizmor.yml now describe the lock files; Renovate's mapping of the version input to the ghcr.io image stays, as that is only how it notices a zizmor release (#344)."
+          ]
+        },
+        {
+          "sha": "0244183",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Dependency clean-ups, and an SBOM check that compares content, not the generating npm",
+          "details": [
+            "write-sbom --check also ignores metadata.tools, the npm that generated the document, and still fails on any difference in components or the dependency graph. A release SBOM written with another npm than CI's no longer fails the release pull request with identical components (#299; ttl-editor#269 and ronl-business-api#481 follow).",
+            "The backend dev server runs on tsx instead of ts-node, which leaves the lockfile with its 12 transitive packages (#293); supertest and its types move to 7 (#291); the deprecated @types/jszip stub is removed, since jszip brings its own types (#292). All development only (#354)."
+          ]
+        },
+        {
+          "sha": "e4b2728",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "Service links and SHACL follow-ups for dct:requires",
+          "details": [
+            "A linked service without a DMN or title is named by its IRI's fragment (#321); the requirements query runs alongside the vendor counts (#319); a required service's title prefers @nl, then untagged, then other languages, so it no longer flips language after a cache refresh (#317).",
+            "SHACL: dct:requires to a service the validated file does not describe is a warning, not an error, because that service lives in its own graph; a required service described with the wrong type, and every other sh:class, stay errors (#315). A fixture and a smoke check pin that against the real shapes, and npm run test:shacl-smoke runs all four SHACL smoke checks; running them in CI is #352 (#316, #353)."
+          ]
+        },
+        {
+          "sha": "1f80697",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Publish hardening from the server-side publish review",
+          "details": [
+            "Every JSON log line carries a timestamp; a failed logo upload is logged with its file name and reason; a refused TRIPLYDB_BASE_URL is named at startup instead of every publish answering 503 without a word; a trailing slash on it is stripped; and a failed upload names TriplyDB's reason instead of its whole answer, so a gateway's HTML page no longer reaches the editor (#336 items 1-7).",
+            "/publish builds its server config inside a try, so it answers 503 instead of hanging; a test pushes a real AxiosError carrying the token through the service and the route, and the token reaches no answer and no log line (#351). Items 8 and 9 shipped in ttl-editor #268."
+          ]
+        },
+        {
+          "sha": "66d66e8",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "Sign-in hardening from the write-auth review",
+          "details": [
+            "Only access tokens (typ Bearer) are accepted, so an ID token is refused; when Keycloak's signing keys cannot be fetched a signed-in route answers 503 AUTH_UNAVAILABLE instead of 401 \"sign in again\" (#332 M-4). A refused anonymous test deploy no longer spends a rate slot (M-3), and on PROD the default AUTH_CLIENTS leaves out lde-e2e (M-5).",
+            "After a popup sign-in, a late report from this tab's own popup no longer starts a second session check (M-10, as ttl-editor #260). The e2e fixtures script renews its token near expiry (M-7), and its preflight treats an engine that answers 401 as up, showing the version when given the engine login (#328 item 2) (#350)."
+          ]
+        },
+        {
+          "sha": "4627fab",
+          "author": "Steven Gort",
+          "type": "chore",
+          "subject": "Comment corrections and small clean-ups",
+          "details": [
+            "SECURITY-PIPELINE.md counts twelve workflows and records a fresh zizmor run over all of them (#342); stale comments in .npmrc, engine-segment.ts and config.ts are corrected (#340, #328); the frontend clears the cache through /v1/cache/clear instead of the deprecated /api alias (#340).",
+            "ServiceRequirement moves below the imports (#320), deduplicated requirement pairs no longer gain explicit undefined titles (#318), and the deploy modal's extra fields are typed instead of read through as any (#300 item 3) (#349)."
+          ]
+        },
+        {
+          "sha": "a1d5a7f",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "concurrently ^10.0.7",
+          "details": ["The dev-server runner, development only (#347)."]
+        },
+        {
+          "sha": "1cb6d34",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Spectral CLI 6.17.1",
+          "details": ["The OpenAPI linter, development only (#346)."]
+        },
+        {
+          "sha": "13ff1b3",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Frontend dependencies: d3 7.9.2, @bpmn-io/properties-panel 3.58.1",
+          "details": [
+            "Runtime: d3's maintenance release moves d3 to 7.9.2 and its 30 d3-* modules up one patch each, all published on 3 November 2026 by the d3 maintainers with provenance from each module's own publish workflow; @bpmn-io/properties-panel 3.58.1 and @bpmn-io/feel-editor 2.8.1. No downgrades (#341)."
+          ]
+        },
+        {
+          "sha": "b12f440",
+          "author": "renovate[bot]",
+          "type": "ci",
+          "subject": "zizmor-action v0.8.1",
+          "details": [
+            "The workflow-audit action, pinned by digest; it adds the lock files for zizmor 1.32.0. zizmor itself stays at 1.29.0 (#344)."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.11.2",
       "status": "Released",
       "date": "12 nov 2026",
