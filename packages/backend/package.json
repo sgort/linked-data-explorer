@@ -54,7 +54,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
-    "@stoplight/spectral-cli": "6.17.0",
+    "@stoplight/spectral-cli": "6.17.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.25",
     "@types/jest": "^29.5.14",
