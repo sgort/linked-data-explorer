@@ -24,13 +24,6 @@
       "validate": { "required": true }
     },
     {
-      "id": "Field_HoeveelheidsbepalingReferentie",
-      "type": "textfield",
-      "label": "Quantity determination reference",
-      "key": "hoeveelheidsbepalingReferentie",
-      "validate": { "required": true }
-    },
-    {
       "id": "Field_VerwerkteBevindingen",
       "type": "textarea",
       "label": "How review findings were incorporated",

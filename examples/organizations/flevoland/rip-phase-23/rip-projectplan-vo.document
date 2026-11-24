@@ -41,15 +41,15 @@
     },
     {
       "id": "b5",
-      "placeholder": "{{projectramingReferentie}}",
-      "variableKey": "projectramingReferentie",
+      "placeholder": "{{linkedDocNumber_rip-projectraming}}",
+      "variableKey": "linkedDocNumber_rip-projectraming",
       "source": "process",
       "label": "Project estimate reference"
     },
     {
       "id": "b6",
-      "placeholder": "{{inkoopplanReferentie}}",
-      "variableKey": "inkoopplanReferentie",
+      "placeholder": "{{linkedDocNumber_rip-inkoopplan-vol}}",
+      "variableKey": "linkedDocNumber_rip-inkoopplan-vol",
       "source": "process",
       "label": "Procurement plan reference"
     },
@@ -155,7 +155,7 @@
                 "content": [
                   {
                     "type": "text",
-                    "text": "The plan incorporates the VO cost estimate {{projectramingReferentie}} and the procurement strategy recorded in {{inkoopplanReferentie}}."
+                    "text": "The plan incorporates the VO cost estimate {{linkedDocNumber_rip-projectraming}} and the procurement strategy recorded in {{linkedDocNumber_rip-inkoopplan-vol}}."
                   }
                 ]
               },

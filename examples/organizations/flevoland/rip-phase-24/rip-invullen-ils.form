@@ -17,15 +17,6 @@
       "text": "Complete the Province of Flevoland ILS (Integrale Levensduur Systematiek) form for the detailed design, so asset management can assess it."
     },
     {
-      "id": "F_ILS",
-      "type": "textfield",
-      "label": "ILS reference",
-      "key": "ilsReferentie",
-      "validate": {
-        "required": true
-      }
-    },
-    {
       "id": "F_Ingevuld",
       "type": "datetime",
       "label": "Completed on",

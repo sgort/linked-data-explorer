@@ -32,33 +32,6 @@
       }
     },
     {
-      "id": "Field_ProjectramingReferentie",
-      "type": "textfield",
-      "label": "Project estimate reference",
-      "key": "projectramingReferentie",
-      "validate": {
-        "required": true
-      }
-    },
-    {
-      "id": "Field_SskRamingReferentie",
-      "type": "textfield",
-      "label": "SSK estimate reference",
-      "key": "sskRamingReferentie",
-      "validate": {
-        "required": true
-      }
-    },
-    {
-      "id": "Field_RamingBedrag",
-      "type": "number",
-      "label": "Estimated project cost (EUR)",
-      "key": "ramingBedrag",
-      "validate": {
-        "required": true
-      }
-    },
-    {
       "id": "Field_OpgesteldDoor",
       "type": "textfield",
       "label": "Drawn up by (cost advisor)",

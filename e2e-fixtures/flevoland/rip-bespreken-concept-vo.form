@@ -38,12 +38,6 @@
       "validate": { "required": true }
     },
     {
-      "id": "Field_BevindingenformulierReferentie",
-      "type": "textfield",
-      "label": "Findings form reference",
-      "key": "bevindingenformulierReferentie"
-    },
-    {
       "id": "Button_Submit",
       "type": "button",
       "label": "Submit",
