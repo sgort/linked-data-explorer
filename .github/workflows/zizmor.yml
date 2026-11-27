@@ -10,15 +10,14 @@ on:
   # the pull request was the only way out, and it was needed four times in one
   # session on 2026-09-02 (#59, #62, #63, #64).
   #
-  # labeled/unlabeled join the default three for the dependency gate: Renovate
-  # adds the `security` label in a call after it opens the pull request, so the
-  # run that `opened` starts never sees it, and only a new run can (the gate
-  # reads the label from the API, not from this payload). Every job runs on
-  # them, deliberately: cancel-in-progress below lets the labeled run replace
-  # the opened one, and a required job skipped by an `if:` on the replacement
-  # reads as passed. A label change costs one more audit run.
+  # The default types only (opened, synchronize, reopened), deliberately NOT
+  # labeled/unlabeled. A pull request opened with labels (every Renovate pull
+  # request) would start two runs on one commit; cancel-in-progress below
+  # cancels one, and the ruleset reads the cancelled audit and lockfile-review
+  # as failed and blocks the merge (seen on #368, 2026-11-27). Renovate's
+  # `security` label arrives a second or so after `opened`, so the dependency
+  # gate waits for Renovate's labels through the API instead of a second run.
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches:
       - acc

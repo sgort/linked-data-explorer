@@ -627,8 +627,11 @@ async function allPages(url, headers, opts, maxPages = 30) {
 /**
  * Whether this run is a Renovate security update, asked of the GitHub API at
  * run time: Renovate labels a pull request in a call after creating it, so
- * the event payload of the run that matters does not carry the label yet.
- * Asked only when PR_AUTHOR is renovate[bot]; any API failure is exit 2.
+ * the event payload of the run that matters does not carry the label yet,
+ * and this waits for it (up to 60 s) rather than relying on a run started by
+ * `labeled`. Asked only when PR_AUTHOR is renovate[bot]; any API failure is
+ * exit 2. `opts.labelWaitMs`, `opts.labelPollMs` and `opts.sleep` are for
+ * tests.
  */
 export async function renovateSecurityOf(env, opts = {}) {
   if (env.PR_AUTHOR !== RENOVATE) return false;
@@ -641,8 +644,24 @@ export async function renovateSecurityOf(env, opts = {}) {
   const repo = repositoryOf(env, "check a Renovate pull request's label");
   const url = `https://api.github.com/repos/${repo}/issues/${number}`;
   const headers = githubHeaders(env);
+  const { labelWaitMs = 60000, labelPollMs = 5000 } = opts;
+  const sleep =
+    opts.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   try {
-    const labels = await allPages(`${url}/labels`, headers, opts);
+    // Renovate adds all its labels (`dependencies`, plus `security` on a
+    // vulnerability update) in one call a second or so after it opens the
+    // pull request. A run started by `opened` can get here first, so wait
+    // until the pull request carries any label, up to labelWaitMs. Still none
+    // then: decide with what is there (the route stays off), not exit 2.
+    let labels = await allPages(`${url}/labels`, headers, opts);
+    for (
+      let waited = 0;
+      labels.length === 0 && waited < labelWaitMs;
+      waited += labelPollMs
+    ) {
+      await sleep(labelPollMs);
+      labels = await allPages(`${url}/labels`, headers, opts);
+    }
     const events = await allPages(`${url}/events`, headers, opts);
     return isRenovateSecurity(
       env.PR_AUTHOR,

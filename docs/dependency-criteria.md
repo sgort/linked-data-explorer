@@ -215,14 +215,18 @@ Renovate's branch would stop it rebasing the fix. All three conditions are
 needed: the pull request's author is `renovate[bot]`, it carries the
 `security` label, **and** the pull request's history shows `renovate[bot]`
 adding that label. The check asks the GitHub API for the labels and that
-history when it runs, not the event that started it: Renovate adds the label
-just after opening the pull request, so the workflow also runs when a label is
-added or removed. A person adding the label does not count, nor can a person be
-the author, and Renovate's routine updates do not carry the label. Any failure
-to ask the API fails the check as "could not run". Young versions are then
-logged instead of
-blocked, in a _Cooldown exceptions_ section of the `lockfile-review` comment
-and the job summary (package, version, publish date, age). A new direct
+history when it runs, not the event that started it. Renovate adds its labels
+a second or so after opening the pull request, so when the author is
+`renovate[bot]` the check waits (up to 60 seconds) until the pull request
+carries a label, and decides with what it then finds; no label by then means
+no exception. It does not run again when a label changes: a pull request
+opened with labels would then start two runs on one commit, one of them
+cancelled, and a cancelled required check blocks the merge. A person adding
+the label does not count, nor can a person be the author, and Renovate's
+routine updates do not carry the label. Any failure to ask the API fails the
+check as "could not run". Young versions are then logged instead of blocked,
+in a _Cooldown exceptions_ section of the `lockfile-review` comment and the job
+summary (package, version, publish date, age). A new direct
 dependency in such a pull request passes with a warning that it is still to
 assess; write its entry afterwards.
 

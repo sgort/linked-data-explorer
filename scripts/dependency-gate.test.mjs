@@ -643,6 +643,56 @@ const renovateEnv = {
     "renovateSecurityOf: Renovate without PR_NUMBER is an InputError",
     err instanceof InputError && /PR_NUMBER/.test(err.message),
   );
+  // Renovate labels the pull request a second or so after opening it: the
+  // gate waits for a label instead of relying on a second run.
+  let labelCalls = 0;
+  const pauses = [];
+  const late = async (url) => {
+    const body = url.includes("/labels")
+      ? ++labelCalls < 3
+        ? []
+        : [{ name: "dependencies" }, { name: "security" }]
+      : byBot;
+    return { ok: true, status: 200, json: async () => body };
+  };
+  check(
+    "renovateSecurityOf: no label at first, then Renovate's → route on",
+    await G.renovateSecurityOf(renovateEnv, {
+      fetchImpl: late,
+      sleep: async (ms) => {
+        pauses.push(ms);
+      },
+    }),
+    true,
+  );
+  check(
+    "renovateSecurityOf: polled every 5 s until a label came",
+    [labelCalls, pauses],
+    [3, [5000, 5000]],
+  );
+  labelCalls = 0;
+  pauses.length = 0;
+  const never = async (url) => {
+    if (url.includes("/labels")) labelCalls += 1;
+    return { ok: true, status: 200, json: async () => [] };
+  };
+  err = null;
+  const unlabelled = await G.renovateSecurityOf(renovateEnv, {
+    fetchImpl: never,
+    sleep: async (ms) => {
+      pauses.push(ms);
+    },
+  }).catch((e) => (err = e));
+  check(
+    "renovateSecurityOf: never any label → route off, not exit 2",
+    [unlabelled, err],
+    [false, null],
+  );
+  check(
+    "renovateSecurityOf: gives up after 60 s of 5 s polls",
+    [labelCalls, pauses.reduce((a, b) => a + b, 0)],
+    [13, 60000],
+  );
 }
 
 // ── lockfile walking ───────────────────────────────────────────────────────

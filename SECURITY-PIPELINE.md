@@ -302,9 +302,12 @@ through a committed override with an open issue (an issue, not a pull request):
 entry for a version too young. Renovate's security pull requests pass
 automatically: the author is `renovate[bot]`, the `security` label is on the
 pull request, and the GitHub API's history of the pull request shows
-`renovate[bot]` adding it. The gate asks the API when it runs, because Renovate
-labels a pull request just after opening it, and the workflow runs again when a
-label changes. The gate logs each young version in a _Cooldown exceptions_
+`renovate[bot]` adding it. The gate asks the API when it runs and, because
+Renovate labels a pull request a second or so after opening it, waits up to 60
+seconds for Renovate's labels. The workflow deliberately does not run on `labeled`: a
+pull request opened with labels would start two runs on one commit, and the
+one cancel-in-progress cancels leaves a cancelled required check that blocks
+the merge. The gate logs each young version in a _Cooldown exceptions_
 section of the comment and job summary. The quarterly review lists open
 overrides, replacements and the previous quarter's security exceptions until
 they are dealt with.

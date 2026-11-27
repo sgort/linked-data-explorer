@@ -218,8 +218,13 @@ Younger → blocking. Two ways through, decided by the user on 2026-11-27:
   16:51:22Z, labelled 16:51:23Z), so the `opened` payload has none. The
   route holds only when the PR's issue events show `security` applied **by
   `renovate[bot]`** and the label is still on the PR — a person adding the
-  label does not count. The workflow also runs on `labeled`/`unlabeled`.
-  (Amended 2026-11-27 after the whole-branch review.)
+  label does not count. When the author is `renovate[bot]` the gate polls the
+  PR's labels (every 5 s, up to 60 s) until it carries one, then decides; no
+  label by then means the route is off, not exit 2. The workflow does not run
+  on `labeled`/`unlabeled`: a PR opened with labels then starts two runs on
+  one commit, cancel-in-progress cancels one, and the cancelled required
+  checks block the merge (seen on #368). (Amended 2026-11-27 after the
+  whole-branch review, and again after #368.)
 - **A person's urgent fix: a committed override**, recorded in the register's
   `cooldownOverrides` list (`{ "package", "version", "reason", "issue" }`, open
   issue required), so it is written down rather than waved through.
