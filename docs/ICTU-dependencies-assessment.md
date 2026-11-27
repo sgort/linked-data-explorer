@@ -74,6 +74,11 @@ with a checklist of those criteria, so the vetting leaves a trace on the pull
 request that adds it. The scores in this document are still those of
 13 September.
 
+**Update, November 2026:** the checklist was replaced by a gate. A new direct
+dependency now needs an entry in `dependency-register.json`, checked against
+registry evidence by the required `lockfile-review` job; see
+[_Adding a dependency_](dependency-criteria.md#adding-a-dependency-r1).
+
 ### 2 — No unpinned tags
 
 Pinned in all three: every `uses:` reference (by digest, verified by a blocking

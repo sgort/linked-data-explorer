@@ -212,8 +212,14 @@ Younger → blocking. Two ways through, decided by the user on 2026-11-27:
   app/renovate`). Why: these PRs skip the cooldown on purpose (`renovate.json`
   `vulnerabilityAlerts`, `minimumReleaseAge: null`), and requiring a commit on
   Renovate's branch would stop Renovate rebasing it and delay exactly the fixes
-  that must not wait. The author and label come from the `pull_request` event
-  payload, passed to the script as environment variables.
+  that must not wait. The author comes from the `pull_request` event; the
+  label is checked at run time through the API, not the payload: Renovate
+  adds labels in a second call after it opens the PR (LDE #364: opened
+  16:51:22Z, labelled 16:51:23Z), so the `opened` payload has none. The
+  route holds only when the PR's issue events show `security` applied **by
+  `renovate[bot]`** and the label is still on the PR — a person adding the
+  label does not count. The workflow also runs on `labeled`/`unlabeled`.
+  (Amended 2026-11-27 after the whole-branch review.)
 - **A person's urgent fix: a committed override**, recorded in the register's
   `cooldownOverrides` list (`{ "package", "version", "reason", "issue" }`, open
   issue required), so it is written down rather than waved through.
