@@ -41,7 +41,7 @@
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^4.22.3",
-    "fast-xml-parser": "^5.11.2",
+    "fast-xml-parser": "^5.12.1",
     "helmet": "^7.2.0",
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "^3.2.2",
