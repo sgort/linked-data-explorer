@@ -37,34 +37,6 @@
       }
     },
     {
-      "id": "Field_BeschikbaarProjectkrediet",
-      "type": "number",
-      "label": "Available project credit (EUR)",
-      "key": "beschikbaarProjectkrediet",
-      "validate": {
-        "required": true
-      }
-    },
-    {
-      "id": "Field_ProjectkredietDekking",
-      "type": "select",
-      "label": "Estimate falls within or outside the project credit",
-      "key": "projectkredietDekking",
-      "values": [
-        {
-          "label": "Within the project credit",
-          "value": "binnen"
-        },
-        {
-          "label": "Outside the project credit",
-          "value": "buiten"
-        }
-      ],
-      "validate": {
-        "required": true
-      }
-    },
-    {
       "id": "Field_ControleOpmerkingen",
       "type": "textarea",
       "label": "Review comments",

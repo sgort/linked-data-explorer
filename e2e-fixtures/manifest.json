@@ -123,10 +123,7 @@
       ],
       "documents": [
         "rip-kes.document",
-        "rip-ontwerptoelichting.document",
-        "rip-objectenboom.document",
-        "rip-bevindingenformulier.document",
-        "rip-hoeveelheidsbepaling.document"
+        "rip-objectenboom.document"
       ],
       "source": "authored in examples/organizations/flevoland/rip-phase-22/ from rip-phases-left/R2 Planvoorbereiding/R2_2 - VO.pdf (rev. 21-11-2024)"
     },

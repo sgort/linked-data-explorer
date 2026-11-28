@@ -48,15 +48,15 @@
     },
     {
       "id": "b6",
-      "placeholder": "{{projectramingDoReferentie}}",
-      "variableKey": "projectramingDoReferentie",
+      "placeholder": "{{linkedDocNumber_rip-projectraming-do}}",
+      "variableKey": "linkedDocNumber_rip-projectraming-do",
       "source": "process",
       "label": "DO project estimate reference"
     },
     {
       "id": "b7",
-      "placeholder": "{{ilsReferentie}}",
-      "variableKey": "ilsReferentie",
+      "placeholder": "{{linkedDocNumber_rip-ils-flevoland}}",
+      "variableKey": "linkedDocNumber_rip-ils-flevoland",
       "source": "process",
       "label": "ILS reference"
     },
@@ -162,7 +162,7 @@
                 "content": [
                   {
                     "type": "text",
-                    "text": "The plan incorporates the final detailed design {{doReferentie}}, the DO project estimate {{projectramingDoReferentie}} and the assessed ILS {{ilsReferentie}}."
+                    "text": "The plan incorporates the final detailed design {{doReferentie}}, the DO project estimate {{linkedDocNumber_rip-projectraming-do}} and the assessed ILS {{linkedDocNumber_rip-ils-flevoland}}."
                   }
                 ]
               },

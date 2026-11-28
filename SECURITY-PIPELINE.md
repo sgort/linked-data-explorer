@@ -276,8 +276,46 @@ repository is archived. It installs nothing.
 | Re-run in a quarter | adds the fresh evidence as a comment; the issue body, with its outcomes, stays put |
 | Node                | an exact literal, like the daily audit                                             |
 
-The same criteria are applied when a dependency is added: the `lockfile-review`
-comment lists each new **direct** dependency with a checklist of them.
+### New dependencies: the register gate
+
+The same criteria are applied when a dependency is added, and there they block.
+Every new **direct** dependency, per manifest, needs an entry in
+[`dependency-register.json`](dependency-register.json) in the same pull request:
+a verdict and a reason for each of the six criteria, the version assessed, and
+an outcome. Until November 2026 the `lockfile-review` comment offered a
+checklist instead; seven dependencies arrived across the three repositories
+with no box ticked, because nothing made the boxes matter.
+
+`scripts/dependency-gate.mjs` runs in the required `lockfile-review` job and
+fails the pull request when an entry is missing, malformed, or contradicts the
+evidence it gathers itself from the npm registry, the GitHub API and the
+lockfile: an entry may not claim a criterion holds that the evidence says does
+not, every unmet criterion and `needed` need a sentence, the assessed major must
+match the locked one, and a cited issue must be open. The same step fails a
+package version younger than the 14-day cooldown (`minReleaseAgeDays` in
+`lockfile-review.json`), whatever wrote the lockfile. The rules are in
+[`docs/dependency-criteria.md`](docs/dependency-criteria.md#adding-a-dependency-r1).
+
+There is no label a person can set and no bypass. A person's urgent fix goes
+through a committed override with an open issue (an issue, not a pull request):
+`"status": "override"` for a dependency still to assess, a `cooldownOverrides`
+entry for a version too young. Renovate's security pull requests pass
+automatically: the author is `renovate[bot]`, the `security` label is on the
+pull request, and the GitHub API's history of the pull request shows
+`renovate[bot]` adding it. The gate asks the API when it runs and, because
+Renovate labels a pull request a second or so after opening it, waits up to 60
+seconds for Renovate's labels. The workflow deliberately does not run on `labeled`: a
+pull request opened with labels would start two runs on one commit, and the
+one cancel-in-progress cancels leaves a cancelled required check that blocks
+the merge. The gate logs each young version in a _Cooldown exceptions_
+section of the comment and job summary. The quarterly review lists open
+overrides, replacements and the previous quarter's security exceptions until
+they are dealt with.
+
+Two limits are known: the job runs the pull request's own copy of the gate, and
+the rulesets require no approvals, so a pull request can weaken the gate by
+editing it; and a lockfile entry hand-marked `"inBundle": true` skips the
+origin, integrity and cooldown checks. Both show in the diff.
 
 ## Version currency
 

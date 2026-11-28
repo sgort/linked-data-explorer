@@ -27,8 +27,8 @@
     },
     {
       "id": "b3",
-      "placeholder": "{{inkoopplanReferentie}}",
-      "variableKey": "inkoopplanReferentie",
+      "placeholder": "{{linkedDocNumber_rip-inkoopplan-vol}}",
+      "variableKey": "linkedDocNumber_rip-inkoopplan-vol",
       "source": "process",
       "label": "Procurement plan reference"
     },
@@ -104,7 +104,7 @@
                 "content": [
                   {
                     "type": "text",
-                    "text": "Procurement plan {{inkoopplanReferentie}} · project {{projectNumber}} — {{projectName}}"
+                    "text": "Procurement plan {{linkedDocNumber_rip-inkoopplan-vol}} · project {{projectNumber}} — {{projectName}}"
                   }
                 ]
               }
@@ -139,7 +139,7 @@
                 "content": [
                   {
                     "type": "text",
-                    "text": "The procurement strategy for project {{projectNumber}} — {{projectName}} is {{inkoopstrategie}}, recorded in procurement plan {{inkoopplanReferentie}}."
+                    "text": "The procurement strategy for project {{projectNumber}} — {{projectName}} is {{inkoopstrategie}}, recorded in procurement plan {{linkedDocNumber_rip-inkoopplan-vol}}."
                   }
                 ]
               },

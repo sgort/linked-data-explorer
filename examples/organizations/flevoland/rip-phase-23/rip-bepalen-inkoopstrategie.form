@@ -17,13 +17,15 @@
       "text": "Set the procurement strategy for the project against the procurement plan format, the adopted project plan and the Infra procurement strategy. The result feeds IN1.1."
     },
     {
-      "id": "Field_InkoopplanReferentie",
-      "type": "textfield",
-      "label": "Procurement plan reference",
-      "key": "inkoopplanReferentie",
-      "validate": {
-        "required": true
-      }
+      "id": "Field_InkoopplanNodig",
+      "type": "radio",
+      "label": "Inkoopplan",
+      "key": "inkoopplanNodig",
+      "values": [
+        { "label": "Er wordt géén inkoopplan geschreven: geen complexe omgevings- of technische aspecten, geraamde waarde < € 3.000.000, aanbesteding via een provinciale groslijst", "value": "nee" },
+        { "label": "Er wordt een inkoopplan geschreven (format 2640968, opslaan in map −63 Werken)", "value": "ja" }
+      ],
+      "validate": { "required": true }
     },
     {
       "id": "Field_Inkoopstrategie",
