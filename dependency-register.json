@@ -1,0 +1,140 @@
+{
+  "$comment": "The dependency register: one assessment per direct dependency per manifest, against the six criteria in docs/dependency-criteria.md. Read by scripts/dependency-gate.mjs in the lockfile-review job, which fails a pull request that adds a direct dependency without an entry here, or with an entry the registry evidence contradicts; and by scripts/dependency-review.mjs, which lists open overrides and replacements every quarter. The first five entries were assessed after the fact on 27 November 2026.",
+  "dependencies": [
+    {
+      "name": "keycloak-js",
+      "manifest": "packages/frontend",
+      "field": "dependencies",
+      "added": { "date": "2026-11-12", "pr": 331 },
+      "assessed": { "date": "2026-11-27", "version": "23.0.7" },
+      "criteria": {
+        "maintained": {
+          "holds": false,
+          "why": "The package is maintained (26.2.5 on 27 October 2026, four releases in the last year), but the locked 23.x line is frozen: 23.0.7 of 22 February 2024 is its last release and gets no fixes."
+        },
+        "maintainers": { "holds": true },
+        "licence": { "holds": true },
+        "releasePolicy": {
+          "holds": false,
+          "why": "Neither 23.0.7 nor the latest release carries npm provenance, and we run a major the project no longer supports; a security policy exists only in keycloak/.github."
+        },
+        "footprint": { "holds": true },
+        "needed": {
+          "holds": true,
+          "why": "It is the frontend's OIDC client (packages/frontend/src/services/auth.ts: init, login, logout, token refresh) and nothing else in the tree does this; it is held at 23 to match the Keycloak 23 server, and moves with the server migration to 26."
+        }
+      },
+      "outcome": "keep",
+      "followUp": 366,
+      "status": "assessed"
+    },
+    {
+      "name": "jsonwebtoken",
+      "manifest": "packages/backend",
+      "field": "dependencies",
+      "added": { "date": "2026-11-12", "pr": 331 },
+      "assessed": { "date": "2026-11-27", "version": "9.0.3" },
+      "criteria": {
+        "maintained": {
+          "holds": false,
+          "why": "One release in the last twelve months (9.0.3, 4 December 2025, after 9.0.2 in August 2023), and the recent commits are CI and release chores only: low activity for code on the token-verification path."
+        },
+        "maintainers": {
+          "holds": true,
+          "why": "The repository belongs to the auth0 organisation, which satisfies the signal, but a single npm account (bsmith-auth0) publishes it."
+        },
+        "licence": { "holds": true },
+        "releasePolicy": {
+          "holds": false,
+          "why": "No npm provenance, no GitHub Releases and no SECURITY.md in the repository or in auth0/.github, while four security advisories have been published against it."
+        },
+        "footprint": {
+          "holds": true,
+          "why": "No install script and 43 KB, but 11 of its 14 transitive packages come in only through it, seven of them single lodash.* functions."
+        },
+        "needed": {
+          "holds": false,
+          "why": "jose (createRemoteJWKSet with jwtVerify) does the RS256 and issuer check in auth.middleware.ts, has no dependencies, ships with provenance, and is already in the tree through jwks-rsa."
+        }
+      },
+      "outcome": "replace",
+      "followUp": 365,
+      "status": "assessed"
+    },
+    {
+      "name": "jwks-rsa",
+      "manifest": "packages/backend",
+      "field": "dependencies",
+      "added": { "date": "2026-11-12", "pr": 331 },
+      "assessed": { "date": "2026-11-27", "version": "3.2.2" },
+      "criteria": {
+        "maintained": { "holds": true },
+        "maintainers": { "holds": true },
+        "licence": { "holds": true },
+        "releasePolicy": { "holds": true },
+        "footprint": {
+          "holds": true,
+          "why": "No install script and 6 packages only it brings, but one of them, limiter 1.1.5, has no licence recorded (#367), and 3.2.2 pulls @types/jsonwebtoken in as a runtime dependency."
+        },
+        "needed": {
+          "holds": false,
+          "why": "Its only use is fetching the realm's signing key in auth.middleware.ts, which jose's createRemoteJWKSet covers; jwks-rsa itself depends on jose 4, so dropping it removes a layer, not a capability."
+        }
+      },
+      "outcome": "replace",
+      "followUp": 365,
+      "status": "assessed"
+    },
+    {
+      "name": "@types/jsonwebtoken",
+      "manifest": "packages/backend",
+      "field": "devDependencies",
+      "added": { "date": "2026-11-12", "pr": 331 },
+      "assessed": { "date": "2026-11-27", "version": "9.0.10" },
+      "criteria": {
+        "maintained": {
+          "holds": false,
+          "why": "No release since 9.0.10 on 16 June 2025, 17 months: the types-for-a-stable-API case, since the jsonwebtoken API they describe has not changed since 9.0."
+        },
+        "maintainers": { "holds": true },
+        "licence": { "holds": true },
+        "releasePolicy": { "holds": true },
+        "footprint": { "holds": true },
+        "needed": {
+          "holds": true,
+          "why": "jsonwebtoken ships no types, and auth.middleware.ts imports GetPublicKeyOrSecret and JwtPayload from it; it goes when the move to jose (#365) removes jsonwebtoken."
+        }
+      },
+      "outcome": "keep",
+      "followUp": 365,
+      "status": "assessed"
+    },
+    {
+      "name": "tsx",
+      "manifest": "packages/backend",
+      "field": "devDependencies",
+      "added": { "date": "2026-11-22", "pr": 354 },
+      "assessed": { "date": "2026-11-27", "version": "4.23.15" },
+      "criteria": {
+        "maintained": { "holds": true },
+        "maintainers": {
+          "holds": false,
+          "why": "One npm maintainer and a repository owned by a user, not an organisation; acceptable for a dev-only runner, and ts-node, or Node's own type stripping after an import migration, is the way back."
+        },
+        "licence": { "holds": true },
+        "releasePolicy": { "holds": true },
+        "footprint": {
+          "holds": false,
+          "why": "It brings its own esbuild 0.28.2, which has an install script, beside the root esbuild, plus a per-platform binary, and the optional fsevents 2.3.3 (macOS only) with an install script of its own: 27 of its 28 transitive packages are only there for it, all dev-only."
+        },
+        "needed": {
+          "holds": true,
+          "why": "It runs the backend in development (nodemon exec tsx src/index.ts) and the TypeScript scripts; Node 24's type stripping cannot replace it while about 124 CommonJS files use extensionless relative imports."
+        }
+      },
+      "outcome": "keep",
+      "status": "assessed"
+    }
+  ],
+  "cooldownOverrides": []
+}
