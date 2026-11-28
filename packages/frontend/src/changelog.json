@@ -2,6 +2,108 @@
   "versions": [
     {
       "format": "commits",
+      "version": "2026.11.4",
+      "status": "Released",
+      "date": "28 nov 2026",
+      "scope": "both",
+      "commits": [
+        {
+          "sha": "462a1e7",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Frontend dependency ranges",
+          "details": [
+            "@bpmn-io/properties-panel ^3.59.0, @testing-library/user-event ^14.6.10, postcss ^8.5.33, prettier ^3.10.1, typescript-eslint ^8.72.2 and vite ^6.4.6 in packages/frontend/package.json. The lock file maintenance below had already locked these versions, so the lockfile does not move (#359)."
+          ]
+        },
+        {
+          "sha": "82077ed",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "Backend dependency ranges",
+          "details": [
+            "axios ^1.21.1, prettier ^3.10.1 and typescript-eslint ^8.72.2 in packages/backend/package.json, already locked by the lock file maintenance (#360)."
+          ]
+        },
+        {
+          "sha": "9e490e0",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Node.js 24.22.3 in the tooling workflows",
+          "details": [
+            "The pinned Node of the audit, review, SBOM and supply-chain workflows moves from 24.22.2 (#363)."
+          ]
+        },
+        {
+          "sha": "646162f",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Node.js 24.22.3",
+          "details": [
+            "`.nvmrc` moves from 24.22.2, so the deploy workflows build on 24.22.3. npm stays 11.19.1 (#361)."
+          ]
+        },
+        {
+          "sha": "a5c2b47",
+          "author": "renovate[bot]",
+          "type": "chore",
+          "subject": "Lock file maintenance",
+          "details": [
+            "The refresh of the transitive tree: 109 packages updated, 27 of them runtime, 1 added and 2 removed, none downgraded. Every changed version was at least 14 days old, checked by the dependency gate (#343).",
+            "Runtime updates include the bpmn-io stack (@bpmn-io/properties-panel 3.59.0, diagram-js 15.29.0, moddle-xml 12.3.2), axios 1.21.1, follow-redirects 1.16.3, the prosemirror packages, marked 18.2.0, tar 7.5.23 and undici 7.30.2 and 8.12.4."
+          ]
+        },
+        {
+          "sha": "567ded1",
+          "author": "renovate[bot]",
+          "type": "fix",
+          "subject": "fast-xml-parser 5.12.1 (security)",
+          "details": [
+            "The backend's XML parser moves from 5.11.2, with fast-xml-builder 1.3.2 and is-unsafe 2.0.3. This was the first Renovate security pull request since the dependency gate: the gate recognised it as such through the issues API, logging rather than blocking young versions, though every changed version was past the cooldown anyway (#364)."
+          ]
+        },
+        {
+          "sha": "1999e27",
+          "author": "Steven Gort",
+          "type": "fix",
+          "subject": "The gate waits for Renovate's labels instead of re-running on labeled",
+          "details": [
+            "A pull request opened with labels started two Supply-chain audit runs on one commit; cancel-in-progress cancelled one, and the ruleset read the cancelled audit and lockfile-review as failing, which blocked the gate's own pull request. The trigger is back to the default types. For a renovate[bot] pull request the gate now polls the labels for up to 60 s, then applies the same rule: `security` present now and applied by renovate[bot]."
+          ]
+        },
+        {
+          "sha": "a191d7a",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "New direct dependencies need a recorded assessment before they merge",
+          "details": [
+            "The new-dependency checklist in the lockfile-review comment was advice: seven new direct dependencies passed it with none of its 35 boxes ticked, and a package already direct in another manifest got none at all. The required lockfile-review check now runs scripts/dependency-gate.mjs. A new direct dependency, per manifest, blocks until dependency-register.json holds an entry that agrees with the npm registry and GitHub: deprecated or archived, last release, maintainers, licence, install scripts in what it installs. Judgement needs a written reason (ICTU recommendation 1).",
+            "Every package version the lockfile adds or changes must also be at least 14 days old (recommendation 6). Ways through, each logged: a committed override with an open issue, or a Renovate security pull request. The quarterly review lists open overrides, replace outcomes and the previous quarter's security exceptions. The register starts with retroactive assessments of keycloak-js, jsonwebtoken, jwks-rsa, @types/jsonwebtoken and tsx; jsonwebtoken and jwks-rsa are to be replaced by jose (#365)."
+          ]
+        },
+        {
+          "sha": "4f04bc5",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "RIP R2.1: a step that finds the eDOCS projectmap",
+          "details": [
+            "The service task \"Aanmaken projectmap eDOCS\" (topic rip-edocs-projectmap) is added to R2.1, after the Relatics workspace and before Opstellen risicodossier. The RONL worker looks up the project's eDOCS workspace and records it for the later phases; it never fails the process. The e2e fixture and the BPMN fingerprints are updated."
+          ]
+        },
+        {
+          "sha": "c318d27",
+          "author": "Steven Gort",
+          "type": "feat",
+          "subject": "RIP R2.1–R2.4: B and B+ documents as linked refs",
+          "details": [
+            "Documents that stay in eDOCS are no longer modelled as generated documents. Four user-task attributes describe them instead: ronl:linkedDocumentRef, ronl:documentFigures, ronl:documentChecklist and ronl:kredietCheck. R2.1 links the PSU-presentatie on Uitvoeren PSU, which moves to rip-projectleider; R2.2's Ontwerptoelichting, Bevindingenformulier and Hoeveelheidsbepaling become linked refs and lose their templates.",
+            "R2.3: Projectraming VO is B+ on both raming tasks, a new task Opstellen SSK-raming, an optional inkoopplan on Bepalen inkoopstrategie and a kredietcheck on Controleren Projectraming VO. R2.4: Projectraming DO is B+ with its kredietcheck, ILS is linked, and a new task Samenstellen Verzamelmap V&G. Forms drop the fields the linked-document block now owns; fingerprints and e2e fixtures are regenerated."
+          ]
+        }
+      ]
+    },
+    {
+      "format": "commits",
       "version": "2026.11.3",
       "status": "Released",
       "date": "22 nov 2026",
